@@ -30,7 +30,7 @@ import java.io.IOException;
 /**
 */
 public class SimpleDictionaryEncodedColumn
-    implements DictionaryEncodedColumn
+    implements DictionaryEncodedColumn<String>
 {
   private final IndexedInts column;
   private final IndexedMultivalue<IndexedInts> multiValueColumn;

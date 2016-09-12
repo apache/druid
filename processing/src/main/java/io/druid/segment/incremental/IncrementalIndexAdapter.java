@@ -22,10 +22,11 @@ package io.druid.segment.incremental;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.common.logger.Logger;
+import io.druid.segment.DimensionHandler;
+import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Metadata;
 import io.druid.segment.Rowboat;
@@ -33,7 +34,6 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  */
@@ -51,38 +50,23 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private static final Logger log = new Logger(IncrementalIndexAdapter.class);
   private final Interval dataInterval;
   private final IncrementalIndex<?> index;
-  private final Set<String> hasNullValueDimensions;
+  private final Map<String, DimensionAccessor> accessors;
 
-  private final Map<String, DimensionIndexer> indexers;
-
-  private class DimensionIndexer
+  private class DimensionAccessor
   {
     private final IncrementalIndex.DimensionDesc dimensionDesc;
     private final MutableBitmap[] invertedIndexes;
+    private final DimensionIndexer indexer;
 
-    private IncrementalIndex.SortedDimLookup dimLookup;
-
-    public DimensionIndexer(IncrementalIndex.DimensionDesc dimensionDesc)
+    public DimensionAccessor(IncrementalIndex.DimensionDesc dimensionDesc)
     {
       this.dimensionDesc = dimensionDesc;
-      this.invertedIndexes = new MutableBitmap[dimensionDesc.getValues().size() + 1];
-    }
-
-    private IncrementalIndex.DimDim getDimValues()
-    {
-      return dimensionDesc.getValues();
-    }
-
-    private IncrementalIndex.SortedDimLookup getDimLookup()
-    {
-      if (dimLookup == null) {
-        final IncrementalIndex.DimDim dimDim = dimensionDesc.getValues();
-        if (hasNullValueDimensions.contains(dimensionDesc.getName()) && !dimDim.contains(null)) {
-          dimDim.add(null);
-        }
-        dimLookup = dimDim.sort();
+      this.indexer = dimensionDesc.getIndexer();
+      if(dimensionDesc.getCapabilities().hasBitmapIndexes()) {
+        this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
+      } else {
+        this.invertedIndexes = null;
       }
-      return dimLookup;
     }
   }
 
@@ -102,42 +86,34 @@ public class IncrementalIndexAdapter implements IndexableAdapter
      * in row 2. So we should iterate all rows to determine whether one dimension contains
      * a null value.
      */
-    this.hasNullValueDimensions = Sets.newHashSet();
-
     final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
 
-    indexers = Maps.newHashMapWithExpectedSize(dimensions.size());
+    accessors = Maps.newHashMapWithExpectedSize(dimensions.size());
     for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-      indexers.put(dimension.getName(), new DimensionIndexer(dimension));
+      accessors.put(dimension.getName(), new DimensionAccessor(dimension));
     }
 
     int rowNum = 0;
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
-      final int[][] dims = timeAndDims.getDims();
+      final Object[] dims = timeAndDims.getDims();
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
-        DimensionIndexer indexer = indexers.get(dimension.getName());
+        DimensionAccessor accessor = accessors.get(dimension.getName());
+
+        // Add 'null' to the dimension's dictionary.
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          hasNullValueDimensions.add(dimension.getName());
+          accessor.indexer.processRowValsToUnsortedEncodedArray(null);
           continue;
         }
-        final IncrementalIndex.DimDim values = dimension.getValues();
-        if (hasNullValue(values, dims[dimIndex])) {
-          hasNullValueDimensions.add(dimension.getName());
-        }
+        final ColumnCapabilities capabilities = dimension.getCapabilities();
 
-        final MutableBitmap[] bitmapIndexes = indexer.invertedIndexes;
-
-        for (Comparable dimIdxComparable : dims[dimIndex]) {
-          Integer dimIdx = (Integer) dimIdxComparable;
-          if (bitmapIndexes[dimIdx] == null) {
-            bitmapIndexes[dimIdx] = bitmapFactory.makeEmptyMutableBitmap();
-          }
-          bitmapIndexes[dimIdx].add(rowNum);
+        if(capabilities.hasBitmapIndexes()) {
+          final MutableBitmap[] bitmapIndexes = accessor.invertedIndexes;
+          final DimensionIndexer indexer = accessor.indexer;
+          indexer.fillBitmapsFromUnsortedEncodedArray(dims[dimIndex], rowNum, bitmapIndexes, bitmapFactory);
         }
       }
-
       ++rowNum;
     }
   }
@@ -167,50 +143,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimValueLookup(String dimension)
+  public Indexed<Comparable> getDimValueLookup(String dimension)
   {
-    final DimensionIndexer indexer = indexers.get(dimension);
-    if (indexer == null) {
+    final DimensionAccessor accessor = accessors.get(dimension);
+    if (accessor == null) {
       return null;
     }
-    final IncrementalIndex.DimDim dimDim = indexer.getDimValues();
-    final IncrementalIndex.SortedDimLookup dimLookup = indexer.getDimLookup();
 
-    return new Indexed<String>()
-    {
-      @Override
-      public Class<? extends String> getClazz()
-      {
-        return String.class;
-      }
+    final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
 
-      @Override
-      public int size()
-      {
-        return dimLookup.size();
-      }
-
-      @Override
-      public String get(int index)
-      {
-        Comparable val = dimLookup.getValueFromSortedId(index);
-        String strVal = val != null ? val.toString() : null;
-        return strVal;
-      }
-
-      @Override
-      public int indexOf(String value)
-      {
-        int id = dimDim.getId(value);
-        return id < 0 ? -1 : dimLookup.getSortedIdFromUnsortedId(id);
-      }
-
-      @Override
-      public Iterator<String> iterator()
-      {
-        return IndexedIterable.create(this).iterator();
-      }
-    };
+    return indexer.getSortedIndexedValues();
   }
 
   @Override
@@ -222,9 +164,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       public Iterator<Rowboat> iterator()
       {
         final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
-        final IncrementalIndex.SortedDimLookup[] sortedDimLookups = new IncrementalIndex.SortedDimLookup[dimensions.size()];
+        final DimensionHandler[] handlers = new DimensionHandler[dimensions.size()];
+        final DimensionIndexer[] indexers = new DimensionIndexer[dimensions.size()];
         for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-          sortedDimLookups[dimension.getIndex()] = indexers.get(dimension.getName()).getDimLookup();
+          handlers[dimension.getIndex()] = dimension.getHandler();
+          indexers[dimension.getIndex()] = dimension.getIndexer();
         }
 
         /*
@@ -242,10 +186,10 @@ public class IncrementalIndexAdapter implements IndexableAdapter
               public Rowboat apply(Map.Entry<IncrementalIndex.TimeAndDims, Integer> input)
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
-                final int[][] dimValues = timeAndDims.getDims();
+                final Object[] dimValues = timeAndDims.getDims();
                 final int rowOffset = input.getValue();
 
-                int[][] dims = new int[dimValues.length][];
+                Object[] dims = new Object[dimValues.length];
                 for (IncrementalIndex.DimensionDesc dimension : dimensions) {
                   final int dimIndex = dimension.getIndex();
 
@@ -253,17 +197,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                     continue;
                   }
 
-                  dims[dimIndex] = new int[dimValues[dimIndex].length];
-
-                  if (dimIndex >= dims.length || dims[dimIndex] == null) {
-                    continue;
-                  }
-
-                  for (int i = 0; i < dimValues[dimIndex].length; ++i) {
-                    dims[dimIndex][i] = sortedDimLookups[dimIndex].getSortedIdFromUnsortedId(dimValues[dimIndex][i]);
-                    //TODO: in later PR, Rowboat will use Comparable[][] instead of int[][]
-                    // Can remove dictionary encoding for numeric dims then.
-                  }
+                  final DimensionIndexer indexer = indexers[dimIndex];
+                  Object sortedDimVals = indexer.convertUnsortedEncodedArrayToSortedEncodedArray(dimValues[dimIndex]);
+                  dims[dimIndex] = sortedDimVals;
                 }
 
                 Object[] metrics = new Object[index.getMetricAggs().length];
@@ -275,7 +211,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                     timeAndDims.getTimestamp(),
                     dims,
                     metrics,
-                    count++
+                    count++,
+                    handlers
                 );
               }
             }
@@ -287,14 +224,19 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public IndexedInts getBitmapIndex(String dimension, int index)
   {
-    DimensionIndexer accessor = indexers.get(dimension);
+    DimensionAccessor accessor = accessors.get(dimension);
     if (accessor == null) {
       return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
+    ColumnCapabilities capabilities = accessor.dimensionDesc.getCapabilities();
+    DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
 
-    IncrementalIndex.SortedDimLookup dimLookup = accessor.getDimLookup();
-    final int id = dimLookup.getUnsortedIdFromSortedId(index);
-    if (id < 0 || id >= dimLookup.size()) {
+    if (!capabilities.hasBitmapIndexes()) {
+      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+    }
+
+    final int id = (Integer) indexer.getUnsortedEncodedValueFromSorted(index);
+    if (id < 0 || id >= indexer.getCardinality()) {
       return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
 
@@ -317,27 +259,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public ColumnCapabilities getCapabilities(String column)
   {
     return index.getCapabilities(column);
-  }
-
-  private boolean hasNullValue(IncrementalIndex.DimDim dimDim, int[] dimIndices)
-  {
-    if (dimIndices == null || dimIndices.length == 0) {
-      return true;
-    }
-    for (int dimIndex : dimIndices) {
-      Comparable val = dimDim.getValue(dimIndex);
-
-      if (val == null) {
-        return true;
-      }
-
-      if (val instanceof String) {
-        if (((String) val).length() == 0) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   static class BitmapIndexedInts implements IndexedInts
@@ -406,5 +327,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return index.getDimensionHandlers();
   }
 }

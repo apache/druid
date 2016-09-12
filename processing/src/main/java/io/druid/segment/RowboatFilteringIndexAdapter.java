@@ -26,6 +26,8 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
 
+import java.util.Map;
+
 /**
  */
 public class RowboatFilteringIndexAdapter implements IndexableAdapter
@@ -64,7 +66,7 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimValueLookup(String dimension)
+  public Indexed<Comparable> getDimValueLookup(String dimension)
   {
     return baseAdapter.getDimValueLookup(dimension);
   }
@@ -97,5 +99,11 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return baseAdapter.getMetadata();
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return baseAdapter.getDimensionHandlers();
   }
 }

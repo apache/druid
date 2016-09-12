@@ -60,7 +60,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     if (columnDesc == null || !columnDesc.getCapabilities().isDictionaryEncoded()) {
       return null;
     }
-    final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
+    final DictionaryEncodedColumn<String> column = columnDesc.getDictionaryEncoding();
     return new Indexed<String>()
     {
       @Override

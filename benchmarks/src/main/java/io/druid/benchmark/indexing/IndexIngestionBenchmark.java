@@ -97,7 +97,7 @@ public class IndexIngestionBenchmark
     }
   }
 
-  @Setup(Level.Iteration)
+  @Setup(Level.Invocation)
   public void setup2() throws IOException
   {
     incIndex = makeIncIndex();

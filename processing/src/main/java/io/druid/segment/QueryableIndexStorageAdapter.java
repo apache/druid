@@ -193,6 +193,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return index.getDimensionHandlers();
+  }
+
+  @Override
   public String getColumnTypeName(String columnName)
   {
     final Column column = index.getColumn(columnName);
@@ -462,13 +468,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         );
                       }
 
-                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
+                      DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
                         dictionaryColumnCache.put(dimension, cachedColumn);
                       }
 
-                      final DictionaryEncodedColumn column = cachedColumn;
+                      final DictionaryEncodedColumn<String> column = cachedColumn;
 
                       if (column == null) {
                         return NULL_DIMENSION_SELECTOR;
@@ -739,7 +745,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
-                        final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
+                        final DictionaryEncodedColumn<String> columnVals = (DictionaryEncodedColumn) cachedColumnVals;
                         if (columnVals.hasMultipleValues()) {
                           return new ObjectColumnSelector<Object>()
                           {

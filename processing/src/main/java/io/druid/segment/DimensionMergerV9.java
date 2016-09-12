@@ -17,21 +17,22 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
 
-import io.druid.segment.data.IndexedInts;
-
-import java.io.Closeable;
+import io.druid.segment.column.ColumnDescriptor;
 
 /**
+ * Processing related interface
+ *
+ * DimensionMerger subclass to be used with IndexMergerV9.
  */
-public interface DictionaryEncodedColumn<ActualType extends Comparable> extends Closeable
+public interface DimensionMergerV9<EncodedTypeArray> extends DimensionMerger<EncodedTypeArray>
 {
-  public int length();
-  public boolean hasMultipleValues();
-  public int getSingleValueRow(int rowNum);
-  public IndexedInts getMultiValueRow(int rowNum);
-  public ActualType lookupName(int id);
-  public int lookupId(ActualType name);
-  public int getCardinality();
+  /**
+   * Return a ColumnDescriptor containing ColumnPartSerde objects appropriate for
+   * this DimensionMerger's value metadata, sequence of row values, and index structures.
+   *
+   * @return ColumnDescriptor that IndexMergerV9 will use to build a column.
+   */
+  public ColumnDescriptor makeColumnDescriptor();
 }

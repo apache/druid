@@ -19,37 +19,27 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Function;
+import com.metamx.common.IAE;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
-import org.joda.time.Interval;
+import io.druid.segment.column.ValueType;
 
-import java.util.Map;
-
-/**
- * An adapter to an index
- */
-public interface IndexableAdapter
+public final class DimensionHandlerUtil
 {
-  Interval getDataInterval();
+  private DimensionHandlerUtil() {}
 
-  int getNumRows();
-
-  Indexed<String> getDimensionNames();
-
-  Indexed<String> getMetricNames();
-
-  Indexed<Comparable> getDimValueLookup(String dimension);
-
-  Iterable<Rowboat> getRows();
-
-  IndexedInts getBitmapIndex(String dimension, int dictId);
-
-  String getMetricType(String metric);
-
-  ColumnCapabilities getCapabilities(String column);
-
-  Metadata getMetadata();
-
-  Map<String, DimensionHandler> getDimensionHandlers();
+  public static DimensionHandler getHandlerFromCapabilities(String dimensionName, ColumnCapabilities capabilities)
+  {
+    DimensionHandler handler = null;
+    if (capabilities.getType() == ValueType.STRING) {
+      if (!capabilities.isDictionaryEncoded() || !capabilities.hasBitmapIndexes()) {
+        throw new IAE("String column must have dictionary encoding and bitmap index.");
+      }
+      handler = new StringDimensionHandler(dimensionName);
+    }
+    if (handler == null) {
+      throw new IAE("Could not create handler from invalid column type: " + capabilities.getType());
+    }
+    return handler;
+  }
 }
