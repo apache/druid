@@ -19,10 +19,12 @@
 
 package io.druid.server.coordinator;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -31,6 +33,7 @@ import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -120,7 +123,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4)), 4
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -133,9 +136,8 @@ public class CostBalancerStrategyTest
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
 
-    final DateTime referenceTimestamp = new DateTime("2014-01-01");
     BalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1))
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1)), 1
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -146,10 +148,7 @@ public class CostBalancerStrategyTest
   public void testComputeJointSegmentCost()
   {
     DateTime referenceTime = new DateTime("2014-01-01T00:00:00");
-    CostBalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
-    );
-    double segmentCost = strategy.computeJointSegmentsCost(
+    double segmentCost = CostBalancerStrategy.computeJointSegmentsCost(
         getSegment(
             100,
             "DUMMY",
@@ -211,5 +210,59 @@ public class CostBalancerStrategyTest
     Assert.assertEquals(1.135335, CostBalancerStrategy.intervalCost(2, 0, 1), 1e-6);
     // partial overlap [0, 3), [1, 2)
     Assert.assertEquals(1.534912, CostBalancerStrategy.intervalCost(3, 1, 2), 1e-6);
+  }
+
+  @Test
+  @Ignore
+  public void testSpeedOfCostBalanceStrategy() throws InterruptedException
+  {
+    final int numServers = 70;
+    final int loaded = 200000;
+    final int adding = 10000;
+
+    List<DruidServer> servers = Lists.newArrayListWithCapacity(numServers);
+    for (int i = 1; i <= numServers; i++) {
+      servers.add(new DruidServer("server-" + i, "host-" + i, 1000000000000L, "hot", "hot", 1));
+    }
+
+    final LoadQueuePeon peon = new LoadQueuePeonTester();
+    final BalancerStrategy strategy = new CostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4)), 4
+    );
+
+    DateTime time = new DateTime("2014-01-01");
+    for (int i = 1; i <= loaded; i++) {
+      DataSegment segment = getSegment(i, "ds", new Interval(time, time = time.plusHours(1)));
+      servers.get(i % servers.size()).addDataSegment(segment.getIdentifier(), segment);
+    }
+
+    // should be materialized
+    final List<ServerHolder> holders = Lists.newArrayList(
+        Lists.transform(
+            servers,
+            new Function<DruidServer, ServerHolder>()
+            {
+              @Override
+              public ServerHolder apply(DruidServer input)
+              {
+                return new ServerHolder(input.toImmutableDruidServer(), peon);
+              }
+            }
+        )
+    );
+
+    System.out.println("started");
+    long start = System.currentTimeMillis();
+    long prev = System.currentTimeMillis();
+
+    for (int i = 1; i <= adding; i++) {
+      DataSegment segment = getSegment(i + loaded, "ds", new Interval(time, time = time.plusHours(1)));
+      strategy.findNewSegmentHomeReplicator(segment, holders);
+      if (i % 1000 == 0) {
+        System.out.println(i + " th.. took " + (System.currentTimeMillis() - prev) + " msec");
+        prev = System.currentTimeMillis();
+      }
+    }
+    System.out.println("Total " + (System.currentTimeMillis() - start) + " msec");
   }
 }

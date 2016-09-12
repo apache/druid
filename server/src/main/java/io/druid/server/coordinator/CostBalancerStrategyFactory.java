@@ -27,17 +27,19 @@ import java.util.concurrent.Executors;
 
 public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
+  private final int costBalancerStrategyThreadCount;
   private final ListeningExecutorService exec;
 
   public CostBalancerStrategyFactory(int costBalancerStrategyThreadCount)
   {
+    this.costBalancerStrategyThreadCount = costBalancerStrategyThreadCount;
     this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(costBalancerStrategyThreadCount));
   }
 
   @Override
   public CostBalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerStrategy(exec);
+    return new CostBalancerStrategy(exec, costBalancerStrategyThreadCount);
   }
 
   @Override

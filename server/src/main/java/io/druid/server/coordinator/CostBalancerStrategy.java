@@ -19,7 +19,7 @@
 
 package io.druid.server.coordinator;
 
-import com.google.common.base.Predicates;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
@@ -32,6 +32,7 @@ import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -70,7 +71,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     final double start = (intervalB.getStartMillis() - t0) / MILLIS_FACTOR;
     final double end = (intervalB.getEndMillis() - t0) / MILLIS_FACTOR;
 
-    // constant cost-multiplier for segments of the same datsource
+    // constant cost-multiplier for segments of the same datasource
     final double multiplier = segmentA.getDataSource().equals(segmentB.getDataSource()) ? 2.0 : 1.0;
 
     return INV_LAMBDA_SQUARE * intervalCost(t1, start, end) * multiplier;
@@ -172,10 +173,12 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   private final ListeningExecutorService exec;
+  private final int threadCount;
 
-  public CostBalancerStrategy(ListeningExecutorService exec)
+  public CostBalancerStrategy(ListeningExecutorService exec, int threadCount)
   {
     this.exec = exec;
+    this.threadCount = threadCount;
   }
 
   @Override
@@ -199,11 +202,18 @@ public class CostBalancerStrategy implements BalancerStrategy
     return chooseBestServer(proposalSegment, serverHolders, true).rhs;
   }
 
-  static double computeJointSegmentsCost(final DataSegment segment, final Iterable<DataSegment> segmentSet)
+  static double computeJointSegmentsCost(
+      final DataSegment segment,
+      final Iterable<DataSegment> segmentSet,
+      final double currentCost
+  )
   {
     double totalCost = 0;
     for (DataSegment s : segmentSet) {
       totalCost += computeJointSegmentsCost(segment, s);
+      if (totalCost > currentCost) {
+        break;
+      }
     }
     return totalCost;
   }
@@ -228,7 +238,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     for (ServerHolder server : serverHolders) {
       Iterable<DataSegment> segments = server.getServer().getSegments().values();
       for (DataSegment s : segments) {
-        cost += computeJointSegmentsCost(s, segments);
+        cost += computeJointSegmentsCost(s, segments, Double.POSITIVE_INFINITY);
       }
     }
     return cost;
@@ -278,36 +288,37 @@ public class CostBalancerStrategy implements BalancerStrategy
     );
   }
 
-  protected double computeCost(
-      final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer
-  )
+  protected double computeCost(final DataSegment proposalSegment, final ServerHolder server, final double currentCost)
   {
-    final long proposalSegmentSize = proposalSegment.getSize();
+    final Map<String, DataSegment> segments = server.getServer().getSegments();
+    final DataSegment stored = segments.get(proposalSegment.getIdentifier());
 
-    // (optional) Don't include server if it is already serving segment
-    if (!includeCurrentServer && server.isServingSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
-
-    // Don't calculate cost if the server doesn't have enough space or is loading the segment
-    if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
+    final Iterable<DataSegment> target;
+    if (stored != null) {
+      target = Iterables.filter(
+          segments.values(), new Predicate<DataSegment>()
+          {
+            @Override
+            public boolean apply(DataSegment input)
+            {
+              return input != stored;
+            }
+          }
+      );
+    } else {
+      target = segments.values();
     }
 
     // The contribution to the total cost of a given server by proposing to move the segment to that server is...
     double cost = 0d;
 
     // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
-    cost += computeJointSegmentsCost(
-        proposalSegment,
-        Iterables.filter(
-            server.getServer().getSegments().values(),
-            Predicates.not(Predicates.equalTo(proposalSegment))
-        )
-    );
+    cost += computeJointSegmentsCost(proposalSegment, target, currentCost);
 
     //  plus the costs of segments that will be loaded
-    cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
+    if (cost < currentCost) {
+      cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad(), currentCost);
+    }
 
     return cost;
   }
@@ -316,22 +327,47 @@ public class CostBalancerStrategy implements BalancerStrategy
    * For assignment, we want to move to the lowest cost server that isn't already serving the segment.
    *
    * @param proposalSegment A DataSegment that we are proposing to move.
-   * @param serverHolders   An iterable of ServerHolders for a particular tier.
+   * @param serverHolders   A list of ServerHolders for a particular tier.
    *
    * @return A ServerHolder with the new home for a segment.
    */
 
   protected Pair<Double, ServerHolder> chooseBestServer(
       final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders,
+      final List<ServerHolder> serverHolders,
       final boolean includeCurrentServer
   )
   {
+    final long proposalSegmentSize = proposalSegment.getSize();
+    final List<ServerHolder> filtered = Lists.newArrayList(
+        Iterables.filter(
+            serverHolders, new Predicate<ServerHolder>()
+            {
+              @Override
+              public boolean apply(ServerHolder server)
+              {
+                // (optional) Don't include server if it is already serving segment
+                if (!includeCurrentServer && server.isServingSegment(proposalSegment)) {
+                  return false;
+                }
+                // Don't calculate cost if the server doesn't have enough space or is loading the segment
+                if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
+                  return false;
+                }
+                return true;
+              }
+            }
+        )
+    );
+
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
+
+    int numServer = filtered.size();
+    int size = numServer / threadCount + (numServer % threadCount == 0 ? 0 : 1);
 
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
 
-    for (final ServerHolder server : serverHolders) {
+    for (final List<ServerHolder> servers : Lists.partition(filtered, size)) {
       futures.add(
           exec.submit(
               new Callable<Pair<Double, ServerHolder>>()
@@ -339,7 +375,16 @@ public class CostBalancerStrategy implements BalancerStrategy
                 @Override
                 public Pair<Double, ServerHolder> call() throws Exception
                 {
-                  return Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server);
+                  ServerHolder currentServer = null;
+                  double currentCost = Double.POSITIVE_INFINITY;
+                  for (ServerHolder server : servers) {
+                    double cost = computeCost(proposalSegment, server, currentCost);
+                    if (currentServer == null || cost < currentCost) {
+                      currentServer = server;
+                      currentCost = cost;
+                    }
+                  }
+                  return Pair.of(currentCost, currentServer);
                 }
               }
           )
