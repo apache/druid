@@ -19,38 +19,76 @@
 
 package io.druid.server.router;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.topn.TopNQueryBuilder;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.rules.ExpectedException;
 
 import java.util.LinkedHashMap;
 
 public class JavaScriptTieredBrokerSelectorStrategyTest
 {
-  final TieredBrokerSelectorStrategy jsStrategy = new JavaScriptTieredBrokerSelectorStrategy(
-      "function (config, query) { if (query.getAggregatorSpecs && query.getDimensionSpec && query.getDimensionSpec().getDimension() == 'bigdim' && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }"
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  private final TieredBrokerSelectorStrategy STRATEGY = new JavaScriptTieredBrokerSelectorStrategy(
+      "function (config, query) { if (query.getAggregatorSpecs && query.getDimensionSpec && query.getDimensionSpec().getDimension() == 'bigdim' && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }",
+      JavaScriptConfig.getDefault()
   );
 
   @Test
   public void testSerde() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            JavaScriptConfig.class,
+            JavaScriptConfig.getDefault()
+        )
+    );
+
     Assert.assertEquals(
-        jsStrategy,
+        STRATEGY,
         mapper.readValue(
-            mapper.writeValueAsString(jsStrategy),
+            mapper.writeValueAsString(STRATEGY),
             JavaScriptTieredBrokerSelectorStrategy.class
         )
     );
+  }
+
+  @Test
+  public void testDisabled() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            JavaScriptConfig.class,
+            new JavaScriptConfig(true)
+        )
+    );
+
+    final String strategyString = mapper.writeValueAsString(STRATEGY);
+
+    expectedException.expect(JsonMappingException.class);
+    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(IllegalStateException.class));
+    expectedException.expectMessage("JavaScript is disabled");
+
+    mapper.readValue(strategyString, JavaScriptTieredBrokerSelectorStrategy.class);
   }
 
   @Test
@@ -77,19 +115,19 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
     };
 
     final TopNQueryBuilder queryBuilder = new TopNQueryBuilder().dataSource("test")
-                                        .intervals("2014/2015")
-                                        .dimension("bigdim")
-                                        .metric("count")
-                                        .threshold(1)
-                                        .aggregators(
-                                            ImmutableList.<AggregatorFactory>of(
-                                                new CountAggregatorFactory("count")
-                                            )
-                                        );
+                                                                .intervals("2014/2015")
+                                                                .dimension("bigdim")
+                                                                .metric("count")
+                                                                .threshold(1)
+                                                                .aggregators(
+                                                                    ImmutableList.<AggregatorFactory>of(
+                                                                        new CountAggregatorFactory("count")
+                                                                    )
+                                                                );
 
     Assert.assertEquals(
         Optional.absent(),
-        jsStrategy.getBrokerServiceName(
+        STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder.build()
         )
@@ -98,7 +136,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
 
     Assert.assertEquals(
         Optional.absent(),
-        jsStrategy.getBrokerServiceName(
+        STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
             Druids.newTimeBoundaryQueryBuilder().dataSource("test").bound("maxTime").build()
         )
@@ -106,7 +144,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
 
     Assert.assertEquals(
         Optional.of("druid/slowBroker"),
-        jsStrategy.getBrokerServiceName(
+        STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder.aggregators(
                 ImmutableList.of(
@@ -122,7 +160,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
     tierBrokerMap.clear();
     Assert.assertEquals(
         Optional.of("druid/broker"),
-        jsStrategy.getBrokerServiceName(
+        STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder.aggregators(
                 ImmutableList.of(

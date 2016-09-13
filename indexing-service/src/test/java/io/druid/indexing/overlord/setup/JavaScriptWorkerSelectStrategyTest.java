@@ -19,6 +19,8 @@
 
 package io.druid.indexing.overlord.setup;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -26,15 +28,21 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.js.JavaScriptConfig;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class JavaScriptWorkerSelectStrategyTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
-  final JavaScriptWorkerSelectStrategy strategy = new JavaScriptWorkerSelectStrategy(
+  private final JavaScriptWorkerSelectStrategy STRATEGY = new JavaScriptWorkerSelectStrategy(
       "function (config, zkWorkers, task) {\n"
       + "var batch_workers = new java.util.ArrayList();\n"
       + "batch_workers.add(\"10.0.0.1\");\n"
@@ -60,20 +68,48 @@ public class JavaScriptWorkerSelectStrategyTest
       + "  }\n"
       + "}\n"
       + "return null;\n"
-      + "}"
+      + "}",
+      JavaScriptConfig.getDefault()
   );
 
   @Test
   public void testSerde() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            JavaScriptConfig.class,
+            JavaScriptConfig.getDefault()
+        )
+    );
+
     Assert.assertEquals(
-        strategy,
+        STRATEGY,
         mapper.readValue(
-            mapper.writeValueAsString(strategy),
+            mapper.writeValueAsString(STRATEGY),
             JavaScriptWorkerSelectStrategy.class
         )
     );
+  }
+
+  @Test
+  public void testDisabled() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            JavaScriptConfig.class,
+            new JavaScriptConfig(true)
+        )
+    );
+
+    final String strategyString = mapper.writeValueAsString(STRATEGY);
+
+    expectedException.expect(JsonMappingException.class);
+    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(IllegalStateException.class));
+    expectedException.expectMessage("JavaScript is disabled");
+
+    mapper.readValue(strategyString, JavaScriptWorkerSelectStrategy.class);
   }
 
   @Test
@@ -86,7 +122,7 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.3", worker2
     );
 
-    ImmutableWorkerInfo workerForBatchTask = strategy.findWorkerForTask(
+    ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
@@ -94,7 +130,7 @@ public class JavaScriptWorkerSelectStrategyTest
     // batch tasks should be sent to worker1
     Assert.assertEquals(worker1, workerForBatchTask);
 
-    ImmutableWorkerInfo workerForOtherTask = strategy.findWorkerForTask(
+    ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("other_type")
@@ -110,7 +146,7 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, true, true),
         "10.0.0.2", createMockWorker(1, true, true)
     );
-    Optional<ImmutableWorkerInfo> workerForOtherTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("other_type")
@@ -125,14 +161,14 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, true, false),
         "10.0.0.4", createMockWorker(1, true, false)
     );
-    Optional<ImmutableWorkerInfo> workerForBatchTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
     Assert.assertFalse(workerForBatchTask.isPresent());
 
-    Optional<ImmutableWorkerInfo> workerForOtherTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("otherTask")
@@ -148,14 +184,14 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, false, true),
         "10.0.0.4", createMockWorker(1, false, true)
     );
-    Optional<ImmutableWorkerInfo> workerForBatchTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
     Assert.assertFalse(workerForBatchTask.isPresent());
 
-    Optional<ImmutableWorkerInfo> workerForOtherTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForOtherTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("otherTask")
@@ -172,7 +208,7 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.1", createMockWorker(1, true, true),
         "10.0.0.2", createMockWorker(5, true, true)
     );
-    Optional<ImmutableWorkerInfo> workerForBatchTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForBatchTask = STRATEGY.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")

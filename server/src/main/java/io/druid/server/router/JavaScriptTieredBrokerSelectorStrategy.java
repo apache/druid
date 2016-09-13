@@ -19,11 +19,14 @@
 
 package io.druid.server.router;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.metamx.common.ISE;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.Query;
 
 import javax.script.Compilable;
@@ -43,9 +46,16 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
   private final String function;
 
   @JsonCreator
-  public JavaScriptTieredBrokerSelectorStrategy(@JsonProperty("function") String fn)
+  public JavaScriptTieredBrokerSelectorStrategy(
+      @JsonProperty("function") String fn,
+      @JacksonInject JavaScriptConfig config
+  )
   {
     Preconditions.checkNotNull(fn, "function must not be null");
+
+    if (config.isDisabled()) {
+      throw new ISE("JavaScript is disabled");
+    }
 
     final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
     try {
