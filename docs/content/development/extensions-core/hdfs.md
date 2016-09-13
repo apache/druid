@@ -14,8 +14,11 @@ Make sure to [include](../../operations/including-extensions.html) `druid-hdfs-s
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|hdfs||Must be set.|
 |`druid.storage.storageDirectory`||Directory for storing segments.|Must be set.|
+|`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name |empty|
+|`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.headlessUser.keytab`|Path to keytab file|empty|
 
-If you are using the Hadoop indexer, set your output directory to be a location on Hadoop and it will work
+If you are using the Hadoop indexer, set your output directory to be a location on Hadoop and it will work.
+If you want to eagerly authenticate against a secured hadoop/hdfs cluster you must set `druid.hadoop.security.kerberos.principal` and `druid.hadoop.security.kerberos.keytab`, this is an alternative to the cron job method that runs `kinit` command periodically.  
 
 ## Google Cloud Storage
 
