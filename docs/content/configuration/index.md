@@ -350,7 +350,7 @@ the following properties.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.javascript.disabled`|Set to "true" to disable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, and post-aggregator.|false|
+|`druid.javascript.disabled`|Set to "true" to disable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, post-aggregator, router strategy, and worker selection strategy.|false|
 
 <div class="note info">
 Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
