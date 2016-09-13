@@ -89,8 +89,8 @@ The following matches any dimension values for the dimension `name` between `'ba
 The JavaScript filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
 <div class="note info">
-Please refer to the Druid [JavaScript programming guide](../development/javascript.html) for guidelines about using
-Druid's JavaScript functionality.
+Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
+about using Druid's JavaScript functionality.
 </div>
 
 ### Extraction filter

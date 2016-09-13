@@ -108,8 +108,8 @@ JavaScript functions are expected to return floating-point values.
 ```
 
 <div class="note info">
-Please refer to the Druid [JavaScript programming guide](../development/javascript.html) for guidelines about using
-Druid's JavaScript functionality.
+Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
+about using Druid's JavaScript functionality.
 </div>
 
 ## Approximate Aggregations
