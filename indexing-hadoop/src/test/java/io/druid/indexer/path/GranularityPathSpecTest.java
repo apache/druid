@@ -120,7 +120,8 @@ public class GranularityPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null
+        )
     );
 
     granularityPathSpec.setDataGranularity(Granularity.HOUR);
