@@ -21,6 +21,7 @@ package io.druid.data.input.avro;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.AvroStreamInputRowParserTest;
 import io.druid.data.input.SomeAvroDatum;
 import io.druid.jackson.DefaultObjectMapper;
@@ -37,30 +38,40 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class SimpleAvroBytesDecoderTest
+public class InlineSchemasAvroBytesDecoderTest
 {
   @Test
   public void testSerde() throws Exception
   {
     String jsonStr = "{\n"
-                     + "  \"type\": \"schema_inline\",\n"
-                     + "  \"schema\": {\n"
-                     + "    \"namespace\": \"io.druid.data.input\",\n"
-                     + "   \"name\": \"SomeData\",\n"
-                     + "    \"type\": \"record\",\n"
-                     + "    \"fields\" : [\n"
-                     + "      {\"name\":\"timestamp\",\"type\":\"long\"},\n"
-                     + "      {\"name\":\"eventType\",\"type\":\"string\"},\n"
-                     + "      {\"name\":\"id\",\"type\":\"long\"}\n"
-                     + "    ]\n"
+                     + "  \"type\": \"multiple_schemas_inline\",\n"
+                     + "  \"schemas\": {\n"
+                     + "    \"5\": {\n"
+                     + "      \"namespace\": \"io.druid.data.input\",\n"
+                     + "      \"name\": \"name5\",\n"
+                     + "      \"type\": \"record\",\n"
+                     + "      \"fields\" : [\n"
+                     + "        {\"name\":\"eventType\",\"type\":\"string\"},\n"
+                     + "        {\"name\":\"id\",\"type\":\"long\"}\n"
+                     + "      ]\n"
+                     + "    },\n"
+                     + "    \"8\": {\n"
+                     + "      \"namespace\": \"io.druid.data.input\",\n"
+                     + "      \"name\": \"name8\",\n"
+                     + "      \"type\": \"record\",\n"
+                     + "      \"fields\" : [\n"
+                     + "       {\"name\":\"eventType\",\"type\":\"string\"},\n"
+                     + "       {\"name\":\"id\",\"type\":\"long\"}\n"
+                     + "      ]\n"
+                     + "    }\n"
                      + "  }\n"
-                     + "}";
+                     + "}\n";
 
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(ObjectMapper.class, mapper)
     );
-    SimpleAvroBytesDecoder actual = (SimpleAvroBytesDecoder) mapper.readValue(
+    InlineSchemasAvroBytesDecoder actual = (InlineSchemasAvroBytesDecoder) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -70,7 +81,8 @@ public class SimpleAvroBytesDecoderTest
         AvroBytesDecoder.class
     );
 
-    Assert.assertEquals(actual.getSchema().get("name"), "SomeData");
+    Assert.assertEquals(actual.getSchemas().get("5").get("name"), "name5");
+    Assert.assertEquals(actual.getSchemas().get("8").get("name"), "name8");
   }
 
   @Test
@@ -81,10 +93,17 @@ public class SimpleAvroBytesDecoderTest
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
 
+    out.write(new byte[]{1});
+    out.write(ByteBuffer.allocate(4).putInt(10).array());
     DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    GenericRecord actual = new SimpleAvroBytesDecoder(schema).parse(ByteBuffer.wrap(out.toByteArray()));
+    GenericRecord actual = new InlineSchemasAvroBytesDecoder(
+        ImmutableMap.of(
+            10,
+            schema
+        )
+    ).parse(ByteBuffer.wrap(out.toByteArray()));
     Assert.assertEquals(someAvroDatum.get("id"), actual.get("id"));
   }
 }

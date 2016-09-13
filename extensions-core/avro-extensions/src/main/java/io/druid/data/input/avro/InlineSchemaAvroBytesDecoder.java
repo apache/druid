@@ -41,15 +41,15 @@ import java.util.Map;
 
 /**
  */
-public class SimpleAvroBytesDecoder implements AvroBytesDecoder
+public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
 {
-  private static final Logger logger = new Logger(SimpleAvroBytesDecoder.class);
+  private static final Logger logger = new Logger(InlineSchemaAvroBytesDecoder.class);
 
   private final Schema schemaObj;
   private final Map<String, Object> schema;
 
   @JsonCreator
-  public SimpleAvroBytesDecoder(
+  public InlineSchemaAvroBytesDecoder(
       @JacksonInject @Json ObjectMapper mapper,
       @JsonProperty("schema") Map<String, Object> schema
   ) throws Exception
@@ -65,7 +65,7 @@ public class SimpleAvroBytesDecoder implements AvroBytesDecoder
 
   //For UT only
   @VisibleForTesting
-  SimpleAvroBytesDecoder(Schema schemaObj)
+  InlineSchemaAvroBytesDecoder(Schema schemaObj)
   {
     this.schemaObj = schemaObj;
     this.schema = null;
