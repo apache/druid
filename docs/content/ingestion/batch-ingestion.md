@@ -287,6 +287,19 @@ classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.r
 loads](../tutorials/cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
 `/etc/hadoop/conf` on your EMR master.
 
+### Secured Hadoop Cluster
+
+By default druid can use the exisiting TGT kerberos ticket available in local kerberos key cache.
+Although TGT ticket has a limited life cycle, 
+therefore you need to call `kinit` command periodically to ensure validity of TGT ticket.
+To avoid this extra external cron job script calling `kinit` periodically,
+ you can provide the principal name and keytab location and druid will do the authentication transparently at startup and job launching time.   
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name |empty|
+|`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.headlessUser.keytab`|Path to keytab file|empty|
+
 #### Loading from S3 with EMR
 
 - In the `jobProperties` field in the `tuningConfig` section of your Hadoop indexing task, add:
