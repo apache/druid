@@ -42,7 +42,7 @@ public class StorageLocationTest
   public void testStorageLocation() throws Exception
   {
     long expectedAvail = 1000L;
-    File location = temporaryFolder.newFolder("/tmp");
+    File location = temporaryFolder.newFolder();
     StorageLocation loc = new StorageLocation(location, expectedAvail);
 
     verifyLoc(expectedAvail, loc);

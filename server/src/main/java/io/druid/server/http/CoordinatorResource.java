@@ -51,6 +51,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -226,7 +227,7 @@ public class CoordinatorResource
         StatusResponseHolder response = client.go(
             new Request(
                 HttpMethod.GET,
-                historicalUrl(server)
+                historicalUrl(server).toURL()
             ),
             RESPONSE_HANDLER
         ).get();
@@ -249,10 +250,10 @@ public class CoordinatorResource
     return Response.ok(statusMap).build();
   }
 
-  private URL historicalUrl(DruidServer server)
+  private URI historicalUrl(DruidServer server)
   {
     try {
-      return new URL(String.format("http://%s/druid/historical/v1/localStorageStatus",server.getHost()));
+      return URI.create(String.format("http://%s/druid/historical/v1/localStorageStatus",server.getHost()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
