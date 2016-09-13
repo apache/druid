@@ -196,6 +196,11 @@ Example for the `__time` dimension:
 }
 ```
 
+<div class="note info">
+Please refer to the Druid [JavaScript programming guide](../development/javascript.html) for guidelines about using
+Druid's JavaScript functionality.
+</div>
+
 ### Lookup extraction function
 
 Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
