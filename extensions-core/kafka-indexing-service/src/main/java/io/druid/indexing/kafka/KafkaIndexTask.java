@@ -403,7 +403,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               }
 
               try {
-                final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(record.value())), "row");
+                final byte[] valueBytes = record.value();
+                if (valueBytes == null) {
+                  throw new ParseException("null value");
+                }
+
+                final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(valueBytes)), "row");
 
                 if (!ioConfig.getMinimumMessageTime().isPresent() ||
                     !ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp())) {
