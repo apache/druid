@@ -78,12 +78,8 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ### JavaScript aggregator
 
-Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions).
-
-All JavaScript functions must return numerical values.
-
-JavaScript aggregators are much slower than the native aggregators and if performance is critical, you should implement 
-your functionality as a native aggregator.
+Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your
+JavaScript functions are expected to return floating-point values.
 
 ```json
 { "type": "javascript",
@@ -111,8 +107,10 @@ your functionality as a native aggregator.
 }
 ```
 
-The JavaScript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
-use than a native aggregator.
+<div class="note info">
+Please refer to the Druid [JavaScript programming guide](../development/javascript.html) for guidelines about using
+Druid's JavaScript functionality.
+</div>
 
 ## Approximate Aggregations
 
