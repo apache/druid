@@ -95,30 +95,31 @@ public class JobHelper
   /**
    * Dose authenticate against a secured hadoop cluster
    * In case of any bug fix make sure to fix the code at HdfsStorageAuthentication#authenticate as well.
+   *
    * @param config containing the principal name and keytab path.
    */
   public static void authenticate(HadoopDruidIndexerConfig config)
   {
     String principal = config.HADOOP_KERBEROS_CONFIG.getPrincipal();
     String keytab = config.HADOOP_KERBEROS_CONFIG.getKeytab();
-    if (Strings.isNullOrEmpty(principal) || Strings.isNullOrEmpty(keytab)) {
-      return;
-    }
-    Configuration conf = new Configuration();
-    UserGroupInformation.setConfiguration(conf);
-    if (UserGroupInformation.isSecurityEnabled()) {
-      try {
-        if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
-            || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
-          log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
-          UserGroupInformation.loginUserFromKeytab(principal, keytab);
+    if (!Strings.isNullOrEmpty(principal) && !Strings.isNullOrEmpty(keytab)) {
+      Configuration conf = new Configuration();
+      UserGroupInformation.setConfiguration(conf);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        try {
+          if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
+              || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
+            log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
+            UserGroupInformation.loginUserFromKeytab(principal, keytab);
+          }
         }
-      }
-      catch (IOException e) {
-        throw new ISE(e, "Failed to authenticate user principal [%s] with keytab [%s]", principal, keytab);
+        catch (IOException e) {
+          throw new ISE(e, "Failed to authenticate user principal [%s] with keytab [%s]", principal, keytab);
+        }
       }
     }
   }
+
   /**
    * Uploads jar files to hdfs and configures the classpath.
    * Snapshot jar files are uploaded to intermediateClasspath and not shared across multiple jobs.
