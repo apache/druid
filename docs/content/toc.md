@@ -87,6 +87,7 @@ layout: toc
   * [Overview](/docs/VERSION/development/overview.html)
   * [Libraries](/docs/VERSION/development/libraries.html)
   * [Extensions](/docs/VERSION/development/extensions.html)
+  * [JavaScript](/docs/VERSION/development/javascript.html)
   * [Build From Source](/docs/VERSION/development/build.html)
   * [Versioning](/docs/VERSION/development/versioning.html)
   * [Integration](/docs/VERSION/development/integrating-druid-with-other-technologies.html)
