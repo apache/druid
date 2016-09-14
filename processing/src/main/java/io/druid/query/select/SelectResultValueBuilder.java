@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Queues;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import com.metamx.common.guava.Comparators;
 import io.druid.query.Result;
@@ -32,6 +33,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 
 /**
  */
@@ -59,6 +61,8 @@ public class SelectResultValueBuilder
   protected final DateTime timestamp;
   protected final PagingSpec pagingSpec;
   protected final boolean descending;
+  protected Set<String> dimensions;
+  protected Set<String> metrics;
 
   protected final Queue<EventHolder> pQueue;
   protected final Map<String, Integer> pagingIdentifiers;
@@ -68,6 +72,8 @@ public class SelectResultValueBuilder
     this.timestamp = timestamp;
     this.pagingSpec = pagingSpec;
     this.descending = descending;
+    this.dimensions = Sets.newHashSet();
+    this.metrics = Sets.newHashSet();
     this.pagingIdentifiers = Maps.newLinkedHashMap();
     this.pQueue = instantiatePQueue();
   }
@@ -81,12 +87,32 @@ public class SelectResultValueBuilder
   {
     pagingIdentifiers.put(segmentId, lastOffset);
   }
+  
+  public void addDimension(String dimension)
+  {
+    dimensions.add(dimension);
+  }
+
+  public void addDimensions(Set<String> dimensions)
+  {
+    this.dimensions.addAll(dimensions);
+  }
+
+  public void addMetric(String metric)
+  {
+    metrics.add(metric);
+  }
+
+  public void addMetrics(Set<String> metrics)
+  {
+    this.metrics.addAll(metrics);
+  }
 
   public Result<SelectResultValue> build()
   {
     return new Result<SelectResultValue>(
         timestamp,
-        new SelectResultValue(pagingIdentifiers, getEventHolders())
+        new SelectResultValue(pagingIdentifiers, dimensions, metrics, getEventHolders())
     );
   }
 

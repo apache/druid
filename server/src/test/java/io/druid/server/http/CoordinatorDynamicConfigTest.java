@@ -19,8 +19,10 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.metamx.common.IAE;
 import io.druid.segment.TestHelper;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.junit.Assert;
@@ -57,7 +59,7 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2")),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false),
         actual
     );
   }
@@ -89,16 +91,66 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2")),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false),
         actual
     );
+  }
+
+  @Test
+  public void testSerdeWithKillAllDataSources() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"millisToWaitBeforeDeleting\": 1,\n"
+                     + "  \"mergeBytesLimit\": 1,\n"
+                     + "  \"mergeSegmentsLimit\" : 1,\n"
+                     + "  \"maxSegmentsToMove\": 1,\n"
+                     + "  \"replicantLifetime\": 1,\n"
+                     + "  \"replicationThrottleLimit\": 1,\n"
+                     + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"emitBalancingStats\": true,\n"
+                     + "  \"killAllDataSources\": true\n"
+                     + "}\n";
+
+    ObjectMapper mapper = TestHelper.getObjectMapper();
+    CoordinatorDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                CoordinatorDynamicConfig.class
+            )
+        ),
+        CoordinatorDynamicConfig.class
+    );
+
+    Assert.assertEquals(
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true),
+        actual
+    );
+
+
+
+    //ensure whitelist is empty when killAllDataSources is true
+    try {
+      jsonStr = "{\n"
+                + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+                + "  \"killAllDataSources\": true\n"
+                + "}\n";
+      mapper.readValue(
+          jsonStr,
+          CoordinatorDynamicConfig.class
+      );
+
+      Assert.fail("deserialization should fail.");
+    } catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IAE);
+    }
   }
 
   @Test
   public void testBuilderDefaults()
   {
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null),
+        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false),
         new CoordinatorDynamicConfig.Builder().build()
     );
   }
@@ -106,8 +158,8 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testEqualsAndHashCodeSanity()
   {
-    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null);
-    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null);
+    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false);
+    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, false);
 
     Assert.assertEquals(config1, config2);
     Assert.assertEquals(config1.hashCode(), config2.hashCode());

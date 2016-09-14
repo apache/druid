@@ -88,6 +88,8 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -511,7 +513,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             response.getContent()
         );
 
-        if (!response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+        if (!HttpResponseStatus.OK.equals(response.getStatus())) {
           log.error("Shutdown failed for %s! Are you sure the task was running?", taskId);
         }
       }
@@ -604,6 +606,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               // make a copy of the pending tasks because tryAssignTask may delete tasks from pending and move them
               // into running status
               List<RemoteTaskRunnerWorkItem> copy = Lists.newArrayList(pendingTasks.values());
+              sortByInsertionTime(copy);
+
               for (RemoteTaskRunnerWorkItem taskRunnerWorkItem : copy) {
                 String taskId = taskRunnerWorkItem.getTaskId();
                 if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
@@ -638,6 +642,20 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             return null;
           }
         }
+    );
+  }
+
+  @VisibleForTesting
+  static void sortByInsertionTime(List<RemoteTaskRunnerWorkItem> tasks)
+  {
+    Collections.sort(tasks, new Comparator<RemoteTaskRunnerWorkItem>()
+                     {
+                       @Override
+                       public int compare(RemoteTaskRunnerWorkItem o1, RemoteTaskRunnerWorkItem o2)
+                       {
+                         return o1.getQueueInsertionTime().compareTo(o2.getQueueInsertionTime());
+                       }
+                     }
     );
   }
 
@@ -705,49 +723,46 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       ZkWorker assignedWorker = null;
       Optional<ImmutableWorkerInfo> immutableZkWorker = null;
       try {
-        immutableZkWorker = strategy.findWorkerForTask(
-            config,
-            ImmutableMap.copyOf(
-                Maps.transformEntries(
-                    Maps.filterEntries(
-                        zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
-                        {
-                          @Override
-                          public boolean apply(Map.Entry<String, ZkWorker> input)
+        synchronized (workersWithUnacknowledgedTask) {
+          immutableZkWorker = strategy.findWorkerForTask(
+              config,
+              ImmutableMap.copyOf(
+                  Maps.transformEntries(
+                      Maps.filterEntries(
+                          zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
                           {
-                            return !lazyWorkers.containsKey(input.getKey()) &&
-                                   !workersWithUnacknowledgedTask.containsKey(input.getKey());
+                            @Override
+                            public boolean apply(Map.Entry<String, ZkWorker> input)
+                            {
+                              return !lazyWorkers.containsKey(input.getKey()) &&
+                                     !workersWithUnacknowledgedTask.containsKey(input.getKey());
+                            }
                           }
-                        }
-                    ),
-                    new Maps.EntryTransformer<String, ZkWorker, ImmutableWorkerInfo>()
-                    {
-                      @Override
-                      public ImmutableWorkerInfo transformEntry(
-                          String key, ZkWorker value
-                      )
+                      ),
+                      new Maps.EntryTransformer<String, ZkWorker, ImmutableWorkerInfo>()
                       {
-                        return value.toImmutable();
+                        @Override
+                        public ImmutableWorkerInfo transformEntry(
+                            String key, ZkWorker value
+                        )
+                        {
+                          return value.toImmutable();
+                        }
                       }
-                    }
-                )
-            ),
-            task
-        );
+                  )
+              ),
+              task
+          );
 
-        if (immutableZkWorker.isPresent()) {
-          if (workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
-              == null) {
+          if (immutableZkWorker.isPresent() &&
+              workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
+                == null) {
             assignedWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
-            return announceTask(task, assignedWorker, taskRunnerWorkItem);
-          } else {
-            log.debug(
-                "Lost race to run task [%s] on worker [%s]. Workers to ack tasks are [%s].",
-                task.getId(),
-                immutableZkWorker.get().getWorker().getHost(),
-                workersWithUnacknowledgedTask
-            );
           }
+        }
+
+        if (assignedWorker != null) {
+          return announceTask(task, assignedWorker, taskRunnerWorkItem);
         } else {
           log.debug(
               "Unsuccessful task-assign attempt for task [%s] on workers [%s]. Workers to ack tasks are [%s].",
@@ -762,10 +777,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       finally {
         if (assignedWorker != null) {
           workersWithUnacknowledgedTask.remove(assignedWorker.getWorker().getHost());
-        }
-
-        if(immutableZkWorker.isPresent()) {
-          //if this attempt lost the race to run the task then there might be another worker available to try on.
           //if this attempt won the race to run the task then other task might be able to use this worker now after task ack.
           runPendingTasks();
         }

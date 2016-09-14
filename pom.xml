@@ -58,15 +58,18 @@
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.27.9</metamx.java-util.version>
+        <metamx.java-util.version>0.27.10</metamx.java-util.version>
         <apache.curator.version>2.10.0</apache.curator.version>
+        <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.5</log4j.version>
         <slf4j.version>1.7.12</slf4j.version>
+        <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
+        <hive.version>2.0.0</hive.version>
     </properties>
 
     <modules>
@@ -86,6 +89,7 @@
         <module>extensions-core/datasketches</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
+        <module>extensions-core/stats</module>
         <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
@@ -104,6 +108,7 @@
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
+        <module>extensions-contrib/orc-extensions</module>
     </modules>
 
     <dependencyManagement>
@@ -258,17 +263,17 @@
             <dependency>
                 <groupId>com.google.inject</groupId>
                 <artifactId>guice</artifactId>
-                <version>4.0-beta</version>
+                <version>${guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-servlet</artifactId>
-                <version>4.0-beta</version>
+                <version>${guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-multibindings</artifactId>
-                <version>4.0-beta</version>
+                <version>${guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>

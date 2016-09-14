@@ -106,7 +106,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
     );
 
     this.queueBufferLength = queueBufferLength == null ? DEFAULT_QUEUE_BUFFER_LENGTH : queueBufferLength;
-    Preconditions.checkArgument(queueBufferLength > 0, "queueBufferLength must be positive number");
+    Preconditions.checkArgument(this.queueBufferLength > 0, "queueBufferLength must be positive number");
     log.info("queueBufferLength loaded as[%s]", this.queueBufferLength);
 
     this.earliest = resetOffsetToEarliest == null ? true : resetOffsetToEarliest.booleanValue();
@@ -153,7 +153,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       );
       Long startOffset = lastOffsets.get(partition);
       PartitionConsumerWorker worker = new PartitionConsumerWorker(
-          feed, kafkaSimpleConsumer, partition, startOffset == null ? 0 : startOffset
+          feed, kafkaSimpleConsumer, partition, startOffset == null ? -1 : startOffset
       );
       consumerWorkers.add(worker);
     }

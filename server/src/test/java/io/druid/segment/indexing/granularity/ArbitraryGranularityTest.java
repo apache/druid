@@ -49,6 +49,8 @@ public class ArbitraryGranularityTest
         new Interval("2012-01-01T00Z/2012-01-03T00Z")
     ));
 
+    Assert.assertTrue(spec.isRollup());
+
     Assert.assertEquals(
         Lists.newArrayList(
             new Interval("2012-01-01T00Z/2012-01-03T00Z"),
@@ -120,6 +122,21 @@ public class ArbitraryGranularityTest
     }
 
     Assert.assertTrue("Exception thrown", thrown);
+  }
+
+  @Test
+  public void testRollupSetting()
+  {
+    List<Interval> intervals = Lists.newArrayList(
+        new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+        new Interval("2012-02-01T00Z/2012-03-01T00Z"),
+        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+    );
+    final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularities.NONE, false, intervals);
+
+    Assert.assertFalse(spec.isRollup());
   }
 
   @Test

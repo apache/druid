@@ -47,6 +47,7 @@ layout: toc
   * [Joins](/docs/VERSION/querying/joins.html)
   * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
   * [Caching](/docs/VERSION/querying/caching.html)
+  * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
 
 ## Design
   * [Overview](/docs/VERSION/design/design.html)
@@ -86,6 +87,7 @@ layout: toc
   * [Overview](/docs/VERSION/development/overview.html)
   * [Libraries](/docs/VERSION/development/libraries.html)
   * [Extensions](/docs/VERSION/development/extensions.html)
+  * [JavaScript](/docs/VERSION/development/javascript.html)
   * [Build From Source](/docs/VERSION/development/build.html)
   * [Versioning](/docs/VERSION/development/versioning.html)
   * [Integration](/docs/VERSION/development/integrating-druid-with-other-technologies.html)

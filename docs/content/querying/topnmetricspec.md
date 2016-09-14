@@ -28,38 +28,27 @@ The metric field can also be given as a JSON object. The grammar for dimension v
 |type|this indicates a numeric sort|yes|
 |metric|the actual metric field in which results will be sorted by|yes|
 
-## Lexicographic TopNMetricSpec
+## Dimension TopNMetricSpec
 
-The grammar for dimension values sorted lexicographically is as follows:
+This metric specification sorts TopN results by dimension value, using one of the sorting orders described here: [Sorting Orders](./sorting-orders.html)
+
+|property|type|description|required?|
+|--------|----|-----------|---------|
+|type|String|this indicates a sort a dimension's values|yes, must be 'dimension'|
+|ordering|String|Specifies the sorting order. Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen". See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
+|previousStop|String|the starting point of the sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
+
+The following metricSpec uses lexicographic sorting.
 
 ```json
 "metric": {
-    "type": "lexicographic",
+    "type": "dimension",
+    "ordering": "lexicographic",
     "previousStop": "<previousStop_value>"
 }
 ```
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|this indicates a lexicographic sort|yes|
-|previousStop|the starting point of the lexicographic sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
-
-## AlphaNumeric TopNMetricSpec
-
-Sort dimension values in alpha-numeric order, i.e treating numbers differently from other characters in sorting the values.
-The algorithm is based on [https://github.com/amjjd/java-alphanum](https://github.com/amjjd/java-alphanum).
-
-```json
-"metric": {
-    "type": "alphaNumeric",
-    "previousStop": "<previousStop_value>"
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|this indicates an alpha-numeric sort|yes|
-|previousStop|the starting point of the alpha-numeric sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
+Note that in earlier versions of Druid, the functionality provided by the DimensionTopNMetricSpec was handled by two separate spec types, Lexicographic and Alphanumeric (when only two sorting orders were supported). These spec types have been deprecated but are still usable.
 
 ## Inverted TopNMetricSpec
 

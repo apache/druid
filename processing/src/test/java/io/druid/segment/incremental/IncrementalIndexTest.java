@@ -27,6 +27,7 @@ import com.metamx.common.ISE;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
@@ -75,10 +76,10 @@ public class IncrementalIndexTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     DimensionsSpec dimensions = new DimensionsSpec(
-        Arrays.asList(
+        Arrays.<DimensionSchema>asList(
             new StringDimensionSchema("string"),
-            new FloatDimensionSchema("float"),
-            new LongDimensionSchema("long")
+            new StringDimensionSchema("float"),
+            new StringDimensionSchema("long")
         ), null, null
     );
     AggregatorFactory[] metrics = {
@@ -87,12 +88,13 @@ public class IncrementalIndexTest
             new SelectorDimFilter("billy", "A", null)
         )
     };
-    final IncrementalIndexSchema schema = new IncrementalIndexSchema(
-        0,
-        QueryGranularities.MINUTE,
-        dimensions,
-        metrics
-    );
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(0)
+        .withQueryGranularity(QueryGranularities.MINUTE)
+        .withDimensionsSpec(dimensions)
+        .withMetrics(metrics)
+        .withRollup(true)
+        .build();
 
     final List<Object[]> constructors = Lists.newArrayList();
     for (final Boolean sortFacts : ImmutableList.of(false, true)) {
@@ -214,9 +216,9 @@ public class IncrementalIndexTest
 
     Row row = index.iterator().next();
 
-    Assert.assertArrayEquals(new String[]{"", "", "A"}, (Object[]) row.getRaw("string"));
-    Assert.assertArrayEquals(new Float[]{null, null, Float.MAX_VALUE}, (Object[]) row.getRaw("float"));
-    Assert.assertArrayEquals(new Long[]{null, null, Long.MIN_VALUE}, (Object[]) row.getRaw("long"));
+    Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
+    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.MAX_VALUE)}), row.getRaw("float"));
+    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
   }
 
   @Test

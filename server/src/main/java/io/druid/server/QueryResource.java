@@ -42,6 +42,8 @@ import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
@@ -81,8 +83,9 @@ public class QueryResource
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   private static final String APPLICATION_SMILE = "application/smile";
 
-  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7*1024;
+  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
+  private final QueryToolChestWarehouse warehouse;
   private final ServerConfig config;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -94,6 +97,7 @@ public class QueryResource
 
   @Inject
   public QueryResource(
+      QueryToolChestWarehouse warehouse,
       ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
@@ -104,6 +108,7 @@ public class QueryResource
       AuthConfig authConfig
   )
   {
+    this.warehouse = warehouse;
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
@@ -159,6 +164,7 @@ public class QueryResource
   {
     final long start = System.currentTimeMillis();
     Query query = null;
+    QueryToolChest toolChest = null;
     String queryId = null;
 
     final String reqContentType = req.getContentType();
@@ -187,6 +193,7 @@ public class QueryResource
             )
         );
       }
+      toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
             .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource(), queryId));
@@ -236,6 +243,7 @@ public class QueryResource
 
       try {
         final Query theQuery = query;
+        final QueryToolChest theToolChest = toolChest;
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -252,12 +260,12 @@ public class QueryResource
 
                     final long queryTime = System.currentTimeMillis() - start;
                     emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
+                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
                                     .setDimension("success", "true")
                                     .build("query/time", queryTime)
                     );
                     emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
+                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
                                     .build("query/bytes", os.getCount())
                     );
 
@@ -309,7 +317,7 @@ public class QueryResource
         log.info("%s [%s]", e.getMessage(), queryId);
         final long queryTime = System.currentTimeMillis() - start;
         emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+            DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
                         .setDimension("success", "false")
                         .build("query/time", queryTime)
         );
@@ -337,11 +345,7 @@ public class QueryResource
         log.error(e2, "Unable to log query [%s]!", query);
       }
       return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
+          jsonWriter.writeValueAsBytes(new QueryInterruptedException(e))
       ).build();
     }
     catch (Exception e) {
@@ -356,7 +360,7 @@ public class QueryResource
       try {
         final long queryTime = System.currentTimeMillis() - start;
         emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+            DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
                         .setDimension("success", "false")
                         .build("query/time", queryTime)
         );
@@ -387,11 +391,7 @@ public class QueryResource
          .emit();
 
       return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
+          jsonWriter.writeValueAsBytes(new QueryInterruptedException(e))
       ).build();
     }
     finally {

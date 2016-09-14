@@ -57,7 +57,7 @@ public class GraphiteEmitter implements Emitter
       .setDaemon(true)
       .setNameFormat("GraphiteEmitter-%s")
       .build()); // Thread pool of two in order to schedule flush runnable
-  private AtomicLong  countLostEvents = new AtomicLong(0);
+  private AtomicLong countLostEvents = new AtomicLong(0);
 
   public GraphiteEmitter(
       GraphiteEmitterConfig graphiteEmitterConfig,
@@ -117,14 +117,19 @@ public class GraphiteEmitter implements Emitter
       catch (InterruptedException e) {
         log.error(e, "got interrupted with message [%s]", e.getMessage());
         Thread.currentThread().interrupt();
-
       }
     } else if (!emitterList.isEmpty() && event instanceof AlertEvent) {
       for (Emitter emitter : emitterList) {
         emitter.emit(event);
       }
+    } else if (event instanceof AlertEvent) {
+      AlertEvent alertEvent = (AlertEvent) event;
+      log.error(
+          "The following alert is dropped, description is [%s], severity is [%s]",
+          alertEvent.getDescription(), alertEvent.getSeverity()
+      );
     } else {
-      throw new ISE("unknown event type [%s]", event.getClass());
+      log.error("unknown event type [%s]", event.getClass());
     }
   }
 
@@ -168,7 +173,7 @@ public class GraphiteEmitter implements Emitter
             log.error(e, e.getMessage());
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
-            } else if (e instanceof SocketException){
+            } else if (e instanceof SocketException) {
               pickledGraphite.connect();
             }
           }

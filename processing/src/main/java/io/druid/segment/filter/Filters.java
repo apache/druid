@@ -24,18 +24,28 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.parsers.ParseException;
 import io.druid.query.Query;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -43,6 +53,7 @@ import java.util.List;
  */
 public class Filters
 {
+  public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(ValueType.STRING, ValueType.LONG);
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
   /**
@@ -155,6 +166,48 @@ public class Filters
           }
         }
     );
+  }
+
+  public static ValueMatcher getLongValueMatcher(
+      final LongColumnSelector longSelector,
+      Comparable value
+  )
+  {
+    if (value == null) {
+      return new BooleanValueMatcher(false);
+    }
+
+    final Long longValue = Longs.tryParse(value.toString());
+    if (longValue == null) {
+      return new BooleanValueMatcher(false);
+    }
+
+    return new ValueMatcher()
+    {
+      // store the primitive, so we don't unbox for every comparison
+      final long unboxedLong = longValue.longValue();
+
+      @Override
+      public boolean matches()
+      {
+        return longSelector.get() == unboxedLong;
+      }
+    };
+  }
+
+  public static ValueMatcher getLongPredicateMatcher(
+      final LongColumnSelector longSelector,
+      final DruidLongPredicate predicate
+  )
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return predicate.applyLong(longSelector.get());
+      }
+    };
   }
 
   public static Filter convertToCNFFromQueryContext(Query query, Filter filter)

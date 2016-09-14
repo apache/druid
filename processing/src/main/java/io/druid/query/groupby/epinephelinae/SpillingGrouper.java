@@ -61,15 +61,19 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   private final List<File> files = Lists.newArrayList();
   private final List<Closeable> closeables = Lists.newArrayList();
 
+  private boolean spillingAllowed = false;
+
   public SpillingGrouper(
       final ByteBuffer buffer,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
+      final int bufferGrouperMaxSize,
+      final float bufferGrouperMaxLoadFactor,
+      final int bufferGrouperInitialBuckets,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final int bufferGrouperMaxSize,
-      final int bufferGrouperInitialBuckets
+      final boolean spillingAllowed
   )
   {
     this.keySerde = keySerdeFactory.factorize();
@@ -79,11 +83,13 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
         columnSelectorFactory,
         aggregatorFactories,
         bufferGrouperMaxSize,
+        bufferGrouperMaxLoadFactor,
         bufferGrouperInitialBuckets
     );
     this.aggregatorFactories = aggregatorFactories;
     this.temporaryStorage = temporaryStorage;
     this.spillMapper = spillMapper;
+    this.spillingAllowed = spillingAllowed;
   }
 
   @Override
@@ -91,10 +97,20 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   {
     if (grouper.aggregate(key, keyHash)) {
       return true;
-    } else {
+    } else if (spillingAllowed) {
       // Warning: this can potentially block up a processing thread for a while.
-      spill();
+      try {
+        spill();
+      }
+      catch (TemporaryStorageFullException e) {
+        return false;
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
       return grouper.aggregate(key, keyHash);
+    } else {
+      return false;
     }
   }
 
@@ -116,6 +132,11 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   {
     grouper.close();
     deleteFiles();
+  }
+
+  public void setSpillingAllowed(final boolean spillingAllowed)
+  {
+    this.spillingAllowed = spillingAllowed;
   }
 
   @Override
@@ -154,14 +175,16 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
     return Groupers.mergeIterators(iterators, sorted);
   }
 
-  private void spill()
+  private void spill() throws IOException
   {
+    final File outFile;
+
     try (
         final LimitedTemporaryStorage.LimitedOutputStream out = temporaryStorage.createFile();
         final LZ4BlockOutputStream compressedOut = new LZ4BlockOutputStream(out);
         final JsonGenerator jsonGenerator = spillMapper.getFactory().createGenerator(compressedOut)
     ) {
-      files.add(out.getFile());
+      outFile = out.getFile();
       final Iterator<Entry<KeyType>> it = grouper.iterator(true);
       while (it.hasNext()) {
         if (Thread.interrupted()) {
@@ -171,10 +194,8 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
         jsonGenerator.writeObject(it.next());
       }
     }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
 
+    files.add(outFile);
     grouper.reset();
   }
 

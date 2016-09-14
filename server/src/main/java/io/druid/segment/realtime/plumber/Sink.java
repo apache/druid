@@ -24,12 +24,14 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -45,6 +47,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -228,13 +231,27 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
+  public int getNumRowsInMemory()
+  {
+    synchronized (hydrantLock) {
+      IncrementalIndex index = currHydrant.getIndex();
+      if (index == null) {
+        return 0;
+      }
+
+      return currHydrant.getIndex().size();
+    }
+  }
+
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
+        .withTimestampSpec(schema.getParser())
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
         .withDimensionsSpec(schema.getParser())
         .withMetrics(schema.getAggregators())
+        .withRollup(schema.getGranularitySpec().isRollup())
         .build();
     final IncrementalIndex newIndex = new OnheapIncrementalIndex(indexSchema, reportParseExceptions, maxRowsInMemory);
 
@@ -248,16 +265,20 @@ public class Sink implements Iterable<FireHydrant>
           FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
           newCount = lastHydrant.getCount() + 1;
           if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
+            Map<String, ColumnCapabilitiesImpl> oldCapabilities;
             if (lastHydrant.hasSwapped()) {
+              oldCapabilities = Maps.newHashMap();
               QueryableIndex oldIndex = lastHydrant.getSegment().asQueryableIndex();
               for (String dim : oldIndex.getAvailableDimensions()) {
                 dimOrder.add(dim);
+                oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumn(dim).getCapabilities());
               }
             } else {
               IncrementalIndex oldIndex = lastHydrant.getIndex();
               dimOrder.addAll(oldIndex.getDimensionOrder());
+              oldCapabilities = oldIndex.getColumnCapabilities();
             }
-            newIndex.loadDimensionIterable(dimOrder);
+            newIndex.loadDimensionIterable(dimOrder, oldCapabilities);
           }
         }
         currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());

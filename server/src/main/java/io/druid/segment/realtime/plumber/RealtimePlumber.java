@@ -31,17 +31,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
@@ -51,17 +46,11 @@ import io.druid.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.query.MetricsEmittingQueryRunner;
-import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.QueryRunnerHelper;
-import io.druid.query.QueryToolChest;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.spec.SpecificSegmentQueryRunner;
-import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
@@ -76,9 +65,9 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.appenderator.SinkQuerySegmentWalker;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.apache.commons.io.FileUtils;
@@ -87,8 +76,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -111,10 +98,7 @@ public class RealtimePlumber implements Plumber
   private final RealtimeTuningConfig config;
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
-  private final ServiceEmitter emitter;
-  private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final ExecutorService queryExecutorService;
   private final DataSegmentPusher dataSegmentPusher;
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifier handoffNotifier;
@@ -123,10 +107,9 @@ public class RealtimePlumber implements Plumber
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
       String.CASE_INSENSITIVE_ORDER
   );
+  private final QuerySegmentWalker texasRanger;
 
   private final Cache cache;
-  private final CacheConfig cacheConfig;
-  private final ObjectMapper objectMapper;
 
   private volatile long nextFlush = 0;
   private volatile boolean shuttingDown = false;
@@ -140,8 +123,6 @@ public class RealtimePlumber implements Plumber
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
-  private static final String SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
-
 
   public RealtimePlumber(
       DataSchema schema,
@@ -165,22 +146,23 @@ public class RealtimePlumber implements Plumber
     this.config = config;
     this.rejectionPolicy = config.getRejectionPolicyFactory().create(config.getWindowPeriod());
     this.metrics = metrics;
-    this.emitter = emitter;
-    this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.queryExecutorService = queryExecutorService;
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.handoffNotifier = handoffNotifier;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
-    this.cacheConfig = cacheConfig;
-    this.objectMapper = objectMapper;
-
-    if (!cache.isLocal()) {
-      log.error("Configured cache is not local, caching will not be enabled");
-    }
+    this.texasRanger = new SinkQuerySegmentWalker(
+        schema.getDataSource(),
+        sinkTimeline,
+        objectMapper,
+        emitter,
+        conglomerate,
+        queryExecutorService,
+        cache,
+        cacheConfig
+    );
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -273,125 +255,8 @@ public class RealtimePlumber implements Plumber
   @Override
   public <T> QueryRunner<T> getQueryRunner(final Query<T> query)
   {
-    final boolean skipIncrementalSegment = query.getContextBoolean(SKIP_INCREMENTAL_SEGMENT, false);
-    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
-
-    final Function<Query<T>, ServiceMetricEvent.Builder> builderFn =
-        new Function<Query<T>, ServiceMetricEvent.Builder>()
-        {
-
-          @Override
-          public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
-          {
-            return toolchest.makeMetricBuilder(query);
-          }
-        };
-
-    List<TimelineObjectHolder<String, Sink>> querySinks = Lists.newArrayList();
-    for (Interval interval : query.getIntervals()) {
-      querySinks.addAll(sinkTimeline.lookup(interval));
-    }
-
-    return toolchest.mergeResults(
-        factory.mergeRunners(
-            queryExecutorService,
-            FunctionalIterable
-                .create(querySinks)
-                .transform(
-                    new Function<TimelineObjectHolder<String, Sink>, QueryRunner<T>>()
-                    {
-                      @Override
-                      public QueryRunner<T> apply(TimelineObjectHolder<String, Sink> holder)
-                      {
-                        if (holder == null) {
-                          throw new ISE("No timeline entry at all!");
-                        }
-
-                        // The realtime plumber always uses SingleElementPartitionChunk
-                        final Sink theSink = holder.getObject().getChunk(0).getObject();
-
-                        if (theSink == null) {
-                          throw new ISE("Missing sink for timeline entry[%s]!", holder);
-                        }
-
-                        final SegmentDescriptor descriptor = new SegmentDescriptor(
-                            holder.getInterval(),
-                            theSink.getSegment().getVersion(),
-                            theSink.getSegment().getShardSpec().getPartitionNum()
-                        );
-
-                        return new SpecificSegmentQueryRunner<T>(
-                            new MetricsEmittingQueryRunner<T>(
-                                emitter,
-                                builderFn,
-                                factory.mergeRunners(
-                                    MoreExecutors.sameThreadExecutor(),
-                                    Iterables.transform(
-                                        theSink,
-                                        new Function<FireHydrant, QueryRunner<T>>()
-                                        {
-                                          @Override
-                                          public QueryRunner<T> apply(FireHydrant input)
-                                          {
-                                            // Hydrant might swap at any point, but if it's swapped at the start
-                                            // then we know it's *definitely* swapped.
-                                            final boolean hydrantDefinitelySwapped = input.hasSwapped();
-
-                                            if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
-                                              return new NoopQueryRunner<T>();
-                                            }
-
-                                            // Prevent the underlying segment from swapping when its being iterated
-                                            final Pair<Segment, Closeable> segment = input.getAndIncrementSegment();
-                                            try {
-                                              QueryRunner<T> baseRunner = QueryRunnerHelper.makeClosingQueryRunner(
-                                                  factory.createRunner(segment.lhs),
-                                                  segment.rhs
-                                              );
-
-                                              if (hydrantDefinitelySwapped // only use caching if data is immutable
-                                                  && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
-                                                  ) {
-                                                return new CachingQueryRunner<>(
-                                                    makeHydrantIdentifier(input, segment.lhs),
-                                                    descriptor,
-                                                    objectMapper,
-                                                    cache,
-                                                    toolchest,
-                                                    baseRunner,
-                                                    MoreExecutors.sameThreadExecutor(),
-                                                    cacheConfig
-                                                );
-                                              } else {
-                                                return baseRunner;
-                                              }
-                                            }
-                                            catch (RuntimeException e) {
-                                              CloseQuietly.close(segment.rhs);
-                                              throw e;
-                                            }
-                                          }
-                                        }
-                                    )
-                                ),
-                                "query/segmentAndCache/time",
-                                ImmutableMap.of("segment", theSink.getSegment().getIdentifier())
-                            ).withWaitMeasuredFromNow(),
-                            new SpecificSegmentSpec(
-                                descriptor
-                            )
-                        );
-                      }
-                    }
-                )
-        )
-    );
-  }
-
-  protected static String makeHydrantIdentifier(FireHydrant input, Segment segment)
-  {
-    return segment.getIdentifier() + "_" + input.getCount();
+    // Calling getQueryRunnerForIntervals here works because there's only one segment per interval for RealtimePlumber.
+    return texasRanger.getQueryRunnerForIntervals(query, query.getIntervals());
   }
 
   @Override
@@ -547,6 +412,7 @@ public class RealtimePlumber implements Plumber
 
               final File mergedFile = indexMerger.mergeQueryableIndex(
                   indexes,
+                  schema.getGranularitySpec().isRollup(),
                   schema.getAggregators(),
                   mergedTarget,
                   config.getIndexSpec()
@@ -990,7 +856,7 @@ public class RealtimePlumber implements Plumber
             new SingleElementPartitionChunk<>(sink)
         );
         for (FireHydrant hydrant : sink) {
-          cache.close(makeHydrantIdentifier(hydrant, hydrant.getSegment()));
+          cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();

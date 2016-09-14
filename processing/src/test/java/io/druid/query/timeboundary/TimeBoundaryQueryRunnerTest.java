@@ -22,13 +22,31 @@ package io.druid.query.timeboundary;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Iterables;
+import com.google.common.io.CharSource;
 import com.metamx.common.guava.Sequences;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
+import io.druid.query.ordering.StringComparators;
+import io.druid.segment.IncrementalIndexSegment;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.Segment;
+import io.druid.segment.TestIndex;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,7 +63,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class TimeBoundaryQueryRunnerTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
@@ -56,12 +74,135 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   private final QueryRunner runner;
+  private static final QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(
+      QueryRunnerTestHelper.NOOP_QUERYWATCHER
+  );
+  private static Segment segment0;
+  private static Segment segment1;
+  private static List<String> segmentIdentifiers;
 
   public TimeBoundaryQueryRunnerTest(
       QueryRunner runner
   )
   {
     this.runner = runner;
+  }
+
+  // Adapted from MultiSegmentSelectQueryTest, with modifications to make filtering meaningful
+  public static final String[] V_0112 = {
+      "2011-01-12T01:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
+      "2011-01-12T02:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
+      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
+      "2011-01-13T01:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
+  };
+  public static final String[] V_0113 = {
+      "2011-01-14T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
+      "2011-01-14T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
+      "2011-01-15T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
+      "2011-01-15T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
+      "2011-01-16T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
+      "2011-01-16T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
+      "2011-01-16T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
+      "2011-01-17T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
+      "2011-01-17T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
+  };
+
+  private static IncrementalIndex newIndex(String minTimeStamp)
+  {
+    return newIndex(minTimeStamp, 10000);
+  }
+
+  private static IncrementalIndex newIndex(String minTimeStamp, int maxRowCount)
+  {
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
+        .withQueryGranularity(QueryGranularities.HOUR)
+        .withMetrics(TestIndex.METRIC_AGGS)
+        .build();
+    return new OnheapIncrementalIndex(schema, true, maxRowCount);
+  }
+
+  private static String makeIdentifier(IncrementalIndex index, String version)
+  {
+    return makeIdentifier(index.getInterval(), version);
+  }
+
+  private static String makeIdentifier(Interval interval, String version)
+  {
+    return DataSegment.makeDataSegmentIdentifier(
+        QueryRunnerTestHelper.dataSource,
+        interval.getStart(),
+        interval.getEnd(),
+        version,
+        new NoneShardSpec()
+    );
+  }
+
+  private QueryRunner getCustomRunner() throws IOException {
+    CharSource v_0112 = CharSource.wrap(StringUtils.join(V_0112, "\n"));
+    CharSource v_0113 = CharSource.wrap(StringUtils.join(V_0113, "\n"));
+
+    IncrementalIndex index0 = TestIndex.loadIncrementalIndex(newIndex("2011-01-12T00:00:00.000Z"), v_0112);
+    IncrementalIndex index1 = TestIndex.loadIncrementalIndex(newIndex("2011-01-14T00:00:00.000Z"), v_0113);
+
+    segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
+    segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
+
+    VersionedIntervalTimeline<String, Segment> timeline = new VersionedIntervalTimeline(StringComparators.LEXICOGRAPHIC);
+    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk(segment0));
+    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk(segment1));
+
+    segmentIdentifiers = Lists.newArrayList();
+    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(new Interval("2011-01-12/2011-01-17"))) {
+      segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
+    }
+
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testFilteredTimeBoundaryQuery() throws IOException
+  {
+    QueryRunner customRunner = getCustomRunner();
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .filters("quality", "automotive")
+                                                .build();
+    Assert.assertTrue(timeBoundaryQuery.hasFilters());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
+        customRunner.run(timeBoundaryQuery, context),
+        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+    );
+
+    Assert.assertTrue(Iterables.size(results) > 0);
+
+    TimeBoundaryResultValue val = results.iterator().next().getValue();
+    DateTime minTime = val.getMinTime();
+    DateTime maxTime = val.getMaxTime();
+
+    Assert.assertEquals(new DateTime("2011-01-13T00:00:00.000Z"), minTime);
+    Assert.assertEquals(new DateTime("2011-01-16T00:00:00.000Z"), maxTime);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testFilteredTimeBoundaryQueryNoMatches() throws IOException
+  {
+    QueryRunner customRunner = getCustomRunner();
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .filters("quality", "foobar") // foobar dimension does not exist
+                                                .build();
+    Assert.assertTrue(timeBoundaryQuery.hasFilters());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
+        customRunner.run(timeBoundaryQuery, context),
+        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+    );
+
+    Assert.assertTrue(Iterables.size(results) == 0);
   }
 
   @Test
@@ -71,6 +212,7 @@ public class TimeBoundaryQueryRunnerTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .build();
+    Assert.assertFalse(timeBoundaryQuery.hasFilters());
     HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         runner.run(timeBoundaryQuery, context),
@@ -152,7 +294,7 @@ public class TimeBoundaryQueryRunnerTest
         )
     );
 
-    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null);
+    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
     Assert.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(new DateTime("2012-02-01")));
@@ -163,7 +305,7 @@ public class TimeBoundaryQueryRunnerTest
   {
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
 
-    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null);
+    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
     Assert.assertFalse(actual.iterator().hasNext());

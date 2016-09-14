@@ -35,7 +35,7 @@ import java.nio.ByteBuffer;
  *
  * <code>
  * for (int i = 1; i &lt; 20; ++i) {
- *   System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
+ * System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
  * }
  * </code>
  *
@@ -90,6 +90,17 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return new HLLCV1();
   }
 
+  /**
+   * Create a wrapper object around an HLL sketch contained within a buffer. The position and limit of
+   * the buffer may be changed; if you do not want this to happen, you can duplicate the buffer before
+   * passing it in.
+   *
+   * The mark and byte order of the buffer will not be modified.
+   *
+   * @param buffer buffer containing an HLL sketch starting at its position and ending at its limit
+   *
+   * @return HLLC wrapper object
+   */
   public static HyperLogLogCollector makeCollector(ByteBuffer buffer)
   {
     int remaining = buffer.remaining();
@@ -127,6 +138,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     }
 
     return e;
+  }
+
+  public static double estimateByteBuffer(ByteBuffer buf)
+  {
+    return makeCollector(buf.duplicate()).estimateCardinality();
   }
 
   private static double estimateSparse(
@@ -212,7 +228,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   public HyperLogLogCollector(ByteBuffer byteBuffer)
   {
-    storageBuffer = byteBuffer.duplicate();
+    storageBuffer = byteBuffer;
     initPosition = byteBuffer.position();
     estimatedCardinality = null;
   }
@@ -281,7 +297,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       byte lookupVal = ByteBitLookup.lookup[UnsignedBytes.toInt(hashedValue[i])];
       switch (lookupVal) {
         case 0:
-          positionOf1 += (byte)8;
+          positionOf1 += (byte) 8;
           continue;
         default:
           positionOf1 += lookupVal;
@@ -353,65 +369,74 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       other = HyperLogLogCollector.makeCollector(tmpBuffer);
     }
 
-    final ByteBuffer otherBuffer = other.storageBuffer.asReadOnlyBuffer();
-    final byte otherOffset = other.getRegisterOffset();
+    final ByteBuffer otherBuffer = other.storageBuffer;
 
-    byte myOffset = getRegisterOffset();
-    short numNonZero = getNumNonZeroRegisters();
+    // Save position and restore later to avoid allocations due to duplicating the otherBuffer object.
+    final int otherPosition = otherBuffer.position();
 
-    final int offsetDiff = myOffset - otherOffset;
-    if (offsetDiff < 0) {
-      throw new ISE("offsetDiff[%d] < 0, shouldn't happen because of swap.", offsetDiff);
+    try {
+      final byte otherOffset = other.getRegisterOffset();
+
+      byte myOffset = getRegisterOffset();
+      short numNonZero = getNumNonZeroRegisters();
+
+      final int offsetDiff = myOffset - otherOffset;
+      if (offsetDiff < 0) {
+        throw new ISE("offsetDiff[%d] < 0, shouldn't happen because of swap.", offsetDiff);
+      }
+
+      final int myPayloadStart = getPayloadBytePosition();
+      otherBuffer.position(other.getPayloadBytePosition());
+
+      if (isSparse(otherBuffer)) {
+        while (otherBuffer.hasRemaining()) {
+          final int payloadStartPosition = otherBuffer.getShort() - other.getNumHeaderBytes();
+          numNonZero += mergeAndStoreByteRegister(
+              storageBuffer,
+              myPayloadStart + payloadStartPosition,
+              offsetDiff,
+              otherBuffer.get()
+          );
+        }
+        if (numNonZero == NUM_BUCKETS) {
+          numNonZero = decrementBuckets();
+          setRegisterOffset(++myOffset);
+          setNumNonZeroRegisters(numNonZero);
+        }
+      } else { // dense
+        int position = getPayloadBytePosition();
+        while (otherBuffer.hasRemaining()) {
+          numNonZero += mergeAndStoreByteRegister(
+              storageBuffer,
+              position,
+              offsetDiff,
+              otherBuffer.get()
+          );
+          position++;
+        }
+        if (numNonZero == NUM_BUCKETS) {
+          numNonZero = decrementBuckets();
+          setRegisterOffset(++myOffset);
+          setNumNonZeroRegisters(numNonZero);
+        }
+      }
+
+      // no need to call setRegisterOffset(myOffset) here, since it gets updated every time myOffset is incremented
+      setNumNonZeroRegisters(numNonZero);
+
+      // this will add the max overflow and also recheck if offset needs to be shifted
+      add(other.getMaxOverflowRegister(), other.getMaxOverflowValue());
+
+      return this;
     }
-
-    final int myPayloadStart = getPayloadBytePosition();
-    otherBuffer.position(other.getPayloadBytePosition());
-
-    if (isSparse(otherBuffer)) {
-      while (otherBuffer.hasRemaining()) {
-        final int payloadStartPosition = otherBuffer.getShort() - other.getNumHeaderBytes();
-        numNonZero += mergeAndStoreByteRegister(
-            storageBuffer,
-            myPayloadStart + payloadStartPosition,
-            offsetDiff,
-            otherBuffer.get()
-        );
-      }
-      if (numNonZero == NUM_BUCKETS) {
-        numNonZero = decrementBuckets();
-        setRegisterOffset(++myOffset);
-        setNumNonZeroRegisters(numNonZero);
-      }
-    } else { // dense
-      int position = getPayloadBytePosition();
-      while (otherBuffer.hasRemaining()) {
-        numNonZero += mergeAndStoreByteRegister(
-            storageBuffer,
-            position,
-            offsetDiff,
-            otherBuffer.get()
-        );
-        position++;
-      }
-      if (numNonZero == NUM_BUCKETS) {
-        numNonZero = decrementBuckets();
-        setRegisterOffset(++myOffset);
-        setNumNonZeroRegisters(numNonZero);
-      }
+    finally {
+      otherBuffer.position(otherPosition);
     }
-
-    // no need to call setRegisterOffset(myOffset) here, since it gets updated every time myOffset is incremented
-    setNumNonZeroRegisters(numNonZero);
-
-    // this will add the max overflow and also recheck if offset needs to be shifted
-    add(other.getMaxOverflowRegister(), other.getMaxOverflowValue());
-
-    return this;
   }
 
   public HyperLogLogCollector fold(ByteBuffer buffer)
   {
-    return fold(makeCollector(buffer));
+    return fold(makeCollector(buffer.duplicate()));
   }
 
   public ByteBuffer toByteBuffer()
@@ -494,11 +519,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return estimatedCardinality;
   }
 
-  public double estimateByteBuffer(ByteBuffer buf)
-  {
-    return makeCollector(buf).estimateCardinality();
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -521,7 +541,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     final ByteBuffer denseStorageBuffer;
     if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer);
+      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer.duplicate());
       denseCollector.convertToDenseStorage();
       denseStorageBuffer = denseCollector.storageBuffer;
     } else {
@@ -529,7 +549,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     }
 
     if (otherBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer);
+      HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer.duplicate());
       otherCollector.convertToDenseStorage();
       otherBuffer = otherCollector.storageBuffer;
     }

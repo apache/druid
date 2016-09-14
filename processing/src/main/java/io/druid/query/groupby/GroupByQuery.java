@@ -386,6 +386,22 @@ public class GroupByQuery extends BaseQuery<Row>
     );
   }
 
+  public GroupByQuery withLimitSpec(final LimitSpec limitSpec)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        getDimensions(),
+        getAggregatorSpecs(),
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        limitSpec,
+        getContext()
+    );
+  }
+
   public static class Builder
   {
     private DataSource dataSource;
@@ -485,11 +501,6 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder addOrderByColumn(String dimension)
     {
       return addOrderByColumn(dimension, (OrderByColumnSpec.Direction) null);
-    }
-
-    public Builder addOrderByColumn(String dimension, String direction)
-    {
-      return addOrderByColumn(dimension, OrderByColumnSpec.determineDirection(direction));
     }
 
     public Builder addOrderByColumn(String dimension, OrderByColumnSpec.Direction direction)
@@ -723,7 +734,6 @@ public class GroupByQuery extends BaseQuery<Row>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
-    result = 31 * result + (limitFn != null ? limitFn.hashCode() : 0);
     return result;
   }
 }

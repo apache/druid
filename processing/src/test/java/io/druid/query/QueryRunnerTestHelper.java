@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,6 +43,8 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -100,6 +103,7 @@ public class QueryRunnerTestHelper
 
   public static final QueryGranularity dayGran = QueryGranularities.DAY;
   public static final QueryGranularity allGran = QueryGranularities.ALL;
+  public static final String timeDimension = "__time";
   public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
@@ -119,9 +123,9 @@ public class QueryRunnerTestHelper
 
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
-  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
-  public static final LongSumAggregatorFactory __timeLongSum = new LongSumAggregatorFactory("sumtime", "__time");
-  public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", indexMetric);
+  public static final LongSumAggregatorFactory __timeLongSum = new LongSumAggregatorFactory("sumtime", timeDimension);
+  public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", indexMetric);
   public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
   public static final String JS_RESET_0 = "function reset() { return 0; }";
   public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
@@ -156,7 +160,7 @@ public class QueryRunnerTestHelper
   );
   public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
       "cardinality",
-      Arrays.asList("quality"),
+      Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("quality", "quality")),
       false
   );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
@@ -323,12 +327,16 @@ public class QueryRunnerTestHelper
       throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex noRollupRtIndex = TestIndex.getNoRollupIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
+        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId), "noRollupRtIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex), "noRollupMMappedTestIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex), "mergedRealtimeIndex")
     );
   }
 
@@ -344,11 +352,12 @@ public class QueryRunnerTestHelper
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
 
     return Arrays.asList(
-        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
-        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
+        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
+        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
         makeUnionQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, mergedRealtimeIndex)
+            new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
+            "mergedRealtimeIndex"
         )
     );
   }
@@ -409,28 +418,32 @@ public class QueryRunnerTestHelper
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String resourceFileName
+      String resourceFileName,
+      final String runnerName
   )
   {
     return makeQueryRunner(
         factory,
         segmentId,
-        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), segmentId)
+        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), segmentId),
+        runnerName
     );
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      Segment adapter
+      Segment adapter,
+      final String runnerName
   )
   {
-    return makeQueryRunner(factory, segmentId, adapter);
+    return makeQueryRunner(factory, segmentId, adapter, runnerName);
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String segmentId,
-      Segment adapter
+      Segment adapter,
+      final String runnerName
   )
   {
     return new FinalizeResultsQueryRunner<T>(
@@ -438,16 +451,24 @@ public class QueryRunnerTestHelper
             segmentId, adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
-        (QueryToolChest<T, Query<T>>)factory.getToolchest()
-    );
+        (QueryToolChest<T, Query<T>>) factory.getToolchest()
+    )
+    {
+      @Override
+      public String toString()
+      {
+        return runnerName;
+      }
+    };
   }
 
   public static <T> QueryRunner<T> makeUnionQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
-      Segment adapter
+      Segment adapter,
+      final String runnerName
   )
   {
-    return new FluentQueryRunnerBuilder<T>(factory.getToolchest())
+    final QueryRunner<T> qr = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
         .create(
             new UnionQueryRunner<T>(
                 new BySegmentQueryRunner<T>(
@@ -458,6 +479,21 @@ public class QueryRunnerTestHelper
         )
         .mergeResults()
         .applyPostMergeDecoration();
+
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+      {
+        return qr.run(query, responseContext);
+      }
+
+      @Override
+      public String toString()
+      {
+        return runnerName;
+      }
+    };
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
@@ -514,5 +550,14 @@ public class QueryRunnerTestHelper
         };
       }
     };
+  }
+
+  public static Map<String, Object> of(Object... keyvalues)
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    for (int i = 0; i < keyvalues.length; i += 2) {
+      builder.put(String.valueOf(keyvalues[i]), keyvalues[i + 1]);
+    }
+    return builder.build();
   }
 }

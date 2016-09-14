@@ -25,7 +25,10 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.IdentityExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.segment.column.Column;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,14 +46,40 @@ public class GetDimensionRangeSetTest
   private final DimFilter in1 = new InDimFilter("dim1", ImmutableList.of("testing", "this", "filter", "tillend"), null);
   private final DimFilter in2 = new InDimFilter("dim2", ImmutableList.of("again"), null);
   private final DimFilter in3 = new InDimFilter("dim1", Arrays.asList("null", null), null);
-  private final DimFilter bound1 = new BoundDimFilter("dim1", "from", "to", false, false, false, null);
-  private final DimFilter bound2 = new BoundDimFilter("dim1", null, "tillend", false, false, false, null);
-  private final DimFilter bound3 = new BoundDimFilter("dim1", "notincluded", null, true, false, false, null);
-  private final DimFilter bound4 = new BoundDimFilter("dim2", "again", "exclusive", true, true, false, null);
+  private final DimFilter bound1 = new BoundDimFilter("dim1", "from", "to", false, false, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
+  private final DimFilter bound2 = new BoundDimFilter("dim1", null, "tillend", false, false, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
+  private final DimFilter bound3 = new BoundDimFilter("dim1", "notincluded", null, true, false, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
+  private final DimFilter bound4 = new BoundDimFilter("dim2", "again", "exclusive", true, true, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
   private final DimFilter other1 = new RegexDimFilter("someDim", "pattern", null);
   private final DimFilter other2 = new JavaScriptDimFilter("someOtherDim", "function(x) { return x }", null,
                                                            JavaScriptConfig.getDefault());
   private final DimFilter other3 = new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("a", true), null);
+
+  private final DimFilter interval1 = new IntervalDimFilter(
+      Column.TIME_COLUMN_NAME,
+      Arrays.asList(
+          Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+          Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+      ),
+      null
+  );
+
+  private final DimFilter interval2 = new IntervalDimFilter(
+      "dim1",
+      Arrays.asList(
+          Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+          Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+      ),
+      null
+  );
 
   private static final RangeSet all = rangeSet(ImmutableList.of(Range.<String>all()));
   private static final RangeSet empty = rangeSet(ImmutableList.<Range<String>>of());
@@ -82,6 +111,9 @@ public class GetDimensionRangeSetTest
     Assert.assertNull(other1.getDimensionRangeSet("someDim"));
     Assert.assertNull(other2.getDimensionRangeSet("someOtherDim"));
     Assert.assertNull(other3.getDimensionRangeSet("dim"));
+
+    Assert.assertNull(interval1.getDimensionRangeSet(Column.TIME_COLUMN_NAME));
+    Assert.assertNull(interval2.getDimensionRangeSet("dim1"));
   }
 
   @Test

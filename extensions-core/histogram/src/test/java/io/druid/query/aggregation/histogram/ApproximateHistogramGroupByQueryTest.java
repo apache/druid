@@ -51,17 +51,31 @@ public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
+  private String testName;
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig();
+    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public String toString()
+      {
+        return "default";
+      }
+    };
     final GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
       public boolean isSingleThreaded()
       {
         return true;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "singleThreaded";
       }
     };
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
@@ -70,6 +84,12 @@ public class ApproximateHistogramGroupByQueryTest
       public String getDefaultStrategy()
       {
         return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2";
       }
     };
 
@@ -86,17 +106,26 @@ public class ApproximateHistogramGroupByQueryTest
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        constructors.add(new Object[]{factory, runner});
+        final String testName = String.format(
+            "config=%s, runner=%s",
+            config.toString(),
+            runner.toString()
+        );
+        constructors.add(new Object[]{testName, factory, runner});
       }
     }
 
     return constructors;
   }
 
-  public ApproximateHistogramGroupByQueryTest(GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public ApproximateHistogramGroupByQueryTest(String testName, GroupByQueryRunnerFactory factory, QueryRunner runner)
   {
+    this.testName = testName;
     this.factory = factory;
     this.runner = runner;
+
+    //Note: this is needed in order to properly register the serde for Histogram.
+    new ApproximateHistogramDruidModule().configure(null);
   }
 
   @Test

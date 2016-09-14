@@ -25,6 +25,8 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -59,7 +61,6 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -76,6 +77,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
+  private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
 
@@ -194,10 +196,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                         ) throws SQLException
                         {
                           try {
-                            DataSegment segment = jsonMapper.readValue(
+                            final DataSegment segment = DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
                                 payload,
                                 DataSegment.class
-                            );
+                            ));
 
                             timeline.add(
                                 segment.getInterval(),
@@ -464,7 +466,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                             throws SQLException
                         {
                           try {
-                            return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                            return DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
+                                r.getBytes("payload"),
+                                DataSegment.class
+                            ));
                           }
                           catch (IOException e) {
                             log.makeAlert(e, "Failed to read segment from db.");

@@ -21,9 +21,9 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
@@ -47,6 +47,7 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.joda.time.DateTime;
 
@@ -61,7 +62,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -76,7 +76,6 @@ public class JobHelper
 {
   private static final Logger log = new Logger(JobHelper.class);
 
-  private static final Set<Path> existing = Sets.newHashSet();
 
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
@@ -91,6 +90,34 @@ public class JobHelper
   public static Path distributedClassPath(Path base)
   {
     return new Path(base, "classpath");
+  }
+
+  /**
+   * Dose authenticate against a secured hadoop cluster
+   * In case of any bug fix make sure to fix the code at HdfsStorageAuthentication#authenticate as well.
+   *
+   * @param config containing the principal name and keytab path.
+   */
+  public static void authenticate(HadoopDruidIndexerConfig config)
+  {
+    String principal = config.HADOOP_KERBEROS_CONFIG.getPrincipal();
+    String keytab = config.HADOOP_KERBEROS_CONFIG.getKeytab();
+    if (!Strings.isNullOrEmpty(principal) && !Strings.isNullOrEmpty(keytab)) {
+      Configuration conf = new Configuration();
+      UserGroupInformation.setConfiguration(conf);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        try {
+          if (UserGroupInformation.getCurrentUser().hasKerberosCredentials() == false
+              || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
+            log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
+            UserGroupInformation.loginUserFromKeytab(principal, keytab);
+          }
+        }
+        catch (IOException e) {
+          throw new ISE(e, "Failed to authenticate user principal [%s] with keytab [%s]", principal, keytab);
+        }
+      }
+    }
   }
 
   /**
@@ -250,11 +277,9 @@ public class JobHelper
   {
     // Snapshot jars are uploaded to non shared intermediate directory.
     final Path hdfsPath = new Path(intermediateClassPath, jarFile.getName());
-
-    // existing is used to prevent uploading file multiple times in same run.
-    if (!existing.contains(hdfsPath)) {
+    // Prevent uploading same file multiple times in same run.
+    if (!fs.exists(hdfsPath)) {
       uploadJar(jarFile, hdfsPath, fs);
-      existing.add(hdfsPath);
     }
     job.addFileToClassPath(hdfsPath);
   }
@@ -297,6 +322,7 @@ public class JobHelper
 
   public static void ensurePaths(HadoopDruidIndexerConfig config)
   {
+    authenticate(config);
     // config.addInputPaths() can have side-effects ( boo! :( ), so this stuff needs to be done before anything else
     try {
       Job job = Job.getInstance(

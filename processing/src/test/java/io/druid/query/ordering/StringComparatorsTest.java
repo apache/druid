@@ -20,6 +20,7 @@
 package io.druid.query.ordering;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,11 +32,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.ordering.StringComparators.StringComparator;
+import io.druid.query.ordering.StringComparator;
 
 public class StringComparatorsTest
 {
-  
   private void commonTest(StringComparator comparator)
   {
     // equality test
@@ -120,15 +120,45 @@ public class StringComparatorsTest
   }
 
   @Test
+  public void testNumericComparator()
+  {
+    commonTest(StringComparators.NUMERIC);
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare("-1230.452487532", "6893") < 0);
+
+    List<String> values = Arrays.asList("-1", "-1.10", "-1.2", "-100", "-2", "0", "1", "1.10", "1.2", "2", "100");
+    Collections.sort(values, StringComparators.NUMERIC);
+
+    Assert.assertEquals(
+        Arrays.asList("-100", "-2", "-1.2", "-1.10", "-1", "0", "1", "1.10", "1.2", "2", "100"),
+        values
+    );
+
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare(null, null) == 0);
+    Assert.assertTrue(StringComparators.NUMERIC.compare(null, "1001") < 0);
+    Assert.assertTrue(StringComparators.NUMERIC.compare("1001", null) > 0);
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare("-500000000.14124", "CAN'T TOUCH THIS") > 0);
+    Assert.assertTrue(StringComparators.NUMERIC.compare("CAN'T PARSE THIS", "-500000000.14124") < 0);
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare("CAN'T PARSE THIS", "CAN'T TOUCH THIS") < 0);
+  }
+
+  @Test
   public void testLexicographicComparatorSerdeTest() throws IOException
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"lexicographic\"}";
-    
+
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.LEXICOGRAPHIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.LEXICOGRAPHIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.LexicographicComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"lexicographic\"";
+    Assert.assertEquals(StringComparators.LEXICOGRAPHIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
   
   @Test
@@ -136,11 +166,15 @@ public class StringComparatorsTest
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"alphanumeric\"}";
-    
+
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.ALPHANUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.ALPHANUMERIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.AlphanumericComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"alphanumeric\"";
+    Assert.assertEquals(StringComparators.ALPHANUMERIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
   
   @Test
@@ -152,6 +186,30 @@ public class StringComparatorsTest
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.STRLEN);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.STRLEN
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.StrlenComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"strlen\"";
+    Assert.assertEquals(StringComparators.STRLEN
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+  }
+
+  @Test
+  public void testNumericComparatorSerdeTest() throws IOException
+  {
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    String expectJsonSpec = "{\"type\":\"numeric\"}";
+
+    String jsonSpec = jsonMapper.writeValueAsString(StringComparators.NUMERIC);
+    Assert.assertEquals(expectJsonSpec, jsonSpec);
+    Assert.assertEquals(StringComparators.NUMERIC
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"numeric\"";
+    Assert.assertEquals(StringComparators.NUMERIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+
+    makeFromJsonSpec = "\"NuMeRiC\"";
+    Assert.assertEquals(StringComparators.NUMERIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
 }

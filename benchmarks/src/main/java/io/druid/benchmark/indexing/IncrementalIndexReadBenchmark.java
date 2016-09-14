@@ -30,8 +30,19 @@ import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.JavaScriptDimFilter;
+import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.RegexDimFilter;
+import io.druid.query.filter.SearchQueryDimFilter;
+import io.druid.query.ordering.StringComparators;
+import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
@@ -55,6 +66,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -69,6 +81,9 @@ public class IncrementalIndexReadBenchmark
 
   @Param({"basic"})
   private String schema;
+
+  @Param({"true", "false"})
+  private boolean rollup;
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -113,6 +128,7 @@ public class IncrementalIndexReadBenchmark
             .withQueryGranularity(QueryGranularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,
@@ -128,6 +144,41 @@ public class IncrementalIndexReadBenchmark
   {
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
     Sequence<Cursor> cursors = sa.makeCursors(null, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
+
+    List<DimensionSelector> selectors = new ArrayList<>();
+    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
+    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimZipf", null)));
+    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimUniform", null)));
+    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequentialHalfNull", null)));
+
+    cursor.reset();
+    while (!cursor.isDone()) {
+      for (DimensionSelector selector : selectors) {
+        IndexedInts row = selector.getRow();
+        blackhole.consume(selector.lookupName(row.get(0)));
+      }
+      cursor.advance();
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void readWithFilters(Blackhole blackhole) throws Exception
+  {
+    DimFilter filter = new OrDimFilter(
+        Arrays.asList(
+            new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
+            new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getDefault()),
+            new RegexDimFilter("dimSequential", "X", null),
+            new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
+            new InDimFilter("dimSequential", Arrays.asList("X"), null)
+        )
+    );
+
+    IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
+    Sequence<Cursor> cursors = sa.makeCursors(filter.toFilter(), schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
     Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();

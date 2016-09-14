@@ -34,12 +34,16 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
@@ -162,6 +166,24 @@ public class FilteredAggregatorTest
       {
         throw new UnsupportedOperationException();
       }
+
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String columnName)
+      {
+        ColumnCapabilitiesImpl caps;
+        if (columnName.equals("value")) {
+          caps = new ColumnCapabilitiesImpl();
+          caps.setType(ValueType.FLOAT);
+          caps.setDictionaryEncoded(false);
+          caps.setHasBitmapIndexes(false);
+        } else {
+          caps = new ColumnCapabilitiesImpl();
+          caps.setType(ValueType.STRING);
+          caps.setDictionaryEncoded(true);
+          caps.setHasBitmapIndexes(true);
+        }
+        return caps;
+      }
     };
   }
 
@@ -236,7 +258,7 @@ public class FilteredAggregatorTest
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new BoundDimFilter("dim", "a", "a", false, false, true, null)
+        new BoundDimFilter("dim", "a", "a", false, false, true, null, StringComparators.ALPHANUMERIC)
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -287,10 +309,12 @@ public class FilteredAggregatorTest
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
-    
+
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn)
+        new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn,
+                           StringComparators.ALPHANUMERIC
+        )
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);

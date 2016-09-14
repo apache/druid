@@ -29,6 +29,8 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -63,16 +65,35 @@ public class DimensionPredicateFilterBenchmark
 
   private static final DimensionPredicateFilter IS_EVEN = new DimensionPredicateFilter(
       "foo",
-      new Predicate<String>()
+      new DruidPredicateFactory()
       {
         @Override
-        public boolean apply(String input)
+        public Predicate<String> makeStringPredicate()
         {
-          if (input == null) {
-            return false;
-          }
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              if (input == null) {
+                return false;
+              }
+              return Integer.parseInt(input.toString()) % 2 == 0;
+            }
+          };
+        }
 
-          return Integer.parseInt(input) % 2 == 0;
+        @Override
+        public DruidLongPredicate makeLongPredicate()
+        {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return false;
+            }
+          };
         }
       },
       null
@@ -89,7 +110,7 @@ public class DimensionPredicateFilterBenchmark
   public void setup() throws IOException
   {
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory();
+    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)

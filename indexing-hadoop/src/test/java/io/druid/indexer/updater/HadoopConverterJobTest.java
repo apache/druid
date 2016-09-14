@@ -56,6 +56,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.TestIndex;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -164,7 +166,8 @@ public class HadoopConverterJobTest
                             "\t",
                             "\u0001",
                             Arrays.asList(TestIndex.COLUMNS)
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -283,7 +286,10 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
             tmpDir.toURI(),
@@ -386,7 +392,10 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
             tmpDir.toURI(),

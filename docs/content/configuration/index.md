@@ -82,6 +82,7 @@ All nodes can log debugging information on startup.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
+|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|["password"]|
 
 Note that some sensitive information may be logged if these settings are enabled.
 
@@ -91,7 +92,7 @@ All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j. How to log every query request.|noop|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -110,6 +111,28 @@ Every request is emitted to some external location.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.feed`|Feed name for requests.|none|
+
+#### SLF4J Request Logging
+
+Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `io.druid.server.log.LoggingRequestLogger`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.setMDC`|If MDC entries should be set in the log entry. Your logging setup still has to be configured to handle MDC to format this data|false|
+|`druid.request.logging.setContextMDC`|If the druid query `context` should be added to the MDC entries. Has no effect unless `setMDC` is `true`|false|
+
+MDC fields populated with `setMDC`:
+
+|MDC field|Description|
+|---------|-----------|
+|`queryId`   |The query ID|
+|`dataSource`|The datasource the query was against|
+|`queryType` |The type of the query|
+|`hasFilters`|If the query has any filters|
+|`remoteAddr`|The remote address of the requesting client|
+|`duration`  |The duration of the query interval|
+|`resultOrdering`|The ordering of results|
+|`descending`|If the query is a descending query|
 
 ### Enabling Metrics
 
@@ -163,7 +186,7 @@ The Druid servers [emit various metrics](../operations/metrics.html) and alerts 
 
 #### Graphite Emitter
 
-To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](https://github.com/druid-io/druid/tree/master/extensions/graphite-emitter/README.md).
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](../development/extensions-contrib/graphite.html).
 
 
 ### Metadata Storage
@@ -175,7 +198,7 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.type`|The type of metadata storage to use. Choose from "mysql", "postgresql", or "derby".|derby|
 |`druid.metadata.storage.connector.connectURI`|The jdbc uri for the database to connect to|none|
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
-|`druid.metadata.storage.connector.password`|The password to connect with.|none|
+|`druid.metadata.storage.connector.password`|The password provider or String password used to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
 |`druid.metadata.storage.tables.segments`|The table to use to look for segments.|druid_segments|
@@ -186,6 +209,26 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|
 |`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|druid_supervisors|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes e.g. Coordinator rules.|druid_audit|
+
+#### Password Provider
+ 
+Environment variable password provider provides password by looking at specified environment variable. Use this in order to avoid specifying password in runtime.properties file.
+e.g 
+
+```json
+{ 
+    "type": "environment",
+    "variable": "METADATA_STORAGE_PASSWORD"   
+}
+```
+
+The values are described below. 
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|password provider type|Yes: `environment`|
+|`variable`|String|environment variable to read password from|Yes|
+
 
 ### Deep Storage
 
@@ -245,9 +288,9 @@ You can enable caching of results at the broker, historical, or realtime level u
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.(broker|historical|realtime).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
-|`druid.(broker|historical|realtime).cache.useCache`|Whether to use cache for getting query results.|false|
-|`druid.(broker|historical|realtime).cache.populateCache`|Whether to populate cache.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|Whether to use cache for getting query results.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|Whether to populate cache.|false|
 
 #### Local Cache
 
@@ -307,4 +350,9 @@ the following properties.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.javascript.disabled`|Set to "true" to disable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, and post-aggregator.|false|
+|`druid.javascript.disabled`|Set to "true" to disable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, post-aggregator, router strategy, and worker selection strategy.|false|
+
+<div class="note info">
+Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
+about using Druid's JavaScript functionality.
+</div>

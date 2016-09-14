@@ -21,14 +21,13 @@ package io.druid.collections;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Pool that pre-generates objects up to a limit, then permits possibly-blocking "take" operations.
@@ -60,60 +59,22 @@ public class BlockingPool<T>
    *
    * @throws InterruptedException if interrupted while waiting for a resource to become available
    */
-  public ResourceHolder<T> take(final long timeout) throws InterruptedException
+  public ReferenceCountingResourceHolder<T> take(final long timeout) throws InterruptedException
   {
     Preconditions.checkState(objects != null, "Pool was initialized with limit = 0, there are no objects to take.");
     final T theObject = timeout >= 0 ? objects.poll(timeout, TimeUnit.MILLISECONDS) : objects.take();
-    return theObject == null ? null : new ObjectResourceHolder(theObject);
-  }
-
-  /**
-   * Similar to StupidPool.ObjectResourceHolder, except this one has no objectsCacheMaxCount, and it returns objects
-   * to the pool on finalize.
-   */
-  private class ObjectResourceHolder implements ResourceHolder<T>
-  {
-    private AtomicBoolean closed = new AtomicBoolean(false);
-    private final T object;
-
-    public ObjectResourceHolder(final T object)
-    {
-      this.object = object;
-    }
-
-    // WARNING: it is entirely possible for a caller to hold onto the object and call "close", then still use that
-    // object even though it will be offered to someone else in BlockingPool.take
-    @Override
-    public T get()
-    {
-      if (closed.get()) {
-        throw new ISE("Already Closed!");
-      }
-
-      return object;
-    }
-
-    @Override
-    public void close()
-    {
-      if (!closed.compareAndSet(false, true)) {
-        log.warn(new ISE("Already Closed!"), "Already closed");
-        return;
-      }
-      if (!objects.offer(object)) {
-        throw new ISE("WTF?! Queue offer failed");
-      }
-    }
-
-    @Override
-    protected void finalize() throws Throwable
-    {
-      if (closed.compareAndSet(false, true)) {
-        log.warn("Not closed! Object was[%s]. Returning to pool.", object);
-        if (!objects.offer(object)) {
-          log.error("WTF?! Queue offer failed during finalize, uh oh...");
+    return theObject == null ? null : new ReferenceCountingResourceHolder<>(
+        theObject,
+        new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            if (!objects.offer(theObject)) {
+              log.error("WTF?! Queue offer failed, uh oh...");
+            }
+          }
         }
-      }
-    }
+    );
   }
 }

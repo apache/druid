@@ -49,7 +49,8 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar")), null, null),
             null,
             null
-        )
+        ),
+        null
     );
     final ByteBufferInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
@@ -197,7 +198,8 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(null, null, null),
             flattenSpec,
             null
-        )
+        ),
+        null
     );
 
     final StringInputRowParser parser2 = jsonMapper.readValue(

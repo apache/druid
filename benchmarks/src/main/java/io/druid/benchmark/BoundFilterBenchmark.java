@@ -32,6 +32,7 @@ import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -75,7 +76,8 @@ public class BoundFilterBenchmark
           true,
           false,
           false,
-          null
+          null,
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -87,7 +89,8 @@ public class BoundFilterBenchmark
           false,
           false,
           false,
-          null
+          null,
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -99,7 +102,8 @@ public class BoundFilterBenchmark
           false,
           false,
           false,
-          null
+          null,
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -111,7 +115,8 @@ public class BoundFilterBenchmark
           true,
           false,
           true,
-          null
+          null,
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -123,7 +128,8 @@ public class BoundFilterBenchmark
           false,
           false,
           true,
-          null
+          null,
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -135,7 +141,8 @@ public class BoundFilterBenchmark
           false,
           false,
           true,
-          null
+          null,
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -153,7 +160,7 @@ public class BoundFilterBenchmark
   {
     step = (END_INT - START_INT) / cardinality;
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory();
+    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)

@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
@@ -34,14 +33,10 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -55,7 +50,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   private final List<ResourceHolder<ByteBuffer>> aggBuffers = new ArrayList<>();
   private final List<int[]> indexAndOffsets = new ArrayList<>();
 
-  private final ConcurrentMap<TimeAndDims, Integer> facts;
+  private final FactsHolder facts;
 
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
 
@@ -80,15 +75,12 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       StupidPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
-    if (sortFacts) {
-      this.facts = new ConcurrentSkipListMap<>(dimsComparator());
-    } else {
-      this.facts = new ConcurrentHashMap<>();
-    }
+    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
+                                                   : new PlainFactsHolder(sortFacts);
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();
@@ -114,10 +106,34 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
+                                            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                                             .build(),
         deserializeComplexMetrics,
         reportParseExceptions,
         sortFacts,
+        maxRowCount,
+        bufferPool
+    );
+  }
+
+  public OffheapIncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      boolean rollup,
+      final AggregatorFactory[] metrics,
+      int maxRowCount,
+      StupidPool<ByteBuffer> bufferPool
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .withRollup(rollup)
+                                            .build(),
+        true,
+        true,
+        true,
         maxRowCount,
         bufferPool
     );
@@ -132,28 +148,19 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   )
   {
     this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .build(),
-        true,
-        true,
-        true,
+        minTimestamp,
+        gran,
+        IncrementalIndexSchema.DEFAULT_ROLLUP,
+        metrics,
         maxRowCount,
         bufferPool
     );
   }
 
   @Override
-  public ConcurrentMap<TimeAndDims, Integer> getFacts()
+  public FactsHolder getFacts()
   {
     return facts;
-  }
-
-  @Override
-  protected DimDim makeDimDim(String dimension, Object lock)
-  {
-    return new OnheapIncrementalIndex.OnHeapDimDim(lock);
   }
 
   @Override
@@ -170,7 +177,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
           agg,
           rowSupplier,
-          deserializeComplexMetrics
+          deserializeComplexMetrics,
+          getColumnCapabilities()
       );
 
       selectors.put(
@@ -207,7 +215,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     int bufferOffset;
 
     synchronized (this) {
-      final Integer priorIndex = facts.get(key);
+      final Integer priorIndex = facts.getPriorIndex(key);
       if (null != priorIndex) {
         final int[] indexAndOffset = indexAndOffsets.get(priorIndex);
         bufferIndex = indexAndOffset[0];
@@ -221,7 +229,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           for (int i = 0; i < metrics.length; i++) {
             final AggregatorFactory agg = metrics[i];
             getAggs()[i] = agg.factorizeBuffered(
-                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, getColumnCapabilities())
             );
           }
           rowContainer.set(null);
@@ -254,7 +262,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
+        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 

@@ -24,6 +24,8 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
 
+import java.util.Map;
+
 /**
  * An adapter to an index
  */
@@ -37,7 +39,7 @@ public interface IndexableAdapter
 
   Indexed<String> getMetricNames();
 
-  Indexed<String> getDimValueLookup(String dimension);
+  Indexed<Comparable> getDimValueLookup(String dimension);
 
   Iterable<Rowboat> getRows();
 
@@ -48,4 +50,6 @@ public interface IndexableAdapter
   ColumnCapabilities getCapabilities(String column);
 
   Metadata getMetadata();
+
+  Map<String, DimensionHandler> getDimensionHandlers();
 }

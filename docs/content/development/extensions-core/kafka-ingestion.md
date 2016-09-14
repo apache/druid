@@ -11,7 +11,7 @@ able to read non-recent events from Kafka and are not subject to the window peri
 ingestion mechanisms. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
-This service is provided in the `kafka-indexing-service` core extension (see
+This service is provided in the `druid-kafka-indexing-service` core extension (see
 [Including Extensions](../../operations/including-extensions.html)). Please note that the Kafka indexing service is
 currently designated as an *experimental feature* and is subject to the usual
 [experimental caveats](../experimental.html).
@@ -24,7 +24,7 @@ version 0.9 or better before using this service.
 
 ## Submitting a Supervisor Spec
 
-The Kafka indexing service requires that the `kafka-indexing-service` extension be loaded on both the overlord and the
+The Kafka indexing service requires that the `druid-kafka-indexing-service` extension be loaded on both the overlord and the
 middle managers. A supervisor for a dataSource is started by submitting a supervisor spec via HTTP POST to
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`, for example:
 
@@ -128,9 +128,25 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|`bitmap`|String|The type of bitmap index to create. Choose from `roaring` or `concise`.|no (default == `concise`)|
-|`dimensionCompression`|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
-|`metricCompression`|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
+|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
+
+##### Bitmap types
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|Must be `concise`.|yes|
+
+For Roaring bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|Must be `roaring`.|yes|
+|`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 ### KafkaSupervisorIOConfig
 

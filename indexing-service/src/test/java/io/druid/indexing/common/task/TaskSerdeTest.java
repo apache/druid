@@ -36,6 +36,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -176,6 +178,7 @@ public class TaskSerdeTest
         "foo",
         segments,
         aggregators,
+        true,
         indexSpec,
         null
     );
@@ -517,7 +520,10 @@ public class TaskSerdeTest
     );
     final ConvertSegmentTask convertSegmentTaskOriginal = ConvertSegmentTask.create(
         segment,
-        new IndexSpec(new RoaringBitmapSerdeFactory(), "lzf", "uncompressed"),
+        new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                      CompressedObjectStrategy.CompressionStrategy.LZF,
+                      CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                      CompressionFactory.LongEncodingStrategy.LONGS),
         false,
         true,
         null

@@ -44,9 +44,9 @@ import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
+import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
-import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -775,6 +775,7 @@ public class Druids
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private String bound;
+    private DimFilter dimFilter;
     private Map<String, Object> context;
 
     public TimeBoundaryQueryBuilder()
@@ -782,6 +783,7 @@ public class Druids
       dataSource = null;
       querySegmentSpec = null;
       bound = null;
+      dimFilter = null;
       context = null;
     }
 
@@ -791,6 +793,7 @@ public class Druids
           dataSource,
           querySegmentSpec,
           bound,
+          dimFilter,
           context
       );
     }
@@ -801,6 +804,7 @@ public class Druids
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
           .bound(builder.bound)
+          .filters(builder.dimFilter)
           .context(builder.context);
     }
 
@@ -837,6 +841,24 @@ public class Druids
     public TimeBoundaryQueryBuilder bound(String b)
     {
       bound = b;
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
       return this;
     }
 

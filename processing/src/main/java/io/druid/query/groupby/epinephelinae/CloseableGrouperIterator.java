@@ -20,24 +20,27 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
 
 public class CloseableGrouperIterator<KeyType extends Comparable<KeyType>, T> implements Iterator<T>, Closeable
 {
-  private final Grouper<KeyType> grouper;
   private final Function<Grouper.Entry<KeyType>, T> transformer;
+  private final Closeable closer;
   private final Iterator<Grouper.Entry<KeyType>> iterator;
 
   public CloseableGrouperIterator(
       final Grouper<KeyType> grouper,
       final boolean sorted,
-      final Function<Grouper.Entry<KeyType>, T> transformer
+      final Function<Grouper.Entry<KeyType>, T> transformer,
+      final Closeable closer
   )
   {
-    this.grouper = grouper;
     this.transformer = transformer;
+    this.closer = closer;
     this.iterator = grouper.iterator(sorted);
   }
 
@@ -62,6 +65,13 @@ public class CloseableGrouperIterator<KeyType extends Comparable<KeyType>, T> im
   @Override
   public void close()
   {
-    grouper.close();
+    if (closer != null) {
+      try {
+        closer.close();
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
+    }
   }
 }

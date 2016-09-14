@@ -103,7 +103,9 @@ public class AppenderatorTester implements AutoCloseable
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(null, null, null)
+                new DimensionsSpec(null, null, null),
+                null,
+                null
             )
         ),
         Map.class

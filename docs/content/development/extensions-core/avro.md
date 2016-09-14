@@ -44,6 +44,68 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
 
 If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 
+##### Inline Schema Based Avro Bytes Decoder
+
+This decoder can be used if all the input events can be read using the same schema. In that case schema can be specified in the input task json itself as described below.
+
+```
+...
+"avroBytesDecoder": {
+  "type": "schema_inline",
+  "schema": {
+    //your schema goes here, for example
+    "namespace": "io.druid.data",
+    "name": "User",
+    "type": "record",
+    "fields" [
+      { "name": "FullName", "type": "string" },
+      { "name": "Country", "type": "string" }
+    ]
+  }
+}
+...
+```
+
+##### Multiple Inline Schemas Based Avro Bytes Decoder
+
+This decoder can be used if different input events can have different read schema. In that case schema can be specified in the input task json itself as described below.
+
+```
+...
+"avroBytesDecoder": {
+  "type": "multiple_schemas_inline",
+  "schemas": {
+    //your id -> schema map goes here, for example
+    "1": {
+      "namespace": "io.druid.data",
+      "name": "User",
+      "type": "record",
+      "fields" [
+        { "name": "FullName", "type": "string" },
+        { "name": "Country", "type": "string" }
+      ]
+    },
+    "2": {
+      "namespace": "io.druid.otherdata",
+      "name": "UserIdentity",
+      "type": "record",
+      "fields" [
+        { "name": "Name", "type": "string" },
+        { "name": "Location", "type": "string" }
+      ]
+    },
+    ...
+    ...
+  }
+}
+...
+```
+
+Note that it is essentially a map of integer schema ID to avro schema object. This parser assumes that record has following format.
+  first 1 byte is version and must always be 1.
+  next 4 bytes are integer schema ID serialized using big-endian byte order.
+  remaining bytes contain serialized avro message.
+
 ##### SchemaRepo Based Avro Bytes Decoder
 
 This Avro bytes decoder first extract `subject` and `id` from input message bytes, then use them to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `io.druid.data.input.AvroStreamInputRowParserTest#testParse()`.

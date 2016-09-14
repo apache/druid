@@ -78,12 +78,8 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ### JavaScript aggregator
 
-Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions).
-
-All JavaScript functions must return numerical values.
-
-JavaScript aggregators are much slower than the native aggregators and if performance is critical, you should implement 
-your functionality as a native aggregator.
+Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your
+JavaScript functions are expected to return floating-point values.
 
 ```json
 { "type": "javascript",
@@ -111,8 +107,10 @@ your functionality as a native aggregator.
 }
 ```
 
-The JavaScript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
-use than a native aggregator.
+<div class="note info">
+Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
+about using Druid's JavaScript functionality.
+</div>
 
 ## Approximate Aggregations
 
@@ -127,10 +125,12 @@ instead of the cardinality aggregator if you do not care about the individual va
 {
   "type": "cardinality",
   "name": "<output_name>",
-  "fieldNames": [ <dimension1>, <dimension2>, ... ],
+  "fields": [ <dimension1>, <dimension2>, ... ],
   "byRow": <false | true> # (optional, defaults to false)
 }
 ```
+
+Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
 
 #### Cardinality by value
 
@@ -171,7 +171,7 @@ Determine the number of distinct countries people are living in or have come fro
 {
   "type": "cardinality",
   "name": "distinct_countries",
-  "fieldNames": [ "coutry_of_origin", "country_of_residence" ]
+  "fields": [ "country_of_origin", "country_of_residence" ]
 }
 ```
 
@@ -181,10 +181,29 @@ Determine the number of distinct people (i.e. combinations of first and last nam
 {
   "type": "cardinality",
   "name": "distinct_people",
-  "fieldNames": [ "first_name", "last_name" ],
+  "fields": [ "first_name", "last_name" ],
   "byRow" : true
 }
 ```
+
+Determine the number of distinct starting characters of last names
+
+```json
+{
+  "type": "cardinality",
+  "name": "distinct_last_name_first_char",
+  "fields": [
+    {
+     "type" : "extraction",
+     "dimension" : "last_name",
+     "outputName" :  "last_name_first_char",
+     "extractionFn" : { "type" : "substring", "index" : 0, "length" : 1 }
+    }
+  ],
+  "byRow" : true
+}
+```
+
 
 ### HyperUnique aggregator
 

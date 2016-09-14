@@ -156,7 +156,7 @@ public abstract class BaseFilterTest
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.<String, BitmapSerdeFactory>of(
         "concise", new ConciseBitmapSerdeFactory(),
-        "roaring", new RoaringBitmapSerdeFactory()
+        "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
     final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
@@ -238,6 +238,7 @@ public abstract class BaseFilterTest
             final IndexBuilder indexBuilder = IndexBuilder.create()
                                                           .indexSpec(new IndexSpec(
                                                               bitmapSerdeFactoryEntry.getValue(),
+                                                              null,
                                                               null,
                                                               null
                                                           ))

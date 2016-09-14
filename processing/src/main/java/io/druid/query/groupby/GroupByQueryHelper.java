@@ -31,6 +31,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -45,7 +46,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
 {
-  private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   public final static String CTX_KEY_SORT_RESULTS = "sortResults";
 
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
@@ -54,6 +54,7 @@ public class GroupByQueryHelper
       StupidPool<ByteBuffer> bufferPool
   )
   {
+    final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final QueryGranularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
@@ -97,7 +98,7 @@ public class GroupByQueryHelper
           false,
           true,
           sortResults,
-          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults()),
+          querySpecificConfig.getMaxResults(),
           bufferPool
       );
     } else {
@@ -110,7 +111,7 @@ public class GroupByQueryHelper
           false,
           true,
           sortResults,
-          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
+          querySpecificConfig.getMaxResults()
       );
     }
 
@@ -132,7 +133,7 @@ public class GroupByQueryHelper
             );
           }
           catch (IndexSizeExceededException e) {
-            throw new ISE(e.getMessage());
+            throw new ResourceLimitExceededException(e.getMessage());
           }
         } else {
           throw new ISE("Unable to accumulate something of type [%s]", in.getClass());
@@ -163,7 +164,7 @@ public class GroupByQueryHelper
     return new Pair<>(init, accumulator);
   }
 
-  // Used by GroupByQueryQueryToolChest, GroupByStrategyV1
+  // Used by GroupByStrategyV1
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
       GroupByQueryConfig config,
@@ -180,7 +181,7 @@ public class GroupByQueryHelper
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
 
-  // Used by GroupByQueryQueryToolChest, GroupByStrategyV1
+  // Used by GroupByStrategyV1
   public static Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(

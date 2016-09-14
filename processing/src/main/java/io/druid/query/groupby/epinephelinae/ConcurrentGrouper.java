@@ -20,6 +20,7 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.metamx.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
@@ -28,33 +29,52 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Grouper based around a set of underlying {@link SpillingGrouper} instances. Thread-safe.
  *
- * The passed-in buffer is cut up into "concurrencyHint" slices, and each slice is passed to a different underlying
- * grouper. Access to each slice is separately synchronized.
+ * The passed-in buffer is cut up into concurrencyHint slices, and each slice is passed to a different underlying
+ * grouper. Access to each slice is separately synchronized. As long as the result set fits in memory, keys are
+ * partitioned between buffers based on their hash, and multiple threads can write into the same buffer. When
+ * it becomes clear that the result set does not fit in memory, the table switches to a mode where each thread
+ * gets its own buffer and its own spill files on disk.
  */
 public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
 {
-  private final List<Grouper<KeyType>> groupers;
+  private final List<SpillingGrouper<KeyType>> groupers;
+  private final ThreadLocal<SpillingGrouper<KeyType>> threadLocalGrouper;
+  private final AtomicInteger threadNumber = new AtomicInteger();
+  private volatile boolean spilling = false;
   private volatile boolean closed = false;
 
   public ConcurrentGrouper(
       final ByteBuffer buffer,
-      final int concurrencyHint,
-      final LimitedTemporaryStorage temporaryStorage,
-      final ObjectMapper spillMapper,
-      final int bufferGrouperMaxSize,
-      final int bufferGrouperInitialBuckets,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
-      final AggregatorFactory[] aggregatorFactories
+      final AggregatorFactory[] aggregatorFactories,
+      final int bufferGrouperMaxSize,
+      final float bufferGrouperMaxLoadFactor,
+      final int bufferGrouperInitialBuckets,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final int concurrencyHint
   )
   {
+    Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
+
     this.groupers = new ArrayList<>(concurrencyHint);
+    this.threadLocalGrouper = new ThreadLocal<SpillingGrouper<KeyType>>()
+    {
+      @Override
+      protected SpillingGrouper<KeyType> initialValue()
+      {
+        return groupers.get(threadNumber.getAndIncrement());
+      }
+    };
 
     final int sliceSize = (buffer.capacity() / concurrencyHint);
+
     for (int i = 0; i < concurrencyHint; i++) {
       final ByteBuffer slice = buffer.duplicate();
       slice.position(sliceSize * i);
@@ -65,10 +85,12 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
               keySerdeFactory,
               columnSelectorFactory,
               aggregatorFactories,
+              bufferGrouperMaxSize,
+              bufferGrouperMaxLoadFactor,
+              bufferGrouperInitialBuckets,
               temporaryStorage,
               spillMapper,
-              bufferGrouperMaxSize,
-              bufferGrouperInitialBuckets
+              false
           )
       );
     }
@@ -81,9 +103,26 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
       throw new ISE("Grouper is closed");
     }
 
-    final Grouper<KeyType> grouper = groupers.get(grouperNumberForKeyHash(keyHash));
-    synchronized (grouper) {
-      return grouper.aggregate(key, keyHash);
+    if (!spilling) {
+      final SpillingGrouper<KeyType> hashBasedGrouper = groupers.get(grouperNumberForKeyHash(keyHash));
+
+      synchronized (hashBasedGrouper) {
+        if (!spilling) {
+          if (hashBasedGrouper.aggregate(key, keyHash)) {
+            return true;
+          } else {
+            spilling = true;
+          }
+        }
+      }
+    }
+
+    // At this point we know spilling = true
+    final SpillingGrouper<KeyType> tlGrouper = threadLocalGrouper.get();
+
+    synchronized (tlGrouper) {
+      tlGrouper.setSpillingAllowed(true);
+      return tlGrouper.aggregate(key, keyHash);
     }
   }
 

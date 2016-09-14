@@ -173,6 +173,7 @@ public class KafkaIndexTaskTest
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "d", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "e", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, "unparseable".getBytes()),
+      new ProducerRecord<byte[], byte[]>("topic0", 0, null, null),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2013", "f", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2012", "g", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2011", "h", "y", 1.0f))
@@ -705,7 +706,7 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence1",
             new KafkaPartitions("topic0", ImmutableMap.of(0, 3L)),
-            new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 8L)),
             kafkaServer.consumerProperties(),
             true,
             false,
@@ -734,7 +735,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().thrownAway());
     Assert.assertEquals(3, task2.getFireDepartmentMetrics().processed());
-    Assert.assertEquals(1, task2.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(2, task2.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task2.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata, should all be from the first task
@@ -772,7 +773,7 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence1",
             new KafkaPartitions("topic0", ImmutableMap.of(0, 3L)),
-            new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 8L)),
             kafkaServer.consumerProperties(),
             false,
             false,
@@ -807,7 +808,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task1.getFireDepartmentMetrics().thrownAway());
     Assert.assertEquals(3, task2.getFireDepartmentMetrics().processed());
-    Assert.assertEquals(1, task2.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(2, task2.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task2.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata
@@ -1200,6 +1201,34 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc3));
   }
 
+  @Test(timeout = 30_000L)
+  public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 2L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null
+        ),
+        null
+    );
+
+    runTask(task);
+
+    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+      Thread.sleep(2000);
+    }
+
+    task.pause(0);
+
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {
@@ -1495,7 +1524,7 @@ public class KafkaIndexTaskTest
     );
     IndexIO indexIO = new TestUtils().getTestIndexIO();
     QueryableIndex index = indexIO.loadIndex(outputLocation);
-    DictionaryEncodedColumn dim1 = index.getColumn("dim1").getDictionaryEncoding();
+    DictionaryEncodedColumn<String> dim1 = index.getColumn("dim1").getDictionaryEncoding();
     List<String> values = Lists.newArrayList();
     for (int i = 0; i < dim1.length(); i++) {
       int id = dim1.getSingleValueRow(i);

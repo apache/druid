@@ -178,22 +178,35 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
    }
 ```
 
-The following properties can be used to tune how the MapReduce job is configured by overriding default Hadoop/YARN/Mapreduce configurations:
+Hadoop's [MapReduce documentation](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) lists the possible configuration parameters.
 
-|Property name|Type|Description|
-|-------------|----|-----------|
-|mapreduce.job.user.classpath.first|String|Use Druid classpath instead of Hadoop classpath for common libraries like [Jackson](https://github.com/FasterXML/jackson) (required with [Cloudera Hadoop distribution](../operations/other-hadoop.html)) when set to `"true"`.|
-|...|String|See [Mapred configuration](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) for more configuration parameters.|
-
-**Please note that using `mapreduce.job.user.classpath.first` is an expert feature and should not be used without a deep understanding of Hadoop and Java class loading mechanism.**
+With some Hadoop distributions, it may be necessary to set `mapreduce.job.classpath` or `mapreduce.job.user.classpath.first`
+to avoid class loading issues. See the [working with different Hadoop versions documentation](../operations/other-hadoop.html)
+for more details.
 
 #### IndexSpec
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|bitmap|String|The type of bitmap index to create. Choose from `roaring` or `concise`, or null to use the default (`concise`).|No|
-|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
-|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
+|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
+
+##### Bitmap types
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `concise`.|yes|
+
+For Roaring bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `roaring`.|yes|
+|compressRunOnSerialization|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 ### Partitioning specification
 
@@ -273,6 +286,19 @@ classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.r
 - Follow the instructions under "[Configure Hadoop for data
 loads](../tutorials/cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
 `/etc/hadoop/conf` on your EMR master.
+
+### Secured Hadoop Cluster
+
+By default druid can use the exisiting TGT kerberos ticket available in local kerberos key cache.
+Although TGT ticket has a limited life cycle, 
+therefore you need to call `kinit` command periodically to ensure validity of TGT ticket.
+To avoid this extra external cron job script calling `kinit` periodically,
+ you can provide the principal name and keytab location and druid will do the authentication transparently at startup and job launching time.   
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name |empty|
+|`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.headlessUser.keytab`|Path to keytab file|empty|
 
 #### Loading from S3 with EMR
 

@@ -29,6 +29,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.common.IAE;
+import com.metamx.common.UOE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -38,6 +40,8 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
@@ -54,6 +58,7 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.BooleanValueMatcher;
+import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
@@ -184,11 +189,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    Column columnObj = index.getColumn(column);
-    if (columnObj == null) {
-      return null;
-    }
-    return columnObj.getCapabilities();
+    return getColumnCapabilites(index, column);
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return index.getDimensionHandlers();
   }
 
   @Override
@@ -312,6 +319,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         ).build(),
         Predicates.<Cursor>notNull()
     );
+  }
+
+  private static ColumnCapabilities getColumnCapabilites(ColumnSelector index, String columnName)
+  {
+    Column columnObj = index.getColumn(columnName);
+    if (columnObj == null) {
+      return null;
+    }
+    return columnObj.getCapabilities();
   }
 
   private interface CursorAdvancer
@@ -452,13 +468,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         );
                       }
 
-                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
+                      DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
                         dictionaryColumnCache.put(dimension, cachedColumn);
                       }
 
-                      final DictionaryEncodedColumn column = cachedColumn;
+                      final DictionaryEncodedColumn<String> column = cachedColumn;
 
                       if (column == null) {
                         return NULL_DIMENSION_SELECTOR;
@@ -729,7 +745,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
-                        final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
+                        final DictionaryEncodedColumn<String> columnVals = (DictionaryEncodedColumn) cachedColumnVals;
                         if (columnVals.hasMultipleValues()) {
                           return new ObjectColumnSelector<Object>()
                           {
@@ -790,6 +806,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
                       };
                     }
+
+                    @Override
+                    public ColumnCapabilities getColumnCapabilities(String columnName)
+                    {
+                      return getColumnCapabilites(index, columnName);
+                    }
                   }
 
                   if (postFilter == null) {
@@ -841,6 +863,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     return new QueryableIndexBaseCursor()
                     {
                       CursorOffsetHolderValueMatcherFactory valueMatcherFactory = new CursorOffsetHolderValueMatcherFactory(
+                          index,
                           this
                       );
                       RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
@@ -981,20 +1004,28 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
   {
+    private final ColumnSelector index;
     private final ColumnSelectorFactory cursor;
 
     public CursorOffsetHolderValueMatcherFactory(
+        ColumnSelector index,
         ColumnSelectorFactory cursor
     )
     {
+      this.index = index;
       this.cursor = cursor;
     }
 
-    // Currently unused, except by unit tests, since filters always support bitmap indexes currently.
-    // This will change when non-String dimensions are added.
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
     {
+      if (getTypeForDimension(dimension) == ValueType.LONG) {
+        return Filters.getLongValueMatcher(
+            cursor.makeLongColumnSelector(dimension),
+            value
+        );
+      }
+
       final DimensionSelector selector = cursor.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
       );
@@ -1026,10 +1057,21 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       }
     }
 
-    // Currently unused, except by unit tests, since filters always support bitmap indexes currently.
-    // This will change when non-String dimensions are added.
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Predicate predicate)
+    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
+    {
+      ValueType type = getTypeForDimension(dimension);
+      switch (type) {
+        case LONG:
+          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
+        case STRING:
+          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
+        default:
+          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
+      }
+    }
+
+    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<String> predicate)
     {
       final DimensionSelector selector = cursor.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
@@ -1054,6 +1096,20 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
           return false;
         }
       };
+    }
+
+    private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)
+    {
+      return Filters.getLongPredicateMatcher(
+          cursor.makeLongColumnSelector(dimension),
+          predicate
+      );
+    }
+
+    private ValueType getTypeForDimension(String dimension)
+    {
+      ColumnCapabilities capabilities = getColumnCapabilites(index, dimension);
+      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 

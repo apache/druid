@@ -21,16 +21,15 @@ package io.druid.query.groupby.orderby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.ordering.StringComparators.StringComparator;
+import io.druid.query.ordering.StringComparator;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -42,50 +41,74 @@ import java.util.Map;
  */
 public class OrderByColumnSpec
 {
-  public static enum Direction
+  public enum Direction
   {
     ASCENDING,
-    DESCENDING
+    DESCENDING;
+
+    /**
+     * Maintain a map of the enum values so that we can just do a lookup and get a null if it doesn't exist instead
+     * of an exception thrown.
+     */
+    private static final Map<String, Direction> stupidEnumMap;
+    static {
+      final ImmutableMap.Builder<String, Direction> bob = ImmutableMap.builder();
+      for (Direction direction : Direction.values()) {
+        bob.put(direction.name(), direction);
+      }
+      stupidEnumMap = bob.build();
+    }
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return this.name().toLowerCase();
+    }
+
+    @JsonCreator
+    public static Direction fromString(String name)
+    {
+      final String upperName = name.toUpperCase();
+      Direction direction = stupidEnumMap.get(upperName);
+
+      if (direction == null) {
+        for (Direction dir : Direction.values()) {
+          if (dir.name().startsWith(upperName)) {
+            if (direction != null) {
+              throw new ISE("Ambiguous directions[%s] and [%s]", direction, dir);
+            }
+            direction = dir;
+          }
+        }
+      }
+
+      return direction;
+    }
   }
 
   public static final StringComparator DEFAULT_DIMENSION_ORDER = StringComparators.LEXICOGRAPHIC;
-
-  /**
-   * Maintain a map of the enum values so that we can just do a lookup and get a null if it doesn't exist instead
-   * of an exception thrown.
-   */
-  private static final Map<String, Direction> stupidEnumMap;
-
-  static {
-    final ImmutableMap.Builder<String, Direction> bob = ImmutableMap.builder();
-    for (Direction direction : Direction.values()) {
-      bob.put(direction.toString(), direction);
-    }
-    stupidEnumMap = bob.build();
-  }
 
   private final String dimension;
   private final Direction direction;
   private final StringComparator dimensionComparator;
 
   @JsonCreator
-  public static OrderByColumnSpec create(Object obj)
+  public OrderByColumnSpec(
+      @JsonProperty("dimension") String dimension,
+      @JsonProperty("direction") Direction direction,
+      @JsonProperty("dimensionOrder") StringComparator dimensionComparator
+  )
   {
-    Preconditions.checkNotNull(obj, "Cannot build an OrderByColumnSpec from a null object.");
+    this.dimension = dimension;
+    this.direction = direction == null ? Direction.ASCENDING : direction;
+    this.dimensionComparator = dimensionComparator == null ? DEFAULT_DIMENSION_ORDER : dimensionComparator;
+  }
 
-    if (obj instanceof String) {
-      return new OrderByColumnSpec(obj.toString(), null, null);
-    } else if (obj instanceof Map) {
-      final Map map = (Map) obj;
-
-      final String dimension = map.get("dimension").toString();
-      final Direction direction = determineDirection(map.get("direction"));
-      final StringComparator dimensionComparator = determinDimensionComparator(map.get("dimensionOrder"));
-
-      return new OrderByColumnSpec(dimension, direction, dimensionComparator);
-    } else {
-      throw new ISE("Cannot build an OrderByColumnSpec from a %s", obj.getClass());
-    }
+  @JsonCreator
+  public static OrderByColumnSpec fromString(String dimension)
+  {
+    return new OrderByColumnSpec(dimension, null, null);
   }
 
   public static OrderByColumnSpec asc(String dimension)
@@ -136,73 +159,22 @@ public class OrderByColumnSpec
     this(dimension, direction, null);
   }
 
-  public OrderByColumnSpec(
-      String dimension,
-      Direction direction,
-      StringComparator dimensionComparator
-  )
-  {
-    this.dimension = dimension;
-    this.direction = direction == null ? Direction.ASCENDING : direction;
-    this.dimensionComparator = dimensionComparator == null ? DEFAULT_DIMENSION_ORDER : dimensionComparator;
-  }
-
-  @JsonProperty
+  @JsonProperty("dimension")
   public String getDimension()
   {
     return dimension;
   }
 
-  @JsonProperty
+  @JsonProperty("direction")
   public Direction getDirection()
   {
     return direction;
   }
 
-  @JsonProperty
+  @JsonProperty("dimensionOrder")
   public StringComparator getDimensionComparator()
   {
     return dimensionComparator;
-  }
-
-  public static Direction determineDirection(Object directionObj)
-  {
-    if (directionObj == null) {
-      return null;
-    }
-
-    String directionString = directionObj.toString();
-
-    Direction direction = stupidEnumMap.get(directionString);
-
-    if (direction == null) {
-      final String lowerDimension = directionString.toLowerCase();
-
-      for (Direction dir : Direction.values()) {
-        if (dir.toString().toLowerCase().startsWith(lowerDimension)) {
-          if (direction != null) {
-            throw new ISE("Ambiguous directions[%s] and [%s]", direction, dir);
-          }
-          direction = dir;
-        }
-      }
-    }
-
-    if (direction == null) {
-      throw new IAE("Unknown direction[%s]", directionString);
-    }
-
-    return direction;
-  }
-
-  private static StringComparator determinDimensionComparator(Object dimensionOrderObj)
-  {
-    if (dimensionOrderObj == null) {
-      return DEFAULT_DIMENSION_ORDER;
-    }
-
-    String dimensionOrderString = dimensionOrderObj.toString().toLowerCase();
-    return StringComparators.makeComparator(dimensionOrderString);
   }
 
   @Override
@@ -241,7 +213,7 @@ public class OrderByColumnSpec
   {
     return "OrderByColumnSpec{" +
            "dimension='" + dimension + '\'' +
-           ", direction=" + direction + '\'' +
+           ", direction='" + direction + '\'' +
            ", dimensionComparator='" + dimensionComparator + '\'' +
            '}';
   }

@@ -34,12 +34,12 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -49,7 +49,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private static final Logger log = new Logger(OnheapIncrementalIndex.class);
 
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
-  private final ConcurrentMap<TimeAndDims, Integer> facts;
+  private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
   protected final int maxRowCount;
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -64,14 +64,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       int maxRowCount
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
     this.maxRowCount = maxRowCount;
 
-    if (sortFacts) {
-      this.facts = new ConcurrentSkipListMap<>(dimsComparator());
-    } else {
-      this.facts = new ConcurrentHashMap<>();
-    }
+    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
+                                                   : new PlainFactsHolder(sortFacts);
   }
 
   public OnheapIncrementalIndex(
@@ -88,10 +85,32 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
+                                            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                                             .build(),
         deserializeComplexMetrics,
         reportParseExceptions,
         sortFacts,
+        maxRowCount
+    );
+  }
+
+  public OnheapIncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      boolean rollup,
+      final AggregatorFactory[] metrics,
+      int maxRowCount
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .withRollup(rollup)
+                                            .build(),
+        true,
+        true,
+        true,
         maxRowCount
     );
   }
@@ -104,13 +123,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   )
   {
     this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .build(),
-        true,
-        true,
-        true,
+        minTimestamp,
+        gran,
+        IncrementalIndexSchema.DEFAULT_ROLLUP,
+        metrics,
         maxRowCount
     );
   }
@@ -125,15 +141,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  public ConcurrentMap<TimeAndDims, Integer> getFacts()
+  public FactsHolder getFacts()
   {
     return facts;
-  }
-
-  @Override
-  protected DimDim makeDimDim(String dimension, Object lock)
-  {
-    return new OnHeapDimDim(lock);
   }
 
   @Override
@@ -145,7 +155,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
-          new ObjectCachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics))
+          new ObjectCachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, getColumnCapabilities()))
       );
     }
 
@@ -164,7 +174,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
-    final Integer priorIndex = facts.get(key);
+    final Integer priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
 
@@ -180,7 +190,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
+      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final Integer prev = facts.putIfAbsent(key, rowIndex);
@@ -319,133 +329,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
-  static class OnHeapDimDim<T extends Comparable<? super T>> implements DimDim<T>
-  {
-    private final Map<T, Integer> valueToId = Maps.newHashMap();
-    private T minValue = null;
-    private T maxValue = null;
-
-    private final List<T> idToValue = Lists.newArrayList();
-    private final Object lock;
-
-    public OnHeapDimDim(Object lock)
-    {
-      this.lock = lock;
-    }
-
-    public int getId(T value)
-    {
-      synchronized (lock) {
-        final Integer id = valueToId.get(value);
-        return id == null ? -1 : id;
-      }
-    }
-
-    public T getValue(int id)
-    {
-      synchronized (lock) {
-        return idToValue.get(id);
-      }
-    }
-
-    public boolean contains(T value)
-    {
-      synchronized (lock) {
-        return valueToId.containsKey(value);
-      }
-    }
-
-    public int size()
-    {
-      synchronized (lock) {
-        return valueToId.size();
-      }
-    }
-
-    public int add(T value)
-    {
-      synchronized (lock) {
-        Integer prev = valueToId.get(value);
-        if (prev != null) {
-          return prev;
-        }
-        final int index = size();
-        valueToId.put(value, index);
-        idToValue.add(value);
-        minValue = minValue == null || minValue.compareTo(value) > 0 ? value : minValue;
-        maxValue = maxValue == null || maxValue.compareTo(value) < 0 ? value : maxValue;
-        return index;
-      }
-    }
-
-    @Override
-    public T getMinValue()
-    {
-      return minValue;
-    }
-
-    @Override
-    public T getMaxValue()
-    {
-      return maxValue;
-    }
-
-    public OnHeapDimLookup sort()
-    {
-      synchronized (lock) {
-        return new OnHeapDimLookup(idToValue, size());
-      }
-    }
-  }
-
-  static class OnHeapDimLookup<T extends Comparable<? super T>> implements SortedDimLookup<T>
-  {
-    private final List<T> sortedVals;
-    private final int[] idToIndex;
-    private final int[] indexToId;
-
-    public OnHeapDimLookup(List<T> idToValue, int length)
-    {
-      Map<T, Integer> sortedMap = Maps.newTreeMap();
-      for (int id = 0; id < length; id++) {
-        sortedMap.put(idToValue.get(id), id);
-      }
-      this.sortedVals = Lists.newArrayList(sortedMap.keySet());
-      this.idToIndex = new int[length];
-      this.indexToId = new int[length];
-      int index = 0;
-      for (Integer id : sortedMap.values()) {
-        idToIndex[id] = index;
-        indexToId[index] = id;
-        index++;
-      }
-    }
-
-    @Override
-    public int size()
-    {
-      return sortedVals.size();
-    }
-
-    @Override
-    public int getUnsortedIdFromSortedId(int index)
-    {
-      return indexToId[index];
-    }
-
-    @Override
-    public T getValueFromSortedId(int index)
-    {
-      return sortedVals.get(index);
-    }
-
-    @Override
-    public int getSortedIdFromUnsortedId(int id)
-    {
-      return idToIndex[id];
-    }
-  }
-
   // Caches references to selector objects for each column instead of creating a new object each time in order to save heap space.
   // In general the selectorFactory need not to thread-safe.
   // here its made thread safe to support the special case of groupBy where the multiple threads can add concurrently to the IncrementalIndex.
@@ -513,6 +396,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         );
         return prev != null ? prev : newSelector;
       }
+    }
+
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return delegate.getColumnCapabilities(columnName);
     }
   }
 

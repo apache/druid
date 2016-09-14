@@ -146,7 +146,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     ) throws IndexSizeExceededException
     {
 
-      final Integer priorIdex = getFacts().get(key);
+      final Integer priorIdex = getFacts().getPriorIndex(key);
 
       Aggregator[] aggs;
 
@@ -158,7 +158,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         for (int i = 0; i < metrics.length; i++) {
           final AggregatorFactory agg = metrics[i];
           aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, null)
           );
         }
         Integer rowIndex;
@@ -169,7 +169,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && !getFacts().containsKey(key)) {
+        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == null) {
           throw new IndexSizeExceededException("Maximum number of rows reached");
         }
         final Integer prev = getFacts().putIfAbsent(key, rowIndex);
