@@ -79,7 +79,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
     this.injective = injective;
     this.manager = manager;
-    this.extractorID = buildID();
+    this.extractorID = String.format("namespace-factory-%s-%s", extractionNamespace, UUID.randomUUID().toString());
     this.lookupIntrospectHandler = new NamespaceLookupIntrospectHandler(this, manager, extractorID);
   }
 
@@ -188,11 +188,6 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public boolean isInjective()
   {
     return injective;
-  }
-
-  private String buildID()
-  {
-    return UUID.randomUUID().toString();
   }
 
   // Grab the latest snapshot from the cache manager
