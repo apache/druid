@@ -59,7 +59,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
   {
 
     final Matcher matcher = Pattern.compile("^s3://(.+?)/(.*)").matcher(workingPath);
-    if (!matcher.matches() || matcher.groupCount() < 2) {
+    if (!matcher.matches()) {
       throw new SegmentLoadingException(
           "S3 path [%s] must have following format s3://bucket/optional-path !!!",
           workingPath
