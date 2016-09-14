@@ -137,7 +137,7 @@ public class LookupReferencesManager
       startStopLock.readLock().lockInterruptibly();
     }
     catch (InterruptedException e) {
-      e.printStackTrace();
+      throw Throwables.propagate(e);
     }
     try {
       assertStarted();

@@ -48,7 +48,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   private static final Logger log = new Logger(OffHeapNamespaceExtractionCacheManager.class);
   private final DB mmapDB;
   private ConcurrentMap<String, String> currentNamespaceCache = new ConcurrentHashMap<>();
-  private Striped<Lock> nsLocks = Striped.lock(32); // Needed to make sure delete() doesn't do weird things
+  private Striped<Lock> nsLocks = Striped.lock(128); // Needed to make sure delete() doesn't do weird things
   private final File tmpFile;
 
   @Inject
