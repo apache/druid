@@ -58,6 +58,7 @@ public class LookupReferencesManager
 {
   private static final Logger LOGGER = new Logger(LookupReferencesManager.class);
   private final ConcurrentMap<String, LookupExtractorFactory> lookupMap = new ConcurrentHashMap<>();
+  // This is a lock against the state of the REFERENCE MANAGER (aka start/stop state), NOT of the lookup itself.
   private final ReadWriteLock startStopLock = new ReentrantReadWriteLock(true);
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -76,12 +77,7 @@ public class LookupReferencesManager
   @LifecycleStart
   public void start()
   {
-    try {
-      startStopLock.writeLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
+    startStopLock.writeLock().lock();
     try {
       if (!started.getAndSet(true)) {
         if (lookupSnapshotTaker != null) {
@@ -101,12 +97,7 @@ public class LookupReferencesManager
   @LifecycleStop
   public void stop()
   {
-    try {
-      startStopLock.writeLock().lockInterruptibly();
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
+    startStopLock.writeLock().lock();
     try {
       if (started.getAndSet(false)) {
         if (lookupSnapshotTaker != null) {
