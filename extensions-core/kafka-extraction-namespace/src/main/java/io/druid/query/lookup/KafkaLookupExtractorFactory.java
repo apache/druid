@@ -192,7 +192,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
             @Override
             public void run()
             {
-              while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
+              while (!executorService.isShutdown()) {
                 final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
                 try {
                   final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
@@ -268,7 +268,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        executorService.shutdown();
+        if (!future.isDone() && !future.cancel(false)) {
           LOG.warn("Could not cancel kafka listening thread");
         }
         LOG.error(e, "Failed to start kafka extraction factory");
@@ -298,10 +299,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         return !started.get();
       }
       started.set(false);
-      executorService.shutdownNow();
+      executorService.shutdown();
       final ListenableFuture<?> future = this.future;
       if (future != null) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        if (!future.isDone() && !future.cancel(false)) {
           LOG.error("Error cancelling future for topic [%s]", getKafkaTopic());
           return false;
         }
