@@ -59,7 +59,7 @@
 
     <properties>
         <metamx.java-util.version>0.27.10</metamx.java-util.version>
-        <apache.curator.version>2.10.0</apache.curator.version>
+        <apache.curator.version>2.11.0</apache.curator.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
@@ -217,7 +217,7 @@
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
-                <version>3.4.8</version>
+                <version>3.4.9</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
