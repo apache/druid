@@ -319,7 +319,7 @@ public abstract class NamespaceExtractionCacheManager
     if (factory == null) {
       throw new ISE("Cannot find factory for namespace [%s]", namespace);
     }
-    final String cacheId = UUID.randomUUID().toString();
+    final String cacheId = String.format("namespace-cache-%s-%s", id, UUID.randomUUID().toString());
     return schedule(id, namespace, factory, getPostRunnable(id, namespace, factory, cacheId), cacheId);
   }
 
