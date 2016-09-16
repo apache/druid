@@ -78,7 +78,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
-  private final String factoryId = UUID.randomUUID().toString();
+  private final String factoryId;
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -114,6 +114,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
+    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID().toString();
   }
 
   public KafkaLookupExtractorFactory(
