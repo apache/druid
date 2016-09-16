@@ -86,4 +86,47 @@ public class MetadataStorageConnectorConfig
            ", passwordProvider=" + passwordProvider +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof MetadataStorageConnectorConfig)) {
+      return false;
+    }
+
+    MetadataStorageConnectorConfig that = (MetadataStorageConnectorConfig) o;
+
+    if (isCreateTables() != that.isCreateTables()) {
+      return false;
+    }
+    if (getPort() != that.getPort()) {
+      return false;
+    }
+    if (getHost() != null ? !getHost().equals(that.getHost()) : that.getHost() != null) {
+      return false;
+    }
+    if (getConnectURI() != null ? !getConnectURI().equals(that.getConnectURI()) : that.getConnectURI() != null) {
+      return false;
+    }
+    if (getUser() != null ? !getUser().equals(that.getUser()) : that.getUser() != null) {
+      return false;
+    }
+    return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = (isCreateTables() ? 1 : 0);
+    result = 31 * result + (getHost() != null ? getHost().hashCode() : 0);
+    result = 31 * result + getPort();
+    result = 31 * result + (getConnectURI() != null ? getConnectURI().hashCode() : 0);
+    result = 31 * result + (getUser() != null ? getUser().hashCode() : 0);
+    result = 31 * result + (passwordProvider != null ? passwordProvider.hashCode() : 0);
+    return result;
+  }
 }

@@ -23,7 +23,55 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class MetadataStorageConnectorConfigTest {
+import java.io.IOException;
+
+public class MetadataStorageConnectorConfigTest
+{
+
+  private MetadataStorageConnectorConfig createMetadataStorageConfig(
+      boolean createTables,
+      String host,
+      int port,
+      String connectURI,
+      String user,
+      String pwdString
+  )
+      throws IOException
+  {
+    return jsonMapper.readValue(
+        "{" +
+        "\"createTables\": \"" + createTables + "\"," +
+        "\"host\": \"" + host + "\"," +
+        "\"port\": \"" + port + "\"," +
+        "\"connectURI\": \"" + connectURI + "\"," +
+        "\"user\": \"" + user + "\"," +
+        "\"password\": " + pwdString +
+        "}",
+        MetadataStorageConnectorConfig.class
+    );
+  }
+
+  @Test
+  public void testEquals() throws IOException
+  {
+    MetadataStorageConnectorConfig metadataStorageConnectorConfig = createMetadataStorageConfig(
+        true,
+        "testHost",
+        4000,
+        "url",
+        "user",
+        "\"nothing\""
+    );
+    MetadataStorageConnectorConfig metadataStorageConnectorConfig2 = createMetadataStorageConfig(
+        true,
+        "testHost",
+        4000,
+        "url",
+        "user",
+        "\"nothing\""
+    );
+    Assert.assertTrue(metadataStorageConnectorConfig.equals(metadataStorageConnectorConfig2));
+  }
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -37,7 +85,8 @@ public class MetadataStorageConnectorConfigTest {
         "connectURI",
         "user",
         "\"nothing\"",
-        "nothing");
+        "nothing"
+    );
   }
 
   @Test
@@ -50,29 +99,31 @@ public class MetadataStorageConnectorConfigTest {
         "connectURI",
         "user",
         "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing");
+        "nothing"
+    );
   }
 
   private void testMetadataStorageConnectionConfig(
-    boolean createTables,
-    String host,
-    int port,
-    String connectURI,
-    String user,
-    String pwdString,
-    String pwd
-    ) throws Exception
+      boolean createTables,
+      String host,
+      int port,
+      String connectURI,
+      String user,
+      String pwdString,
+      String pwd
+  ) throws Exception
   {
     MetadataStorageConnectorConfig config = jsonMapper.readValue(
-          "{" +
-          "\"createTables\": \"" + createTables + "\"," +
-          "\"host\": \"" + host + "\"," +
-          "\"port\": \"" + port + "\"," +
-          "\"connectURI\": \"" + connectURI + "\"," +
-          "\"user\": \"" + user + "\"," +
-          "\"password\": " + pwdString +
-          "}",
-          MetadataStorageConnectorConfig.class);
+        "{" +
+        "\"createTables\": \"" + createTables + "\"," +
+        "\"host\": \"" + host + "\"," +
+        "\"port\": \"" + port + "\"," +
+        "\"connectURI\": \"" + connectURI + "\"," +
+        "\"user\": \"" + user + "\"," +
+        "\"password\": " + pwdString +
+        "}",
+        MetadataStorageConnectorConfig.class
+    );
 
     Assert.assertEquals(host, config.getHost());
     Assert.assertEquals(port, config.getPort());
