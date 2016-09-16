@@ -20,9 +20,16 @@
 package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
+import com.metamx.common.StringUtils;
+import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -32,20 +39,40 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 
 public class LookupReferencesManagerTest
 {
+  private static final int CONCURRENT_THREADS = 16;
   LookupReferencesManager lookupReferencesManager;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   ObjectMapper mapper = new DefaultObjectMapper();
+  private final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+      CONCURRENT_THREADS,
+      "hammer-time-%s"
+  ));
 
   @Before
   public void setUp() throws IOException
   {
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
-    lookupReferencesManager = new LookupReferencesManager(new LookupConfig(Files.createTempDir().getAbsolutePath()), mapper);
+    lookupReferencesManager = new LookupReferencesManager(
+        new LookupConfig(Files.createTempDir().getAbsolutePath()),
+        mapper
+    );
     Assert.assertTrue("must be closed before start call", lookupReferencesManager.isClosed());
     lookupReferencesManager.start();
     Assert.assertFalse("must start after start call", lookupReferencesManager.isClosed());
@@ -56,6 +83,7 @@ public class LookupReferencesManagerTest
   {
     lookupReferencesManager.stop();
     Assert.assertTrue("stop call should close it", lookupReferencesManager.isClosed());
+    executorService.shutdownNow();
   }
 
   @Test(expected = ISE.class)
@@ -253,11 +281,365 @@ public class LookupReferencesManagerTest
   @Test
   public void testBootstrapFromFile() throws IOException
   {
-    LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.<String, String>of("key", "value"), true);
-    lookupReferencesManager.put("testMockForBootstrap",lookupExtractorFactory);
+    LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.<String, String>of(
+        "key",
+        "value"
+    ), true);
+    lookupReferencesManager.put("testMockForBootstrap", lookupExtractorFactory);
     lookupReferencesManager.stop();
     lookupReferencesManager.start();
     Assert.assertEquals(lookupExtractorFactory, lookupReferencesManager.get("testMockForBootstrap"));
 
+  }
+
+  @Test
+  public void testConcurrencyStaaaaaaaaaaartStop() throws Exception
+  {
+    lookupReferencesManager.stop();
+    final CyclicBarrier cyclicBarrier = new CyclicBarrier(CONCURRENT_THREADS);
+    final Runnable start = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          cyclicBarrier.await();
+        }
+        catch (InterruptedException | BrokenBarrierException e) {
+          throw Throwables.propagate(e);
+        }
+        lookupReferencesManager.start();
+      }
+    };
+    final Collection<ListenableFuture<?>> futures = new ArrayList<>(CONCURRENT_THREADS);
+    for (int i = 0; i < CONCURRENT_THREADS; ++i) {
+      futures.add(executorService.submit(start));
+    }
+    lookupReferencesManager.stop();
+    Futures.allAsList(futures).get(100, TimeUnit.MILLISECONDS);
+    for (ListenableFuture future : futures) {
+      Assert.assertNull(future.get());
+    }
+  }
+
+  @Test
+  public void testConcurrencyStartStoooooooooop() throws Exception
+  {
+    lookupReferencesManager.stop();
+    lookupReferencesManager.start();
+    final CyclicBarrier cyclicBarrier = new CyclicBarrier(CONCURRENT_THREADS);
+    final Runnable start = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          cyclicBarrier.await();
+        }
+        catch (InterruptedException | BrokenBarrierException e) {
+          throw Throwables.propagate(e);
+        }
+        lookupReferencesManager.stop();
+      }
+    };
+    final Collection<ListenableFuture<?>> futures = new ArrayList<>(CONCURRENT_THREADS);
+    for (int i = 0; i < CONCURRENT_THREADS; ++i) {
+      futures.add(executorService.submit(start));
+    }
+    Futures.allAsList(futures).get(100, TimeUnit.MILLISECONDS);
+    for (ListenableFuture future : futures) {
+      Assert.assertNull(future.get());
+    }
+  }
+
+  @Test(timeout = 10000L)
+  public void testConcurrencySequentialChaos() throws Exception
+  {
+    final CountDownLatch runnableStartBarrier = new CountDownLatch(1);
+    final Random random = new Random(478137498L);
+    final int numUpdates = 100000;
+    final int numNamespaces = 100;
+    final CountDownLatch runnablesFinishedBarrier = new CountDownLatch(numUpdates);
+    final List<Runnable> runnables = new ArrayList<>(numUpdates);
+    final Map<String, Integer> maxNumber = new HashMap<>();
+    for (int i = 1; i <= numUpdates; ++i) {
+      final boolean shouldStart = random.nextInt(10) == 1;
+      final boolean shouldClose = random.nextInt(10) == 1;
+      final String name = Integer.toString(random.nextInt(numNamespaces));
+      final int position = i;
+
+      final LookupExtractorFactory lookupExtractorFactory = new LookupExtractorFactory()
+      {
+        @Override
+        public boolean start()
+        {
+          return shouldStart;
+        }
+
+        @Override
+        public boolean close()
+        {
+          return shouldClose;
+        }
+
+        @Override
+        public boolean replaces(@Nullable LookupExtractorFactory other)
+        {
+          if (other == null) {
+            return true;
+          }
+          final NamedIntrospectionHandler introspectionHandler = (NamedIntrospectionHandler) other.getIntrospectHandler();
+          return position > introspectionHandler.position;
+        }
+
+        @Nullable
+        @Override
+        public LookupIntrospectHandler getIntrospectHandler()
+        {
+          return new NamedIntrospectionHandler(position);
+        }
+
+        @Override
+        public String toString()
+        {
+          return String.format("TestFactroy position %d", position);
+        }
+
+        @Override
+        public LookupExtractor get()
+        {
+          return null;
+        }
+      };
+
+      if (shouldStart && (!maxNumber.containsKey(name) || maxNumber.get(name) < position)) {
+        maxNumber.put(name, position);
+      }
+      runnables.add(new LookupUpdatingRunnable(
+          name,
+          lookupExtractorFactory,
+          runnableStartBarrier,
+          lookupReferencesManager
+      ));
+    }
+    ////// Add some CHAOS!
+    Collections.shuffle(runnables, random);
+    final Runnable decrementFinished = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        runnablesFinishedBarrier.countDown();
+      }
+    };
+    for (Runnable runnable : runnables) {
+      executorService.submit(runnable).addListener(decrementFinished, MoreExecutors.sameThreadExecutor());
+    }
+
+    runnableStartBarrier.countDown();
+    do {
+      for (String name : maxNumber.keySet()) {
+        final LookupExtractorFactory factory;
+        try {
+          factory = lookupReferencesManager.get(name);
+        }
+        catch (ISE e) {
+          continue;
+        }
+        if (null == factory) {
+          continue;
+        }
+        final NamedIntrospectionHandler introspectionHandler = (NamedIntrospectionHandler) factory.getIntrospectHandler();
+        Assert.assertTrue(introspectionHandler.position >= 0);
+      }
+    } while (runnablesFinishedBarrier.getCount() > 0);
+
+    lookupReferencesManager.start();
+
+    for (String name : maxNumber.keySet()) {
+      final LookupExtractorFactory factory = lookupReferencesManager.get(name);
+      if (null == factory) {
+        continue;
+      }
+      final NamedIntrospectionHandler introspectionHandler = (NamedIntrospectionHandler) factory.getIntrospectHandler();
+      Assert.assertNotNull(introspectionHandler);
+      Assert.assertEquals(
+          StringUtils.safeFormat("Named position %s failed", name),
+          maxNumber.get(name),
+          Integer.valueOf(introspectionHandler.position)
+      );
+    }
+    Assert.assertEquals(maxNumber.size(), lookupReferencesManager.getAll().size());
+  }
+
+  @Test(timeout = 10000L)
+  public void testConcurrencyStartStopChaos() throws Exception
+  {
+    // Don't want to exercise snapshot here
+    final LookupReferencesManager manager = new LookupReferencesManager(new LookupConfig(null), mapper);
+    final Runnable chaosStart = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        manager.start();
+      }
+    };
+    final Runnable chaosStop = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        manager.stop();
+      }
+    };
+    final CountDownLatch runnableStartBarrier = new CountDownLatch(1);
+    final Random random = new Random(478137498L);
+    final int numUpdates = 100000;
+    final int numNamespaces = 100;
+    final CountDownLatch runnablesFinishedBarrier = new CountDownLatch(numUpdates);
+    final List<Runnable> runnables = new ArrayList<>(numUpdates);
+    final Map<String, Integer> maxNumber = new HashMap<>();
+    for (int i = 1; i <= numUpdates; ++i) {
+      final boolean shouldStart = random.nextInt(10) == 1;
+      final boolean shouldClose = random.nextInt(10) == 1;
+      final String name = Integer.toString(random.nextInt(numNamespaces));
+      final int position = i;
+
+      final LookupExtractorFactory lookupExtractorFactory = new LookupExtractorFactory()
+      {
+        @Override
+        public boolean start()
+        {
+          return shouldStart;
+        }
+
+        @Override
+        public boolean close()
+        {
+          return shouldClose;
+        }
+
+        @Override
+        public boolean replaces(@Nullable LookupExtractorFactory other)
+        {
+          if (other == null) {
+            return true;
+          }
+          final NamedIntrospectionHandler introspectionHandler = (NamedIntrospectionHandler) other.getIntrospectHandler();
+          return position > introspectionHandler.position;
+        }
+
+        @Nullable
+        @Override
+        public LookupIntrospectHandler getIntrospectHandler()
+        {
+          return new NamedIntrospectionHandler(position);
+        }
+
+        @Override
+        public String toString()
+        {
+          return String.format("TestFactroy position %d", position);
+        }
+
+        @Override
+        public LookupExtractor get()
+        {
+          return null;
+        }
+      };
+      if (random.nextFloat() < 0.001) {
+        if (random.nextBoolean()) {
+          runnables.add(chaosStart);
+        } else {
+          runnables.add(chaosStop);
+        }
+      } else {
+        if (shouldStart && (!maxNumber.containsKey(name) || maxNumber.get(name) < position)) {
+          maxNumber.put(name, position);
+        }
+        runnables.add(new LookupUpdatingRunnable(
+            name,
+            lookupExtractorFactory,
+            runnableStartBarrier,
+            manager
+        ));
+      }
+    }
+    ////// Add some CHAOS!
+    Collections.shuffle(runnables, random);
+    final Runnable decrementFinished = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        runnablesFinishedBarrier.countDown();
+      }
+    };
+    for (Runnable runnable : runnables) {
+      executorService.submit(runnable).addListener(decrementFinished, MoreExecutors.sameThreadExecutor());
+    }
+
+    runnableStartBarrier.countDown();
+    do {
+      for (String name : maxNumber.keySet()) {
+        final LookupExtractorFactory factory;
+        try {
+          factory = manager.get(name);
+        }
+        catch (ISE e) {
+          continue;
+        }
+        if (null == factory) {
+          continue;
+        }
+        final NamedIntrospectionHandler introspectionHandler = (NamedIntrospectionHandler) factory.getIntrospectHandler();
+        Assert.assertTrue(introspectionHandler.position >= 0);
+      }
+    } while (runnablesFinishedBarrier.getCount() > 0);
+  }
+}
+
+class LookupUpdatingRunnable implements Runnable
+{
+  final String name;
+  final LookupExtractorFactory factory;
+  final CountDownLatch startLatch;
+  final LookupReferencesManager lookupReferencesManager;
+
+  LookupUpdatingRunnable(
+      String name,
+      LookupExtractorFactory factory,
+      CountDownLatch startLatch,
+      LookupReferencesManager lookupReferencesManager
+  )
+  {
+    this.name = name;
+    this.factory = factory;
+    this.startLatch = startLatch;
+    this.lookupReferencesManager = lookupReferencesManager;
+  }
+
+  @Override
+  public void run()
+  {
+    try {
+      startLatch.await();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+    lookupReferencesManager.updateIfNew(name, factory);
+  }
+}
+
+class NamedIntrospectionHandler implements LookupIntrospectHandler
+{
+  final int position;
+
+  NamedIntrospectionHandler(final int position)
+  {
+    this.position = position;
   }
 }

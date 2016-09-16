@@ -54,11 +54,12 @@ import io.druid.server.listener.resource.AbstractListenerHandler;
 import io.druid.server.listener.resource.ListenerResource;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.curator.utils.ZKPaths;
+
+import javax.ws.rs.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.ws.rs.Path;
-import org.apache.curator.utils.ZKPaths;
 
 public class LookupModule implements DruidModule
 {
@@ -116,10 +117,8 @@ class LookupListeningResource extends ListenerResource
         {
         })
         {
-          private final Object deleteLock = new Object();
-
           @Override
-          public synchronized Object post(final Map<String, LookupExtractorFactory> lookups)
+          public Object post(final Map<String, LookupExtractorFactory> lookups)
               throws Exception
           {
             final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
@@ -154,17 +153,17 @@ class LookupListeningResource extends ListenerResource
           @Override
           public Object delete(String id)
           {
-            // Prevent races to 404 vs 500 between concurrent delete requests
-            synchronized (deleteLock) {
+            if (manager.get(id) == null) {
+              return null;
+            }
+            if (!manager.remove(id)) {
               if (manager.get(id) == null) {
                 return null;
               }
-              if (!manager.remove(id)) {
-                // We don't have more information at this point.
-                throw new RE("Could not remove lookup [%s]", id);
-              }
-              return id;
+              // We don't have more information at this point.
+              throw new RE("Could not remove lookup [%s]", id);
             }
+            return id;
           }
         }
     );
