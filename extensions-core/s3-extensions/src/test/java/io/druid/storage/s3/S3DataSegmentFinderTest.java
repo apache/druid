@@ -210,7 +210,7 @@ public class S3DataSegmentFinderTest
       } else if (dataSegment.getIdentifier().equals(SEGMENT_4_1.getIdentifier())) {
         updatedSegment4_1 = dataSegment;
       } else {
-        Assert.fail("Unexpected segment");
+        Assert.fail("Unexpected segment identifier : " + dataSegment.getIdentifier());
       }
     }
 
