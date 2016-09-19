@@ -47,14 +47,14 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class PollingLookupTest
 {
-  private static final Map<String, String> firstLookupMap = ImmutableMap.of(
+  private static final Map<Object, String> firstLookupMap = ImmutableMap.<Object, String>of(
       "foo", "bar",
       "bad", "bar",
       "how about that", "foo",
       "empty string", ""
   );
 
-  private static final Map<String, String> secondLookupMap = ImmutableMap.of(
+  private static final Map<Object, String> secondLookupMap = ImmutableMap.<Object, String>of(
       "new-foo", "new-bar",
       "new-bad", "new-bar"
   );
@@ -178,7 +178,7 @@ public class PollingLookupTest
   @Test
   public void testBulkApply()
   {
-    Map<String, String> map = pollingLookup.applyAll(firstLookupMap.keySet());
+    Map<Object, String> map = pollingLookup.applyAll(firstLookupMap.keySet());
     Assert.assertEquals(firstLookupMap, Maps.transformValues(map, new Function<String, String>()
     {
       @Override
@@ -197,10 +197,10 @@ public class PollingLookupTest
     Assert.assertFalse(Arrays.equals(pollingLookup2.getCacheKey(), pollingLookup.getCacheKey()));
   }
 
-  private void assertMapLookup(Map<String, String> map, LookupExtractor lookup)
+  private void assertMapLookup(Map<Object, String> map, LookupExtractor lookup)
   {
-    for (Map.Entry<String, String> entry : map.entrySet()) {
-      String key = entry.getKey();
+    for (Map.Entry<Object, String> entry : map.entrySet()) {
+      Object key = entry.getKey();
       String val = entry.getValue();
       Assert.assertEquals("non-null check", Strings.emptyToNull(val), lookup.apply(key));
     }

@@ -107,14 +107,14 @@ public class LoadingLookupFactoryTest
     ObjectMapper mapper = TestHelper.getObjectMapper();
     LoadingLookupFactory loadingLookupFactory = new LoadingLookupFactory(
         new MockDataFetcher(),
-        new OnHeapLoadingCache<String, String>(
+        new OnHeapLoadingCache<Object, String>(
             0,
             100,
             100L,
             0L,
             0L
         ),
-        new OffHeapLoadingCache<String, List<String>>(
+        new OffHeapLoadingCache<String, List<Object>>(
             100,
             100L,
             0L,
