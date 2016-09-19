@@ -35,6 +35,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.cache.Cache;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -60,6 +61,7 @@ import io.druid.segment.filter.Filters;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.joda.time.Interval;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -71,10 +73,12 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
   private static final EmittingLogger log = new EmittingLogger(SearchQueryRunner.class);
   private final Segment segment;
+  private final Cache cache;
 
-  public SearchQueryRunner(Segment segment)
+  public SearchQueryRunner(Segment segment, Cache cache)
   {
     this.segment = segment;
+    this.cache = cache;
   }
 
   @Override
@@ -101,6 +105,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
+    final String segmentId = segment.getIdentifier();
 
     if (index != null) {
       final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
@@ -113,9 +118,23 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       }
 
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+      final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(bitmapFactory, index);
 
-      final ImmutableBitmap baseFilter =
-          filter == null ? null : filter.toFilter().getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
+      Cache.NamedKey key = null;
+      ImmutableBitmap baseFilter = null;
+      if (cache != null && filter != null) {
+        key = new Cache.NamedKey(segmentId, filter.getCacheKey());
+        byte[] cached = cache.get(key);
+        if (cached != null) {
+          baseFilter = selector.getBitmapFactory().mapImmutableBitmap(ByteBuffer.wrap(cached));
+        }
+      }
+      if (baseFilter == null) {
+        baseFilter = filter == null ? null : filter.toFilter().getBitmapIndex(selector);
+        if (key != null) {
+          cache.put(key, baseFilter.toBytes());
+        }
+      }
 
       ImmutableBitmap timeFilteredBitmap;
       if (!interval.contains(segment.getDataInterval())) {

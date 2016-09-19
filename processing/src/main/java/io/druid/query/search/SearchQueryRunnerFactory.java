@@ -20,6 +20,8 @@
 package io.druid.query.search;
 
 import com.google.inject.Inject;
+import io.druid.cache.BitmapCache;
+import io.druid.cache.Cache;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -38,20 +40,34 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   private final SearchQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
+  @BitmapCache
+  @Inject(optional = true)
+  private Cache cache;
+
   @Inject
   public SearchQueryRunnerFactory(
       SearchQueryQueryToolChest toolChest,
       QueryWatcher queryWatcher
   )
   {
+    this(toolChest, queryWatcher, null);
+  }
+
+  public SearchQueryRunnerFactory(
+      SearchQueryQueryToolChest toolChest,
+      QueryWatcher queryWatcher,
+      Cache cache
+  )
+  {
     this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
+    this.cache = cache;
   }
 
   @Override
   public QueryRunner<Result<SearchResultValue>> createRunner(final Segment segment)
   {
-    return new SearchQueryRunner(segment);
+    return new SearchQueryRunner(segment, cache);
   }
 
   @Override
