@@ -25,9 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Chars;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -39,12 +39,12 @@ import io.druid.granularity.AllGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectors;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -54,15 +54,10 @@ import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
@@ -517,180 +512,19 @@ public class RowBasedGrouperHelper
         DimensionSpec dimensionSpec
     )
     {
-      return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
-    }
-
-    private DimensionSelector makeDimensionSelectorUndecorated(
-        DimensionSpec dimensionSpec
-    )
-    {
-      final List<String> dimensions = dimensionSpec.getDimensions();
-      final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-
-      if (dimensions.size() == 1) {
-        final String dimension = dimensions.get(0);
-
-        return new DimensionSelector()
-        {
-          @Override
-          public IndexedInts getRow()
-          {
-            final List<String> dimensionValues = row.get().getDimension(dimension);
-            final ArrayList<Integer> vals = Lists.newArrayList();
-            if (dimensionValues != null) {
-              for (int i = 0; i < dimensionValues.size(); ++i) {
-                vals.add(i);
-              }
-            }
-
-            return new IndexedInts()
-            {
-              @Override
-              public int size()
+      return dimensionSpec.decorate(
+          DimensionSelectors.makeMultiDimensionalSelectorFromRow(
+              new Supplier<Row>()
               {
-                return vals.size();
-              }
-
-              @Override
-              public int get(int index)
-              {
-                return vals.get(index);
-              }
-
-              @Override
-              public Iterator<Integer> iterator()
-              {
-                return vals.iterator();
-              }
-
-              @Override
-              public void close() throws IOException
-              {
-
-              }
-
-              @Override
-              public void fill(int index, int[] toFill)
-              {
-                throw new UnsupportedOperationException("fill not supported");
-              }
-            };
-          }
-
-          @Override
-          public int getValueCardinality()
-          {
-            return DimensionSelector.CARDINALITY_UNKNOWN;
-          }
-
-          @Override
-          public String lookupName(int id)
-          {
-            final String value = row.get().getDimension(dimension).get(id);
-            return extractionFn == null ? value : extractionFn.apply(value);
-          }
-
-          @Override
-          public int lookupId(String name)
-          {
-            if (extractionFn != null) {
-              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
-            }
-            return row.get().getDimension(dimension).indexOf(name);
-          }
-        };
-      } else {
-        return new DimensionSelector()
-        {
-          boolean extractValuesFilled = false;
-          List<String> dimsExtractValues = null;
-          Row currentRow = null;
-          ArrayList<Integer> vals;
-
-          @Override
-          public IndexedInts getRow()
-          {
-            fillExtractValues();
-
-            return new IndexedInts()
-            {
-              @Override
-              public int size()
-              {
-                return vals.size();
-              }
-
-              @Override
-              public int get(int index)
-              {
-                return vals.get(index);
-              }
-
-              @Override
-              public Iterator<Integer> iterator()
-              {
-                return vals.iterator();
-              }
-
-              @Override
-              public void close() throws IOException
-              {
-
-              }
-
-              @Override
-              public void fill(int index, int[] toFill)
-              {
-                throw new UnsupportedOperationException("fill not supported");
-              }
-            };
-          }
-
-          @Override
-          public int getValueCardinality()
-          {
-            return DimensionSelector.CARDINALITY_UNKNOWN;
-          }
-
-          @Override
-          public String lookupName(int id)
-          {
-            fillExtractValues();
-            return dimsExtractValues.get(id);
-          }
-
-          @Override
-          public int lookupId(String name)
-          {
-            throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
-          }
-
-          private synchronized void fillExtractValues()
-          {
-            if (!extractValuesFilled || currentRow != row.get())
-            {
-              List<Set<String>> dimValues = Lists.newArrayListWithCapacity(dimensions.size());
-              for (String dimension: dimensions) {
-                List<String> dimensionValues = row.get().getDimension(dimension);
-                dimValues.add(new HashSet<>(dimensionValues));
-              }
-
-              Set<List<String>> args = Sets.cartesianProduct(dimValues);
-              dimsExtractValues = Lists.newArrayListWithCapacity(args.size());
-              for (List<String> arg: args) {
-                dimsExtractValues.add(extractionFn.apply(arg));
-              }
-              vals = Lists.newArrayList();
-              for (int i = 0; i < dimsExtractValues.size(); ++i) {
-                vals.add(i);
-              }
-
-              extractValuesFilled = true;
-              currentRow = row.get();
-            }
-          }
-        };
-      }
+                @Override
+                public Row get()
+                {
+                  return row.get();
+                }
+              },
+              dimensionSpec
+          )
+      );
     }
 
     @Override

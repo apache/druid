@@ -148,7 +148,7 @@ public class MultiDimDimensionSpecTest
 
     Assert.assertEquals("multilookup", hit.getDimension());
     Assert.assertEquals("xxx", hit.getValue());
-    Assert.assertEquals(15L, hit.getCount().longValue());
+    Assert.assertEquals(2L, hit.getCount().longValue());
   }
 
   public final static String readFileFromClasspathAsString(String fileName) throws IOException

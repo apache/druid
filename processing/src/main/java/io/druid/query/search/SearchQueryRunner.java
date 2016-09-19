@@ -164,8 +164,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
                 continue;
               }
               ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-              if (baseFilter != null) {
-                bitmap = bitmapFactory.intersection(Arrays.asList(baseFilter, bitmap));
+              if (timeFilteredBitmap != null) {
+                bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
               }
               if (bitmap.size() > 0) {
                 MutableInt counter = new MutableInt(bitmap.size());
