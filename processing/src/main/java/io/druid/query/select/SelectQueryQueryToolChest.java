@@ -230,7 +230,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           @Override
           public Object apply(final Result<SelectResultValue> input)
           {
-            if (dimensionSpecs != null) {
+            if (!dimOutputNames.isEmpty()) {
               return Arrays.asList(
                   input.getTimestamp().getMillis(),
                   input.getValue().getPagingIdentifiers(),
@@ -266,8 +266,6 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
-            List<DimensionSpec> dimensionSpecs = query.getDimensions();
-
             Map<String, Integer> pageIdentifier = jsonMapper.convertValue(
                 resultIter.next(), new TypeReference<Map<String, Integer>>() {}
                 );
@@ -280,7 +278,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             List<EventHolder> eventHolders = jsonMapper.convertValue(
                 resultIter.next(), new TypeReference<List<EventHolder>>() {}
                 );
-            if (dimensionSpecs != null) {
+            // check the condition that outputName of cached result should be updated
+            if (resultIter.hasNext()) {
               List<String> cachedOutputNames = (List<String>) resultIter.next();
               Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
                   "Cache hit but different number of dimensions??");

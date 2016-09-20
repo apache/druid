@@ -208,7 +208,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           @Override
           public Object apply(Result<SearchResultValue> input)
           {
-            return dimensionSpecs != null
+            return dimensionSpecs.size() > 0
                 ? Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue(), dimOutputNames)
                 : Lists.newArrayList(input.getTimestamp().getMillis(), input.getValue());
           }
@@ -227,7 +227,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             List<Object> result = (List<Object>) input;
             boolean needsRename = false;
             final Map<String, String> outputNameMap = Maps.newHashMap();
-            if (dimensionSpecs != null) {
+            if (hasOutputName(result)) {
               List<String> cachedOutputNames = (List) result.get(2);
               Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
                   "cache hit, but number of dimensions mismatch");
@@ -303,6 +303,19 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                 ;
           }
         };
+      }
+
+      private boolean hasOutputName(List<Object> cachedEntry)
+      {
+        /*
+         * cached entry is list of two or three objects
+         *  1. timestamp
+         *  2. SearchResultValue
+         *  3. outputName of each dimension (optional)
+         *
+         * if a cached entry has three objects, dimension name of SearchResultValue should be check if rename is needed
+         */
+        return cachedEntry.size() == 3;
       }
     };
   }
