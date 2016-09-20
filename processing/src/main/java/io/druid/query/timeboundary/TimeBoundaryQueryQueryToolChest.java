@@ -129,7 +129,7 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> getCacheStrategy(TimeBoundaryQuery query)
+  public CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> getCacheStrategy(final TimeBoundaryQuery query)
   {
     return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
     {

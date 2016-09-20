@@ -1092,7 +1092,7 @@ public class CachingClusteredClientTest
                                                     .granularity(GRANULARITY)
                                                     .limit(1000)
                                                     .intervals(SEG_SPEC)
-                                                    .dimensions(Arrays.asList("a_dim"))
+                                                    .dimensions(Arrays.asList(TOP_DIM))
                                                     .query("how")
                                                     .context(CONTEXT);
 
@@ -1100,13 +1100,14 @@ public class CachingClusteredClientTest
         client,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeSearchResults(new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeSearchResults(new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
 
         new Interval("2011-01-05/2011-01-10"),
         makeSearchResults(
+            TOP_DIM,
             new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
             new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
             new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
@@ -1116,6 +1117,7 @@ public class CachingClusteredClientTest
 
         new Interval("2011-01-05/2011-01-10"),
         makeSearchResults(
+            TOP_DIM,
             new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
             new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
             new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
@@ -1133,6 +1135,7 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSearchResults(
+            TOP_DIM,
             new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
             new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
             new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
@@ -1149,6 +1152,106 @@ public class CachingClusteredClientTest
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .build(),
+            context
+        )
+    );
+  }
+
+  @Test
+  public void testSearchCachingRenamedOutput() throws Exception
+  {
+    final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .filters(DIM_FILTER)
+        .granularity(GRANULARITY)
+        .limit(1000)
+        .intervals(SEG_SPEC)
+        .dimensions(Arrays.asList(TOP_DIM))
+        .query("how")
+        .context(CONTEXT);
+
+    testQueryCaching(
+        client,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeSearchResults(TOP_DIM, new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSearchResults(
+            TOP_DIM,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSearchResults(
+            TOP_DIM,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        )
+    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        client, new SearchQueryQueryToolChest(
+        new SearchQueryConfig(),
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(
+        makeSearchResults(
+            TOP_DIM,
+            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .build(),
+            context
+        )
+    );
+    TestHelper.assertExpectedResults(
+        makeSearchResults(
+            "new_dim",
+            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .dimensions(new DefaultDimensionSpec(
+                    TOP_DIM,
+                    "new_dim"
+                ))
+                .build(),
             context
         )
     );
@@ -1221,6 +1324,108 @@ public class CachingClusteredClientTest
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .build(),
+            context
+        )
+    );
+  }
+
+  @Test
+  public void testSelectCachingRenamedOutputName() throws Exception
+  {
+    final Set<String> dimensions = Sets.<String>newHashSet("a");
+    final Set<String> metrics = Sets.<String>newHashSet("rows");
+
+    Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .intervals(SEG_SPEC)
+        .filters(DIM_FILTER)
+        .granularity(GRANULARITY)
+        .dimensions(Arrays.asList("a"))
+        .metrics(Arrays.asList("rows"))
+        .pagingSpec(new PagingSpec(null, 3))
+        .context(CONTEXT);
+
+    testQueryCaching(
+        client,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        )
+    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        client,
+        new SelectQueryQueryToolChest(
+            jsonMapper,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+            new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .build(),
+            context
+        )
+    );
+
+    TestHelper.assertExpectedResults(
+        makeSelectResults(
+            dimensions, metrics,
+            new DateTime("2011-01-01"), ImmutableMap.of("a2", "b", "rows", 1),
+            new DateTime("2011-01-02"), ImmutableMap.of("a2", "c", "rows", 5),
+            new DateTime("2011-01-05"), ImmutableMap.of("a2", "d", "rows", 5),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a2", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a2", "e", "rows", 6),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a2", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a2", "f", "rows", 7),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a2", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a2", "g", "rows", 8),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a2", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a2", "h", "rows", 9),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a2", "h", "rows", 9)
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                .dimensionSpecs(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("a", "a2")))
+                .build(),
             context
         )
     );
@@ -2411,7 +2616,7 @@ public class CachingClusteredClientTest
   }
 
   private Iterable<Result<SearchResultValue>> makeSearchResults
-      (Object... objects)
+      (String dim, Object... objects)
   {
     List<Result<SearchResultValue>> retVal = Lists.newArrayList();
     int index = 0;
@@ -2420,7 +2625,7 @@ public class CachingClusteredClientTest
 
       List<SearchHit> values = Lists.newArrayList();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        values.add(new SearchHit(TOP_DIM, objects[index++].toString(), (Integer) objects[index++]));
+        values.add(new SearchHit(dim, objects[index++].toString(), (Integer) objects[index++]));
       }
 
       retVal.add(new Result<>(timestamp, new SearchResultValue(values)));
