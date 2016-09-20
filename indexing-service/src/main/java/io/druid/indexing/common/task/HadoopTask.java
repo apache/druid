@@ -52,7 +52,7 @@ public abstract class HadoopTask extends AbstractTask
   private static final Logger log = new Logger(HadoopTask.class);
   private static final ExtensionsConfig extensionsConfig;
 
-  final static Injector injector = GuiceInjectors.makeStartupInjector();
+  protected final static Injector injector = GuiceInjectors.makeStartupInjector();
 
   static {
     extensionsConfig = injector.getInstance(ExtensionsConfig.class);
@@ -68,6 +68,17 @@ public abstract class HadoopTask extends AbstractTask
   )
   {
     super(id, dataSource, context);
+    this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
+  }
+
+  protected HadoopTask(
+      String id,
+      List<String> dataSources,
+      List<String> hadoopDependencyCoordinates,
+      Map<String, Object> context
+  )
+  {
+    super(id, dataSources, context);
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
   }
 

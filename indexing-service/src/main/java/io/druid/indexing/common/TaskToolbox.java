@@ -30,10 +30,12 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.indexing.common.actions.MultiDataSourceSegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.DataSourceMetadataAndSegments;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -51,6 +53,7 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -223,6 +226,16 @@ public class TaskToolbox
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
     }
+  }
+
+  public void publishSegments(Map<String, List<DataSegment>> segments) throws IOException
+  {
+    List<DataSourceMetadataAndSegments> list = new ArrayList<>(segments.size());
+    for (Map.Entry<String, List<DataSegment>> e : segments.entrySet()) {
+      list.add(new DataSourceMetadataAndSegments(ImmutableSet.copyOf(e.getValue()), null, null));
+    }
+
+    getTaskActionClient().submit(new MultiDataSourceSegmentTransactionalInsertAction(list));
   }
 
   public File getTaskWorkDir()
