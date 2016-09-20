@@ -76,6 +76,21 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
                                    : handoffConditionTimeout;
   }
 
+  public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
+  {
+    return new KafkaTuningConfig(
+        config.maxRowsInMemory,
+        config.maxRowsPerSegment,
+        config.intermediatePersistPeriod,
+        config.basePersistDirectory,
+        config.maxPendingPersists,
+        config.indexSpec,
+        config.buildV9Directly,
+        config.reportParseExceptions,
+        config.handoffConditionTimeout
+    );
+  }
+
   @JsonProperty
   public int getMaxRowsInMemory()
   {
@@ -158,5 +173,79 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         reportParseExceptions,
         handoffConditionTimeout
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    KafkaTuningConfig that = (KafkaTuningConfig) o;
+
+    if (maxRowsInMemory != that.maxRowsInMemory) {
+      return false;
+    }
+    if (maxRowsPerSegment != that.maxRowsPerSegment) {
+      return false;
+    }
+    if (maxPendingPersists != that.maxPendingPersists) {
+      return false;
+    }
+    if (buildV9Directly != that.buildV9Directly) {
+      return false;
+    }
+    if (reportParseExceptions != that.reportParseExceptions) {
+      return false;
+    }
+    if (handoffConditionTimeout != that.handoffConditionTimeout) {
+      return false;
+    }
+    if (intermediatePersistPeriod != null
+        ? !intermediatePersistPeriod.equals(that.intermediatePersistPeriod)
+        : that.intermediatePersistPeriod != null) {
+      return false;
+    }
+    if (basePersistDirectory != null
+        ? !basePersistDirectory.equals(that.basePersistDirectory)
+        : that.basePersistDirectory != null) {
+      return false;
+    }
+    return !(indexSpec != null ? !indexSpec.equals(that.indexSpec) : that.indexSpec != null);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = maxRowsInMemory;
+    result = 31 * result + maxRowsPerSegment;
+    result = 31 * result + (intermediatePersistPeriod != null ? intermediatePersistPeriod.hashCode() : 0);
+    result = 31 * result + (basePersistDirectory != null ? basePersistDirectory.hashCode() : 0);
+    result = 31 * result + maxPendingPersists;
+    result = 31 * result + (indexSpec != null ? indexSpec.hashCode() : 0);
+    result = 31 * result + (buildV9Directly ? 1 : 0);
+    result = 31 * result + (reportParseExceptions ? 1 : 0);
+    result = 31 * result + (int) (handoffConditionTimeout ^ (handoffConditionTimeout >>> 32));
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "KafkaTuningConfig{" +
+           "maxRowsInMemory=" + maxRowsInMemory +
+           ", maxRowsPerSegment=" + maxRowsPerSegment +
+           ", intermediatePersistPeriod=" + intermediatePersistPeriod +
+           ", basePersistDirectory=" + basePersistDirectory +
+           ", maxPendingPersists=" + maxPendingPersists +
+           ", indexSpec=" + indexSpec +
+           ", buildV9Directly=" + buildV9Directly +
+           ", reportParseExceptions=" + reportParseExceptions +
+           ", handoffConditionTimeout=" + handoffConditionTimeout +
+           '}';
   }
 }

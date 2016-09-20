@@ -136,6 +136,23 @@ public class KafkaSupervisorIOConfig
     return lateMessageRejectionPeriod;
   }
 
+  @Override
+  public String toString()
+  {
+    return "KafkaSupervisorIOConfig{" +
+           "topic='" + topic + '\'' +
+           ", replicas=" + replicas +
+           ", taskCount=" + taskCount +
+           ", taskDuration=" + taskDuration +
+           ", consumerProperties=" + consumerProperties +
+           ", startDelay=" + startDelay +
+           ", period=" + period +
+           ", useEarliestOffset=" + useEarliestOffset +
+           ", completionTimeout=" + completionTimeout +
+           ", lateMessageRejectionPeriod=" + lateMessageRejectionPeriod +
+           '}';
+  }
+
   private static Duration defaultDuration(final Period period, final String theDefault)
   {
     return (period == null ? new Period(theDefault) : period).toStandardDuration();

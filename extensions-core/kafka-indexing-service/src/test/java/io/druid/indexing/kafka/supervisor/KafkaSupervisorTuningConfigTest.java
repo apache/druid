@@ -17,24 +17,26 @@
  * under the License.
  */
 
-package io.druid.indexing.kafka;
+package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.indexing.kafka.KafkaIndexTaskModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.TuningConfig;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 
-public class KafkaTuningConfigTest
+public class KafkaSupervisorTuningConfigTest
 {
   private final ObjectMapper mapper;
 
-  public KafkaTuningConfigTest()
+  public KafkaSupervisorTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
     mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
@@ -45,7 +47,7 @@ public class KafkaTuningConfigTest
   {
     String jsonStr = "{\"type\": \"kafka\"}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KafkaSupervisorTuningConfig config = (KafkaSupervisorTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -64,6 +66,10 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(false, config.getBuildV9Directly());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertNull(config.getWorkerThreads());
+    Assert.assertNull(config.getChatThreads());
+    Assert.assertEquals(8L, (long) config.getChatRetries());
+    Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
   }
 
   @Test
@@ -78,10 +84,14 @@ public class KafkaTuningConfigTest
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"buildV9Directly\": true,\n"
                      + "  \"reportParseExceptions\": true,\n"
-                     + "  \"handoffConditionTimeout\": 100\n"
+                     + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"workerThreads\": 12,\n"
+                     + "  \"chatThreads\": 13,\n"
+                     + "  \"chatRetries\": 14,\n"
+                     + "  \"httpTimeout\": \"PT15S\"\n"
                      + "}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KafkaSupervisorTuningConfig config = (KafkaSupervisorTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -99,22 +109,9 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
-  }
-
-  @Test
-  public void testCopyOf() throws Exception
-  {
-    KafkaTuningConfig original = new KafkaTuningConfig(1, 2, new Period("PT3S"), new File("/tmp/xxx"), 4, new IndexSpec(), true, true, 5L);
-    KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
-
-    Assert.assertEquals(1, copy.getMaxRowsInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment());
-    Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
-    Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
-    Assert.assertEquals(4, copy.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
-    Assert.assertEquals(true, copy.getBuildV9Directly());
-    Assert.assertEquals(true, copy.isReportParseExceptions());
-    Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
+    Assert.assertEquals(12, (int) config.getWorkerThreads());
+    Assert.assertEquals(13, (int) config.getChatThreads());
+    Assert.assertEquals(14L, (long) config.getChatRetries());
+    Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
   }
 }

@@ -105,10 +105,10 @@ A sample supervisor spec is shown below:
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kafka`.|yes|
 |`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec](../../ingestion/index.html).|yes|
-|`tuningConfig`|A KafkaTuningConfig that will be provided to indexing tasks, see below.|no|
-|`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor, see below.|yes|
+|`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
+|`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor and indexing tasks, see below.|yes|
 
-### KafkaTuningConfig
+### KafkaSupervisorTuningConfig
 
 The tuningConfig is optional and default parameters will be used if no tuningConfig is specified.
 
@@ -123,6 +123,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`buildV9Directly`|Boolean|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|no (default == false)|
 |`reportParseExceptions`|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|no (default == false)|
 |`handoffConditionTimeout`|Long|Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.|no (default == 0)|
+|`workerThreads`|Integer|The number of threads that will be used by the supervisor for asynchronous operations.|no (default == min(10, taskCount))|
+|`chatThreads`|Integer|The number of threads that will be used for communicating with indexing tasks.|no (default == min(10, taskCount * replicas))|
+|`chatRetries`|Integer|The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.|no (default == 8)|
+|`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
 
 #### IndexSpec
 

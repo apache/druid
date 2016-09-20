@@ -23,8 +23,8 @@ RUN wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeep
       && ln -s /usr/local/zookeeper-3.4.6 /usr/local/zookeeper
 
 # Kafka
-RUN wget -q -O - http://www.us.apache.org/dist/kafka/0.8.2.0/kafka_2.10-0.8.2.0.tgz | tar -xzf - -C /usr/local \
-      && ln -s /usr/local/kafka_2.10-0.8.2.0 /usr/local/kafka
+RUN wget -q -O - http://www.us.apache.org/dist/kafka/0.9.0.1/kafka_2.10-0.9.0.1.tgz | tar -xzf - -C /usr/local \
+      && ln -s /usr/local/kafka_2.10-0.9.0.1 /usr/local/kafka
 
 # Druid system user
 RUN adduser --system --group --no-create-home druid \

@@ -2,7 +2,7 @@
   "type" : "index_realtime",
   "spec" : {
     "dataSchema": {
-      "dataSource": "kafka_test",
+      "dataSource": "%%DATASOURCE%%",
       "parser" : {
         "type" : "string",
         "parseSpec" : {

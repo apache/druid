@@ -3,7 +3,7 @@
    "description": "timeBoundary",
    "query": {
       "queryType":"timeBoundary",
-      "dataSource":"kafka_test"
+      "dataSource":"%%DATASOURCE%%"
    },
    "expectedResults":[
       {
@@ -19,7 +19,7 @@
    "description": "timeseries",
    "query": {
       "queryType": "timeseries",
-      "dataSource": "kafka_test",
+      "dataSource": "%%DATASOURCE%%",
       "intervals": [ "%%TIMESERIES_QUERY_START%%/%%TIMESERIES_QUERY_END%%" ],
       "granularity": "all",
       "aggregations": [
