@@ -25,6 +25,7 @@ import com.metamx.http.client.HttpClient;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.TaskInfoProvider;
+import org.joda.time.Duration;
 
 public class KafkaIndexTaskClientFactory
 {
@@ -38,8 +39,22 @@ public class KafkaIndexTaskClientFactory
     this.mapper = mapper;
   }
 
-  public KafkaIndexTaskClient build(TaskInfoProvider taskInfoProvider)
+  public KafkaIndexTaskClient build(
+      TaskInfoProvider taskInfoProvider,
+      String dataSource,
+      int numThreads,
+      Duration httpTimeout,
+      long numRetries
+  )
   {
-    return new KafkaIndexTaskClient(httpClient, mapper, taskInfoProvider);
+    return new KafkaIndexTaskClient(
+        httpClient,
+        mapper,
+        taskInfoProvider,
+        dataSource,
+        numThreads,
+        httpTimeout,
+        numRetries
+    );
   }
 }
