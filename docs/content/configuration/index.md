@@ -153,6 +153,7 @@ The following monitors are available:
 |`com.metamx.metrics.JvmMonitor`|Reports JVM-related statistics.|
 |`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
 |`io.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
+|`io.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
 
 ### Emitting Metrics
 
