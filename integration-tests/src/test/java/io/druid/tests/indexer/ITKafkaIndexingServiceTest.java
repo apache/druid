@@ -29,12 +29,12 @@ import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.TestQueryHelper;
 import kafka.admin.AdminUtils;
 import kafka.common.TopicExistsException;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.io.IOUtils;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -47,21 +47,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 /*
- * This is a test for the kafka firehose.
+ * This is a test for the Kafka indexing service.
  */
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITKafkaTest extends AbstractIndexerTest
+public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
 {
-  private static final Logger LOG = new Logger(ITKafkaTest.class);
+  private static final Logger LOG = new Logger(ITKafkaIndexingServiceTest.class);
   private static final int DELAY_BETWEEN_EVENTS_SECS = 5;
-  private static final String INDEXER_FILE = "/indexer/kafka_index_task.json";
+  private static final String INDEXER_FILE = "/indexer/kafka_supervisor_spec.json";
   private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
-  private static final String DATASOURCE = "kafka_test";
-  private static final String TOPIC_NAME = "kafkaTopic";
-  private static final int MINUTES_TO_SEND = 2;
+  private static final String DATASOURCE = "kafka_indexing_service_test";
+  private static final String TOPIC_NAME = "kafka_indexing_service_topic";
+  private static final int MINUTES_TO_SEND = 4;
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -83,7 +82,7 @@ public class ITKafkaTest extends AbstractIndexerTest
       "\"deleted\":%d," +
       "\"delta\":%d}";
 
-  private String taskID;
+  private String supervisorId;
   private ZkClient zkClient;
   private Boolean segmentsExist;   // to tell if we should remove segments during teardown
 
@@ -102,7 +101,7 @@ public class ITKafkaTest extends AbstractIndexerTest
   @Test
   public void testKafka()
   {
-    LOG.info("Starting test: ITKafkaTest");
+    LOG.info("Starting test: ITKafkaIndexingServiceTest");
 
     // create topic
     try {
@@ -113,7 +112,7 @@ public class ITKafkaTest extends AbstractIndexerTest
           zkHosts, sessionTimeoutMs, connectionTimeoutMs,
           ZKStringSerializer$.MODULE$
       );
-      int numPartitions = 1;
+      int numPartitions = 4;
       int replicationFactor = 1;
       Properties topicConfig = new Properties();
       AdminUtils.createTopic(zkClient, TOPIC_NAME, numPartitions, replicationFactor, topicConfig);
@@ -125,41 +124,36 @@ public class ITKafkaTest extends AbstractIndexerTest
       throw new ISE(e, "could not create kafka topic");
     }
 
-    String indexerSpec;
-
-    // replace temp strings in indexer file
+    String spec;
     try {
-      LOG.info("indexerFile name: [%s]", INDEXER_FILE);
-      indexerSpec = getTaskAsString(INDEXER_FILE)
+      LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
+      spec = getTaskAsString(INDEXER_FILE)
           .replaceAll("%%DATASOURCE%%", DATASOURCE)
           .replaceAll("%%TOPIC%%", TOPIC_NAME)
-          .replaceAll("%%ZOOKEEPER_SERVER%%", config.getZookeeperHosts())
-          .replaceAll("%%GROUP_ID%%", Long.toString(System.currentTimeMillis()))
-          .replaceAll(
-              "%%SHUTOFFTIME%%",
-              new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2 * MINUTES_TO_SEND)).toString()
-          );
-      LOG.info("indexerFile: [%s]\n", indexerSpec);
+          .replaceAll("%%KAFKA_BROKER%%", config.getKafkaHost());
+      LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {
-      // log here so the message will appear in the console output
-      LOG.error("could not read indexer file [%s]", INDEXER_FILE);
-      throw new ISE(e, "could not read indexer file [%s]", INDEXER_FILE);
+      LOG.error("could not read file [%s]", INDEXER_FILE);
+      throw new ISE(e, "could not read file [%s]", INDEXER_FILE);
     }
 
-    // start indexing task
-    taskID = indexer.submitTask(indexerSpec);
-    LOG.info("-------------SUBMITTED TASK");
+    // start supervisor
+    supervisorId = indexer.submitSupervisor(spec);
+    LOG.info("Submitted supervisor");
 
     // set up kafka producer
     Properties properties = new Properties();
-    properties.put("metadata.broker.list", config.getKafkaHost());
-    LOG.info("kafka host: [%s]", config.getKafkaHost());
-    properties.put("serializer.class", "kafka.serializer.StringEncoder");
-    properties.put("request.required.acks", "1");
-    properties.put("producer.type", "async");
-    ProducerConfig producerConfig = new ProducerConfig(properties);
-    Producer<String, String> producer = new Producer<String, String>(producerConfig);
+    properties.put("bootstrap.servers", config.getKafkaHost());
+    LOG.info("Kafka bootstrap.servers: [%s]", config.getKafkaHost());
+    properties.put("acks", "all");
+    properties.put("retries", "3");
+
+    KafkaProducer<String, String> producer = new KafkaProducer<>(
+        properties,
+        new StringSerializer(),
+        new StringSerializer()
+    );
 
     DateTimeZone zone = DateTimeZone.forID("UTC");
     // format for putting into events
@@ -180,15 +174,10 @@ public class ITKafkaTest extends AbstractIndexerTest
       num_events++;
       added += num_events;
       // construct the event to send
-      String event = String.format(
-          event_template,
-          event_fmt.print(dt), num_events, 0, num_events
-      );
+      String event = String.format(event_template, event_fmt.print(dt), num_events, 0, num_events);
       LOG.info("sending event: [%s]", event);
       try {
-        // Send event to kafka
-        KeyedMessage<String, String> message = new KeyedMessage<String, String>(TOPIC_NAME, event);
-        producer.send(message);
+        producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();
       }
       catch (Exception ioe) {
         throw Throwables.propagate(ioe);
@@ -204,13 +193,13 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     producer.close();
 
-    // put the timestamps into the query structure
-    String query_response_template = null;
-    InputStream is = ITKafkaTest.class.getResourceAsStream(QUERIES_FILE);
+    InputStream is = ITKafkaIndexingServiceTest.class.getResourceAsStream(QUERIES_FILE);
     if (null == is) {
       throw new ISE("could not open query file: %s", QUERIES_FILE);
     }
 
+    // put the timestamps into the query structure
+    String query_response_template;
     try {
       query_response_template = IOUtils.toString(is, "UTF-8");
     }
@@ -220,24 +209,24 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     String queryStr = query_response_template
         .replaceAll("%%DATASOURCE%%", DATASOURCE)
-            // time boundary
         .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
         .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
         .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-            // time series
         .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
         .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2)))
         .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
         .replace("%%TIMESERIES_ADDED%%", Integer.toString(added))
         .replace("%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
 
-    // this query will probably be answered from the realtime task
+    // this query will probably be answered from the indexing tasks but possibly from 2 historical segments / 2 indexing
     try {
       this.queryHelper.testQueriesFromString(queryStr, 2);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+
+    indexer.shutdownSupervisor(supervisorId);
 
     // wait for segments to be handed off
     try {
@@ -262,7 +251,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     LOG.info("segments are present");
     segmentsExist = true;
 
-    // this query will be answered by historical
+    // this query will be answered by at least 1 historical segment, most likely 2, and possibly up to all 4
     try {
       this.queryHelper.testQueriesFromString(queryStr, 2);
     }
@@ -276,9 +265,6 @@ public class ITKafkaTest extends AbstractIndexerTest
   {
     LOG.info("teardown");
 
-    // wait for the task to complete
-    indexer.waitUntilTaskCompletes(taskID);
-
     // delete kafka topic
     AdminUtils.deleteTopic(zkClient, TOPIC_NAME);
 
@@ -288,4 +274,3 @@ public class ITKafkaTest extends AbstractIndexerTest
     }
   }
 }
-

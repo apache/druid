@@ -117,7 +117,8 @@ public class OverlordResourceTestClient
   public TaskStatus.Status getTaskStatus(String taskID)
   {
     try {
-      StatusResponseHolder response = makeRequest( HttpMethod.GET,
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
           String.format(
               "%stask/%s/status",
               getIndexerURL(),
@@ -158,7 +159,8 @@ public class OverlordResourceTestClient
   private List<TaskResponseObject> getTasks(String identifier)
   {
     try {
-      StatusResponseHolder response = makeRequest( HttpMethod.GET,
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.GET,
           String.format("%s%s", getIndexerURL(), identifier)
       );
       LOG.info("Tasks %s response %s", identifier, response.getContent());
@@ -176,10 +178,12 @@ public class OverlordResourceTestClient
   public Map<String, String> shutDownTask(String taskID)
   {
     try {
-      StatusResponseHolder response = makeRequest( HttpMethod.POST,
-         String.format("%stask/%s/shutdown", getIndexerURL(),
-		       URLEncoder.encode(taskID, "UTF-8")
-         )
+      StatusResponseHolder response = makeRequest(
+          HttpMethod.POST,
+          String.format(
+              "%stask/%s/shutdown", getIndexerURL(),
+              URLEncoder.encode(taskID, "UTF-8")
+          )
       );
       LOG.info("Shutdown Task %s response %s", taskID, response.getContent());
       return jsonMapper.readValue(
@@ -195,7 +199,7 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID)
   {
-      waitUntilTaskCompletes(taskID, 60000, 10);
+    waitUntilTaskCompletes(taskID, 60000, 10);
   }
 
   public void waitUntilTaskCompletes(final String taskID, final int millisEach, final int numTimes)
@@ -218,6 +222,61 @@ public class OverlordResourceTestClient
         numTimes,
         taskID
     );
+  }
+
+  public String submitSupervisor(String spec)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "supervisor"))
+              .setContent(
+                  "application/json",
+                  spec.getBytes()
+              ),
+          responseHandler
+      ).get();
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while submitting supervisor to overlord, response [%s %s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      Map<String, String> responseData = jsonMapper.readValue(
+          response.getContent(), new TypeReference<Map<String, String>>()
+          {
+          }
+      );
+      String id = responseData.get("id");
+      LOG.info("Submitted supervisor with id[%s]", id);
+      return id;
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public void shutdownSupervisor(String id)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.POST, new URL(String.format("%ssupervisor/%s/shutdown", getIndexerURL(), id))
+          ),
+          responseHandler
+      ).get();
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while shutting down supervisor, response [%s %s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      LOG.info("Shutdown supervisor with id[%s]", id);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   private StatusResponseHolder makeRequest(HttpMethod method, String url)

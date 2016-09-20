@@ -21,80 +21,14 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import com.metamx.common.IAE;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.joda.time.DateTime;
 
 import java.util.List;
-import java.util.Map;
 
 public class KafkaSupervisorReport extends SupervisorReport
 {
-  public class TaskReportData
-  {
-    private final String id;
-    private final Map<Integer, Long> startingOffsets;
-    private final Map<Integer, Long> currentOffsets;
-    private final DateTime startTime;
-    private final Long remainingSeconds;
-
-    public TaskReportData(
-        String id,
-        Map<Integer, Long> startingOffsets,
-        Map<Integer, Long> currentOffsets,
-        DateTime startTime,
-        Long remainingSeconds
-    )
-    {
-      this.id = id;
-      this.startingOffsets = startingOffsets;
-      this.currentOffsets = currentOffsets;
-      this.startTime = startTime;
-      this.remainingSeconds = remainingSeconds;
-    }
-
-    @JsonProperty
-    public String getId()
-    {
-      return id;
-    }
-
-    @JsonProperty
-    public Map<Integer, Long> getStartingOffsets()
-    {
-      return startingOffsets;
-    }
-
-    @JsonProperty
-    public Map<Integer, Long> getCurrentOffsets()
-    {
-      return currentOffsets;
-    }
-
-    @JsonProperty
-    public DateTime getStartTime()
-    {
-      return startTime;
-    }
-
-    @JsonProperty
-    public Long getRemainingSeconds()
-    {
-      return remainingSeconds;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "{" +
-             "id='" + id + '\'' +
-             (startingOffsets != null ? ", startingOffsets=" + startingOffsets : "") +
-             (currentOffsets != null ? ", currentOffsets=" + currentOffsets : "") +
-             ", startTime=" + startTime +
-             ", remainingSeconds=" + remainingSeconds +
-             '}';
-    }
-  }
-
   public class KafkaSupervisorReportPayload
   {
     private final String dataSource;
@@ -200,26 +134,15 @@ public class KafkaSupervisorReport extends SupervisorReport
     return payload;
   }
 
-  public void addActiveTask(
-      String id,
-      Map<Integer, Long> startingOffsets,
-      Map<Integer, Long> currentOffsets,
-      DateTime startTime,
-      Long remainingSeconds
-  )
+  public void addTask(TaskReportData data)
   {
-    payload.activeTasks.add(new TaskReportData(id, startingOffsets, currentOffsets, startTime, remainingSeconds));
-  }
-
-  public void addPublishingTask(
-      String id,
-      Map<Integer, Long> startingOffsets,
-      Map<Integer, Long> currentOffsets,
-      DateTime startTime,
-      Long remainingSeconds
-  )
-  {
-    payload.publishingTasks.add(new TaskReportData(id, startingOffsets, currentOffsets, startTime, remainingSeconds));
+    if (data.getType().equals(TaskReportData.TaskType.ACTIVE)) {
+      payload.activeTasks.add(data);
+    } else if (data.getType().equals(TaskReportData.TaskType.PUBLISHING)) {
+      payload.publishingTasks.add(data);
+    } else {
+      throw new IAE("Unknown task type [%s]", data.getType().name());
+    }
   }
 
   @Override
