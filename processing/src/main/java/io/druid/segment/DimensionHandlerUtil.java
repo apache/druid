@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
+import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -29,12 +30,21 @@ public final class DimensionHandlerUtil
 
   public static DimensionHandler getHandlerFromCapabilities(String dimensionName, ColumnCapabilities capabilities)
   {
+    return getHandlerFromCapabilities(dimensionName, capabilities, null);
+  }
+
+  public static DimensionHandler getHandlerFromCapabilities(
+      String dimensionName,
+      ColumnCapabilities capabilities,
+      MultiValueHandling multiValueHandling
+  )
+  {
     DimensionHandler handler = null;
     if (capabilities.getType() == ValueType.STRING) {
       if (!capabilities.isDictionaryEncoded() || !capabilities.hasBitmapIndexes()) {
         throw new IAE("String column must have dictionary encoding and bitmap index.");
       }
-      handler = new StringDimensionHandler(dimensionName);
+      handler = new StringDimensionHandler(dimensionName, multiValueHandling);
     }
     if (handler == null) {
       throw new IAE("Could not create handler from invalid column type: " + capabilities.getType());

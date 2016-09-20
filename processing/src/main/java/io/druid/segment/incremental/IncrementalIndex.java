@@ -34,6 +34,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
@@ -409,7 +410,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
-        DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dimName, capabilities);
+        DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(
+            dimName,
+            capabilities,
+            dimSchema.getMultiValueHandling()
+        );
         addNewDimension(dimName, capabilities, handler);
       }
       columnCapabilities.put(dimName, capabilities);
@@ -556,7 +561,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       for (String dimension : rowDimensions) {
         boolean wasNewDim = false;
         ColumnCapabilitiesImpl capabilities;
-        ValueType valType = null;
         DimensionDesc desc = dimensionDescs.get(dimension);
         if (desc != null) {
           capabilities = desc.getCapabilities();
@@ -852,7 +856,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                     continue;
                   }
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  Object rowVals = indexer.convertUnsortedEncodedArrayToActualArrayOrList(dim, true);
+                  Object rowVals = indexer.convertUnsortedEncodedArrayToActualArrayOrList(dim, DimensionIndexer.LIST);
                   theVals.put(dimensionName, rowVals);
                 }
 
