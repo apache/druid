@@ -42,8 +42,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.zip.ZipFile;
 
 @RunWith(Parameterized.class)
 public class TimestampAggregationSelectTest
@@ -141,8 +143,9 @@ public class TimestampAggregationSelectTest
         "    \"fieldName\": \"timestamp\"\n" +
         "  }\n" +
         "]";
+    ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
     Sequence seq = helper.createIndexAndRunQueryOnSegment(
-        this.getClass().getClassLoader().getResourceAsStream("druid.sample.tsv"),
+        zip.getInputStream(zip.getEntry("druid.sample.tsv")),
         recordParser,
         aggregator,
         0,
