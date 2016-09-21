@@ -651,7 +651,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null, false)
         ),
         mapper,
         null
@@ -709,7 +709,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory()),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null, false)
         ),
         mapper,
         null
@@ -1068,7 +1068,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null, false)
         ),
         mapper,
         null

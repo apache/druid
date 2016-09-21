@@ -336,6 +336,11 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getPartitionsSpec().getTargetPartitionSize();
   }
 
+  public boolean isForceExtendableShardSpecs()
+  {
+    return schema.getTuningConfig().isForceExtendableShardSpecs();
+  }
+
   public long getMaxPartitionSize()
   {
     return schema.getTuningConfig().getPartitionsSpec().getMaxPartitionSize();
@@ -359,6 +364,11 @@ public class HadoopDruidIndexerConfig
   public HadoopyShardSpec getShardSpec(Bucket bucket)
   {
     return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
+  }
+
+  public int getShardSpecCount(Bucket bucket)
+  {
+    return schema.getTuningConfig().getShardSpecs().get(bucket.time).size();
   }
 
   public boolean isBuildV9Directly()
