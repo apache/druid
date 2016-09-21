@@ -20,9 +20,11 @@
 package io.druid.math.expr;
 
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
+import com.google.common.collect.Lists;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -31,6 +33,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Map;
 
 public class Parser
@@ -65,5 +68,60 @@ public class Parser
     ExprListenerImpl listener = new ExprListenerImpl(parseTree);
     walker.walk(listener, parseTree);
     return listener.getAST();
+  }
+
+  public static List<String> findRequiredBindings(String in)
+  {
+    return findRequiredBindings(parse(in));
+  }
+
+  public static List<String> findRequiredBindings(Expr parsed)
+  {
+    return findRecursive(parsed, Lists.<String>newArrayList());
+  }
+
+  private static List<String> findRecursive(Expr expr, List<String> found)
+  {
+    if (expr instanceof IdentifierExpr) {
+      found.add(expr.toString());
+    } else if (expr instanceof BinaryOpExprBase) {
+      BinaryOpExprBase binary = (BinaryOpExprBase) expr;
+      findRecursive(binary.left, found);
+      findRecursive(binary.right, found);
+    } else if (expr instanceof UnaryMinusExpr) {
+      findRecursive(((UnaryMinusExpr) expr).expr, found);
+    } else if (expr instanceof UnaryNotExpr) {
+      findRecursive(((UnaryNotExpr) expr).expr, found);
+    } else if (expr instanceof FunctionExpr) {
+      for (Expr child : ((FunctionExpr) expr).args) {
+        findRecursive(child, found);
+      }
+    }
+    return found;
+  }
+
+  public static Expr.NumericBinding withMap(final Map<String, ?> bindings)
+  {
+    return new Expr.NumericBinding()
+    {
+      @Override
+      public Number get(String name)
+      {
+        return (Number)bindings.get(name);
+      }
+    };
+  }
+
+  public static Expr.NumericBinding withSuppliers(final Map<String, Supplier<Number>> bindings)
+  {
+    return new Expr.NumericBinding()
+    {
+      @Override
+      public Number get(String name)
+      {
+        Supplier<Number> supplier = bindings.get(name);
+        return supplier == null ? null : supplier.get();
+      }
+    };
   }
 }
