@@ -398,6 +398,12 @@ public class KafkaSupervisor implements Supervisor
     return generateReport(true);
   }
 
+  @Override
+  public void reset() {
+    boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
+    log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
+  }
+
   public void possiblyRegisterListener()
   {
     // getTaskRunner() sometimes fails if the task queue is still being initialized so retry later until we succeed
@@ -1289,8 +1295,8 @@ public class KafkaSupervisor implements Supervisor
       long latestKafkaOffset = getOffsetFromKafkaForPartition(partition, false);
       if (offset > latestKafkaOffset) {
         throw new ISE(
-            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition [%d]. If your Kafka offsets have"
-            + " been reset, you will need to remove the entry for [%s] from the dataSource table.",
+            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition[%d] dataSource[%s]. If your "
+            + "Kafka offsets have been reset, you will need to use the supervisor reset API to remove the old entry.",
             offset,
             latestKafkaOffset,
             partition,
