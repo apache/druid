@@ -106,12 +106,16 @@ public class RestoreTask extends AbstractFixedIntervalTask
       }
     }
 
-    // Update metadata for moved segments
-    toolbox.getTaskActionClient().submit(
-        new SegmentMetadataUpdateAction(
-            ImmutableSet.copyOf(restoredSegments)
-        )
-    );
+    if (restoredSegments.isEmpty()) {
+      log.info("No segments restored");
+    } else {
+      // Update metadata for moved segments
+      toolbox.getTaskActionClient().submit(
+          new SegmentMetadataUpdateAction(
+              ImmutableSet.copyOf(restoredSegments)
+          )
+      );
+    }
 
     return TaskStatus.success(getId());
   }
