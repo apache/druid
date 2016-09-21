@@ -42,6 +42,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.commons.io.FileUtils;
@@ -89,7 +90,7 @@ public class IndexGeneratorJobTest
 
   @Parameterized.Parameters(name = "useCombiner={0}, partitionType={1}, interval={2}, shardInfoForEachSegment={3}, " +
                                    "data={4}, inputFormatName={5}, inputRowParser={6}, maxRowsInMemory={7}, " +
-                                   "aggs={8}, datasourceName={9}, buildV9Directly={10}")
+                                   "aggs={8}, datasourceName={9}, forceExtendableShardSpecs={10}, buildV9Directly={11}")
   public static Collection<Object[]> constructFeed()
   {
     final List<Object[]> baseConstructors = Arrays.asList(
@@ -363,17 +364,18 @@ public class IndexGeneratorJobTest
         }
     );
 
-    // Run each baseConstructor with/without buildV9Directly.
+    // Run each baseConstructor with/without buildV9Directly and forceExtendableShardSpecs.
     final List<Object[]> constructors = Lists.newArrayList();
     for (Object[] baseConstructor : baseConstructors) {
-      final Object[] c1 = new Object[baseConstructor.length + 1];
-      final Object[] c2 = new Object[baseConstructor.length + 1];
-      System.arraycopy(baseConstructor, 0, c1, 0, baseConstructor.length);
-      System.arraycopy(baseConstructor, 0, c2, 0, baseConstructor.length);
-      c1[c1.length - 1] = true;
-      c2[c2.length - 1] = false;
-      constructors.add(c1);
-      constructors.add(c2);
+      for (int buildV9Directly = 0; buildV9Directly < 2; buildV9Directly++) {
+        for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2 ; forceExtendableShardSpecs++) {
+          final Object[] fullConstructor = new Object[baseConstructor.length + 2];
+          System.arraycopy(baseConstructor, 0, fullConstructor, 0, baseConstructor.length);
+          fullConstructor[baseConstructor.length] = forceExtendableShardSpecs == 0;
+          fullConstructor[baseConstructor.length + 1] = buildV9Directly == 0;
+          constructors.add(fullConstructor);
+        }
+      }
     }
 
     return constructors;
@@ -392,6 +394,7 @@ public class IndexGeneratorJobTest
   private final Integer maxRowsInMemory;
   private final AggregatorFactory[] aggs;
   private final String datasourceName;
+  private final boolean forceExtendableShardSpecs;
   private final boolean buildV9Directly;
 
   private ObjectMapper mapper;
@@ -410,8 +413,9 @@ public class IndexGeneratorJobTest
       Integer maxRowsInMemory,
       AggregatorFactory[] aggs,
       String datasourceName,
+      boolean forceExtendableShardSpecs,
       boolean buildV9Directly
-      ) throws IOException
+  ) throws IOException
   {
     this.useCombiner = useCombiner;
     this.partitionType = partitionType;
@@ -423,6 +427,7 @@ public class IndexGeneratorJobTest
     this.maxRowsInMemory = maxRowsInMemory;
     this.aggs = aggs;
     this.datasourceName = datasourceName;
+    this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     this.buildV9Directly = buildV9Directly;
   }
 
@@ -511,7 +516,8 @@ public class IndexGeneratorJobTest
                 useCombiner,
                 null,
                 buildV9Directly,
-                null
+                null,
+                forceExtendableShardSpecs
             )
         )
     );
@@ -619,7 +625,11 @@ public class IndexGeneratorJobTest
           Assert.fail("Test did not specify supported datasource name");
         }
 
-        if (partitionType.equals("hashed")) {
+        if (forceExtendableShardSpecs) {
+          NumberedShardSpec spec = (NumberedShardSpec) dataSegment.getShardSpec();
+          Assert.assertEquals(partitionNum, spec.getPartitionNum());
+          Assert.assertEquals(shardInfo.length, spec.getPartitions());
+        } else if (partitionType.equals("hashed")) {
           Integer[] hashShardInfo = (Integer[]) shardInfo[partitionNum];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
