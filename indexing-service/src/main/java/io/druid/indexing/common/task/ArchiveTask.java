@@ -96,7 +96,11 @@ public class ArchiveTask extends AbstractFixedIntervalTask
     // Move segments
     for (DataSegment segment : unusedSegments) {
       final DataSegment archivedSegment = toolbox.getDataSegmentArchiver().archive(segment);
-      toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
+      if (archivedSegment != null) {
+        toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
+      } else {
+        log.info("No action was taken for [%s]", segment);
+      }
     }
 
     return TaskStatus.success(getId());
