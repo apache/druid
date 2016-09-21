@@ -30,8 +30,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
-
 public class TaskLockboxTest
 {
   private TaskStorage taskStorage;
@@ -127,4 +125,24 @@ public class TaskLockboxTest
   }
 
 
+  @Test
+  public void testMultiLock() throws InterruptedException
+  {
+    Interval interval = new Interval("2015-01-01/2015-01-02");
+
+    Task task1 = new NoopTask("id1", "gp1", "navis;manse");
+    lockbox.add(task1);
+    Assert.assertTrue(lockbox.tryLock(task1, interval).isPresent());
+
+    Task task2 = new NoopTask("id2", "gp1", "navis;manmanse");
+    lockbox.add(task2);
+    Assert.assertTrue(lockbox.tryLock(task2, interval).isPresent());
+
+    Task task3 = new NoopTask("id3", "gp2", "manse");
+    lockbox.add(task3);
+    Assert.assertTrue(!lockbox.tryLock(task3, interval).isPresent());
+
+    lockbox.unlock(task1, interval);
+    Assert.assertTrue(lockbox.tryLock(task3, interval).isPresent());
+  }
 }

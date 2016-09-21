@@ -124,6 +124,13 @@ public abstract class AbstractTask implements Task
     return dataSource;
   }
 
+  @JsonProperty
+  @Override
+  public String getRequiredLockName()
+  {
+    return getDataSource();
+  }
+
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {

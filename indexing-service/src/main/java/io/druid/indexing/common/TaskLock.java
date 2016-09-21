@@ -72,6 +72,11 @@ public class TaskLock
     return version;
   }
 
+  public boolean isShareable(String groupId, Interval interval)
+  {
+    return this.interval.contains(interval) && this.groupId.equals(groupId);
+  }
+
   @Override
   public boolean equals(Object o)
   {
