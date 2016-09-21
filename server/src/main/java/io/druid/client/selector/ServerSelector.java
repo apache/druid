@@ -83,18 +83,22 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     }
   }
 
-  public List<DruidServerMetadata> getCandidates(int numCandidates) {
-    List<DruidServerMetadata> result = Lists.newArrayListWithCapacity(numCandidates);
+  public List<DruidServerMetadata> getCandidates(final int numCandidates) {
+    List<DruidServerMetadata> result = Lists.newArrayList();
     synchronized (this) {
       final DataSegment target = segment.get();
-      for (Map.Entry<Integer, Set<QueryableDruidServer>> entry : toServers().entrySet()) {
+      for (Map.Entry<Integer, Set<QueryableDruidServer>> entry : toPrioritizedServers().entrySet()) {
         Set<QueryableDruidServer> servers = entry.getValue();
         TreeMap<Integer, Set<QueryableDruidServer>> tieredMap = Maps.newTreeMap();
         while (!servers.isEmpty()) {
           tieredMap.put(entry.getKey(), servers);   // strategy.pick() removes entry
           QueryableDruidServer server = strategy.pick(tieredMap, target);
+          if (server == null) {
+            // regard this as any server in tieredMap is not appropriate
+            break;
+          }
           result.add(server.getServer().getMetadata());
-          if (result.size() >= numCandidates) {
+          if (numCandidates > 0 && result.size() >= numCandidates) {
             return result;
           }
           servers.remove(server);
@@ -107,11 +111,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public QueryableDruidServer pick()
   {
     synchronized (this) {
-      return strategy.pick(toServers(), segment.get());
+      return strategy.pick(toPrioritizedServers(), segment.get());
     }
   }
 
-  private TreeMap<Integer, Set<QueryableDruidServer>> toServers()
+  private TreeMap<Integer, Set<QueryableDruidServer>> toPrioritizedServers()
   {
     final TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers = new TreeMap<>(strategy.getComparator());
     for (QueryableDruidServer server : servers) {

@@ -61,7 +61,7 @@ Returns the metrics of the datasource.
 
 * `/druid/v2/datasources/{dataSourceName}/candidates/intervals/{comma-separated-intervals-in-ISO8601-format}/numCandidates/{numCandidates}`
 
-Returns segment information lists including server locations for the given datasource and intervals.
+Returns segment information lists including server locations for the given datasource and intervals. If "numCandidates" is not specified, it will return all servers for each interval.
 
 * `/druid/broker/v1/loadstatus`
 

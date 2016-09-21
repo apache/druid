@@ -39,7 +39,7 @@ import java.util.List;
  */
 public class ServerViewUtil
 {
-  public static final int DEFAULT_NUM_CANDIDATES = 5;
+  public static final int DEFAULT_NUM_CANDIDATES = -1;
 
   public static List<LocatedSegmentDescriptor> getTargetLocations(
       TimelineServerView serverView,

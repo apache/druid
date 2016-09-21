@@ -31,7 +31,7 @@ import java.util.Objects;
 /**
  * public, evolving
  * <p/>
- * extended version of SegmentDescriptor, which is internal class, with location and size information
+ * extended version of SegmentDescriptor, which is internal class, with location and size information attached
  */
 public class LocatedSegmentDescriptor
 {
@@ -95,7 +95,7 @@ public class LocatedSegmentDescriptor
   @Override
   public boolean equals(Object o)
   {
-    if (!(o instanceof LocatedSegmentDescriptor) || !super.equals(o)) {
+    if (!(o instanceof LocatedSegmentDescriptor)) {
       return false;
     }
 
@@ -117,10 +117,7 @@ public class LocatedSegmentDescriptor
   @Override
   public int hashCode()
   {
-    int result = Objects.hashCode(interval);
-    result = 31 * result + Objects.hashCode(version);
-    result = 31 * result + partitionNumber;
-    return result;
+    return Objects.hash(partitionNumber, interval, version);
   }
 
   @Override
