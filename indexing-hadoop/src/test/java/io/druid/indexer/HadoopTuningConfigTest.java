@@ -55,7 +55,8 @@ public class HadoopTuningConfigTest
         true,
         null,
         null,
-        null
+        null,
+        true
     );
 
     HadoopTuningConfig actual = jsonReadWriteRead(jsonMapper.writeValueAsString(expected), HadoopTuningConfig.class);
@@ -74,6 +75,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(true, actual.isCombineText());
     Assert.assertEquals(true, actual.getUseCombiner());
     Assert.assertEquals(0, actual.getNumBackgroundPersistThreads());
+    Assert.assertEquals(true, actual.isForceExtendableShardSpecs());
   }
 
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)
