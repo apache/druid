@@ -113,6 +113,8 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|75000|no|
 |numShards|Directly specify the number of shards to create. You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
+|buildV9Directly|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|false|no|
+|forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
 
 #### IndexSpec
 

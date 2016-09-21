@@ -215,7 +215,8 @@ public class OrcIndexGeneratorJobTest
                 true,
                 null,
                 true,
-                null
+                null,
+                false
             )
         )
     );
