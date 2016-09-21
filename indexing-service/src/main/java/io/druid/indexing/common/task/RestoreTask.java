@@ -62,52 +62,57 @@ public class RestoreTask extends AbstractFixedIntervalTask
   }
 
   @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
-    {
-      // Confirm we have a lock (will throw if there isn't exactly one element)
-      final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  {
+    // Confirm we have a lock (will throw if there isn't exactly one element)
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
 
-      if (!myLock.getDataSource().equals(getDataSource())) {
-        throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
+    if (!myLock.getDataSource().equals(getDataSource())) {
+      throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
+    }
+
+    if (!myLock.getInterval().equals(getInterval())) {
+      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
+    }
+
+    // List unused segments
+    final List<DataSegment> unusedSegments = toolbox
+        .getTaskActionClient()
+        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+
+    // Verify none of these segments have versions > lock version
+    for (final DataSegment unusedSegment : unusedSegments) {
+      if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
+        throw new ISE(
+            "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
+            unusedSegment.getIdentifier(),
+            unusedSegment.getVersion(),
+            myLock.getVersion()
+        );
       }
 
-      if (!myLock.getInterval().equals(getInterval())) {
-        throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
-      }
+      log.info("OK to restore segment: %s", unusedSegment.getIdentifier());
+    }
 
-      // List unused segments
-      final List<DataSegment> unusedSegments = toolbox
-          .getTaskActionClient()
-          .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+    List<DataSegment> restoredSegments = Lists.newLinkedList();
 
-      // Verify none of these segments have versions > lock version
-      for (final DataSegment unusedSegment : unusedSegments) {
-        if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
-          throw new ISE(
-              "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
-              unusedSegment.getIdentifier(),
-              unusedSegment.getVersion(),
-              myLock.getVersion()
-          );
-        }
-
-        log.info("OK to restore segment: %s", unusedSegment.getIdentifier());
-      }
-
-      List<DataSegment> restoredSegments = Lists.newLinkedList();
-
-      // Move segments
-      for (DataSegment segment : unusedSegments) {
+    // Move segments
+    for (DataSegment segment : unusedSegments) {
+      final DataSegment restored = toolbox.getDataSegmentArchiver().restore(segment);
+      if (restored == null) {
+        log.info("Segment [%s] did not move, not updating metadata", segment);
+      } else {
         restoredSegments.add(toolbox.getDataSegmentArchiver().restore(segment));
       }
-
-      // Update metadata for moved segments
-      toolbox.getTaskActionClient().submit(
-          new SegmentMetadataUpdateAction(
-              ImmutableSet.copyOf(restoredSegments)
-          )
-      );
-
-      return TaskStatus.success(getId());
     }
+
+    // Update metadata for moved segments
+    toolbox.getTaskActionClient().submit(
+        new SegmentMetadataUpdateAction(
+            ImmutableSet.copyOf(restoredSegments)
+        )
+    );
+
+    return TaskStatus.success(getId());
+  }
 }
