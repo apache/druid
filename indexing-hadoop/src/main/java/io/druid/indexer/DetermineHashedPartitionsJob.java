@@ -146,7 +146,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                 intervals
             )
         );
-        log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
+        log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
@@ -416,6 +416,3 @@ public class DetermineHashedPartitionsJob implements Jobby
   }
 
 }
-
-
-
