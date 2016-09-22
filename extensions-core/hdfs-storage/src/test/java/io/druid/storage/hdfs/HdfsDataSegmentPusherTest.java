@@ -23,16 +23,22 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.joda.time.Interval;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.runners.statements.Fail;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  */
@@ -74,5 +80,21 @@ public class HdfsDataSegmentPusherTest
     DataSegment segment = pusher.push(segmentDir, segmentToPush);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
+
+    // rename directory after push
+    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
+    File indexFile = new File(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
+    Assert.assertTrue(indexFile.exists());
+    File descriptorFile = new File(String.format("%s/%s/descriptor.json", config.getStorageDirectory(), storageDir));
+    Assert.assertTrue(descriptorFile.exists());
+
+    // push twice will fail and temp dir cleaned
+    File outDir = new File(String.format("%s/%s", config.getStorageDirectory(), storageDir));
+    outDir.setReadOnly();
+    try {
+      pusher.push(segmentDir, segmentToPush);
+    }catch (IOException e){
+      Assert.fail("should not throw exception");
+    }
   }
 }
