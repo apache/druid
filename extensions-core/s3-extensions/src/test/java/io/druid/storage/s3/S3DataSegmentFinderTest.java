@@ -287,15 +287,6 @@ public class S3DataSegmentFinderTest
   }
 
   @Test
-  public void testFindSegmentsWithDefaultMaxListingLength() throws SegmentLoadingException
-  {
-    config.setMaxListingLength(-1);
-    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
-    final Set<DataSegment> segments = s3DataSegmentFinder.findSegments("", false);
-    Assert.assertEquals(5, segments.size());
-  }
-
-  @Test
   public void testFindSegmentsWithworkingDirPath() throws SegmentLoadingException
   {
     config.setBaseKey("");
