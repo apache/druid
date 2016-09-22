@@ -93,9 +93,8 @@ public class HdfsDataSegmentPusherTest
     outDir.setReadOnly();
     try {
       pusher.push(segmentDir, segmentToPush);
-      Assert.fail("should throw exception");
     }catch (IOException e){
-      Assert.assertEquals(new File(config.getStorageDirectory()).list().length, 1);
+      Assert.fail("should not throw exception");
     }
   }
 }
