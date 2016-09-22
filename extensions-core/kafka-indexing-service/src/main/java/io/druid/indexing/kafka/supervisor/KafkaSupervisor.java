@@ -400,8 +400,8 @@ public class KafkaSupervisor implements Supervisor
 
   @Override
   public void reset() {
-    boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
-    log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
+    log.info("Posting ResetNotice");
+    notices.add(new ResetNotice());
   }
 
   public void possiblyRegisterListener()
@@ -483,6 +483,33 @@ public class KafkaSupervisor implements Supervisor
         stopLock.notifyAll();
       }
     }
+  }
+
+  private class ResetNotice implements Notice
+  {
+    @Override
+    public void handle()
+    {
+      resetInternal();
+    }
+  }
+
+  @VisibleForTesting
+  void resetInternal()
+  {
+    boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
+    log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
+
+    for (TaskGroup taskGroup : taskGroups.values()) {
+      for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+        String taskId = entry.getKey();
+        log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
+        killTask(taskId);
+      }
+    }
+
+    partitionGroups.clear();
+    taskGroups.clear();
   }
 
   @VisibleForTesting
@@ -1295,8 +1322,9 @@ public class KafkaSupervisor implements Supervisor
       long latestKafkaOffset = getOffsetFromKafkaForPartition(partition, false);
       if (offset > latestKafkaOffset) {
         throw new ISE(
-            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition[%d] dataSource[%s]. If your "
-            + "Kafka offsets have been reset, you will need to use the supervisor reset API to remove the old entry.",
+            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition[%d] dataSource[%s]. If these "
+            + "messages are no longer available (perhaps you deleted and re-created your Kafka topic) you can use the "
+            + "supervisor reset API to restart ingestion.",
             offset,
             latestKafkaOffset,
             partition,
