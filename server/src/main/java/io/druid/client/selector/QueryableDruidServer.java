@@ -44,4 +44,13 @@ public class QueryableDruidServer
   {
     return client;
   }
+
+  @Override
+  public String toString()
+  {
+    return "QueryableDruidServer{" +
+           "server=" + server +
+           ", client=" + client +
+           '}';
+  }
 }

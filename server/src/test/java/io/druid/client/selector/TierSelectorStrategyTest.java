@@ -22,6 +22,7 @@ package io.druid.client.selector;
 import com.google.common.collect.Lists;
 import io.druid.client.DirectDruidClient;
 import io.druid.client.DruidServer;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -31,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class TierSelectorStrategyTest
@@ -51,8 +53,7 @@ public class TierSelectorStrategyTest
 
     testTierSelectorStrategy(
         new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
-        Arrays.asList(lowPriority, highPriority),
-        highPriority
+        highPriority, lowPriority
     );
   }
 
@@ -71,8 +72,7 @@ public class TierSelectorStrategyTest
 
     testTierSelectorStrategy(
         new LowestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
-        Arrays.asList(lowPriority, highPriority),
-        lowPriority
+        lowPriority, highPriority
     );
   }
 
@@ -104,15 +104,13 @@ public class TierSelectorStrategyTest
           }
         }
         ),
-        Arrays.asList(lowPriority, mediumPriority, highPriority),
-        mediumPriority
+        mediumPriority, lowPriority, highPriority
     );
   }
 
   private void testTierSelectorStrategy(
       TierSelectorStrategy tierSelectorStrategy,
-      List<QueryableDruidServer> servers,
-      QueryableDruidServer expectedSelection
+      QueryableDruidServer... expectedSelection
   )
   {
     final ServerSelector serverSelector = new ServerSelector(
@@ -129,10 +127,21 @@ public class TierSelectorStrategyTest
         ),
         tierSelectorStrategy
     );
+
+    List<QueryableDruidServer> servers = Lists.newArrayList(expectedSelection);
+
+    List<DruidServerMetadata> expectedCandidates = Lists.newArrayList();
+    for (QueryableDruidServer server : servers) {
+      expectedCandidates.add(server.getServer().getMetadata());
+    }
+    Collections.shuffle(servers);
     for (QueryableDruidServer server : servers) {
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
-    Assert.assertEquals(expectedSelection, serverSelector.pick());
+
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick());
+    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1));
+    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2));
   }
 
 }
