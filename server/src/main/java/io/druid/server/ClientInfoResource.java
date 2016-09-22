@@ -55,6 +55,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -304,12 +305,13 @@ public class ClientInfoResource
   }
 
   @GET
-  @Path("/{dataSourceName}/candidates/intervals/{intervals}/numCandidates/{numCandidates}")
+  @Path("/{dataSourceName}/candidates")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Iterable<LocatedSegmentDescriptor> getQueryTargets(
       @PathParam("dataSourceName") String datasource,
-      @PathParam("intervals") String intervals,
-      @PathParam("numCandidates") String numCandidates,
+      @QueryParam("intervals") String intervals,
+      @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
       @Context final HttpServletRequest req
   ) throws IOException
   {

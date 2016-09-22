@@ -36,6 +36,7 @@ import io.druid.server.security.AuthConfig;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -78,7 +79,7 @@ public class BrokerQueryResource extends QueryResource
   public Response getQueryTargets(
       InputStream in,
       @QueryParam("pretty") String pretty,
-      @QueryParam("numCandidates") String numCandidates,
+      @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
       @Context final HttpServletRequest req
   ) throws IOException
   {

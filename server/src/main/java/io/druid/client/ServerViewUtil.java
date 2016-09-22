@@ -19,7 +19,6 @@
 
 package io.druid.client;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.druid.client.selector.ServerSelector;
 import io.druid.query.DataSource;
@@ -39,13 +38,11 @@ import java.util.List;
  */
 public class ServerViewUtil
 {
-  public static final int DEFAULT_NUM_CANDIDATES = -1;
-
   public static List<LocatedSegmentDescriptor> getTargetLocations(
       TimelineServerView serverView,
       String datasource,
       List<Interval> intervals,
-      String numCandidates
+      int numCandidates
   )
   {
     return getTargetLocations(serverView, new TableDataSource(datasource), intervals, numCandidates);
@@ -55,14 +52,13 @@ public class ServerViewUtil
       TimelineServerView serverView,
       DataSource datasource,
       List<Interval> intervals,
-      String numCandidates
+      int numCandidates
   )
   {
     TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(datasource);
     if (timeline == null) {
       return Collections.emptyList();
     }
-    int candidate = Strings.isNullOrEmpty(numCandidates) ? DEFAULT_NUM_CANDIDATES : Integer.valueOf(numCandidates);
     List<LocatedSegmentDescriptor> located = Lists.newArrayList();
     for (Interval interval : intervals) {
       for (TimelineObjectHolder<String, ServerSelector> holder : timeline.lookup(interval)) {
@@ -72,7 +68,7 @@ public class ServerViewUtil
               holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
           );
           long size = selector.getSegment().getSize();
-          List<DruidServerMetadata> candidates = selector.getCandidates(candidate);
+          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates);
           located.add(new LocatedSegmentDescriptor(descriptor, size, candidates));
         }
       }
