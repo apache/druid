@@ -79,21 +79,21 @@ import java.util.UUID;
 @Path("/druid/v2/")
 public class QueryResource
 {
-  private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
+  protected static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
-  private static final String APPLICATION_SMILE = "application/smile";
+  protected static final String APPLICATION_SMILE = "application/smile";
 
-  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
+  protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
-  private final QueryToolChestWarehouse warehouse;
-  private final ServerConfig config;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-  private final QuerySegmentWalker texasRanger;
-  private final ServiceEmitter emitter;
-  private final RequestLogger requestLogger;
-  private final QueryManager queryManager;
-  private final AuthConfig authConfig;
+  protected final QueryToolChestWarehouse warehouse;
+  protected final ServerConfig config;
+  protected final ObjectMapper jsonMapper;
+  protected final ObjectMapper smileMapper;
+  protected final QuerySegmentWalker texasRanger;
+  protected final ServiceEmitter emitter;
+  protected final RequestLogger requestLogger;
+  protected final QueryManager queryManager;
+  protected final AuthConfig authConfig;
 
   @Inject
   public QueryResource(
@@ -167,19 +167,11 @@ public class QueryResource
     QueryToolChest toolChest = null;
     String queryId = null;
 
-    final String reqContentType = req.getContentType();
-    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
-                            || APPLICATION_SMILE.equals(reqContentType);
-    final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
-
-    ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
-    final ObjectWriter jsonWriter = pretty != null
-                                    ? objectMapper.writerWithDefaultPrettyPrinter()
-                                    : objectMapper.writer();
+    final ResponseContext context = createContext(req.getContentType(), pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      query = objectMapper.readValue(in, Query.class);
+      query = context.getObjectMapper().readValue(in, Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
@@ -244,6 +236,7 @@ public class QueryResource
       try {
         final Query theQuery = query;
         final QueryToolChest theToolChest = toolChest;
+        final ObjectWriter jsonWriter = context.newOutputWriter();
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -285,7 +278,7 @@ public class QueryResource
                     );
                   }
                 },
-                contentType
+                context.getContentType()
             )
             .header("X-Druid-Query-Id", queryId);
 
@@ -344,9 +337,7 @@ public class QueryResource
       catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
-      return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(new QueryInterruptedException(e))
-      ).build();
+      return context.gotError(e);
     }
     catch (Exception e) {
       // Input stream has already been consumed by the json object mapper if query == null
@@ -390,12 +381,60 @@ public class QueryResource
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(new QueryInterruptedException(e))
-      ).build();
+      return context.gotError(e);
     }
     finally {
       Thread.currentThread().setName(currThreadName);
+    }
+  }
+
+  protected ResponseContext createContext(String requestType, boolean pretty)
+  {
+    boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestType) ||
+                      APPLICATION_SMILE.equals(requestType);
+    String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
+    return new ResponseContext(contentType, isSmile ? smileMapper : jsonMapper, pretty);
+  }
+
+  protected static class ResponseContext
+  {
+    private final String contentType;
+    private final ObjectMapper inputMapper;
+    private final boolean isPretty;
+
+    ResponseContext(String contentType, ObjectMapper inputMapper, boolean isPretty)
+    {
+      this.contentType = contentType;
+      this.inputMapper = inputMapper;
+      this.isPretty = isPretty;
+    }
+
+    String getContentType()
+    {
+      return contentType;
+    }
+
+    public ObjectMapper getObjectMapper()
+    {
+      return inputMapper;
+    }
+
+    ObjectWriter newOutputWriter()
+    {
+      return isPretty ? inputMapper.writerWithDefaultPrettyPrinter() : inputMapper.writer();
+    }
+
+    Response ok(Object object) throws IOException
+    {
+      return Response.ok(newOutputWriter().writeValueAsString(object), contentType).build();
+    }
+
+    Response gotError(Exception e) throws IOException
+    {
+      return Response.serverError()
+                     .type(contentType)
+                     .entity(newOutputWriter().writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e)))
+                     .build();
     }
   }
 }

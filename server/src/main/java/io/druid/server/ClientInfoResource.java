@@ -33,9 +33,11 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.FilteredServerInventoryView;
-import io.druid.client.InventoryView;
+import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
+import io.druid.common.utils.JodaUtils;
+import io.druid.query.LocatedSegmentDescriptor;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.server.http.security.DatasourceResourceFilter;
@@ -53,6 +55,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -60,6 +63,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -298,6 +302,25 @@ public class ClientInfoResource
     }
 
     return metrics;
+  }
+
+  @GET
+  @Path("/{dataSourceName}/candidates")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Iterable<LocatedSegmentDescriptor> getQueryTargets(
+      @PathParam("dataSourceName") String datasource,
+      @QueryParam("intervals") String intervals,
+      @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
+      @Context final HttpServletRequest req
+  ) throws IOException
+  {
+    List<Interval> intervalList = Lists.newArrayList();
+    for (String interval : intervals.split(",")) {
+      intervalList.add(Interval.parse(interval.trim()));
+    }
+    List<Interval> condensed = JodaUtils.condenseIntervals(intervalList);
+    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates);
   }
 
   protected DateTime getCurrentTime()
