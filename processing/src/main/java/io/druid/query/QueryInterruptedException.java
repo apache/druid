@@ -145,4 +145,9 @@ public class QueryInterruptedException extends RuntimeException
       return null;
     }
   }
+
+  public static QueryInterruptedException wrapIfNeeded(Throwable e)
+  {
+    return e instanceof QueryInterruptedException ? (QueryInterruptedException) e : new QueryInterruptedException(e);
+  }
 }

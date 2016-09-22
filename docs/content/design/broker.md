@@ -59,7 +59,17 @@ Returns the dimensions of the datasource.
 
 Returns the metrics of the datasource.
 
+* `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals-in-ISO8601-format}&numCandidates={numCandidates}`
+
+Returns segment information lists including server locations for the given datasource and intervals. If "numCandidates" is not specified, it will return all servers for each interval.
+
 * `/druid/broker/v1/loadstatus`
 
 Returns a flag indicating if the broker knows about all segments in Zookeeper. This can be used to know when a broker node is ready to be queried after a restart.
 
+
+### POST
+
+* `/druid/v2/candidates/`
+
+Returns segment information lists including server locations for the given query.
