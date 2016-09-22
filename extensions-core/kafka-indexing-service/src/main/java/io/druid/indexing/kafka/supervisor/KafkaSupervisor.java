@@ -369,7 +369,7 @@ public class KafkaSupervisor implements Supervisor
           while (!stopped) {
             long sleepTime = endTime - System.currentTimeMillis();
             if (sleepTime <= 0) {
-              log.info("Timed out while waiting for shutdown (timeout [%dms])", shutdownTimeoutMillis);
+              log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
               stopped = true;
               break;
             }
