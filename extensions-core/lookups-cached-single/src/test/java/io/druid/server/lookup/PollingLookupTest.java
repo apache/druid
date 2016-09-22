@@ -59,7 +59,7 @@ public class PollingLookupTest
       "new-bad", "new-bar"
   );
 
-  private static final long POLL_PERIOD = 100L;
+  private static final long POLL_PERIOD = 1000L;
 
   @JsonTypeName("mock")
   private static class MockDataFetcher implements DataFetcher
