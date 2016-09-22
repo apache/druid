@@ -21,12 +21,12 @@ package io.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Min;
+
 /**
  */
 public class S3DataSegmentPusherConfig
 {
-  public static final int MAX_LISTING_LENGTH = 1000;
-
   @JsonProperty
   private String bucket = "";
 
@@ -37,7 +37,8 @@ public class S3DataSegmentPusherConfig
   private boolean disableAcl = false;
 
   @JsonProperty
-  private int maxListingLength = MAX_LISTING_LENGTH;
+  @Min(0)
+  private int maxListingLength = 1000;
 
   public void setBucket(String bucket)
   {
