@@ -34,6 +34,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
+  private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V1;
@@ -151,8 +152,12 @@ public class GroupByQueryConfig
         getBufferGrouperInitialBuckets()
     );
     newConfig.maxOnDiskStorage = Math.min(
-        ((Number)query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
+        ((Number) query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
         getMaxOnDiskStorage()
+    );
+    newConfig.maxMergingDictionarySize = Math.min(
+        ((Number) query.getContextValue(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getMaxMergingDictionarySize())).longValue(),
+        getMaxMergingDictionarySize()
     );
     return newConfig;
   }
