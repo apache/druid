@@ -138,6 +138,21 @@ public class SupervisorManager
     return supervisor == null ? Optional.<SupervisorReport>absent() : Optional.fromNullable(supervisor.lhs.getStatus());
   }
 
+  public boolean resetSupervisor(String id)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+
+    if (supervisor == null) {
+      return false;
+    }
+
+    supervisor.lhs.reset();
+    return true;
+  }
+
   /**
    * Stops a supervisor with a given id and then removes it from the list.
    * <p>

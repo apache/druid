@@ -206,6 +206,29 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/{id}/reset")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response reset(@PathParam("id") final String id)
+  {
+    return asLeaderWithSupervisorManager(
+        new Function<SupervisorManager, Response>()
+        {
+          @Override
+          public Response apply(SupervisorManager manager)
+          {
+            if (manager.resetSupervisor(id)) {
+              return Response.ok(ImmutableMap.of("id", id)).build();
+            } else {
+              return Response.status(Response.Status.NOT_FOUND)
+                             .entity(ImmutableMap.of("error", String.format("[%s] does not exist", id)))
+                             .build();
+            }
+          }
+        }
+    );
+  }
+
   private Response asLeaderWithSupervisorManager(Function<SupervisorManager, Response> f)
   {
     Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();

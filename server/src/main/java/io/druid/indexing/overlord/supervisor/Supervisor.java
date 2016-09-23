@@ -32,4 +32,6 @@ public interface Supervisor
   void stop(boolean stopGracefully);
 
   SupervisorReport getStatus();
+
+  void reset();
 }
