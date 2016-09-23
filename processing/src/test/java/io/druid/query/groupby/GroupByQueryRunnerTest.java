@@ -1074,6 +1074,55 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testSubqueryWithOuterMaxOnDiskStorageContextOverride()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                ImmutableList.of(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING)),
+                null
+            )
+        )
+        .setContext(
+            ImmutableMap.<String, Object>of(
+                "maxOnDiskStorage", Integer.MAX_VALUE,
+                "bufferGrouperMaxSize", Integer.MAX_VALUE
+            )
+        )
+        .build();
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList())
+        .setAggregatorSpecs(ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("count")))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setContext(ImmutableMap.<String, Object>of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 0))
+        .build();
+
+    // v1 strategy throws an exception for this query because it tries to merge the noop outer
+    // and default inner limit specs, then apply the resulting spec to the outer query, which
+    // fails because the inner limit spec refers to columns that don't exist in the outer
+    // query. I'm not sure why it does this.
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(ISE.class);
+      expectedException.expectMessage("Unknown column in order clause");
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    } else {
+      expectedException.expect(ResourceLimitExceededException.class);
+      expectedException.expectMessage("Grouping resources exhausted");
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    }
+  }
+
+  @Test
   public void testGroupByWithRebucketRename()
   {
     Map<String, String> map = new HashMap<>();
