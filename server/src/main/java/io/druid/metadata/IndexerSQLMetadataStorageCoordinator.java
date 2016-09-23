@@ -772,6 +772,26 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return retVal;
   }
 
+  public boolean deleteDataSourceMetadata(final String dataSource)
+  {
+    return connector.retryWithHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            int rows = handle.createStatement(
+                String.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+            )
+                             .bind("dataSource", dataSource)
+                             .execute();
+
+            return rows > 0;
+          }
+        }
+    );
+  }
+
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(

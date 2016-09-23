@@ -267,6 +267,35 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(503, response.getStatus());
   }
 
+  @Test
+  public void testReset() throws Exception
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
+    EasyMock.expect(supervisorManager.resetSupervisor("my-id")).andReturn(true);
+    EasyMock.expect(supervisorManager.resetSupervisor("my-id-2")).andReturn(false);
+    replayAll();
+
+    Response response = supervisorResource.reset("my-id");
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+
+    response = supervisorResource.reset("my-id-2");
+
+    Assert.assertEquals(404, response.getStatus());
+    verifyAll();
+
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    replayAll();
+
+    response = supervisorResource.shutdown("my-id");
+
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
+  }
+
   private class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
