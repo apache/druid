@@ -33,6 +33,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
   private final Integer chatThreads;
   private final Long chatRetries;
   private final Duration httpTimeout;
+  private final Duration shutdownTimeout;
 
   public KafkaSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
@@ -47,7 +48,8 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("workerThreads") Integer workerThreads,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
-      @JsonProperty("httpTimeout") Period httpTimeout
+      @JsonProperty("httpTimeout") Period httpTimeout,
+      @JsonProperty("shutdownTimeout") Period shutdownTimeout
   )
   {
     super(
@@ -66,6 +68,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
     this.chatThreads = chatThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : 8);
     this.httpTimeout = defaultDuration(httpTimeout, "PT10S");
+    this.shutdownTimeout = defaultDuration(shutdownTimeout, "PT80S");
   }
 
   @JsonProperty
@@ -92,6 +95,12 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
     return httpTimeout;
   }
 
+  @JsonProperty
+  public Duration getShutdownTimeout()
+  {
+    return shutdownTimeout;
+  }
+
   @Override
   public String toString()
   {
@@ -109,6 +118,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            ", chatThreads=" + chatThreads +
            ", chatRetries=" + chatRetries +
            ", httpTimeout=" + httpTimeout +
+           ", shutdownTimeout=" + shutdownTimeout +
            '}';
   }
 

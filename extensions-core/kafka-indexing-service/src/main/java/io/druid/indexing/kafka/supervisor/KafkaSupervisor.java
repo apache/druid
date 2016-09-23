@@ -101,7 +101,6 @@ public class KafkaSupervisor implements Supervisor
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
   private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000; // prevent us from running too often in response to events
-  private static final int SHUTDOWN_TIMEOUT_MILLIS = 15000;
   private static final long NOT_SET = -1;
 
   // Internal data structures
@@ -365,11 +364,12 @@ public class KafkaSupervisor implements Supervisor
             notices.add(new ShutdownNotice());
           }
 
-          long endTime = System.currentTimeMillis() + SHUTDOWN_TIMEOUT_MILLIS;
+          long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
+          long endTime = System.currentTimeMillis() + shutdownTimeoutMillis;
           while (!stopped) {
             long sleepTime = endTime - System.currentTimeMillis();
             if (sleepTime <= 0) {
-              log.info("Timed out while waiting for shutdown");
+              log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
               stopped = true;
               break;
             }
