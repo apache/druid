@@ -46,6 +46,9 @@ public class NoopSupervisorSpec implements SupervisorSpec
       {
         return null;
       }
+
+      @Override
+      public void reset() {}
     };
   }
 }
