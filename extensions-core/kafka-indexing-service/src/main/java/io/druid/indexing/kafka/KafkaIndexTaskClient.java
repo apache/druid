@@ -176,6 +176,7 @@ public class KafkaIndexTaskClient
       );
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
+        log.info("Task [%s] paused successfully", id);
         return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>() {});
       }
 
@@ -187,6 +188,7 @@ public class KafkaIndexTaskClient
 
         final Duration delay = retryPolicy.getAndIncrementRetryDelay();
         if (delay == null) {
+          log.error("Task [%s] failed to pause, aborting", id);
           throw new ISE("Task [%s] failed to pause, aborting", id);
         } else {
           final long sleepTime = delay.getMillis();
@@ -200,9 +202,11 @@ public class KafkaIndexTaskClient
       }
     }
     catch (NoTaskLocationException e) {
+      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
+      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
       throw Throwables.propagate(e);
     }
   }
