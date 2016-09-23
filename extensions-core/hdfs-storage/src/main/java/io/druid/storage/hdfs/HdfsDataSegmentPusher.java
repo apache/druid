@@ -112,16 +112,22 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       );
       Path outDir = new Path(String.format("%s/%s", config.getStorageDirectory(), storageDir));
       if (!fs.rename(tmpFile.getParent(), outDir)) {
-        if(!fs.delete(tmpFile.getParent(), true)){
-          log.error("Failed to delete temp directory");
+        if (!fs.delete(tmpFile.getParent(), true)) {
+          log.error("Failed to delete temp directory[%s]", tmpFile);
         }
-        if(fs.exists(outDir)){
+        if (fs.exists(outDir)) {
+          log.info(
+              "Unable to rename temp directory[%s] to segment directory[%s]. It is already pushed by a replica task.",
+              tmpFile,
+              outDir
+          );
+        } else {
           throw new IOException(String.format(
-              "Writing conflict detected for [%s], is there some other job running?",
-              segment.getIdentifier()
+              "Failed to rename temp directory[%s] and segment directory[%s] is not present.",
+              tmpFile,
+              outDir
           ));
         }
-        throw new IOException(String.format("Failed to rename and delete temp directory [%s]", tmpFile));
       }
     }
 
