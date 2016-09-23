@@ -35,6 +35,7 @@ import io.druid.data.input.Row;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -147,7 +148,7 @@ public class GroupByRowProcessor
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   true,
-                  config,
+                  querySpecificConfig,
                   mergeBufferHolder.get(),
                   -1,
                   temporaryStorage,
@@ -158,7 +159,10 @@ public class GroupByRowProcessor
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
               closeOnFailure.add(grouper);
 
-              filteredSequence.accumulate(grouper, accumulator);
+              final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(grouper, accumulator);
+              if (retVal != grouper) {
+                throw new ResourceLimitExceededException("Grouping resources exhausted");
+              }
 
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,
