@@ -4,7 +4,7 @@ layout: doc_page
 
 # Avro
 
-This extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` as an extension.  Inline schema and [Schema Repo](http://schemarepo.org) are supported. [Schema Registry](https://github.com/confluentinc/schema-registry) is not supported.
+This extension enables Druid to ingest and understand the Apache Avro data format. Make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` as an extension.  Inline schema and [Schema Repo](http://schemarepo.org) are supported.
 
 ### Avro Stream Parser
 
