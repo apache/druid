@@ -127,6 +127,43 @@ public final class ProtoTestEventWrapper {
      * <code>optional uint64 someLongColumn = 9;</code>
      */
     long getSomeLongColumn();
+
+    /**
+     * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+     */
+    boolean hasFoo();
+    /**
+     * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+     */
+    io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getFoo();
+    /**
+     * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+     */
+    io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getFooOrBuilder();
+
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    java.util.List<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo>
+        getBarList();
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getBar(int index);
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    int getBarCount();
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    java.util.List<? extends io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>
+        getBarOrBuilderList();
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getBarOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code prototest.ProtoTestEvent}
@@ -149,6 +186,7 @@ public final class ProtoTestEventWrapper {
       someFloatColumn_ = 0F;
       someIntColumn_ = 0;
       someLongColumn_ = 0L;
+      bar_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -232,6 +270,28 @@ public final class ProtoTestEventWrapper {
               someLongColumn_ = input.readUInt64();
               break;
             }
+            case 82: {
+              io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000200) == 0x00000200)) {
+                subBuilder = foo_.toBuilder();
+              }
+              foo_ = input.readMessage(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(foo_);
+                foo_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000200;
+              break;
+            }
+            case 90: {
+              if (!((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
+                bar_ = new java.util.ArrayList<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo>();
+                mutable_bitField0_ |= 0x00000400;
+              }
+              bar_.add(
+                  input.readMessage(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -240,6 +300,9 @@ public final class ProtoTestEventWrapper {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
+          bar_ = java.util.Collections.unmodifiableList(bar_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -353,6 +416,557 @@ public final class ProtoTestEventWrapper {
       }
 
       // @@protoc_insertion_point(enum_scope:prototest.ProtoTestEvent.EventCategory)
+    }
+
+    public interface FooOrBuilder extends
+        // @@protoc_insertion_point(interface_extends:prototest.ProtoTestEvent.Foo)
+        com.google.protobuf.MessageOrBuilder {
+
+      /**
+       * <code>required string bar = 1;</code>
+       */
+      boolean hasBar();
+      /**
+       * <code>required string bar = 1;</code>
+       */
+      java.lang.String getBar();
+      /**
+       * <code>required string bar = 1;</code>
+       */
+      com.google.protobuf.ByteString
+          getBarBytes();
+    }
+    /**
+     * Protobuf type {@code prototest.ProtoTestEvent.Foo}
+     */
+    public  static final class Foo extends
+        com.google.protobuf.GeneratedMessageV3 implements
+        // @@protoc_insertion_point(message_implements:prototest.ProtoTestEvent.Foo)
+        FooOrBuilder {
+      // Use Foo.newBuilder() to construct.
+      private Foo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+        super(builder);
+      }
+      private Foo() {
+        bar_ = "";
+      }
+
+      @java.lang.Override
+      public final com.google.protobuf.UnknownFieldSet
+      getUnknownFields() {
+        return this.unknownFields;
+      }
+      private Foo(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        this();
+        int mutable_bitField0_ = 0;
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+            com.google.protobuf.UnknownFieldSet.newBuilder();
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              default: {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
+                  done = true;
+                }
+                break;
+              }
+              case 10: {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                bitField0_ |= 0x00000001;
+                bar_ = bs;
+                break;
+              }
+            }
+          }
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(this);
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(
+              e).setUnfinishedMessage(this);
+        } finally {
+          this.unknownFields = unknownFields.build();
+          makeExtensionsImmutable();
+        }
+      }
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return io.druid.data.input.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return io.druid.data.input.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.class, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder.class);
+      }
+
+      private int bitField0_;
+      public static final int BAR_FIELD_NUMBER = 1;
+      private volatile java.lang.Object bar_;
+      /**
+       * <code>required string bar = 1;</code>
+       */
+      public boolean hasBar() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string bar = 1;</code>
+       */
+      public java.lang.String getBar() {
+        java.lang.Object ref = bar_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            bar_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>required string bar = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getBarBytes() {
+        java.lang.Object ref = bar_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          bar_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized == 1) return true;
+        if (isInitialized == 0) return false;
+
+        if (!hasBar()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          com.google.protobuf.GeneratedMessageV3.writeString(output, 1, bar_);
+        }
+        unknownFields.writeTo(output);
+      }
+
+      public int getSerializedSize() {
+        int size = memoizedSize;
+        if (size != -1) return size;
+
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, bar_);
+        }
+        size += unknownFields.getSerializedSize();
+        memoizedSize = size;
+        return size;
+      }
+
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      public boolean equals(final java.lang.Object obj) {
+        if (obj == this) {
+         return true;
+        }
+        if (!(obj instanceof io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo)) {
+          return super.equals(obj);
+        }
+        io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo other = (io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo) obj;
+
+        boolean result = true;
+        result = result && (hasBar() == other.hasBar());
+        if (hasBar()) {
+          result = result && getBar()
+              .equals(other.getBar());
+        }
+        result = result && unknownFields.equals(other.unknownFields);
+        return result;
+      }
+
+      @java.lang.Override
+      public int hashCode() {
+        if (memoizedHashCode != 0) {
+          return memoizedHashCode;
+        }
+        int hash = 41;
+        hash = (19 * hash) + getDescriptorForType().hashCode();
+        if (hasBar()) {
+          hash = (37 * hash) + BAR_FIELD_NUMBER;
+          hash = (53 * hash) + getBar().hashCode();
+        }
+        hash = (29 * hash) + unknownFields.hashCode();
+        memoizedHashCode = hash;
+        return hash;
+      }
+
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input, extensionRegistry);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseDelimitedWithIOException(PARSER, input);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input);
+      }
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input, extensionRegistry);
+      }
+
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder() {
+        return DEFAULT_INSTANCE.toBuilder();
+      }
+      public static Builder newBuilder(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo prototype) {
+        return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() {
+        return this == DEFAULT_INSTANCE
+            ? new Builder() : new Builder().mergeFrom(this);
+      }
+
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
+      /**
+       * Protobuf type {@code prototest.ProtoTestEvent.Foo}
+       */
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+          // @@protoc_insertion_point(builder_implements:prototest.ProtoTestEvent.Foo)
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return io.druid.data.input.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return io.druid.data.input.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.class, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder.class);
+        }
+
+        // Construct using io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+
+        private Builder(
+            com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessageV3
+                  .alwaysUseFieldBuilders) {
+          }
+        }
+        public Builder clear() {
+          super.clear();
+          bar_ = "";
+          bitField0_ = (bitField0_ & ~0x00000001);
+          return this;
+        }
+
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return io.druid.data.input.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+        }
+
+        public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getDefaultInstanceForType() {
+          return io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance();
+        }
+
+        public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo build() {
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+
+        public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo buildPartial() {
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo result = new io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.bar_ = bar_;
+          result.bitField0_ = to_bitField0_;
+          onBuilt();
+          return result;
+        }
+
+        public Builder clone() {
+          return (Builder) super.clone();
+        }
+        public Builder setField(
+            com.google.protobuf.Descriptors.FieldDescriptor field,
+            Object value) {
+          return (Builder) super.setField(field, value);
+        }
+        public Builder clearField(
+            com.google.protobuf.Descriptors.FieldDescriptor field) {
+          return (Builder) super.clearField(field);
+        }
+        public Builder clearOneof(
+            com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+          return (Builder) super.clearOneof(oneof);
+        }
+        public Builder setRepeatedField(
+            com.google.protobuf.Descriptors.FieldDescriptor field,
+            int index, Object value) {
+          return (Builder) super.setRepeatedField(field, index, value);
+        }
+        public Builder addRepeatedField(
+            com.google.protobuf.Descriptors.FieldDescriptor field,
+            Object value) {
+          return (Builder) super.addRepeatedField(field, value);
+        }
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo) {
+            return mergeFrom((io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+
+        public Builder mergeFrom(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo other) {
+          if (other == io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance()) return this;
+          if (other.hasBar()) {
+            bitField0_ |= 0x00000001;
+            bar_ = other.bar_;
+            onChanged();
+          }
+          this.mergeUnknownFields(other.unknownFields);
+          onChanged();
+          return this;
+        }
+
+        public final boolean isInitialized() {
+          if (!hasBar()) {
+            return false;
+          }
+          return true;
+        }
+
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo parsedMessage = null;
+          try {
+            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            parsedMessage = (io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo) e.getUnfinishedMessage();
+            throw e.unwrapIOException();
+          } finally {
+            if (parsedMessage != null) {
+              mergeFrom(parsedMessage);
+            }
+          }
+          return this;
+        }
+        private int bitField0_;
+
+        private java.lang.Object bar_ = "";
+        /**
+         * <code>required string bar = 1;</code>
+         */
+        public boolean hasBar() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        /**
+         * <code>required string bar = 1;</code>
+         */
+        public java.lang.String getBar() {
+          java.lang.Object ref = bar_;
+          if (!(ref instanceof java.lang.String)) {
+            com.google.protobuf.ByteString bs =
+                (com.google.protobuf.ByteString) ref;
+            java.lang.String s = bs.toStringUtf8();
+            if (bs.isValidUtf8()) {
+              bar_ = s;
+            }
+            return s;
+          } else {
+            return (java.lang.String) ref;
+          }
+        }
+        /**
+         * <code>required string bar = 1;</code>
+         */
+        public com.google.protobuf.ByteString
+            getBarBytes() {
+          java.lang.Object ref = bar_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b =
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            bar_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>required string bar = 1;</code>
+         */
+        public Builder setBar(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+          bar_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required string bar = 1;</code>
+         */
+        public Builder clearBar() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          bar_ = getDefaultInstance().getBar();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required string bar = 1;</code>
+         */
+        public Builder setBarBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+          bar_ = value;
+          onChanged();
+          return this;
+        }
+        public final Builder setUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.setUnknownFields(unknownFields);
+        }
+
+        public final Builder mergeUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.mergeUnknownFields(unknownFields);
+        }
+
+
+        // @@protoc_insertion_point(builder_scope:prototest.ProtoTestEvent.Foo)
+      }
+
+      // @@protoc_insertion_point(class_scope:prototest.ProtoTestEvent.Foo)
+      private static final io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo DEFAULT_INSTANCE;
+      static {
+        DEFAULT_INSTANCE = new io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo();
+      }
+
+      public static io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getDefaultInstance() {
+        return DEFAULT_INSTANCE;
+      }
+
+      @java.lang.Deprecated public static final com.google.protobuf.Parser<Foo>
+          PARSER = new com.google.protobuf.AbstractParser<Foo>() {
+        public Foo parsePartialFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+            return new Foo(input, extensionRegistry);
+        }
+      };
+
+      public static com.google.protobuf.Parser<Foo> parser() {
+        return PARSER;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Parser<Foo> getParserForType() {
+        return PARSER;
+      }
+
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getDefaultInstanceForType() {
+        return DEFAULT_INSTANCE;
+      }
+
     }
 
     private int bitField0_;
@@ -546,6 +1160,62 @@ public final class ProtoTestEventWrapper {
       return someLongColumn_;
     }
 
+    public static final int FOO_FIELD_NUMBER = 10;
+    private io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo foo_;
+    /**
+     * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+     */
+    public boolean hasFoo() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+     */
+    public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getFoo() {
+      return foo_ == null ? io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
+    }
+    /**
+     * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+     */
+    public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getFooOrBuilder() {
+      return foo_ == null ? io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
+    }
+
+    public static final int BAR_FIELD_NUMBER = 11;
+    private java.util.List<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo> bar_;
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    public java.util.List<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo> getBarList() {
+      return bar_;
+    }
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    public java.util.List<? extends io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>
+        getBarOrBuilderList() {
+      return bar_;
+    }
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    public int getBarCount() {
+      return bar_.size();
+    }
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getBar(int index) {
+      return bar_.get(index);
+    }
+    /**
+     * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+     */
+    public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getBarOrBuilder(
+        int index) {
+      return bar_.get(index);
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -563,6 +1233,18 @@ public final class ProtoTestEventWrapper {
       if (!hasTimestamp()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      if (hasFoo()) {
+        if (!getFoo().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getBarCount(); i++) {
+        if (!getBar(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -596,6 +1278,12 @@ public final class ProtoTestEventWrapper {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeUInt64(9, someLongColumn_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeMessage(10, getFoo());
+      }
+      for (int i = 0; i < bar_.size(); i++) {
+        output.writeMessage(11, bar_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -638,6 +1326,14 @@ public final class ProtoTestEventWrapper {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(9, someLongColumn_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(10, getFoo());
+      }
+      for (int i = 0; i < bar_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, bar_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -702,6 +1398,13 @@ public final class ProtoTestEventWrapper {
         result = result && (getSomeLongColumn()
             == other.getSomeLongColumn());
       }
+      result = result && (hasFoo() == other.hasFoo());
+      if (hasFoo()) {
+        result = result && getFoo()
+            .equals(other.getFoo());
+      }
+      result = result && getBarList()
+          .equals(other.getBarList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -752,6 +1455,14 @@ public final class ProtoTestEventWrapper {
         hash = (37 * hash) + SOMELONGCOLUMN_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getSomeLongColumn());
+      }
+      if (hasFoo()) {
+        hash = (37 * hash) + FOO_FIELD_NUMBER;
+        hash = (53 * hash) + getFoo().hashCode();
+      }
+      if (getBarCount() > 0) {
+        hash = (37 * hash) + BAR_FIELD_NUMBER;
+        hash = (53 * hash) + getBarList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -867,6 +1578,8 @@ public final class ProtoTestEventWrapper {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
+          getFooFieldBuilder();
+          getBarFieldBuilder();
         }
       }
       public Builder clear() {
@@ -889,6 +1602,18 @@ public final class ProtoTestEventWrapper {
         bitField0_ = (bitField0_ & ~0x00000080);
         someLongColumn_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000100);
+        if (fooBuilder_ == null) {
+          foo_ = null;
+        } else {
+          fooBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000200);
+        if (barBuilder_ == null) {
+          bar_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000400);
+        } else {
+          barBuilder_.clear();
+        }
         return this;
       }
 
@@ -949,6 +1674,23 @@ public final class ProtoTestEventWrapper {
           to_bitField0_ |= 0x00000100;
         }
         result.someLongColumn_ = someLongColumn_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        if (fooBuilder_ == null) {
+          result.foo_ = foo_;
+        } else {
+          result.foo_ = fooBuilder_.build();
+        }
+        if (barBuilder_ == null) {
+          if (((bitField0_ & 0x00000400) == 0x00000400)) {
+            bar_ = java.util.Collections.unmodifiableList(bar_);
+            bitField0_ = (bitField0_ & ~0x00000400);
+          }
+          result.bar_ = bar_;
+        } else {
+          result.bar_ = barBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1022,6 +1764,35 @@ public final class ProtoTestEventWrapper {
         if (other.hasSomeLongColumn()) {
           setSomeLongColumn(other.getSomeLongColumn());
         }
+        if (other.hasFoo()) {
+          mergeFoo(other.getFoo());
+        }
+        if (barBuilder_ == null) {
+          if (!other.bar_.isEmpty()) {
+            if (bar_.isEmpty()) {
+              bar_ = other.bar_;
+              bitField0_ = (bitField0_ & ~0x00000400);
+            } else {
+              ensureBarIsMutable();
+              bar_.addAll(other.bar_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.bar_.isEmpty()) {
+            if (barBuilder_.isEmpty()) {
+              barBuilder_.dispose();
+              barBuilder_ = null;
+              bar_ = other.bar_;
+              bitField0_ = (bitField0_ & ~0x00000400);
+              barBuilder_ =
+                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getBarFieldBuilder() : null;
+            } else {
+              barBuilder_.addAllMessages(other.bar_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
@@ -1036,6 +1807,16 @@ public final class ProtoTestEventWrapper {
         }
         if (!hasTimestamp()) {
           return false;
+        }
+        if (hasFoo()) {
+          if (!getFoo().isInitialized()) {
+            return false;
+          }
+        }
+        for (int i = 0; i < getBarCount(); i++) {
+          if (!getBar(i).isInitialized()) {
+            return false;
+          }
         }
         return true;
       }
@@ -1438,6 +2219,364 @@ public final class ProtoTestEventWrapper {
         onChanged();
         return this;
       }
+
+      private io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo foo_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder> fooBuilder_;
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public boolean hasFoo() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getFoo() {
+        if (fooBuilder_ == null) {
+          return foo_ == null ? io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
+        } else {
+          return fooBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public Builder setFoo(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo value) {
+        if (fooBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          foo_ = value;
+          onChanged();
+        } else {
+          fooBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000200;
+        return this;
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public Builder setFoo(
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder builderForValue) {
+        if (fooBuilder_ == null) {
+          foo_ = builderForValue.build();
+          onChanged();
+        } else {
+          fooBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000200;
+        return this;
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public Builder mergeFoo(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo value) {
+        if (fooBuilder_ == null) {
+          if (((bitField0_ & 0x00000200) == 0x00000200) &&
+              foo_ != null &&
+              foo_ != io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance()) {
+            foo_ =
+              io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.newBuilder(foo_).mergeFrom(value).buildPartial();
+          } else {
+            foo_ = value;
+          }
+          onChanged();
+        } else {
+          fooBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000200;
+        return this;
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public Builder clearFoo() {
+        if (fooBuilder_ == null) {
+          foo_ = null;
+          onChanged();
+        } else {
+          fooBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000200);
+        return this;
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder getFooBuilder() {
+        bitField0_ |= 0x00000200;
+        onChanged();
+        return getFooFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getFooOrBuilder() {
+        if (fooBuilder_ != null) {
+          return fooBuilder_.getMessageOrBuilder();
+        } else {
+          return foo_ == null ?
+              io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance() : foo_;
+        }
+      }
+      /**
+       * <code>optional .prototest.ProtoTestEvent.Foo foo = 10;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>
+          getFooFieldBuilder() {
+        if (fooBuilder_ == null) {
+          fooBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>(
+                  getFoo(),
+                  getParentForChildren(),
+                  isClean());
+          foo_ = null;
+        }
+        return fooBuilder_;
+      }
+
+      private java.util.List<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo> bar_ =
+        java.util.Collections.emptyList();
+      private void ensureBarIsMutable() {
+        if (!((bitField0_ & 0x00000400) == 0x00000400)) {
+          bar_ = new java.util.ArrayList<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo>(bar_);
+          bitField0_ |= 0x00000400;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder> barBuilder_;
+
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public java.util.List<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo> getBarList() {
+        if (barBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(bar_);
+        } else {
+          return barBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public int getBarCount() {
+        if (barBuilder_ == null) {
+          return bar_.size();
+        } else {
+          return barBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo getBar(int index) {
+        if (barBuilder_ == null) {
+          return bar_.get(index);
+        } else {
+          return barBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder setBar(
+          int index, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo value) {
+        if (barBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureBarIsMutable();
+          bar_.set(index, value);
+          onChanged();
+        } else {
+          barBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder setBar(
+          int index, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder builderForValue) {
+        if (barBuilder_ == null) {
+          ensureBarIsMutable();
+          bar_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          barBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder addBar(io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo value) {
+        if (barBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureBarIsMutable();
+          bar_.add(value);
+          onChanged();
+        } else {
+          barBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder addBar(
+          int index, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo value) {
+        if (barBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureBarIsMutable();
+          bar_.add(index, value);
+          onChanged();
+        } else {
+          barBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder addBar(
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder builderForValue) {
+        if (barBuilder_ == null) {
+          ensureBarIsMutable();
+          bar_.add(builderForValue.build());
+          onChanged();
+        } else {
+          barBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder addBar(
+          int index, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder builderForValue) {
+        if (barBuilder_ == null) {
+          ensureBarIsMutable();
+          bar_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          barBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder addAllBar(
+          java.lang.Iterable<? extends io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo> values) {
+        if (barBuilder_ == null) {
+          ensureBarIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, bar_);
+          onChanged();
+        } else {
+          barBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder clearBar() {
+        if (barBuilder_ == null) {
+          bar_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000400);
+          onChanged();
+        } else {
+          barBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public Builder removeBar(int index) {
+        if (barBuilder_ == null) {
+          ensureBarIsMutable();
+          bar_.remove(index);
+          onChanged();
+        } else {
+          barBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder getBarBuilder(
+          int index) {
+        return getBarFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder getBarOrBuilder(
+          int index) {
+        if (barBuilder_ == null) {
+          return bar_.get(index);  } else {
+          return barBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public java.util.List<? extends io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>
+           getBarOrBuilderList() {
+        if (barBuilder_ != null) {
+          return barBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(bar_);
+        }
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder addBarBuilder() {
+        return getBarFieldBuilder().addBuilder(
+            io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder addBarBuilder(
+          int index) {
+        return getBarFieldBuilder().addBuilder(
+            index, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .prototest.ProtoTestEvent.Foo bar = 11;</code>
+       */
+      public java.util.List<io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder>
+           getBarBuilderList() {
+        return getBarFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>
+          getBarFieldBuilder() {
+        if (barBuilder_ == null) {
+          barBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+              io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.Foo.Builder, io.druid.data.input.ProtoTestEventWrapper.ProtoTestEvent.FooOrBuilder>(
+                  bar_,
+                  ((bitField0_ & 0x00000400) == 0x00000400),
+                  getParentForChildren(),
+                  isClean());
+          bar_ = null;
+        }
+        return barBuilder_;
+      }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
@@ -1492,6 +2631,11 @@ public final class ProtoTestEventWrapper {
   private static final
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_prototest_ProtoTestEvent_Foo_descriptor;
+  private static final
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1501,16 +2645,19 @@ public final class ProtoTestEventWrapper {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ProtoTest.proto\022\tprototest\"\266\002\n\016ProtoTe" +
+      "\n\017ProtoTest.proto\022\tprototest\"\242\003\n\016ProtoTe" +
       "stEvent\022:\n\teventType\030\001 \002(\0162\'.prototest.P" +
       "rotoTestEvent.EventCategory\022\n\n\002id\030\002 \002(\004\022" +
       "\021\n\ttimestamp\030\003 \002(\t\022\023\n\013someOtherId\030\004 \001(\r\022" +
       "\017\n\007isValid\030\005 \001(\010\022\023\n\013description\030\006 \001(\t\022\027\n" +
       "\017someFloatColumn\030\007 \001(\002\022\025\n\rsomeIntColumn\030" +
-      "\010 \001(\r\022\026\n\016someLongColumn\030\t \001(\004\"F\n\rEventCa" +
-      "tegory\022\021\n\rCATEGORY_ZERO\020\000\022\020\n\014CATEGORY_ON" +
-      "E\020\001\022\020\n\014CATEGORY_TWO\020\002B,\n\023io.druid.data.i" +
-      "nputB\025ProtoTestEventWrapper"
+      "\010 \001(\r\022\026\n\016someLongColumn\030\t \001(\004\022*\n\003foo\030\n \001" +
+      "(\0132\035.prototest.ProtoTestEvent.Foo\022*\n\003bar" +
+      "\030\013 \003(\0132\035.prototest.ProtoTestEvent.Foo\032\022\n" +
+      "\003Foo\022\013\n\003bar\030\001 \002(\t\"F\n\rEventCategory\022\021\n\rCA",
+      "TEGORY_ZERO\020\000\022\020\n\014CATEGORY_ONE\020\001\022\020\n\014CATEG" +
+      "ORY_TWO\020\002B,\n\023io.druid.data.inputB\025ProtoT" +
+      "estEventWrapper"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -1529,7 +2676,13 @@ public final class ProtoTestEventWrapper {
     internal_static_prototest_ProtoTestEvent_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_prototest_ProtoTestEvent_descriptor,
-        new java.lang.String[] { "EventType", "Id", "Timestamp", "SomeOtherId", "IsValid", "Description", "SomeFloatColumn", "SomeIntColumn", "SomeLongColumn", });
+        new java.lang.String[] { "EventType", "Id", "Timestamp", "SomeOtherId", "IsValid", "Description", "SomeFloatColumn", "SomeIntColumn", "SomeLongColumn", "Foo", "Bar", });
+    internal_static_prototest_ProtoTestEvent_Foo_descriptor =
+      internal_static_prototest_ProtoTestEvent_descriptor.getNestedTypes().get(0);
+    internal_static_prototest_ProtoTestEvent_Foo_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_prototest_ProtoTestEvent_Foo_descriptor,
+        new java.lang.String[] { "Bar", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)
