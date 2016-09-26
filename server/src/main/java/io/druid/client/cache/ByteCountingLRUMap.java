@@ -78,27 +78,23 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
   public byte[] put(ByteBuffer key, byte[] value)
   {
     numBytes.addAndGet(key.remaining() + value.length);
-
-    if (numBytes.get() > sizeInBytes) {
-      Iterator<Map.Entry<ByteBuffer, byte[]>> it = entrySet().iterator();
-
-      while (numBytes.get() > sizeInBytes && it.hasNext()) {
-        evictionCount.incrementAndGet();
-        if (logEvictions && evictionCount.get() % logEvictionCount == 0) {
-          log.info(
-              "Evicting %,dth element.  Size[%,d], numBytes[%,d], averageSize[%,d]",
-              evictionCount,
-              size(),
-              numBytes.get(),
-              numBytes.get() / size()
-          );
-        }
-
-        Map.Entry<ByteBuffer, byte[]> next = it.next();
-        long entrySize = next.getKey().remaining() + next.getValue().length;
-        numBytes.addAndGet(-entrySize);
-        it.remove();
+    Iterator<Map.Entry<ByteBuffer, byte[]>> it = entrySet().iterator();
+    while (numBytes.get() > sizeInBytes && it.hasNext()) {
+      evictionCount.incrementAndGet();
+      if (logEvictions && evictionCount.get() % logEvictionCount == 0) {
+        log.info(
+            "Evicting %,dth element.  Size[%,d], numBytes[%,d], averageSize[%,d]",
+            evictionCount,
+            size(),
+            numBytes.get(),
+            numBytes.get() / size()
+        );
       }
+
+      Map.Entry<ByteBuffer, byte[]> next = it.next();
+      long entrySize = next.getKey().remaining() + next.getValue().length;
+      numBytes.addAndGet(-entrySize);
+      it.remove();
     }
 
     return super.put(key, value);
