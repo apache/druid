@@ -49,7 +49,8 @@ public class ProtoBufInputRowParserTest {
                         true,
                         Lists.newArrayList(
                                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "eventType", "eventType"),
-                                new JSONPathFieldSpec(JSONPathFieldType.PATH, "foobar", "$.foo.bar")
+                                new JSONPathFieldSpec(JSONPathFieldType.PATH, "foobar", "$.foo.bar"),
+                                new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
                         )
                 ), null
         );
@@ -91,6 +92,8 @@ public class ProtoBufInputRowParserTest {
 
         assertDimensionEquals(row, "eventType", ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE.name());
         assertDimensionEquals(row, "foobar", "baz");
+        assertDimensionEquals(row, "bar0", "bar0");
+
 
         assertEquals(47.11F, row.getFloatMetric("someFloatColumn"), 0.0);
         assertEquals(815.0F, row.getFloatMetric("someIntColumn"), 0.0);
