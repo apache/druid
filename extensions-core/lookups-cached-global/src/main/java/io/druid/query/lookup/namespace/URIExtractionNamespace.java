@@ -219,13 +219,12 @@ public class URIExtractionNamespace implements ExtractionNamespace
           key,
           input
       ).toString(); // Just in case is long
-      final String val = Preconditions.checkNotNull(
-          inner.get(value),
-          "Value column [%s] missing data in line [%s]",
-          value,
-          input
-      ).toString();
-      return ImmutableMap.<String, String>of(k, val);
+      final Object val = inner.get(value);
+      if (val == null) {
+        // Skip nulls
+        return null;
+      }
+      return ImmutableMap.of(k, val.toString());
     }
 
     @Override

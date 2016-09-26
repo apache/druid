@@ -51,7 +51,7 @@ public class MapPopulator<K, V>
    * @param source The ByteSource to read lines from
    * @param map    The map to populate
    *
-   * @return The number of entries parsed
+   * @return The number of entries parsed, not counting null entries
    *
    * @throws IOException
    */
@@ -65,8 +65,11 @@ public class MapPopulator<K, V>
           @Override
           public boolean processLine(String line) throws IOException
           {
-            map.putAll(parser.parse(line));
-            ++count;
+            final Map<K, V> kvMap = parser.parse(line);
+            if (kvMap != null) {
+              map.putAll(kvMap);
+              count += map.size();
+            }
             return true;
           }
 
