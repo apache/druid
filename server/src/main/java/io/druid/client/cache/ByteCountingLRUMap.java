@@ -22,9 +22,11 @@ package io.druid.client.cache;
 import com.metamx.common.logger.Logger;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -79,7 +81,9 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
   {
     numBytes.addAndGet(key.remaining() + value.length);
     Iterator<Map.Entry<ByteBuffer, byte[]>> it = entrySet().iterator();
-    while (numBytes.get() > sizeInBytes && it.hasNext()) {
+    List<ByteBuffer> keysToRemove = new ArrayList<>();
+    long totalEvictionSize = 0L;
+    while (numBytes.get() - totalEvictionSize > sizeInBytes && it.hasNext()) {
       evictionCount.incrementAndGet();
       if (logEvictions && evictionCount.get() % logEvictionCount == 0) {
         log.info(
@@ -92,9 +96,12 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       }
 
       Map.Entry<ByteBuffer, byte[]> next = it.next();
-      long entrySize = next.getKey().remaining() + next.getValue().length;
-      numBytes.addAndGet(-entrySize);
-      it.remove();
+      totalEvictionSize += next.getKey().remaining() + next.getValue().length;
+      keysToRemove.add(next.getKey());
+    }
+
+    for (ByteBuffer keyToRemove : keysToRemove) {
+      remove(keyToRemove);
     }
 
     return super.put(key, value);
