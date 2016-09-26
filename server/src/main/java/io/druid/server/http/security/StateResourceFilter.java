@@ -92,6 +92,7 @@ public class StateResourceFilter extends AbstractResourceFilter
            requestPath.startsWith("druid/coordinator/v1/tiers") ||
            requestPath.startsWith("druid/worker/v1") ||
            requestPath.startsWith("druid/coordinator/v1/servers") ||
+           requestPath.startsWith("druid/v2") ||
            requestPath.startsWith("status");
   }
 }

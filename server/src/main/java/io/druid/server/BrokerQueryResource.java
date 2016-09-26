@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
@@ -30,6 +31,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.AuthConfig;
@@ -76,6 +78,7 @@ public class BrokerQueryResource extends QueryResource
   @Path("/candidates")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE, APPLICATION_SMILE})
+  @ResourceFilters(StateResourceFilter.class)
   public Response getQueryTargets(
       InputStream in,
       @QueryParam("pretty") String pretty,
