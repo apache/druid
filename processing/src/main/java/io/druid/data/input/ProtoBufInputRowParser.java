@@ -79,20 +79,22 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
     DynamicMessage message;
     try {
       message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
-    } catch (InvalidProtocolBufferException e) {
+    }
+    catch (InvalidProtocolBufferException e) {
       throw new ParseException(e, "Invalid protobuf exception");
     }
     String json = null;
     try {
       json = JsonFormat.printer().print(message);
-    } catch (InvalidProtocolBufferException e) {
+    }
+    catch (InvalidProtocolBufferException e) {
       e.printStackTrace();
     }
     Map<String, Object> record = parser.parse(json);
     return new MapBasedInputRow(
-            parseSpec.getTimestampSpec().extractTimestamp(record),
-            parseSpec.getDimensionsSpec().getDimensionNames(),
-            record
+        parseSpec.getTimestampSpec().extractTimestamp(record),
+        parseSpec.getDimensionsSpec().getDimensionNames(),
+        record
     );
   }
 
@@ -103,7 +105,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
       FileDescriptorSet set = FileDescriptorSet.parseFrom(fin);
       FileDescriptor file = FileDescriptor.buildFrom(
           set.getFile(0), new FileDescriptor[]
-          {}
+              {}
       );
       return file.getMessageTypes().get(0);
     }
