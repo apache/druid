@@ -54,6 +54,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.List;
@@ -197,7 +198,7 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
   }
 
   @Override
-  public void writeValueMetadataToFile(FileOutputSupplier valueEncodingFile) throws IOException
+  public void writeValueMetadataToFile(final FileOutputSupplier valueEncodingFile) throws IOException
   {
     final SerializerUtils serializerUtils = new SerializerUtils();
 
@@ -218,15 +219,23 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
 
   @Override
   public void writeIndexesToFiles(
-      ByteSink invertedIndexFile,
-      OutputSupplier<FileOutputStream> spatialIndexFile
+      final ByteSink invertedIndexFile,
+      final OutputSupplier<FileOutputStream> spatialIndexFile
   ) throws IOException
   {
     final SerializerUtils serializerUtils = new SerializerUtils();
+    final OutputSupplier<OutputStream> invertedIndexOutputSupplier = new OutputSupplier<OutputStream>()
+    {
+      @Override
+      public OutputStream getOutput() throws IOException
+      {
+        return invertedIndexFile.openStream();
+      }
+    };
 
     bitmapWriter.close();
-    serializerUtils.writeString(invertedIndexFile, dimensionName);
-    ByteStreams.copy(bitmapWriter.combineStreams(), invertedIndexFile);
+    serializerUtils.writeString(invertedIndexOutputSupplier, dimensionName);
+    ByteStreams.copy(bitmapWriter.combineStreams(), invertedIndexOutputSupplier);
 
 
     if (capabilities.hasSpatialIndexes()) {

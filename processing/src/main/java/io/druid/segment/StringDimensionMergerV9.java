@@ -289,9 +289,9 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     // write dim values to one single file because we need to read it
     File dimValueFile = IndexIO.makeDimFile(outDir, dimensionName);
-    FileOutputStream fos = new FileOutputStream(dimValueFile);
-    ByteStreams.copy(dictionaryWriter.combineStreams(), fos);
-    fos.close();
+    try(FileOutputStream fos = new FileOutputStream(dimValueFile)) {
+      ByteStreams.copy(dictionaryWriter.combineStreams(), fos);
+    }
 
     final MappedByteBuffer dimValsMapped = Files.map(dimValueFile);
     try (Closeable dimValsMappedUnmapper = new Closeable()
