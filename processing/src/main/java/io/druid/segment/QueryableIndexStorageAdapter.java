@@ -417,19 +417,28 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
                   }
 
-                  final Offset offset = descending ?
-                                        new DescendingTimestampCheckingOffset(
-                                            baseOffset,
-                                            timestamps,
-                                            timeStart,
-                                            minDataTimestamp >= timeStart
-                                        ) :
-                                        new AscendingTimestampCheckingOffset(
-                                            baseOffset,
-                                            timestamps,
-                                            timeEnd,
-                                            maxDataTimestamp < timeEnd
-                                        );
+                  final Offset offset;
+                  if (descending) {
+                    if (minDataTimestamp >= timeStart) {
+                      offset = baseOffset;
+                    } else {
+                      offset = new DescendingTimestampCheckingOffset(
+                          baseOffset,
+                          timestamps,
+                          timeStart
+                      );
+                    }
+                  } else {
+                    if (maxDataTimestamp < timeEnd) {
+                      offset = baseOffset;
+                    } else {
+                      offset = new AscendingTimestampCheckingOffset(
+                          baseOffset,
+                          timestamps,
+                          timeEnd
+                      );
+                    }
+                  }
 
 
                   final Offset initOffset = offset.clone();
@@ -1178,20 +1187,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     protected final Offset baseOffset;
     protected final GenericColumn timestamps;
     protected final long timeLimit;
-    protected final boolean allWithinThreshold;
 
     public TimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
-        long timeLimit,
-        boolean allWithinThreshold
+        long timeLimit
     )
     {
       this.baseOffset = baseOffset;
       this.timestamps = timestamps;
       this.timeLimit = timeLimit;
-      // checks if all the values are within the Threshold specified, skips timestamp lookups and checks if all values are within threshold.
-      this.allWithinThreshold = allWithinThreshold;
     }
 
     @Override
@@ -1205,9 +1210,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       if (!baseOffset.withinBounds()) {
         return false;
-      }
-      if (allWithinThreshold) {
-        return true;
       }
       return timeInRange(timestamps.getLongSingleValueRow(baseOffset.getOffset()));
     }
@@ -1231,11 +1233,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public AscendingTimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
-        long timeLimit,
-        boolean allWithinThreshold
+        long timeLimit
     )
     {
-      super(baseOffset, timestamps, timeLimit, allWithinThreshold);
+      super(baseOffset, timestamps, timeLimit);
     }
 
     @Override
@@ -1254,7 +1255,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     @Override
     public Offset clone()
     {
-      return new AscendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit, allWithinThreshold);
+      return new AscendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit);
     }
   }
 
@@ -1263,11 +1264,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public DescendingTimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
-        long timeLimit,
-        boolean allWithinThreshold
+        long timeLimit
     )
     {
-      super(baseOffset, timestamps, timeLimit, allWithinThreshold);
+      super(baseOffset, timestamps, timeLimit);
     }
 
     @Override
@@ -1287,7 +1287,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     @Override
     public Offset clone()
     {
-      return new DescendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit, allWithinThreshold);
+      return new DescendingTimestampCheckingOffset(baseOffset.clone(), timestamps, timeLimit);
     }
   }
 
