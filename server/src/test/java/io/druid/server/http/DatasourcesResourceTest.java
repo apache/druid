@@ -101,6 +101,19 @@ public class DatasourcesResourceTest
             30
         )
     );
+    dataSegmentList.add(
+        new DataSegment(
+            "datasource3",
+            new Interval("2010-01-02/P1D"),
+            null,
+            null,
+            null,
+            null,
+            null,
+            0x9,
+            40
+        )
+    );
     listDataSources = new ArrayList<>();
     listDataSources.add(
         new DruidDataSource("datasource1", new HashMap()).addSegment("part1", dataSegmentList.get(0))
@@ -108,33 +121,45 @@ public class DatasourcesResourceTest
     listDataSources.add(
         new DruidDataSource("datasource2", new HashMap()).addSegment("part1", dataSegmentList.get(1))
     );
+    listDataSources.add(
+        new DruidDataSource("datasource3", new HashMap()).addSegment("part1", dataSegmentList.get(2))
+    );
   }
 
   @Test
   public void testGetFullQueryableDataSources() throws Exception
   {
     EasyMock.expect(server.getDataSources()).andReturn(
-        ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
+        ImmutableList.of(listDataSources.get(0), listDataSources.get(1), listDataSources.get(2))
     ).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, server);
     DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
-    Response response = datasourcesResource.getQueryableDataSources("full", null, request);
+    Response response = datasourcesResource.getQueryableDataSources("full", null, null, request);
     Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
     DruidDataSource[] resultantDruidDataSources = new DruidDataSource[result.size()];
     result.toArray(resultantDruidDataSources);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(2, resultantDruidDataSources.length);
+    Assert.assertEquals(3, resultantDruidDataSources.length);
     Assert.assertArrayEquals(listDataSources.toArray(), resultantDruidDataSources);
 
-    response = datasourcesResource.getQueryableDataSources(null, null, request);
+    response = datasourcesResource.getQueryableDataSources(null, null, null, request);
     List<String> result1 = (List<String>) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(2, result1.size());
+    Assert.assertEquals(3, result1.size());
     Assert.assertTrue(result1.contains("datasource1"));
     Assert.assertTrue(result1.contains("datasource2"));
+    Assert.assertTrue(result1.contains("datasource3"));
+    EasyMock.verify(inventoryView, server);
+
+    response = datasourcesResource.getQueryableDataSources(null, null, "data.*[13]", request);
+    List<String> result2 = (List<String>) response.getEntity();
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(2, result2.size());
+    Assert.assertTrue(result2.contains("datasource1"));
+    Assert.assertTrue(result2.contains("datasource3"));
     EasyMock.verify(inventoryView, server);
   }
 
@@ -142,7 +167,7 @@ public class DatasourcesResourceTest
   public void testSecuredGetFullQueryableDataSources() throws Exception
   {
     EasyMock.expect(server.getDataSources()).andReturn(
-        ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
+        ImmutableList.of(listDataSources.get(0), listDataSources.get(1), listDataSources.get(2))
     ).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
@@ -166,7 +191,7 @@ public class DatasourcesResourceTest
     EasyMock.replay(inventoryView, server, request);
 
     DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(true));
-    Response response = datasourcesResource.getQueryableDataSources("full", null, request);
+    Response response = datasourcesResource.getQueryableDataSources("full", null, null, request);
     Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
     DruidDataSource[] resultantDruidDataSources = new DruidDataSource[result.size()];
     result.toArray(resultantDruidDataSources);
@@ -175,7 +200,7 @@ public class DatasourcesResourceTest
     Assert.assertEquals(1, resultantDruidDataSources.length);
     Assert.assertArrayEquals(listDataSources.subList(0, 1).toArray(), resultantDruidDataSources);
 
-    response = datasourcesResource.getQueryableDataSources(null, null, request);
+    response = datasourcesResource.getQueryableDataSources(null, null, null, request);
     List<String> result1 = (List<String>) response.getEntity();
 
     Assert.assertEquals(200, response.getStatus());
@@ -199,13 +224,17 @@ public class DatasourcesResourceTest
         listDataSources.get(1)
     ).atLeastOnce();
     EasyMock.expect(server.getTier()).andReturn(null).atLeastOnce();
+    EasyMock.expect(server.getDataSource("datasource3")).andReturn(
+        listDataSources.get(2)
+    ).atLeastOnce();
+    EasyMock.expect(server.getTier()).andReturn(null).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
     DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
-    Response response = datasourcesResource.getQueryableDataSources(null, "simple", request);
+    Response response = datasourcesResource.getQueryableDataSources(null, "simple", null, request);
     Assert.assertEquals(200, response.getStatus());
     List<Map<String, Object>> results = (List<Map<String, Object>>) response.getEntity();
     int index = 0;

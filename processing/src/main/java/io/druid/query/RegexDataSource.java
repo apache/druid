@@ -16,59 +16,39 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package io.druid.query;
+
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
 
-import java.util.Arrays;
 import java.util.List;
 
-@JsonTypeName("table")
-public class TableDataSource implements DataSource
+public class RegexDataSource implements DataSource
 {
-  public static List<TableDataSource> of(Iterable<String> dataSources)
-  {
-    // materialize
-    return Lists.newArrayList(
-        Iterables.transform(
-            dataSources, new Function<String, TableDataSource>()
-            {
-              @Override
-              public TableDataSource apply(String input)
-              {
-                return new TableDataSource(input);
-              }
-            }
-        )
-    );
-  }
-
   @JsonProperty
-  private final String name;
+  private final List<String> dataSources;
 
   @JsonCreator
-  public TableDataSource(@JsonProperty("name") String name)
+  public RegexDataSource(@JsonProperty("dataSources") List<String> dataSources)
   {
-    this.name = (name == null ? null : name);
-  }
-
-  @JsonProperty
-  public String getName(){
-    return name;
+    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for RegexDataSource");
+    this.dataSources = dataSources;
   }
 
   @Override
   public List<String> getNames()
   {
-    return Arrays.asList(name);
+    return dataSources;
   }
 
-  public String toString() { return name; }
+  @JsonProperty
+  public List<String> getDataSources()
+  {
+    return dataSources;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -76,13 +56,13 @@ public class TableDataSource implements DataSource
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TableDataSource)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    TableDataSource that = (TableDataSource) o;
+    RegexDataSource that = (RegexDataSource) o;
 
-    if (!name.equals(that.name)) {
+    if (!dataSources.equals(that.dataSources)) {
       return false;
     }
 
@@ -92,6 +72,14 @@ public class TableDataSource implements DataSource
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    return dataSources.hashCode();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RegexDataSource{" +
+           "dataSources=" + dataSources +
+           '}';
   }
 }

@@ -31,7 +31,8 @@ import java.util.List;
 @JsonSubTypes({
                   @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
                   @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
-                  @JsonSubTypes.Type(value = UnionDataSource.class, name = "union")
+                  @JsonSubTypes.Type(value = UnionDataSource.class, name = "union"),
+                  @JsonSubTypes.Type(value = RegexDataSource.class, name = "regex")
               })
 public interface DataSource
 {

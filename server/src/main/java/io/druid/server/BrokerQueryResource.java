@@ -21,16 +21,26 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.client.DruidDataSource;
+import io.druid.client.DruidServer;
+import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.DataSource;
 import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.RegexDataSource;
+import io.druid.query.TableDataSource;
+import io.druid.query.UnionDataSource;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
@@ -48,12 +58,16 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  */
 @Path("/druid/v2/")
 public class BrokerQueryResource extends QueryResource
 {
+  private final FilteredServerInventoryView serverInventoryView;
   private final TimelineServerView brokerServerView;
 
   @Inject
@@ -67,10 +81,12 @@ public class BrokerQueryResource extends QueryResource
       RequestLogger requestLogger,
       QueryManager queryManager,
       AuthConfig authConfig,
+      FilteredServerInventoryView serverInventoryView,
       TimelineServerView brokerServerView
   )
   {
     super(warehouse, config, jsonMapper, smileMapper, texasRanger, emitter, requestLogger, queryManager, authConfig);
+    this.serverInventoryView = serverInventoryView;
     this.brokerServerView = brokerServerView;
   }
 
@@ -101,5 +117,39 @@ public class BrokerQueryResource extends QueryResource
     catch (Exception e) {
       return context.gotError(e);
     }
+  }
+
+  @Override
+  protected Query prepareQuery(Query query)
+  {
+    return rewriteDataSources(query);
+  }
+
+  private Query rewriteDataSources(Query query)
+  {
+    DataSource dataSource = query.getDataSource();
+    if (dataSource instanceof RegexDataSource) {
+      Set<String> found = Sets.newLinkedHashSet();
+      Iterable<DruidServer> inventory = serverInventoryView.getInventory();
+      for (String pattern : dataSource.getNames()) {
+        Matcher matcher = Pattern.compile(pattern).matcher("");
+        for (DruidServer server : inventory) {
+          for (DruidDataSource source : server.getDataSources()) {
+            if (matcher.reset(source.getName()).matches()) {
+              found.add(source.getName());
+            }
+          }
+        }
+      }
+      if (found.size() == 1) {
+        query = query.withDataSource(new TableDataSource(Iterables.getOnlyElement(found)));
+      } else {
+        query = query.withDataSource(new UnionDataSource(TableDataSource.of(found)));
+      }
+    } else if (dataSource instanceof QueryDataSource) {
+      Query subQuery = rewriteDataSources(((QueryDataSource) query).getQuery());
+      query = query.withDataSource(new QueryDataSource(subQuery));
+    }
+    return query;
   }
 }

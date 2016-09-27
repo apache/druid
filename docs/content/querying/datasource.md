@@ -22,8 +22,8 @@ This data source unions two or more table data sources.
 
 ```json
 {
-       "type": "union",
-       "dataSources": ["<string_value1>", "<string_value2>", "<string_value3>", ... ]
+	"type": "union",
+	"dataSources": ["<string_value1>", "<string_value2>", "<string_value3>", ... ]
 }
 ```
 
@@ -41,5 +41,16 @@ This is used for nested groupBys and is only currently supported for groupBys.
 		"type": "groupBy",
 		...
 	}
+}
+```
+
+### Regex Data Source
+
+You can use regex patterns for name of datasource. Because translations is done in broker, you cannot use this directly to historical or realtime node directly.
+
+```json
+{
+	"type": "regex",
+	"dataSources": ["<regex_pattern1>", "<regex_pattern2>", "<regex_pattern3>", ... ]
 }
 ```

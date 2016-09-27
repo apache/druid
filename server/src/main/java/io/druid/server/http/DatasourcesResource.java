@@ -20,6 +20,8 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -68,6 +70,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -100,16 +104,37 @@ public class DatasourcesResource
   public Response getQueryableDataSources(
       @QueryParam("full") String full,
       @QueryParam("simple") String simple,
+      @QueryParam("nameRegex") String regex,
       @Context final HttpServletRequest req
   )
   {
     Response.ResponseBuilder builder = Response.ok();
-    final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
+    Set<DruidDataSource> datasources = authConfig.isEnabled() ?
                                              InventoryViewUtils.getSecuredDataSources(
                                                  serverInventoryView,
                                                  (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)
                                              ) :
                                              InventoryViewUtils.getDataSources(serverInventoryView);
+    if (!Strings.isNullOrEmpty(regex)) {
+      Set<DruidDataSource> filtered = Sets.newLinkedHashSet();
+      for (String part : regex.split(",")) {
+        final Matcher matcher = Pattern.compile(part.trim()).matcher("");
+        filtered.addAll(
+            Sets.filter(
+                datasources,
+                new Predicate<DruidDataSource>()
+                {
+                  @Override
+                  public boolean apply(DruidDataSource input)
+                  {
+                    return matcher.reset(input.getName()).matches();
+                  }
+                }
+            )
+        );
+      }
+      datasources = filtered;
+    }
 
     if (full != null) {
       return builder.entity(datasources).build();

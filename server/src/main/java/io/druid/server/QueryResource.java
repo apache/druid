@@ -193,6 +193,8 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
+      query = prepareQuery(query);
+
       if (authConfig.isEnabled()) {
         // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
         AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
@@ -386,6 +388,11 @@ public class QueryResource
     finally {
       Thread.currentThread().setName(currThreadName);
     }
+  }
+
+  protected Query prepareQuery(Query query)
+  {
+    return query;
   }
 
   protected ResponseContext createContext(String requestType, boolean pretty)
