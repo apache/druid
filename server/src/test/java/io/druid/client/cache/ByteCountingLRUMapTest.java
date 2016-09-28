@@ -65,8 +65,8 @@ public class ByteCountingLRUMapTest
     Assert.assertEquals(ByteBuffer.wrap(eightyEightVal), ByteBuffer.wrap(map.get(tenKey)));
 
     map.put(twoByte, oneByte.array());
-    assertMapValues(2, 101, 2);
-    Assert.assertEquals(ByteBuffer.wrap(eightyEightVal), ByteBuffer.wrap(map.get(tenKey)));
+    assertMapValues(1, 3, 3);
+    Assert.assertEquals(null, map.get(tenKey));
     Assert.assertEquals(oneByte, ByteBuffer.wrap(map.get(twoByte)));
 
     Iterator<ByteBuffer> it = map.keySet().iterator();
@@ -80,10 +80,10 @@ public class ByteCountingLRUMapTest
     for(ByteBuffer buf : toRemove) {
       map.remove(buf);
     }
-    assertMapValues(1, 3, 2);
+    assertMapValues(1, 3, 3);
 
     map.remove(twoByte);
-    assertMapValues(0, 0, 2);
+    assertMapValues(0, 0, 3);
   }
 
   private void assertMapValues(final int size, final int numBytes, final int evictionCount)
