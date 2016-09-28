@@ -28,9 +28,12 @@ import com.metamx.common.CompressionUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.util.UUID;
 
 /**
  */
@@ -69,7 +72,9 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File dataSegmentFile, DataSegment segment) throws IOException
   {
-    File outDir = new File(config.getStorageDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+    final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
+    final File baseStorageDir = config.getStorageDirectory();
+    File outDir = new File(baseStorageDir, storageDir);
 
     log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getIdentifier(), outDir.toString());
 
@@ -87,19 +92,37 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       );
     }
 
+    File tmpOutDir = new File(baseStorageDir, storageDir + "." + UUID.randomUUID().toString());
+    long size = compressSegment(dataSegmentFile, tmpOutDir);
+
+    DataSegment dataSegment = createDescriptorFile(
+      segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip")))
+             .withSize(size)
+             .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
+      tmpOutDir
+    );
+
+    // moving the temporary directory to the final destination, once success the potentially concurrent push operations
+    // will be failed and will read the descriptor.json created by current push operation directly
+    try {
+      java.nio.file.Files.move(tmpOutDir.toPath(), outDir.toPath());
+    }
+    catch (FileAlreadyExistsException e) {
+      log.warn("Push destination directory[%s] exists, ignore this message if replication is configured.");
+      dataSegment = jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
+      FileUtils.deleteDirectory(tmpOutDir);
+    }
+    return dataSegment;
+  }
+
+  private long compressSegment(File dataSegmentFile, File outDir) throws IOException
+  {
     if (!outDir.mkdirs() && !outDir.isDirectory()) {
       throw new IOException(String.format("Cannot create directory[%s]", outDir));
     }
     File outFile = new File(outDir, "index.zip");
     log.info("Compressing files from[%s] to [%s]", dataSegmentFile, outFile);
-    long size = CompressionUtils.zip(dataSegmentFile, outFile);
-
-    return createDescriptorFile(
-        segment.withLoadSpec(makeLoadSpec(outFile))
-               .withSize(size)
-               .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
-        outDir
-    );
+    return CompressionUtils.zip(dataSegmentFile, outFile);
   }
 
   private DataSegment createDescriptorFile(DataSegment segment, File outDir) throws IOException
