@@ -74,7 +74,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   {
     final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
     final File baseStorageDir = config.getStorageDirectory();
-    File outDir = new File(baseStorageDir, storageDir);
+    final File outDir = new File(baseStorageDir, storageDir);
 
     log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getIdentifier(), outDir.toString());
 
@@ -92,10 +92,10 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       );
     }
 
-    File tmpOutDir = new File(baseStorageDir, storageDir + "." + UUID.randomUUID().toString());
-    long size = compressSegment(dataSegmentFile, tmpOutDir);
+    final File tmpOutDir = new File(baseStorageDir, storageDir + "." + UUID.randomUUID().toString());
+    final long size = compressSegment(dataSegmentFile, tmpOutDir);
 
-    DataSegment dataSegment = createDescriptorFile(
+    final DataSegment dataSegment = createDescriptorFile(
       segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip")))
              .withSize(size)
              .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
@@ -109,8 +109,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     }
     catch (FileAlreadyExistsException e) {
       log.warn("Push destination directory[%s] exists, ignore this message if replication is configured.");
-      dataSegment = jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
       FileUtils.deleteDirectory(tmpOutDir);
+      return jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
     }
     return dataSegment;
   }
