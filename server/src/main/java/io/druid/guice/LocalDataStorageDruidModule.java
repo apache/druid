@@ -47,7 +47,6 @@ import java.util.List;
 public class LocalDataStorageDruidModule implements DruidModule
 {
   public static final String SCHEME = "local";
-  public static final String FILE_SCHEME = "file";
 
   @Override
   public void configure(Binder binder)
@@ -91,11 +90,6 @@ public class LocalDataStorageDruidModule implements DruidModule
 
     PolyBind.optionBinder(binder, Key.get(ResultWriter.class))
             .addBinding(SCHEME)
-            .to(LocalDataSegmentPusher.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(ResultWriter.class))
-            .addBinding(FILE_SCHEME)
             .to(LocalDataSegmentPusher.class)
             .in(LazySingleton.class);
 

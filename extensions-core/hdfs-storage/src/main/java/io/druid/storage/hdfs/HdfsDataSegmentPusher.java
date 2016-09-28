@@ -21,6 +21,7 @@ package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSink;
@@ -30,6 +31,7 @@ import io.druid.common.utils.PropUtils;
 import io.druid.common.utils.UUIDUtils;
 import io.druid.data.output.CountingAccumulator;
 import io.druid.data.output.Formatters;
+import io.druid.data.output.formatter.OrcFormatter;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.ResultWriter;
@@ -48,7 +50,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -169,10 +173,12 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
   }
 
   @Override
-  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, Object> context)
+  public Map<String, Object> write(URI location, TabularFormat result, Map<String, Object> context)
       throws IOException
   {
-    Path targetDirectory = new Path(location);
+    log.info("Writing to " + location + " with context " + context);
+    Path parent = new Path(location);
+    Path targetDirectory = toHadoopPath(location);
     FileSystem fileSystem = targetDirectory.getFileSystem(hadoopConfig);
 
     boolean cleanup = PropUtils.parseBoolean(context, "cleanup", false);
@@ -189,18 +195,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
     Path dataFile = new Path(targetDirectory, Strings.isNullOrEmpty(fileName) ? "data" : fileName);
 
     Map<String, Object> info = Maps.newHashMap();
-    try (OutputStream output = fileSystem.create(dataFile)) {
-      CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper);
-      try {
-        accumulator.begin(output);
-        result.getSequence().accumulate(null, accumulator);
-        info.put("numRows", accumulator.count());
-      }
-      finally {
-        accumulator.end(output);
-      }
+    try (CountingAccumulator accumulator = toExporter(context, jsonMapper, fileSystem, dataFile)) {
+      accumulator.init();
+      result.getSequence().accumulate(null, accumulator);
+      info.put("numRows", accumulator.count());
     }
-    info.put("data", ImmutableMap.of(dataFile.toString(), fileSystem.getFileStatus(dataFile).getLen()));
+    Path dataLocation = new Path(parent, dataFile.getName());
+    info.put("data", ImmutableMap.of(dataLocation.toString(), fileSystem.getFileStatus(dataFile).getLen()));
 
     Map<String, Object> metaData = result.getMetaData();
     if (metaData != null && !metaData.isEmpty()) {
@@ -208,9 +209,35 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
       try (OutputStream output = fileSystem.create(metaFile)) {
         jsonMapper.writeValue(output, metaData);
       }
-      info.put("meta", ImmutableMap.of(metaFile.toString(), fileSystem.getFileStatus(metaFile).getLen()));
+      Path metaLocation = new Path(parent, metaFile.getName());
+      info.put("meta", ImmutableMap.of(metaLocation.toString(), fileSystem.getFileStatus(metaFile).getLen()));
     }
     return info;
+  }
+
+  private Path toHadoopPath(URI uri)
+  {
+    return uri.getScheme().equals(ResultWriter.FILE_SCHEME) ? new Path(removeHostPort(uri)) : new Path(uri);
+  }
+
+  private URI removeHostPort(URI uri)
+  {
+    try {
+      return new URI(uri.getScheme(), uri.getUserInfo(), null, -1, uri.getPath(), uri.getQuery(), uri.getFragment());
+    }
+    catch (URISyntaxException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private CountingAccumulator toExporter(Map<String, Object> context, ObjectMapper mapper, FileSystem fs, Path dataFile)
+      throws IOException
+  {
+    String format = Objects.toString(context.get("format"), null);
+    if (format.equals("orc")) {
+      return Formatters.wrapToExporter(new OrcFormatter(dataFile, Objects.toString(context.get("schema"), null)));
+    }
+    return Formatters.toBasicExporter(context, mapper, new HdfsOutputStreamSupplier(fs, dataFile));
   }
 
   private static class HdfsOutputStreamSupplier extends ByteSink

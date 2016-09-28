@@ -23,13 +23,12 @@ import io.druid.java.util.common.guava.Accumulator;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.util.Map;
 
 /**
  */
-public interface CountingAccumulator<AccumulatedType, InType> extends Accumulator<AccumulatedType, InType>
+public interface CountingAccumulator extends Accumulator<Void, Map<String, Object>>, Closeable
 {
-  void begin(OutputStream output) throws IOException;
-  void end(OutputStream output) throws IOException;
+  void init() throws IOException;
   int count();
 }

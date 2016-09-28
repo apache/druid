@@ -134,10 +134,9 @@ public class BrokerQueryResource extends QueryResource
       URI uri;
       try {
         uri = new URI(forwardURL);
-        String scheme = uri.getScheme() == null ? LocalDataStorageDruidModule.FILE_SCHEME : uri.getScheme();
-        if (scheme.equals(LocalDataStorageDruidModule.FILE_SCHEME) ||
-            scheme.equals(LocalDataStorageDruidModule.SCHEME)) {
-          uri = rewriteURI(uri, LocalDataStorageDruidModule.FILE_SCHEME);
+        String scheme = uri.getScheme() == null ? ResultWriter.FILE_SCHEME : uri.getScheme();
+        if (scheme.equals(ResultWriter.FILE_SCHEME) || scheme.equals(LocalDataStorageDruidModule.SCHEME)) {
+          uri = rewriteURI(uri, scheme, node);
         }
       }
       catch (URISyntaxException e) {
@@ -159,7 +158,7 @@ public class BrokerQueryResource extends QueryResource
     return res;
   }
 
-  private URI rewriteURI(URI uri, String scheme) throws URISyntaxException
+  private URI rewriteURI(URI uri, String scheme, DruidNode node) throws URISyntaxException
   {
     return new URI(
         scheme,

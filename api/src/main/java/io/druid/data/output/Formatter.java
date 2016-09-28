@@ -21,21 +21,18 @@ package io.druid.data.output;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
 
 /**
  */
-public interface Formatter
+public interface Formatter extends Closeable
 {
   String NEW_LINE = System.lineSeparator();
 
-  void begin(OutputStream output) throws IOException;
-
-  void write(OutputStream output, Map<String, Object> datum) throws IOException;
-
-  void end(OutputStream output) throws IOException;
+  void write(Map<String, Object> datum) throws IOException;
 
   class XSVFormatter implements Formatter
   {
@@ -45,25 +42,23 @@ public interface Formatter
 
     private final StringBuilder builder = new StringBuilder();
 
-    public XSVFormatter(String separator)
+    private final OutputStream output;
+
+    public XSVFormatter(OutputStream output, String separator)
     {
-      this(separator, null, null);
+      this(output, separator, null, null);
     }
 
-    public XSVFormatter(String separator, String nullValue, String[] dimensions)
+    public XSVFormatter(OutputStream output, String separator, String nullValue, String[] dimensions)
     {
       this.separator = separator == null ? "," : separator;
       this.nullValue = nullValue == null ? "NULL" : nullValue;
       this.dimensions = dimensions;
+      this.output = output;
     }
 
     @Override
-    public void begin(OutputStream output) throws IOException
-    {
-    }
-
-    @Override
-    public void write(OutputStream output, Map<String, Object> datum) throws IOException
+    public void write(Map<String, Object> datum) throws IOException
     {
       builder.setLength(0);
 
@@ -90,31 +85,30 @@ public interface Formatter
     }
 
     @Override
-    public void end(OutputStream output) throws IOException
+    public void close() throws IOException
     {
+      output.close();
     }
   }
 
   class JsonFormatter implements Formatter
   {
-    private static final byte[] HEAD = ("[" + System.lineSeparator()).getBytes();
+    private static final byte[] HEAD = "[".getBytes();
+    private static final byte[] NEW_LINE = System.lineSeparator().getBytes();
     private static final byte[] NEXT_LINE = (", " + System.lineSeparator()).getBytes();
-    private static final byte[] TAIL = (System.lineSeparator() + "]" + System.lineSeparator()).getBytes();
+    private static final byte[] TAIL = ("]" + System.lineSeparator()).getBytes();
 
     private final ObjectMapper jsonMapper;
     private final boolean withWrapping;
 
+    private final OutputStream output;
     private boolean firstLine;
 
-    public JsonFormatter(ObjectMapper jsonMapper, boolean withWrapping)
+    public JsonFormatter(OutputStream output, ObjectMapper jsonMapper, boolean withWrapping) throws IOException
     {
       this.jsonMapper = jsonMapper;
       this.withWrapping = withWrapping;
-    }
-
-    @Override
-    public void begin(OutputStream output) throws IOException
-    {
+      this.output = output;
       if (withWrapping) {
         output.write(HEAD);
       }
@@ -122,9 +116,9 @@ public interface Formatter
     }
 
     @Override
-    public void write(OutputStream output, Map<String, Object> datum) throws IOException
+    public void write(Map<String, Object> datum) throws IOException
     {
-      if (withWrapping && !firstLine) {
+      if (!firstLine) {
         output.write(NEXT_LINE);
       }
       // jsonMapper.writeValue(output, datum) closes stream
@@ -133,10 +127,15 @@ public interface Formatter
     }
 
     @Override
-    public void end(OutputStream output) throws IOException
+    public void close() throws IOException
     {
-      if (withWrapping) {
-        output.write(TAIL);
+      try (OutputStream finishing = output) {
+        if (!firstLine) {
+          finishing.write(NEW_LINE);
+        }
+        if (withWrapping) {
+          finishing.write(TAIL);
+        }
       }
     }
   }

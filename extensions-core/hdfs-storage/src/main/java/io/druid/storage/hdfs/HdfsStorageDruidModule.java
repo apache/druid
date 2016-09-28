@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.MapBinder;
-
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
@@ -35,6 +34,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.ResultWriter;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
+import java.util.ServiceLoader;
 
 /**
  */
@@ -98,8 +99,6 @@ public class HdfsStorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentFinderBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentFinder.class).in(LazySingleton.class);
 
-    Binders.resultWriterPullerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
-
     final Configuration conf = new Configuration();
 
     // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
@@ -111,6 +110,10 @@ public class HdfsStorageDruidModule implements DruidModule
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       FileSystem.get(conf);
+      MapBinder<String, ResultWriter> writers = Binders.resultWriterPullerBinder(binder);
+      for (FileSystem fs : ServiceLoader.load(FileSystem.class)) {
+        writers.addBinding(fs.getScheme()).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
+      }
     }
     catch (IOException ex) {
       throw Throwables.propagate(ex);

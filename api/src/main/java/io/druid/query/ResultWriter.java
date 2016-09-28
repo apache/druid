@@ -27,5 +27,7 @@ import java.util.Map;
  */
 public interface ResultWriter
 {
+  String FILE_SCHEME = "file";
+
   Map<String, Object> write(URI location, TabularFormat result, Map<String, Object> context) throws IOException;
 }

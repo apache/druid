@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
@@ -37,7 +38,6 @@ import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -130,9 +130,10 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
   }
 
   @Override
-  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, Object> context)
+  public Map<String, Object> write(URI location, TabularFormat result, Map<String, Object> context)
       throws IOException
   {
+    log.info("Writing to " + location + " with context " + context);
     File targetDirectory = new File(location.getPath());
     boolean cleanup = PropUtils.parseBoolean(context, "cleanup", false);
     if (cleanup) {
@@ -148,16 +149,10 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
     File dataFile = new File(targetDirectory, Strings.isNullOrEmpty(fileName) ? "data" : fileName);
 
     Map<String, Object> info = Maps.newHashMap();
-    try (OutputStream output = new BufferedOutputStream(new FileOutputStream(dataFile))) {
-      CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper);
-      try {
-        accumulator.begin(output);
-        result.getSequence().accumulate(null, accumulator);
-        info.put("numRows", accumulator.count());
-      }
-      finally {
-        accumulator.end(output);
-      }
+    try (CountingAccumulator accumulator = toExporter(context, jsonMapper, dataFile)) {
+      accumulator.init();
+      result.getSequence().accumulate(null, accumulator);
+      info.put("numRows", accumulator.count());
     }
     info.put("data", ImmutableMap.of(rewrite(location, dataFile.getAbsolutePath()), dataFile.length()));
 
@@ -172,7 +167,23 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
     return info;
   }
 
-  private String rewrite(URI location, String path) {
+  CountingAccumulator toExporter(Map<String, Object> context, ObjectMapper mapper, final File dataFile)
+      throws IOException
+  {
+    return Formatters.toBasicExporter(
+        context, mapper, new ByteSink()
+        {
+          @Override
+          public OutputStream openStream() throws IOException
+          {
+            return new FileOutputStream(dataFile);
+          }
+        }
+    );
+  }
+
+  private String rewrite(URI location, String path)
+  {
     try {
       return new URI(
           location.getScheme(),

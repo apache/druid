@@ -23,18 +23,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.io.ByteSink;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -42,38 +43,28 @@ public class Formatters
 {
   private static final Logger log = new Logger(Formatter.class);
 
-  public static CountingAccumulator toExporter(
+  public static CountingAccumulator toBasicExporter(
       Map<String, Object> context,
-      OutputStream output,
-      ObjectMapper jsonMapper
-  )
+      ObjectMapper jsonMapper,
+      ByteSink output
+  ) throws IOException
   {
-    if ("excel".equals(context.get("format"))) {
+    if ("excel".equals(Objects.toString(context.get("format"), null))) {
       return toExcelExporter(output, context);
     } else {
-      return toSimpleExporter(output, context, jsonMapper);
+      return wrapToExporter(toBasicFormatter(output, context, jsonMapper));
     }
   }
 
-  private static CountingAccumulator toExcelExporter(
-      final OutputStream output,
-      Map<String, Object> context
-  )
+  public static CountingAccumulator toExcelExporter(final ByteSink sink, final Map<String, Object> context)
+      throws IOException
   {
-    final String[] dimensions = Formatters.toDimensionOrder(parseString(context.get("columns"), null));
+    final String[] dimensions = Formatters.toDimensionOrder(Objects.toString(context.get("columns"), null));
     final HSSFWorkbook wb = new HSSFWorkbook();
     final Sheet sheet = wb.createSheet();
 
-    final Closeable resource = new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        wb.write(output);
-      }
-    };
     if (dimensions != null) {
-      return new CountingAccumulator<Object, Map<String, Object>>()
+      return new CountingAccumulator()
       {
         private int rowNum;
 
@@ -84,7 +75,7 @@ public class Formatters
         }
 
         @Override
-        public void begin(OutputStream output) throws IOException
+        public void init() throws IOException
         {
           Row r = sheet.createRow(rowNum++);
           for (int i = 0; i < dimensions.length; i++) {
@@ -94,7 +85,7 @@ public class Formatters
         }
 
         @Override
-        public Object accumulate(Object accumulated, Map<String, Object> in)
+        public Void accumulate(Void accumulated, Map<String, Object> in)
         {
           Row r = sheet.createRow(rowNum++);
           for (int i = 0; i < dimensions.length; i++) {
@@ -114,13 +105,15 @@ public class Formatters
         }
 
         @Override
-        public void end(OutputStream output) throws IOException
+        public void close() throws IOException
         {
-          resource.close();
+          try (OutputStream output = sink.openBufferedStream()) {
+            wb.write(output);
+          }
         }
       };
     }
-    return new CountingAccumulator<Object, Map<String, Object>>()
+    return new CountingAccumulator()
     {
       private int rowNum;
 
@@ -131,12 +124,12 @@ public class Formatters
       }
 
       @Override
-      public void begin(OutputStream output) throws IOException
+      public void init() throws IOException
       {
       }
 
       @Override
-      public Object accumulate(Object accumulated, Map<String, Object> in)
+      public Void accumulate(Void accumulated, Map<String, Object> in)
       {
         Row r = sheet.createRow(rowNum++);
         int i = 0;
@@ -156,21 +149,18 @@ public class Formatters
       }
 
       @Override
-      public void end(OutputStream output) throws IOException
+      public void close() throws IOException
       {
-        resource.close();
+        try (OutputStream output = sink.openBufferedStream()) {
+          wb.write(output);
+        }
       }
     };
   }
 
-  private static CountingAccumulator toSimpleExporter(
-      final OutputStream output,
-      Map<String, Object> context,
-      ObjectMapper jsonMapper
-  )
+  public static CountingAccumulator wrapToExporter(final Formatter formatter)
   {
-    final Formatter formatter = getFormatter(context, jsonMapper);
-    return new CountingAccumulator<Object, Map<String, Object>>()
+    return new CountingAccumulator()
     {
       int counter = 0;
 
@@ -181,16 +171,15 @@ public class Formatters
       }
 
       @Override
-      public void begin(OutputStream output) throws IOException
+      public void init() throws IOException
       {
-        formatter.begin(output);
       }
 
       @Override
-      public Object accumulate(Object accumulated, Map<String, Object> in)
+      public Void accumulate(Void accumulated, Map<String, Object> in)
       {
         try {
-          formatter.write(output, in);
+          formatter.write(in);
           counter++;
         }
         catch (Exception e) {
@@ -200,18 +189,20 @@ public class Formatters
       }
 
       @Override
-      public void end(OutputStream output) throws IOException
+      public void close() throws IOException
       {
-        formatter.end(output);
+        formatter.close();
       }
     };
   }
 
-  private static Formatter getFormatter(Map<String, Object> context, ObjectMapper jsonMapper)
+  public static Formatter toBasicFormatter(ByteSink output, Map<String, Object> context, ObjectMapper jsonMapper)
+      throws IOException
   {
-    String formatString = parseString(context.get("format"), null);
+    String formatString = Objects.toString(context.get("format"), null);
     if (isNullOrEmpty(formatString) || formatString.equalsIgnoreCase("json")) {
-      return new Formatter.JsonFormatter(jsonMapper, parseBoolean(context.get("wrapAsList"), false));
+      boolean wrapAsList = parseBoolean(context.get("wrapAsList"), false);
+      return new Formatter.JsonFormatter(output.openBufferedStream(), jsonMapper, wrapAsList);
     }
     String separator;
     if (formatString.equalsIgnoreCase("csv")) {
@@ -220,12 +211,13 @@ public class Formatters
       separator = "\t";
     } else {
       log.warn("Invalid format " + formatString + ".. using json formatter instead");
-      return new Formatter.JsonFormatter(jsonMapper, parseBoolean(context.get("wrapAsList"), false));
+      boolean wrapAsList = parseBoolean(context.get("wrapAsList"), false);
+      return new Formatter.JsonFormatter(output.openBufferedStream(), jsonMapper, wrapAsList);
     }
-    String nullValue = parseString(context.get("nullValue"), null);
-    String columns = parseString(context.get("columns"), null);
+    String nullValue = Objects.toString(context.get("nullValue"), null);
+    String columns = Objects.toString(context.get("columns"), null);
 
-    return new Formatter.XSVFormatter(separator, nullValue, toDimensionOrder(columns));
+    return new Formatter.XSVFormatter(output.openBufferedStream(), separator, nullValue, toDimensionOrder(columns));
   }
 
   private static String[] toDimensionOrder(String columns)
@@ -252,11 +244,6 @@ public class Formatters
   private static boolean isNullOrEmpty(String string)
   {
     return string == null || string.isEmpty();
-  }
-
-  private static String parseString(Object input, String defaultValue)
-  {
-    return input == null ? defaultValue : String.valueOf(input);
   }
 
   private static boolean parseBoolean(Object input, boolean defaultValue)
