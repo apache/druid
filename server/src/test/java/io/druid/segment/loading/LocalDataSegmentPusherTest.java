@@ -20,14 +20,12 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.joda.JodaMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
-import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,7 +65,7 @@ public class LocalDataSegmentPusherTest
   {
     config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config, new JodaMapper());
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, new DefaultObjectMapper());
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }
