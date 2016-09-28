@@ -92,7 +92,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       );
     }
 
-    final File tmpOutDir = new File(baseStorageDir, storageDir + "." + UUID.randomUUID().toString());
+    final File tmpOutDir = new File(baseStorageDir, intermediateDirFor(storageDir));
+    log.info("Creating intermediate directory[%s] for segment[%s]", tmpOutDir.toString(), segment.getIdentifier());
     final long size = compressSegment(dataSegmentFile, tmpOutDir);
 
     final DataSegment dataSegment = createDescriptorFile(
@@ -104,22 +105,33 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
     // moving the temporary directory to the final destination, once success the potentially concurrent push operations
     // will be failed and will read the descriptor.json created by current push operation directly
+    createIfNotExists(outDir.getParentFile());
     try {
       java.nio.file.Files.move(tmpOutDir.toPath(), outDir.toPath());
     }
     catch (FileAlreadyExistsException e) {
-      log.warn("Push destination directory[%s] exists, ignore this message if replication is configured.");
+      log.warn("Push destination directory[%s] exists, ignore this message if replication is configured.", outDir);
       FileUtils.deleteDirectory(tmpOutDir);
       return jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
     }
     return dataSegment;
   }
 
+  private void createIfNotExists(File directory) throws IOException
+  {
+    if (!directory.mkdirs() && !directory.isDirectory()) {
+      throw new IOException(String.format("Cannot create directory[%s]", directory.toString()));
+    }
+  }
+
+  private String intermediateDirFor(String storageDir)
+  {
+    return "intermediate_pushes/" + storageDir + "." + UUID.randomUUID().toString();
+  }
+
   private long compressSegment(File dataSegmentFile, File outDir) throws IOException
   {
-    if (!outDir.mkdirs() && !outDir.isDirectory()) {
-      throw new IOException(String.format("Cannot create directory[%s]", outDir));
-    }
+    createIfNotExists(outDir);
     File outFile = new File(outDir, "index.zip");
     log.info("Compressing files from[%s] to [%s]", dataSegmentFile, outFile);
     return CompressionUtils.zip(dataSegmentFile, outFile);
