@@ -28,6 +28,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.lang.annotation.Annotation;
 
@@ -116,6 +117,9 @@ public class JettyHttpClientModule implements Module
 
       httpClient.setIdleTimeout(config.getReadTimeout().getMillis());
       httpClient.setMaxConnectionsPerDestination(config.getNumConnections());
+      final QueuedThreadPool pool = new QueuedThreadPool(config.getNumMaxThreads());
+      pool.setName(JettyHttpClientModule.class.getSimpleName() + "-threadPool-" + pool.hashCode());
+      httpClient.setExecutor(pool);
 
       final Lifecycle lifecycle = getLifecycleProvider().get();
 
