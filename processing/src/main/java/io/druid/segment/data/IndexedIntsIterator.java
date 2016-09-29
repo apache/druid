@@ -20,11 +20,11 @@
 package io.druid.segment.data;
 
 
-import java.util.Iterator;
+import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 
 /**
  */
-public class IndexedIntsIterator implements Iterator<Integer>
+public class IndexedIntsIterator extends AbstractIntIterator
 {
   private final IndexedInts baseInts;
   private final int size;
@@ -47,14 +47,8 @@ public class IndexedIntsIterator implements Iterator<Integer>
   }
 
   @Override
-  public Integer next()
-  {
+  public int nextInt() {
     return baseInts.get(currIndex++);
   }
 
-  @Override
-  public void remove()
-  {
-    throw new UnsupportedOperationException();
-  }
 }

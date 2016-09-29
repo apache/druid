@@ -28,6 +28,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
+import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.Metadata;
 import io.druid.segment.Rowboat;
 import io.druid.segment.column.ColumnCapabilities;
@@ -285,30 +286,44 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     @Override
-    public Iterator<Integer> iterator()
+    public it.unimi.dsi.fastutil.ints.IntIterator iterator()
     {
-      return new Iterator<Integer>()
+      return new Iter();
+    }
+
+    private class Iter implements it.unimi.dsi.fastutil.ints.IntIterator
+    {
+      final IntIterator baseIter = bitmapIndex.iterator();
+
+      @Override
+      public boolean hasNext()
       {
-        final IntIterator baseIter = bitmapIndex.iterator();
+        return baseIter.hasNext();
+      }
 
-        @Override
-        public boolean hasNext()
-        {
-          return baseIter.hasNext();
-        }
+      @Override
+      public Integer next()
+      {
+        return baseIter.next();
+      }
 
-        @Override
-        public Integer next()
-        {
-          return baseIter.next();
-        }
+      @Override
+      public int nextInt()
+      {
+        return baseIter.next();
+      }
 
-        @Override
-        public void remove()
-        {
-          throw new UnsupportedOperationException();
-        }
-      };
+      @Override
+      public void remove()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public int skip(int n)
+      {
+        return IntIteratorUtils.skip(this, n);
+      }
     }
 
     @Override

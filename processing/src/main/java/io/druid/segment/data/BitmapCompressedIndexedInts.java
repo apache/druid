@@ -21,11 +21,11 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.IntIteratorUtils;
 import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  */
@@ -82,30 +82,44 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
   }
 
   @Override
-  public Iterator<Integer> iterator()
+  public it.unimi.dsi.fastutil.ints.IntIterator iterator()
   {
-    return new Iterator<Integer>()
+    return new Iter();
+  }
+
+  private class Iter implements it.unimi.dsi.fastutil.ints.IntIterator
+  {
+    IntIterator baseIterator = immutableBitmap.iterator();
+
+    @Override
+    public boolean hasNext()
     {
-      IntIterator baseIterator = immutableBitmap.iterator();
+      return baseIterator.hasNext();
+    }
 
-      @Override
-      public boolean hasNext()
-      {
-        return baseIterator.hasNext();
-      }
+    @Override
+    public Integer next()
+    {
+      return baseIterator.next();
+    }
 
-      @Override
-      public Integer next()
-      {
-        return baseIterator.next();
-      }
+    @Override
+    public int nextInt()
+    {
+      return baseIterator.next();
+    }
 
-      @Override
-      public void remove()
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
+    @Override
+    public int skip(int n)
+    {
+      return IntIteratorUtils.skip(this, n);
+    }
+
+    @Override
+    public void remove()
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 
   @Override
