@@ -203,7 +203,7 @@ public class PooledTopNAlgorithm
 
     final int aggSize = theAggregators.length;
     final int aggExtra = aggSize % AGG_UNROLL_COUNT;
-    final AtomicInteger currentPosition = new AtomicInteger(0);
+    int currentPosition = 0;
 
     while (!cursor.isDone()) {
       final IndexedInts dimValues = dimSelector.getRow();
@@ -212,7 +212,7 @@ public class PooledTopNAlgorithm
       final int dimExtra = dimSize % AGG_UNROLL_COUNT;
       switch(dimExtra){
         case 7:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -224,7 +224,7 @@ public class PooledTopNAlgorithm
               currentPosition
           );
         case 6:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -236,7 +236,7 @@ public class PooledTopNAlgorithm
               currentPosition
           );
         case 5:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -248,7 +248,7 @@ public class PooledTopNAlgorithm
               currentPosition
           );
         case 4:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -260,7 +260,7 @@ public class PooledTopNAlgorithm
               currentPosition
           );
         case 3:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -272,7 +272,7 @@ public class PooledTopNAlgorithm
               currentPosition
           );
         case 2:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -284,7 +284,7 @@ public class PooledTopNAlgorithm
               currentPosition
           );
         case 1:
-          aggregateDimValue(
+          currentPosition = aggregateDimValue(
               positions,
               theAggregators,
               resultsBuf,
@@ -297,7 +297,7 @@ public class PooledTopNAlgorithm
           );
       }
       for (int i = dimExtra; i < dimSize; i += AGG_UNROLL_COUNT) {
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -308,7 +308,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -319,7 +319,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i + 1),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -330,7 +330,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i + 2),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -341,7 +341,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i + 3),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -352,7 +352,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i + 4),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -363,7 +363,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i + 5),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -374,7 +374,7 @@ public class PooledTopNAlgorithm
             dimValues.get(i + 6),
             currentPosition
         );
-        aggregateDimValue(
+        currentPosition = aggregateDimValue(
             positions,
             theAggregators,
             resultsBuf,
@@ -390,7 +390,11 @@ public class PooledTopNAlgorithm
     }
   }
 
-  private static void aggregateDimValue(
+  /**
+   * Returns a new currentPosition, incremented if a new position was initialized, otherwise the same position as passed
+   * in the last argument.
+   */
+  private static int aggregateDimValue(
       final int[] positions,
       final BufferAggregator[] theAggregators,
       final ByteBuffer resultsBuf,
@@ -399,14 +403,15 @@ public class PooledTopNAlgorithm
       final int aggSize,
       final int aggExtra,
       final int dimIndex,
-      final AtomicInteger currentPosition
+      int currentPosition
   )
   {
     if (SKIP_POSITION_VALUE == positions[dimIndex]) {
-      return;
+      return currentPosition;
     }
     if (INIT_POSITION_VALUE == positions[dimIndex]) {
-      positions[dimIndex] = currentPosition.getAndIncrement() * numBytesPerRecord;
+      positions[dimIndex] = currentPosition * numBytesPerRecord;
+      currentPosition++;
       final int pos = positions[dimIndex];
       for (int j = 0; j < aggSize; ++j) {
         theAggregators[j].init(resultsBuf, pos + aggregatorOffsets[j]);
@@ -440,6 +445,7 @@ public class PooledTopNAlgorithm
       theAggregators[j+6].aggregate(resultsBuf, position + aggregatorOffsets[j+6]);
       theAggregators[j+7].aggregate(resultsBuf, position + aggregatorOffsets[j+7]);
     }
+    return currentPosition;
   }
 
   @Override
