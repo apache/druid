@@ -215,7 +215,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -228,7 +227,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -241,7 +239,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -254,7 +251,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -267,7 +263,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -280,7 +275,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -293,7 +287,6 @@ public class PooledTopNAlgorithm
           aggregateDimValue(
               positions,
               theAggregators,
-              numProcessed,
               resultsBuf,
               numBytesPerRecord,
               aggregatorOffsets,
@@ -307,7 +300,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -319,7 +311,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -331,7 +322,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -343,7 +333,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -355,7 +344,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -367,7 +355,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -379,7 +366,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -391,7 +377,6 @@ public class PooledTopNAlgorithm
         aggregateDimValue(
             positions,
             theAggregators,
-            numProcessed,
             resultsBuf,
             numBytesPerRecord,
             aggregatorOffsets,
@@ -408,7 +393,6 @@ public class PooledTopNAlgorithm
   private static void aggregateDimValue(
       final int[] positions,
       final BufferAggregator[] theAggregators,
-      final int numProcessed,
       final ByteBuffer resultsBuf,
       final int numBytesPerRecord,
       final int[] aggregatorOffsets,
