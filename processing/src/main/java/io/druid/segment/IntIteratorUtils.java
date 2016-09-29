@@ -89,7 +89,8 @@ public final class IntIteratorUtils
 
     private static long makeQueueElement(int value, int index)
     {
-      return (index & 0xFFFFFFFFL) | (((long) value) << 32);
+      // Don't have to mask index because this is a Java array index => positive => no sign bit extension
+      return index | (((long) value) << 32);
     }
 
     private static int value(long queueElement)
