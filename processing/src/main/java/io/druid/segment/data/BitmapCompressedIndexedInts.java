@@ -22,7 +22,7 @@ package io.druid.segment.data;
 import com.google.common.collect.Ordering;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.IntIteratorUtils;
-import org.roaringbitmap.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -82,44 +82,9 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
   }
 
   @Override
-  public it.unimi.dsi.fastutil.ints.IntIterator iterator()
+  public IntIterator iterator()
   {
-    return new Iter();
-  }
-
-  private class Iter implements it.unimi.dsi.fastutil.ints.IntIterator
-  {
-    IntIterator baseIterator = immutableBitmap.iterator();
-
-    @Override
-    public boolean hasNext()
-    {
-      return baseIterator.hasNext();
-    }
-
-    @Override
-    public Integer next()
-    {
-      return baseIterator.next();
-    }
-
-    @Override
-    public int nextInt()
-    {
-      return baseIterator.next();
-    }
-
-    @Override
-    public int skip(int n)
-    {
-      return IntIteratorUtils.skip(this, n);
-    }
-
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException();
-    }
+    return IntIteratorUtils.fromRoaringBitmapIntIterator(immutableBitmap.iterator());
   }
 
   @Override
