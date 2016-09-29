@@ -21,8 +21,10 @@ package io.druid.data.output;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteSink;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -34,6 +36,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -59,7 +62,7 @@ public class Formatters
   public static CountingAccumulator toExcelExporter(final ByteSink sink, final Map<String, Object> context)
       throws IOException
   {
-    final String[] dimensions = Formatters.toDimensionOrder(Objects.toString(context.get("columns"), null));
+    final String[] dimensions = parseStrings(context.get("columns"));
     final HSSFWorkbook wb = new HSSFWorkbook();
     final Sheet sheet = wb.createSheet();
 
@@ -215,30 +218,9 @@ public class Formatters
       return new Formatter.JsonFormatter(output.openBufferedStream(), jsonMapper, wrapAsList);
     }
     String nullValue = Objects.toString(context.get("nullValue"), null);
-    String columns = Objects.toString(context.get("columns"), null);
+    String[] columns = parseStrings(context.get("columns"));
 
-    return new Formatter.XSVFormatter(output.openBufferedStream(), separator, nullValue, toDimensionOrder(columns));
-  }
-
-  private static String[] toDimensionOrder(String columns)
-  {
-    String[] dimensions = null;
-    if (!isNullOrEmpty(columns)) {
-      dimensions = Iterables.toArray(
-          Iterables.transform(
-              Arrays.asList(columns.split(",")), new Function<String, String>()
-              {
-                @Override
-                public String apply(String input)
-                {
-                  return input.trim();
-                }
-              }
-          ),
-          String.class
-      );
-    }
-    return dimensions;
+    return new Formatter.XSVFormatter(output.openBufferedStream(), separator, nullValue, columns);
   }
 
   private static boolean isNullOrEmpty(String string)
@@ -250,5 +232,30 @@ public class Formatters
   {
     return input == null ? defaultValue :
            input instanceof Boolean ? (Boolean)input : Boolean.valueOf(String.valueOf(input));
+  }
+
+  private static String[] parseStrings(Object input)
+  {
+    if (input instanceof List) {
+      List<String> stringList = Lists.transform((List)input, Functions.toStringFunction());
+      return stringList.toArray(new String[stringList.size()]);
+    }
+    String stringVal = Objects.toString(input, null);
+    if (isNullOrEmpty(stringVal)) {
+      return null;
+    }
+    return Iterables.toArray(
+        Iterables.transform(
+            Arrays.asList(stringVal.split(",")), new Function<String, String>()
+            {
+              @Override
+              public String apply(String input)
+              {
+                return input.trim();
+              }
+            }
+        ),
+        String.class
+    );
   }
 }
