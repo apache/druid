@@ -35,6 +35,10 @@ public abstract class DruidCoordinatorConfig
   @Default("PT60s")
   public abstract Duration getCoordinatorPeriod();
 
+  @Config("druid.coordinator.lazy.ticks")
+  @Default("1")
+  public abstract int getCoordinatorLazyTicks();
+
   @Config("druid.coordinator.period.indexingPeriod")
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();

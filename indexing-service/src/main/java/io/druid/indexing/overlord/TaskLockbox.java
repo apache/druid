@@ -38,9 +38,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -254,7 +252,7 @@ public class TaskLockbox
 
         // No existing locks. We can make a new one.
         if (!running.containsKey(dataSource)) {
-          running.put(dataSource, new TreeMap<Interval, TaskLockPosse>(Comparators.intervalsByStartThenEnd()));
+          running.put(dataSource, new TreeMap<Interval, TaskLockPosse>(JodaUtils.intervalsByStartThenEnd()));
         }
 
         // Create new TaskLock and assign it a version.

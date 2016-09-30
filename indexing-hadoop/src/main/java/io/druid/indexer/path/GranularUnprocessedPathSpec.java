@@ -22,11 +22,12 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.FSSpideringIterator;
 import io.druid.java.util.common.Granularity;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -75,7 +76,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     final Granularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
 
     Map<DateTime, Long> inputModifiedTimes = new TreeMap<>(
-        Comparators.inverse(Comparators.comparable())
+        Ordering.natural().reverse()
     );
 
     for (FileStatus status : FSSpideringIterator.spiderIterable(fs, betaInput)) {
@@ -86,7 +87,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       inputModifiedTimes.put(key, currVal == null ? mTime : Math.max(currVal, mTime));
     }
 
-    Set<Interval> bucketsToRun = Sets.newTreeSet(Comparators.intervals());
+    Set<Interval> bucketsToRun = Sets.newTreeSet(JodaUtils.intervalsByStartThenEnd());
     for (Map.Entry<DateTime, Long> entry : inputModifiedTimes.entrySet()) {
       DateTime timeBucket = entry.getKey();
       long mTime = entry.getValue();

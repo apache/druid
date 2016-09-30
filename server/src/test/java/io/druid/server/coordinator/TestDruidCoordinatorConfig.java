@@ -75,6 +75,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public int getCoordinatorLazyTicks()
+  {
+    return 1;
+  }
+
+  @Override
   public Duration getCoordinatorIndexingPeriod()
   {
     return coordinatorIndexingPeriod;
