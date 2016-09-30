@@ -160,7 +160,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     if (!rollup.equals(that.rollup)) {
       return false;
     }
-    if (!timezone.equals(that.timezone)) {
+    if (timezone != null ? !timezone.equals(that.timezone): that.timezone != null) {
       return false;
     }
 
