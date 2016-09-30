@@ -42,17 +42,21 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   private final TreeSet<Interval> intervals;
   private final QueryGranularity queryGranularity;
   private final Boolean rollup;
+  private final String timezone;
 
   @JsonCreator
   public ArbitraryGranularitySpec(
       @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup,
-      @JsonProperty("intervals") List<Interval> inputIntervals
+      @JsonProperty("intervals") List<Interval> inputIntervals,
+      @JsonProperty("timezone") String timezone
+
   )
   {
     this.queryGranularity = queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    this.timezone = timezone;
 
     if (inputIntervals == null) {
       inputIntervals = Lists.newArrayList();
@@ -88,7 +92,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
       List<Interval> inputIntervals
   )
   {
-    this(queryGranularity, true, inputIntervals);
+    this(queryGranularity, true, inputIntervals, null);
   }
 
   @Override
@@ -132,6 +136,13 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
+  @JsonProperty("timezone")
+  public String getTimezone()
+  {
+    return timezone;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -149,6 +160,10 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     if (!rollup.equals(that.rollup)) {
       return false;
     }
+    if (!timezone.equals(that.timezone)) {
+      return false;
+    }
+
     return !(queryGranularity != null
              ? !queryGranularity.equals(that.queryGranularity)
              : that.queryGranularity != null);
@@ -161,6 +176,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     int result = intervals.hashCode();
     result = 31 * result + rollup.hashCode();
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
+    result = 31 * result + (timezone != null ? timezone.hashCode() : 0);
     return result;
   }
 }
