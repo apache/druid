@@ -143,7 +143,8 @@ public class DetermineHashedPartitionsJob implements Jobby
                 config.getGranularitySpec().getSegmentGranularity(),
                 config.getGranularitySpec().getQueryGranularity(),
                 config.getGranularitySpec().isRollup(),
-                intervals
+                intervals,
+                config.getGranularitySpec().getTimezone()
             )
         );
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());

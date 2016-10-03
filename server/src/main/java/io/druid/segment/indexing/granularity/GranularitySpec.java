@@ -61,4 +61,5 @@ public interface GranularitySpec
 
   public QueryGranularity getQueryGranularity();
 
+  public String getTimezone();
 }
