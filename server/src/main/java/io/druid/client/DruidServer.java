@@ -30,6 +30,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,6 +54,9 @@ public class DruidServer implements Comparable
   private final DruidServerMetadata metadata;
 
   private volatile long currSize;
+
+  @GuardedBy("lock")
+  private ImmutableDruidServer immutableView;
 
   public DruidServer(
       DruidNode node,
@@ -152,6 +156,7 @@ public class DruidServer implements Comparable
         return this;
       }
 
+      immutableView = null;
       String dataSourceName = segment.getDataSource();
       DruidDataSource dataSource = dataSources.get(dataSourceName);
 
@@ -174,6 +179,7 @@ public class DruidServer implements Comparable
   public DruidServer addDataSegments(DruidServer server)
   {
     synchronized (lock) {
+      immutableView = null;
       for (Map.Entry<String, DataSegment> entry : server.segments.entrySet()) {
         addDataSegment(entry.getKey(), entry.getValue());
       }
@@ -191,6 +197,7 @@ public class DruidServer implements Comparable
         return this;
       }
 
+      immutableView = null;
       DruidDataSource dataSource = dataSources.get(segment.getDataSource());
 
       if (dataSource == null) {
@@ -272,23 +279,28 @@ public class DruidServer implements Comparable
 
   public ImmutableDruidServer toImmutableDruidServer()
   {
-    return new ImmutableDruidServer(
-        metadata,
-        currSize,
-        ImmutableMap.copyOf(
-            Maps.transformValues(
-                dataSources,
-                new Function<DruidDataSource, ImmutableDruidDataSource>()
-                {
-                  @Override
-                  public ImmutableDruidDataSource apply(DruidDataSource input)
-                  {
-                    return input.toImmutableDruidDataSource();
-                  }
-                }
-            )
-        ),
-        ImmutableMap.copyOf(segments)
-    );
+    synchronized (lock) {
+      if (immutableView == null) {
+        immutableView = new ImmutableDruidServer(
+            metadata,
+            currSize,
+            ImmutableMap.copyOf(
+                Maps.transformValues(
+                    dataSources,
+                    new Function<DruidDataSource, ImmutableDruidDataSource>()
+                    {
+                      @Override
+                      public ImmutableDruidDataSource apply(DruidDataSource input)
+                      {
+                        return input.toImmutableDruidDataSource();
+                      }
+                    }
+                )
+            ),
+            ImmutableMap.copyOf(segments)
+        );
+      }
+      return immutableView;
+    }
   }
 }
