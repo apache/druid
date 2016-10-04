@@ -19,6 +19,11 @@
 
 package io.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -29,6 +34,7 @@ import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,7 +47,7 @@ public class DruidCoordinatorRuntimeParams
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final Set<DruidDataSource> dataSources;
-  private final Set<DataSegment> availableSegments;
+  private final List<Supplier<Set<DataSegment>>> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
@@ -50,13 +56,15 @@ public class DruidCoordinatorRuntimeParams
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategyFactory strategyFactory;
 
+  private Set<DataSegment> materializedSegments;
+
   public DruidCoordinatorRuntimeParams(
       long startTime,
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
       Set<DruidDataSource> dataSources,
-      Set<DataSegment> availableSegments,
+      List<Supplier<Set<DataSegment>>> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
@@ -108,7 +116,20 @@ public class DruidCoordinatorRuntimeParams
 
   public Set<DataSegment> getAvailableSegments()
   {
-    return availableSegments;
+    if (materializedSegments == null) {
+      if (availableSegments.isEmpty()) {
+        materializedSegments = ImmutableSet.of();
+      } else if (availableSegments.size() == 1) {
+        materializedSegments = Collections.unmodifiableSet(availableSegments.get(0).get());
+      } else {
+        Set<DataSegment> merged = Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR);
+        for (Supplier<Set<DataSegment>> supplier : availableSegments) {
+          merged.addAll(supplier.get());
+        }
+        materializedSegments = Collections.unmodifiableSet(merged);
+      }
+    }
+    return materializedSegments;
   }
 
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
@@ -182,7 +203,7 @@ public class DruidCoordinatorRuntimeParams
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
     private final Set<DruidDataSource> dataSources;
-    private final Set<DataSegment> availableSegments;
+    private final List<Supplier<Set<DataSegment>>> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
@@ -198,7 +219,7 @@ public class DruidCoordinatorRuntimeParams
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
       this.dataSources = Sets.newHashSet();
-      this.availableSegments = Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR);
+      this.availableSegments = Lists.newArrayList();
       this.loadManagementPeons = Maps.newHashMap();
       this.replicationManager = null;
       this.emitter = null;
@@ -213,7 +234,7 @@ public class DruidCoordinatorRuntimeParams
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
         Set<DruidDataSource> dataSources,
-        Set<DataSegment> availableSegments,
+        List<Supplier<Set<DataSegment>>> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
@@ -287,9 +308,22 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
+    @VisibleForTesting
     public Builder withAvailableSegments(Collection<DataSegment> availableSegmentsCollection)
     {
-      availableSegments.addAll(Collections.unmodifiableCollection(availableSegmentsCollection));
+      Set<DataSegment> segmentSet;
+      if (availableSegmentsCollection instanceof Set) {
+        segmentSet = (Set<DataSegment>)availableSegmentsCollection;
+      } else {
+        segmentSet = Sets.newHashSet(availableSegmentsCollection);
+      }
+      availableSegments.add(Suppliers.ofInstance(segmentSet));
+      return this;
+    }
+
+    public Builder withAvailableSegments(Supplier<Set<DataSegment>> availableSegmentsCollection)
+    {
+      availableSegments.add(availableSegmentsCollection);
       return this;
     }
 
