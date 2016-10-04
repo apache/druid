@@ -310,28 +310,30 @@ public class KafkaSupervisor implements Supervisor
               }
             }
         );
+        firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
+        scheduledExec.scheduleAtFixedRate(
+            buildRunTask(),
+            ioConfig.getStartDelay().getMillis(),
+            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
+            TimeUnit.MILLISECONDS
+        );
+
+        started = true;
+        log.info(
+            "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
+            dataSource,
+            ioConfig.getStartDelay(),
+            spec.toString()
+        );
       }
       catch (Exception e) {
+        if (consumer != null) {
+          consumer.close();
+        }
         log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
            .emit();
         throw Throwables.propagate(e);
       }
-
-      firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
-      scheduledExec.scheduleAtFixedRate(
-          buildRunTask(),
-          ioConfig.getStartDelay().getMillis(),
-          Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
-          TimeUnit.MILLISECONDS
-      );
-
-      started = true;
-      log.info(
-          "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
-          dataSource,
-          ioConfig.getStartDelay(),
-          spec.toString()
-      );
     }
   }
 
