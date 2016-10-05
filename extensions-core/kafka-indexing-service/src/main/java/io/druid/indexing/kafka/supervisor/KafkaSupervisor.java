@@ -1272,7 +1272,7 @@ public class KafkaSupervisor implements Supervisor
           spec.getDataSchema(),
           taskTuningConfig,
           kafkaIOConfig,
-          ImmutableMap.<String, Object>of(),
+          spec.getContext(),
           null
       );
 
