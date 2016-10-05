@@ -32,7 +32,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -134,20 +133,22 @@ public class GenericIndexedWriter<T> implements Closeable
            valuesOut.getCount();  // value length
   }
 
-  public ByteSource combineStreams()
+  public InputSupplier<InputStream> combineStreams()
   {
-    return ByteSource.concat(
+    // ByteSource.concat is only available in guava 15 and higher
+    // This is guava 14 compatible
+    return ByteStreams.join(
         Iterables.transform(
             Arrays.asList("meta", "header", "values"),
-            new Function<String,ByteSource>() {
-
+            new Function<String, InputSupplier<InputStream>>()
+            {
               @Override
-              public ByteSource apply(final String input)
+              public InputSupplier<InputStream> apply(final String input)
               {
-                return new ByteSource()
+                return new InputSupplier<InputStream>()
                 {
                   @Override
-                  public InputStream openStream() throws IOException
+                  public InputStream getInput() throws IOException
                   {
                     return ioPeon.makeInputStream(makeFilename(input));
                   }
@@ -160,7 +161,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    final ReadableByteChannel from = Channels.newChannel(combineStreams().openStream());
+    final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput());
     ByteStreams.copy(from, channel);
   }
 }

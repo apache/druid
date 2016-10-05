@@ -112,7 +112,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
     try (OutputStream out = consolidatedOut.openStream();
          InputStream meta = ioPeon.makeInputStream(metaFile)) {
       ByteStreams.copy(meta, out);
-      flattener.combineStreams().copyTo(out);
+      ByteStreams.copy(flattener.combineStreams(), out);
     }
   }
 
@@ -148,7 +148,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     try (InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream input = flattener.combineStreams().openStream()) {
+         InputStream input = flattener.combineStreams().getInput()) {
       ByteStreams.copy(Channels.newChannel(meta), channel);
       final ReadableByteChannel from = Channels.newChannel(input);
       ByteStreams.copy(from, channel);
