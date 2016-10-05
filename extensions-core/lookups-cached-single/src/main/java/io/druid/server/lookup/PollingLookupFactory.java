@@ -33,7 +33,6 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@JsonTypeName("pollingLookup")
 public class PollingLookupFactory implements LookupExtractorFactory
 {
   private static final Logger LOGGER = new Logger(PollingLookupFactory.class);

@@ -19,10 +19,10 @@
 
 package io.druid.server.lookup;
 
-
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.segment.TestHelper;
 import io.druid.server.lookup.cache.loading.LoadingCache;
@@ -36,60 +36,61 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
-public class LoadingLookupFactoryTest
+public class PrefetchedLoadingLookupFactoryTest
 {
-  DataFetcher dataFetcher = EasyMock.createMock(DataFetcher.class);
+  PrefetchableFetcher prefetchableFetcher = EasyMock.createMock(PrefetchableFetcher.class);
   LoadingCache lookupCache = EasyMock.createStrictMock(LoadingCache.class);
   LoadingCache reverseLookupCache = EasyMock.createStrictMock(LoadingCache.class);
-  LoadingLookup loadingLookup = EasyMock.createMock(LoadingLookup.class);
-  LoadingLookupFactory loadingLookupFactory = new LoadingLookupFactory(
-      dataFetcher,
+  PrefetchedLoadingLookup prefetchedLoadingLookup = EasyMock.createMock(PrefetchedLoadingLookup.class);
+  LoadingLookupFactory prefetchedLoadingLookupFactory = new PrefetchedLoadingLookupFactory(
+      prefetchableFetcher,
       lookupCache,
       reverseLookupCache,
-      loadingLookup
+      prefetchedLoadingLookup
   );
 
   @Test
   public void testStartStop()
   {
-    EasyMock.expect(loadingLookup.isOpen()).andReturn(true).once();
-    loadingLookup.close();
+    EasyMock.expect(prefetchedLoadingLookup.isOpen()).andReturn(true).once();
+    prefetchedLoadingLookup.close();
     EasyMock.expectLastCall().once();
-    EasyMock.replay(loadingLookup);
-    Assert.assertTrue(loadingLookupFactory.start());
-    Assert.assertTrue(loadingLookupFactory.close());
-    EasyMock.verify(loadingLookup);
+    EasyMock.replay(prefetchedLoadingLookup);
+    Assert.assertTrue(prefetchedLoadingLookupFactory.start());
+    Assert.assertTrue(prefetchedLoadingLookupFactory.close());
+    EasyMock.verify(prefetchedLoadingLookup);
 
   }
 
   @Test
   public void testReplacesWithNull()
   {
-    Assert.assertTrue(loadingLookupFactory.replaces(null));
+    Assert.assertTrue(prefetchedLoadingLookupFactory.replaces(null));
   }
 
   @Test
   public void testReplacesWithSame()
   {
-    Assert.assertFalse(loadingLookupFactory.replaces(loadingLookupFactory));
+    Assert.assertFalse(prefetchedLoadingLookupFactory.replaces(prefetchedLoadingLookupFactory));
   }
 
   @Test
   public void testReplacesWithDifferent()
   {
-    Assert.assertTrue(loadingLookupFactory.replaces(new LoadingLookupFactory(
-        EasyMock.createMock(DataFetcher.class),
+    Assert.assertTrue(prefetchedLoadingLookupFactory.replaces(new PrefetchedLoadingLookupFactory(
+        EasyMock.createMock(PrefetchableFetcher.class),
         lookupCache,
         reverseLookupCache
     )));
-    Assert.assertTrue(loadingLookupFactory.replaces(new LoadingLookupFactory(
-        dataFetcher,
+    Assert.assertTrue(prefetchedLoadingLookupFactory.replaces(new PrefetchedLoadingLookupFactory(
+        prefetchableFetcher,
         EasyMock.createMock(LoadingCache.class),
         reverseLookupCache
     )));
-    Assert.assertTrue(loadingLookupFactory.replaces(new LoadingLookupFactory(
-        dataFetcher,
+    Assert.assertTrue(prefetchedLoadingLookupFactory.replaces(new PrefetchedLoadingLookupFactory(
+        prefetchableFetcher,
         lookupCache,
         EasyMock.createMock(LoadingCache.class)
     )));
@@ -99,15 +100,15 @@ public class LoadingLookupFactoryTest
   @Test
   public void testGet()
   {
-    Assert.assertEquals(loadingLookup, loadingLookupFactory.get());
+    Assert.assertEquals(prefetchedLoadingLookup, prefetchedLoadingLookupFactory.get());
   }
 
   @Test
   public void testSerDeser() throws IOException
   {
     ObjectMapper mapper = TestHelper.getObjectMapper();
-    LoadingLookupFactory loadingLookupFactory = new LoadingLookupFactory(
-        new MockDataFetcher(),
+    PrefetchedLoadingLookupFactory prefetchedLoadingLookupFactory = new PrefetchedLoadingLookupFactory(
+        new MockPrefetchableFetcher(),
         new OnHeapLoadingCache<String, String>(
             0,
             100,
@@ -123,23 +124,21 @@ public class LoadingLookupFactoryTest
         )
     );
 
-    mapper.registerSubtypes(MockDataFetcher.class);
+    mapper.registerSubtypes(MockPrefetchableFetcher.class);
     for (Module module: new LookupExtractionModule().getJacksonModules()) {
       mapper.registerModule(module);
     }
-    Assert.assertEquals(
-        loadingLookupFactory,
-        mapper.reader(LookupExtractorFactory.class)
-              .readValue(mapper.writeValueAsString(loadingLookupFactory))
-    );
+    String factoryString = mapper.writeValueAsString(prefetchedLoadingLookupFactory);
+    LookupExtractorFactory factory = mapper.reader(LookupExtractorFactory.class).readValue(factoryString);
+    Assert.assertEquals(prefetchedLoadingLookupFactory, factory);
   }
 
 
   @JsonTypeName("mock")
-  private static class MockDataFetcher implements DataFetcher
+  private static class MockPrefetchableFetcher extends PrefetchableFetcher
   {
     @JsonCreator
-    public MockDataFetcher()
+    public MockPrefetchableFetcher()
     {
     }
 
@@ -170,8 +169,13 @@ public class LoadingLookupFactoryTest
     @Override
     public boolean equals(Object obj)
     {
-      return obj instanceof MockDataFetcher;
+      return obj instanceof MockPrefetchableFetcher;
+    }
+
+    @Override
+    public Map prefetch(Object key)
+    {
+      return null;
     }
   }
-
 }

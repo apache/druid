@@ -44,7 +44,7 @@ public class LoadingLookup extends LookupExtractor
   private static final Logger LOGGER = new Logger(LoadingLookup.class);
 
   private final DataFetcher<String, String> dataFetcher;
-  private final LoadingCache<String, String> loadingCache;
+  protected final LoadingCache<String, String> loadingCache;
   private final LoadingCache<String, List<String>> reverseLoadingCache;
   private final AtomicBoolean isOpen;
   private final String id = Integer.toHexString(System.identityHashCode(this));
