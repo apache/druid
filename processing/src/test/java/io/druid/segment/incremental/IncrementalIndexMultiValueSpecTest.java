@@ -47,13 +47,6 @@ public class IncrementalIndexMultiValueSpecTest
             new StringDimensionSchema("string1", DimensionSchema.MultiValueHandling.ARRAY),
             new StringDimensionSchema("string2", DimensionSchema.MultiValueHandling.SORTED_ARRAY),
             new StringDimensionSchema("string3", DimensionSchema.MultiValueHandling.SORTED_SET)
-//            ,
-//            new FloatDimensionSchema("float1", DimensionSchema.MultiValueHandling.ARRAY),
-//            new FloatDimensionSchema("float2", DimensionSchema.MultiValueHandling.SORTED_ARRAY),
-//            new FloatDimensionSchema("float3", DimensionSchema.MultiValueHandling.SET),
-//            new LongDimensionSchema("long1", DimensionSchema.MultiValueHandling.ARRAY),
-//            new LongDimensionSchema("long2", DimensionSchema.MultiValueHandling.SORTED_ARRAY),
-//            new LongDimensionSchema("long3", DimensionSchema.MultiValueHandling.SET)
         ),
         null, null
     );
@@ -95,13 +88,5 @@ public class IncrementalIndexMultiValueSpecTest
     Assert.assertEquals(Lists.newArrayList("xsd", "aba", "fds", "aba"), row.getRaw("string1"));
     Assert.assertEquals(Lists.newArrayList("aba", "aba", "fds", "xsd"), row.getRaw("string2"));
     Assert.assertEquals(Lists.newArrayList("aba", "fds", "xsd"), row.getRaw("string3"));
-
-//    Assert.assertArrayEquals(new Float[] {3.92f, -2.76f, 42.153f, Float.NaN, -2.76f, -2.76f}, (Object[])row.getRaw("float1"));
-//    Assert.assertArrayEquals(new Float[] {-2.76f, -2.76f, -2.76f, 3.92f, 42.153f, Float.NaN}, (Object[])row.getRaw("float2"));
-//    Assert.assertArrayEquals(new Float[] {-2.76f, 3.92f, 42.153f, Float.NaN}, (Object[])row.getRaw("float3"));
-//
-//    Assert.assertArrayEquals(new Long[] {-231238789L, 328L, 923L, 328L, -2L, 0L}, (Object[])row.getRaw("long1"));
-//    Assert.assertArrayEquals(new Long[] {-231238789L, -2L, 0L, 328L, 328L, 923L}, (Object[])row.getRaw("long2"));
-//    Assert.assertArrayEquals(new Long[] {-231238789L, -2L, 0L, 328L, 923L}, (Object[])row.getRaw("long3"));
   }
 }

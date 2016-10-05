@@ -28,11 +28,6 @@ public final class DimensionHandlerUtil
 {
   private DimensionHandlerUtil() {}
 
-  public static DimensionHandler getHandlerFromCapabilities(String dimensionName, ColumnCapabilities capabilities)
-  {
-    return getHandlerFromCapabilities(dimensionName, capabilities, null);
-  }
-
   public static DimensionHandler getHandlerFromCapabilities(
       String dimensionName,
       ColumnCapabilities capabilities,
@@ -44,6 +39,8 @@ public final class DimensionHandlerUtil
       if (!capabilities.isDictionaryEncoded() || !capabilities.hasBitmapIndexes()) {
         throw new IAE("String column must have dictionary encoding and bitmap index.");
       }
+      // use default behavior
+      multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
       handler = new StringDimensionHandler(dimensionName, multiValueHandling);
     }
     if (handler == null) {

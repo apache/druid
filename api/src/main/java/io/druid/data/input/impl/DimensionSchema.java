@@ -91,7 +91,13 @@ public abstract class DimensionSchema
     @JsonCreator
     public static MultiValueHandling fromString(String name)
     {
-      return valueOf(name.toUpperCase());
+      return name == null ? ofDefault() : valueOf(name.toUpperCase());
+    }
+
+    // this can be system configuration
+    public static MultiValueHandling ofDefault()
+    {
+      return SORTED_ARRAY;
     }
   }
 
