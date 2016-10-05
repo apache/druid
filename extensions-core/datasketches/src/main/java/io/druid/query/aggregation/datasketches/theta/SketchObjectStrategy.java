@@ -26,6 +26,7 @@ import com.yahoo.sketches.memory.MemoryRegion;
 import com.yahoo.sketches.memory.NativeMemory;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
+import com.yahoo.sketches.theta.Union;
 import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
@@ -98,6 +99,8 @@ public class SketchObjectStrategy implements ObjectStrategy
       byte[] retVal = new byte[(int) mem.getCapacity()];
       mem.getByteArray(0, retVal, 0, (int) mem.getCapacity());
       return retVal;
+    }  else if (obj instanceof Union) {
+      return toBytes(((Union) obj).getResult(true, null));
     } else if (obj == null) {
       return EMPTY_BYTES;
     } else {
