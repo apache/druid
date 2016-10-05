@@ -197,6 +197,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               while (!executorService.isShutdown()) {
                 consumerConnector = buildConnector(kafkaProperties);
                 try {
+                  if (executorService.isShutdown()) {
+                    break;
+                  }
+
                   final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
                       new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
                   );
