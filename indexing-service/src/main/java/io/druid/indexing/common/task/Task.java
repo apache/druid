@@ -106,6 +106,11 @@ public interface Task
   public String getDataSource();
 
   /**
+   * Returns the name of lock to be acquired for this task. Generally, it's the name of datasource.
+   */
+  public String getRequiredLockName();
+
+  /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.
    *
