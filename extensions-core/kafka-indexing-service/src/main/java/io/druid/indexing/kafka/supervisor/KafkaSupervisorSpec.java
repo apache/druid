@@ -33,11 +33,14 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.segment.indexing.DataSchema;
 
+import java.util.Map;
+
 public class KafkaSupervisorSpec implements SupervisorSpec
 {
   private final DataSchema dataSchema;
   private final KafkaSupervisorTuningConfig tuningConfig;
   private final KafkaSupervisorIOConfig ioConfig;
+  private final Map<String, Object> context;
 
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
@@ -50,6 +53,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KafkaSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaSupervisorIOConfig ioConfig,
+      @JsonProperty("context") Map<String, Object> context,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -77,6 +81,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
                             null
                         );
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
+    this.context = context;
 
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
@@ -101,6 +106,12 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return ioConfig;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getContext()
+  {
+    return context;
   }
 
   @Override
