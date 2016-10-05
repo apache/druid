@@ -110,10 +110,21 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    Union union = (Union) SetOperation.builder().build(size, Family.UNION);
-    updateUnion(union, lhs);
-    updateUnion(union, rhs);
-    return union.getResult(false, null);
+    final Union union;
+    if (lhs instanceof Union) {
+      union = (Union) lhs;
+      updateUnion(union, rhs);
+    } else if (rhs instanceof Union) {
+      union = (Union) rhs;
+      updateUnion(union, lhs);
+    } else {
+      union = (Union) SetOperation.builder().build(size, Family.UNION);
+      updateUnion(union, lhs);
+      updateUnion(union, rhs);
+    }
+
+
+    return union;
   }
 
   private void updateUnion(Union union, Object obj)
@@ -124,6 +135,8 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       union.update((Memory) obj);
     } else if (obj instanceof Sketch) {
       union.update((Sketch) obj);
+    } else if (obj instanceof Union) {
+      union.update(((Union) obj).getResult(false, null));
     } else {
       throw new IAE("Object of type [%s] can not be unioned", obj.getClass().getName());
     }

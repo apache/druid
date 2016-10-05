@@ -26,6 +26,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.theta.Sketch;
+import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
@@ -83,10 +84,21 @@ public class SketchSetPostAggregator implements PostAggregator
   {
     Sketch[] sketches = new Sketch[fields.size()];
     for (int i = 0; i < sketches.length; i++) {
-      sketches[i] = (Sketch) fields.get(i).compute(combinedAggregators);
+      sketches[i] = toSketch(fields.get(i).compute(combinedAggregators));
     }
 
     return SketchOperations.sketchSetOperation(func, maxSketchSize, sketches);
+  }
+
+  public final static Sketch toSketch(Object obj)
+  {
+    if (obj instanceof Sketch) {
+      return (Sketch) obj;
+    } else if (obj instanceof Union) {
+      return ((Union) obj).getResult(true, null);
+    } else {
+      throw new IAE("Can't convert to Sketch object [%s]", obj.getClass());
+    }
   }
 
   @Override
