@@ -43,6 +43,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.PolyBind;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -120,6 +121,8 @@ public class CliOverlord extends ServerRunnable
                   .annotatedWith(Names.named("serviceName"))
                   .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
+
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("overlord"));
 
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);

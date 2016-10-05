@@ -20,16 +20,31 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import io.druid.guice.GuiceInjectors;
+import io.druid.guice.NodeTypeConfig;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Map;
+
 @RunWith(Parameterized.class)
 public class MainTest
 {
+  private Map<Class, String> nodeTypeMap = ImmutableMap.<Class, String>builder()
+      .put(CliOverlord.class, "overlord")
+      .put(CliBroker.class, "broker")
+      .put(CliHistorical.class, "historical")
+      .put(CliCoordinator.class, "coordinator")
+      .put(CliMiddleManager.class, "middleManager")
+      .put(CliRealtime.class, "realtime")
+      .put(CliRealtimeExample.class, "realtime")
+      .put(CliRouter.class, "router").build();
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
@@ -55,6 +70,7 @@ public class MainTest
         new Object[]{new CliRouter()}
     );
   }
+
   private final GuiceRunnable runnable;
   public MainTest(GuiceRunnable runnable)
   {
@@ -65,6 +81,10 @@ public class MainTest
   {
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Injector runnableInjector = runnable.makeInjector();
+    Assert.assertNotNull(runnableInjector);
+
+    NodeTypeConfig nodeTypeConfig = runnableInjector.getInstance(NodeTypeConfig.class);
+    Assert.assertEquals(nodeTypeMap.get(runnable.getClass()), nodeTypeConfig.getNodeType());
   }
 }

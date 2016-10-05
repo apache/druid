@@ -39,6 +39,7 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
@@ -88,6 +89,8 @@ public class CliBroker extends ServerRunnable
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
+
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("broker"));
 
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
             binder.install(new CacheModule());
