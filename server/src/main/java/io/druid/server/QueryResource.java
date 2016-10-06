@@ -307,7 +307,7 @@ public class QueryResource
     }
     catch (QueryInterruptedException e) {
       try {
-        log.info("%s [%s]", e.getMessage(), queryId);
+        log.warn(e, "Exception while processing queryId [%s]", queryId);
         final long queryTime = System.currentTimeMillis() - start;
         emitter.emit(
             DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
