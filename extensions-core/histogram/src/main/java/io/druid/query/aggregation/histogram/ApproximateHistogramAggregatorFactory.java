@@ -48,6 +48,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   protected final String fieldName;
 
   protected final int resolution;
+  protected final int initialSize;
   protected final int numBuckets;
 
   protected final float lowerLimit;
@@ -58,6 +59,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty("resolution") Integer resolution,
+      @JsonProperty("initialSize") Integer initialSize,
       @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") Float lowerLimit,
       @JsonProperty("upperLimit") Float upperLimit
@@ -67,12 +69,15 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
     this.resolution = resolution == null ? ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE : resolution;
+    this.initialSize = initialSize == null || initialSize < 0 ? this.resolution : initialSize;
     this.numBuckets = numBuckets == null ? ApproximateHistogram.DEFAULT_BUCKET_SIZE : numBuckets;
     this.lowerLimit = lowerLimit == null ? Float.NEGATIVE_INFINITY : lowerLimit;
     this.upperLimit = upperLimit == null ? Float.POSITIVE_INFINITY : upperLimit;
 
-    Preconditions.checkArgument(this.resolution > 0, "resolution must be greater than 1");
-    Preconditions.checkArgument(this.numBuckets > 0, "numBuckets must be greater than 1");
+    Preconditions.checkArgument(this.resolution > 0, "resolution must be greater than 0");
+    Preconditions.checkArgument(this.initialSize > 0, "initialSize must be greater than 0");
+    Preconditions.checkArgument(this.initialSize <= this.resolution, "initialSize must be lesser or equal to resolution");
+    Preconditions.checkArgument(this.numBuckets > 0, "numBuckets must be greater than 0");
     Preconditions.checkArgument(this.upperLimit > this.lowerLimit, "upperLimit must be greater than lowerLimit");
   }
 
@@ -83,6 +88,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
         name,
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
+        initialSize,
         lowerLimit,
         upperLimit
     );
@@ -114,7 +120,15 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit);
+    return new ApproximateHistogramFoldingAggregatorFactory(
+        name,
+        name,
+        resolution,
+        numBuckets,
+        initialSize,
+        lowerLimit,
+        upperLimit
+    );
   }
 
   @Override
@@ -127,6 +141,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
           name,
           name,
           Math.max(resolution, castedOther.resolution),
+          Math.max(initialSize, castedOther.initialSize),
           numBuckets,
           Math.min(lowerLimit, castedOther.lowerLimit),
           Math.max(upperLimit, castedOther.upperLimit)
@@ -145,6 +160,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
             fieldName,
             fieldName,
             resolution,
+            initialSize,
             numBuckets,
             lowerLimit,
             upperLimit
@@ -312,6 +328,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", resolution=" + resolution +
+           ", initialSize=" + initialSize +
            ", numBuckets=" + numBuckets +
            ", lowerLimit=" + lowerLimit +
            ", upperLimit=" + upperLimit +

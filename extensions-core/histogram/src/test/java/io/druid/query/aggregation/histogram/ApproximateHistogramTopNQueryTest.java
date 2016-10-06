@@ -54,10 +54,10 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramTopNQueryTest
 {
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.transformToConstructionFeeder(
+    return QueryRunnerTestHelper.cartesian(
         Iterables.concat(
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
@@ -82,17 +82,21 @@ public class ApproximateHistogramTopNQueryTest
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
-        )
+        ),
+        Arrays.asList(-1, 1)
     );
   }
 
   private final QueryRunner runner;
+  private final int initialSize;
 
   public ApproximateHistogramTopNQueryTest(
-      QueryRunner runner
+      QueryRunner runner,
+      int initialSize
   )
   {
     this.runner = runner;
+    this.initialSize = initialSize;
   }
 
   @Test
@@ -102,6 +106,7 @@ public class ApproximateHistogramTopNQueryTest
         "apphisto",
         "index",
         10,
+        initialSize,
         5,
         Float.NEGATIVE_INFINITY,
         Float.POSITIVE_INFINITY
@@ -237,7 +242,7 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
 
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }

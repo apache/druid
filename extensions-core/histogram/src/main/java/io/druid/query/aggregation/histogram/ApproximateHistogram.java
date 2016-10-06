@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -115,7 +116,7 @@ public class ApproximateHistogram
   }
 
 
-  public ApproximateHistogram(
+  private ApproximateHistogram(
       int size,
       float[] positions,
       long[] bins,
@@ -163,10 +164,15 @@ public class ApproximateHistogram
 
   public ApproximateHistogram(int size, float lowerLimit, float upperLimit)
   {
+    this(size, size, lowerLimit, upperLimit);
+  }
+
+  public ApproximateHistogram(int size, int initialSize, float lowerLimit, float upperLimit)
+  {
     this(
         size,                    //size
-        new float[size],         //positions
-        new long[size],          //bins
+        new float[initialSize],  //positions
+        new long[initialSize],   //bins
         0,                       //binCount
         Float.POSITIVE_INFINITY, //min
         Float.NEGATIVE_INFINITY, //max
@@ -176,7 +182,8 @@ public class ApproximateHistogram
     );
   }
 
-  public ApproximateHistogram(int binCount, float[] positions, long[] bins, float min, float max)
+  @VisibleForTesting
+  ApproximateHistogram(int binCount, float[] positions, long[] bins, float min, float max)
   {
     this(
         positions.length,        //size
@@ -437,6 +444,8 @@ public class ApproximateHistogram
    */
   protected void shiftRight(int start, int end)
   {
+    assertHolder(end + 1);
+
     float prevVal = positions[start];
     long prevCnt = bins[start];
 
@@ -449,6 +458,14 @@ public class ApproximateHistogram
 
       prevVal = tmpVal;
       prevCnt = tmpCnt;
+    }
+  }
+
+  private void assertHolder(int length)
+  {
+    if (positions.length < length) {
+      positions = Arrays.copyOf(positions, length);
+      bins = Arrays.copyOf(bins, length);
     }
   }
 
@@ -511,11 +528,8 @@ public class ApproximateHistogram
   public ApproximateHistogram copy(ApproximateHistogram h)
   {
     this.size = h.size;
-    this.positions = new float[size];
-    this.bins = new long[size];
-
-    System.arraycopy(h.positions, 0, this.positions, 0, h.binCount);
-    System.arraycopy(h.bins, 0, this.bins, 0, h.binCount);
+    this.positions = Arrays.copyOf(h.positions, h.binCount);
+    this.bins = Arrays.copyOf(h.bins, h.binCount);
     this.min = h.min;
     this.max = h.max;
     this.binCount = h.binCount;
@@ -576,8 +590,14 @@ public class ApproximateHistogram
 
     // determine how many bins to merge
     int numMerge = mergedBinCount - this.size;
-    if (numMerge < 0) {
-      numMerge = 0;
+    if (numMerge <= 0) {
+      this.positions = mergedPositions;
+      this.bins = mergedBins;
+      this.binCount = mergedBinCount;
+      this.min = mergedMin;
+      this.max = mergedMax;
+      this.count = mergedCount;
+      return this;
     }
 
     // perform the required number of merges
@@ -618,6 +638,8 @@ public class ApproximateHistogram
       mergedPositions = new float[this.size];
       mergedBins = new long[this.size];
     }
+
+    assertHolder(this.binCount + h.binCount);
 
     int mergedBinCount;
     if (this.binCount + h.binCount <= this.size) {
@@ -1329,8 +1351,8 @@ public class ApproximateHistogram
     int size = buf.getInt();
     int binCount = -1 * buf.getInt();
 
-    float[] positions = new float[size];
-    long[] bins = new long[size];
+    float[] positions = new float[binCount];
+    long[] bins = new long[binCount];
 
     for (int i = 0; i < binCount; ++i) {
       positions[i] = buf.getFloat();

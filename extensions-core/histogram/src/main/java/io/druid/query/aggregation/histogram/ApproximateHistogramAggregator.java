@@ -53,6 +53,7 @@ public class ApproximateHistogramAggregator implements Aggregator
       String name,
       FloatColumnSelector selector,
       int resolution,
+      int initialSize,
       float lowerLimit,
       float upperLimit
   )
@@ -62,7 +63,7 @@ public class ApproximateHistogramAggregator implements Aggregator
     this.resolution = resolution;
     this.lowerLimit = lowerLimit;
     this.upperLimit = upperLimit;
-    this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
+    this.histogram = new ApproximateHistogram(resolution, initialSize, lowerLimit, upperLimit);
   }
 
   @Override
