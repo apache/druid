@@ -21,6 +21,7 @@
 
 package io.druid.server.lookup.jdbc;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
@@ -36,6 +37,7 @@ import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class JdbcDataFetcherTest
@@ -48,8 +50,8 @@ public class JdbcDataFetcherTest
   private final String tableName = "tableName";
   private final String keyColumn = "keyColumn";
   private final String valueColumn = "valueColumn";
-  
-  
+
+
 
   private static final Map<String, String> lookupMap = ImmutableMap.of(
       "foo", "bar",
@@ -58,11 +60,13 @@ public class JdbcDataFetcherTest
       "empty string", ""
   );
 
+  private List<String> prefetchRanges = ImmutableList.of("A", "Z", "a", "e", "z");
+
   @Before
   public void setUp() throws InterruptedException
   {
     jdbcDataFetcher = new JdbcDataFetcher(derbyConnectorRule.getMetadataConnectorConfig(), "tableName", "keyColumn", "valueColumn",
-                                          100);
+                                          100, prefetchRanges);
 
     handle = derbyConnectorRule.getConnector().getDBI().open();
     Assert.assertEquals(
@@ -122,6 +126,18 @@ public class JdbcDataFetcherTest
   }
 
   @Test
+  public void testPrefetch()
+  {
+    Map<String, String> expected = ImmutableMap.of(
+        "foo", "bar",
+        "how about that", "foo",
+        "empty string", ""
+    );
+    Assert.assertEquals(expected, jdbcDataFetcher.prefetch("foo"));
+    assertMapLookup(lookupMap, jdbcDataFetcher);
+  }
+
+  @Test
   public void testReverseFetch() throws InterruptedException
   {
     Assert.assertEquals(
@@ -150,7 +166,7 @@ public class JdbcDataFetcherTest
   public void testSerDesr() throws IOException
   {
     JdbcDataFetcher jdbcDataFetcher = new JdbcDataFetcher(new MetadataStorageConnectorConfig(), "table", "keyColumn", "ValueColumn",
-                                                          100);
+                                                          100, prefetchRanges);
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String jdbcDataFetcherSer = mapper.writeValueAsString(jdbcDataFetcher);
     Assert.assertEquals(jdbcDataFetcher, mapper.reader(DataFetcher.class).readValue(jdbcDataFetcherSer));

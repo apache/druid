@@ -25,7 +25,6 @@ package io.druid.server.lookup;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.server.lookup.jdbc.JdbcDataFetcher;
-import io.druid.server.lookup.jdbc.JdbcDataPreFetcher;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -40,8 +39,7 @@ import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "jdbcDataFetcher", value = JdbcDataFetcher.class),
-    @JsonSubTypes.Type(name = "jdbcDataPreFetcher", value = JdbcDataPreFetcher.class)
+    @JsonSubTypes.Type(name = "jdbcDataFetcher", value = JdbcDataFetcher.class)
 })
 public interface DataFetcher<K, V>
 {

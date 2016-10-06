@@ -19,8 +19,10 @@ Generally speaking this module can be divided into two main component, namely, t
 ### Data Fetcher layer
 
 First part is the data fetcher layer API `DataFetcher`, that exposes a set of fetch methods to fetch data from the actual Lookup dimension source.
-For instance `JdbcDataFetcher` provides an implementation of `DataFetcher` that can be used to fetch key/value from a RDBMS via JDBC driver.
-If you need new type of data fetcher, all you need to do, is to implement the interface `DataFetcher` and load it via another druid module.
+`PrefetchableFetcher` extends `DataFetcher` by providing one more API `prefetch`, which fetches multiple key/value pairs that have locality with the given key value in advance. 
+For instance `JdbcDataFetcher` provides an implementation of `PrefetchableFetcher` that can be used to fetch key/value from a RDBMS via JDBC driver as a `DataFetcher` and it additionally provides pre-fetch ability of key/value pairs as a `PrefetchableFetcher`.
+If you need new type of data fetcher, all you need to do, is to implement the interface `DataFetcher` or extend abstract class `PrefetchableFetcher` when prefetch is needed, and load it via another druid module.
+
 ### Caching layer
 
 This extension comes with two different caching strategies. First strategy is a poll based and the second is a load based.
@@ -37,9 +39,12 @@ Once the key/value  pair is loaded eviction will occur according to the cache ev
 This module comes with two loading lookup implementation, the first is onheap backed by a Guava cache implementation, the second is MapDB offheap implementation.
 Both implementations offer various eviction strategies.
 Same for Loading cache, developer can implement a new type of loading cache by implementing `LookupLoadingCache` interface.
- 
-## Configuration and Operation:
 
+#### Prefetched loading lookup
+Prefetched loading lookup basically works like loading lookup. One difference is that it prefetches multiple pairs of key/value at cache miss.
+Both onheap and offheap cache are also applicable with Prefetched loading lookup.
+ 
+## Configuration and Operation: 
 
 ### Polling Lookup
 
@@ -127,3 +132,32 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
    "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterAccess":10000}
 }
 ```
+
+### Prefetched loading lookup
+
+|Field|Type|Description|Required|default|
+|-----|----|-----------|--------|-------|
+|dataFetcher|Json object|Specifies the lookup prefetchable fetcher type to use in order to fetch data|yes|null|
+|loadingCacheSpec|Json Object|Lookup cache spec implementation|yes |null|
+|reverseLoadingCacheSpec|Json Object| Reverse lookup cache  implementation|yes |null|
+
+`loadingCacheSpec` and `reverseLoadingCacheSpec` have the same spec as used in Loading lookup.
+`dataFetcher` should have spec of `PrefetchableFetcher` and an example is as followings.
+
+```json
+{
+  "type" : "jdbcDataFetcher",
+  "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", 
+  "table":"lookup_table_name", 
+  "keyColumn":"key_column_name", 
+  "valueColumn": "value_column_name",
+  "prefetchRanges": [
+     "a",
+     "e",
+     "z"
+  ]
+}
+```
+
+With above spec, key range is partitioned into four pieces, ~ "a", "a" ~ "e", "e" ~ "z", and "z" ~. Each piece of range includes start while excludes end.
+It prefetches all the key-values whose keys are in the same range as the requested key. For example, it prefetches all key-value pairs for keys in "e" ~ "z" when key "foo" is requested. 
