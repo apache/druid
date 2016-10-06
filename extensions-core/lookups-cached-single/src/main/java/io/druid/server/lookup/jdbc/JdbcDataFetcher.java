@@ -32,6 +32,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.server.lookup.PrefetchableFetcher;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionCallback;
@@ -62,16 +63,16 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
   @JsonProperty
   private final int streamingFetchSize;
   @JsonProperty
-  private final List<String> prefetchRanges;
+  private final PrefetchKeyProvider prefetchKeyProvider;
 
   private final String fetchAllQuery;
   private final String fetchQuery;
   private final String prefetchQueryFromTo;
   private final String prefetchQueryFromOnly;
   private final String prefetchQueryToOnly;
+  private final String prefetchQueryForKeys;
   private final String reverseFetchQuery;
   private final DBI dbi;
-  private final NavigableSet<String> sortedRanges;
 
   public JdbcDataFetcher(
       @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
@@ -79,7 +80,7 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
       @JsonProperty("keyColumn") String keyColumn,
       @JsonProperty("valueColumn") String valueColumn,
       @JsonProperty("streamingFetchSize") Integer streamingFetchSize,
-      @JsonProperty("prefetchRanges") List<String> rangeKeys
+      @JsonProperty("prefetchKeyProvider") PrefetchKeyProvider prefetchKeyProvider
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
@@ -88,8 +89,7 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
     this.table = Preconditions.checkNotNull(table, "table");
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
-    this.prefetchRanges = rangeKeys;
-    this.sortedRanges = new TreeSet<>(this.prefetchRanges);
+    this.prefetchKeyProvider = prefetchKeyProvider;
 
     this.fetchAllQuery = String.format(
         "SELECT %s, %s FROM %s",
@@ -120,6 +120,13 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
     );
     this.prefetchQueryToOnly = String.format(
         "SELECT %s, %s FROM %s WHERE '%%s' <= %s",
+        this.keyColumn,
+        this.valueColumn,
+        this.table,
+        this.keyColumn
+    );
+    this.prefetchQueryForKeys = String.format(
+        "SELECT %s, %s FROM %s WHERE %s in (%%s)",
         this.keyColumn,
         this.valueColumn,
         this.table,
@@ -209,15 +216,11 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
   @Override
   public Map<String, String> prefetch(String key)
   {
-    if (prefetchRanges == null) {
+    if (prefetchKeyProvider == null) {
       return ImmutableMap.of();
     }
 
-    final Pair<String, String> range = getRange(key);
-    final String queryString =
-        (range.lhs == null) ? String.format(prefetchQueryToOnly, range.rhs) :
-            (range.rhs == null) ? String.format(prefetchQueryFromOnly, range.lhs)
-                : String.format(prefetchQueryFromTo, range.lhs, range.rhs);
+    final String queryString = Preconditions.checkNotNull(makePrefetchQuery(key), "query string is null");
 
     return inReadOnlyTransaction(
         new TransactionCallback<Map<String, String>>()
@@ -259,21 +262,39 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
     if (!keyColumn.equals(that.keyColumn)) {
       return false;
     }
-    if (!CollectionUtils.isEqualCollection(prefetchRanges, that.prefetchRanges)) {
+    if (!prefetchKeyProvider.equals(that.prefetchKeyProvider)) {
       return false;
     }
     return valueColumn.equals(that.valueColumn);
 
   }
 
-  private Pair<String, String> getRange(String key)
+  private String makePrefetchQuery(String key)
   {
-    String start = sortedRanges.floor(key);
-    String end = sortedRanges.higher(key);
+    PrefetchKeyProvider.ReturnType returnType = prefetchKeyProvider.getReturnType();
+    String[] keys = prefetchKeyProvider.get(key);
 
-    Preconditions.checkArgument(start != null || end != null, "No matching range");
+    switch(returnType) {
+      case Range:
+        Preconditions.checkArgument(keys.length == 2,
+            "Needs only two points of range (start and end) but got %d", keys.length);
+        String from = keys[0];
+        String to = keys[1];
+        return
+            (from == null) ? String.format(prefetchQueryToOnly, to) :
+                (to == null) ? String.format(prefetchQueryFromOnly, from)
+                             : String.format(prefetchQueryFromTo, from, to);
+      case Points:
+        Preconditions.checkArgument(keys.length > 0, "Needs at least one key to prefetch");
+        String inList = String.format(
+            "'%s'",
+            StringUtils.join(keys, "', '")
+            );
+        return String.format(prefetchQueryForKeys, inList);
+    }
 
-    return new Pair<String, String>(start, end);
+    // should not reach here
+    return null;
   }
 
   private DBI getDbi()

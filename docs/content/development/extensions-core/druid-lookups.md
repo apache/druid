@@ -19,9 +19,12 @@ Generally speaking this module can be divided into two main component, namely, t
 ### Data Fetcher layer
 
 First part is the data fetcher layer API `DataFetcher`, that exposes a set of fetch methods to fetch data from the actual Lookup dimension source.
-`PrefetchableFetcher` extends `DataFetcher` by providing one more API `prefetch`, which fetches multiple key/value pairs that have locality with the given key value in advance. 
-For instance `JdbcDataFetcher` provides an implementation of `PrefetchableFetcher` that can be used to fetch key/value from a RDBMS via JDBC driver as a `DataFetcher` and it additionally provides pre-fetch ability of key/value pairs as a `PrefetchableFetcher`.
-If you need new type of data fetcher, all you need to do, is to implement the interface `DataFetcher` or extend abstract class `PrefetchableFetcher` when prefetch is needed, and load it via another druid module.
+`PrefetchableFetcher` extends `DataFetcher` by providing one more API `prefetch()`, which fetches multiple key/value pairs that have locality with the given key in advance.
+`PrefetchableFetcher` takes one more argument `prefetchKeyProvider` that determines keys to prefetch for a given key. `PrefetchKeyRangeProvider` assumes spatial locality of key and suggests pre-fetching key range including requested key.
+You can apply other pre-fetching policy by implementing the interface `PrefetchKeyProvider`.
+
+`JdbcDataFetcher` provides an implementation of `PrefetchableFetcher` that can be used to fetch key/value from a RDBMS via JDBC driver as a `DataFetcher` and it additionally provides pre-fetch ability of key/value pairs as a `PrefetchableFetcher`.
+If you need new type of data fetcher, all you need to do, is to implement the interface `DataFetcher` or extend abstract class `PrefetchableFetcher` when pre-fetch is needed, and load it via another druid module.
 
 ### Caching layer
 
@@ -41,8 +44,8 @@ Both implementations offer various eviction strategies.
 Same for Loading cache, developer can implement a new type of loading cache by implementing `LookupLoadingCache` interface.
 
 #### Prefetched loading lookup
-Prefetched loading lookup basically works like loading lookup. One difference is that it prefetches multiple pairs of key/value at cache miss.
-Both onheap and offheap cache are also applicable with Prefetched loading lookup.
+Prefetched loading lookup basically works like loading lookup. One difference is that it pre-fetches multiple pairs of key/value at cache miss.
+Both onheap and offheap cache are also applicable to Prefetched loading lookup.
  
 ## Configuration and Operation: 
 
@@ -151,13 +154,9 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
   "table":"lookup_table_name", 
   "keyColumn":"key_column_name", 
   "valueColumn": "value_column_name",
-  "prefetchRanges": [
-     "a",
-     "e",
-     "z"
-  ]
+  "prefetchKeyProvider":{"type":"keyRanges","partitionKeys":["a","e","z"]}
 }
 ```
 
-With above spec, key range is partitioned into four pieces, ~ "a", "a" ~ "e", "e" ~ "z", and "z" ~. Each piece of range includes start while excludes end.
-It prefetches all the key-values whose keys are in the same range as the requested key. For example, it prefetches all key-value pairs for keys in "e" ~ "z" when key "foo" is requested. 
+With above spec, `PrefetchKeyRangeProvider` is used as its type is `keyRanges`. It partitions key space into four ranges, ~ "a", "a" ~ "e", "e" ~ "z", and "z" ~, and each range includes start while excludes end.
+`jdbcDataFetcher` will pre-fetch all the key-values whose keys are in the same range as the requested key. For example, it pre-fetches all key-value pairs for keys in "e" ~ "z" when key "foo" is requested. 

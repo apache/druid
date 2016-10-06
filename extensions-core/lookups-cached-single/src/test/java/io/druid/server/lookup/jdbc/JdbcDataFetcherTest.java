@@ -33,15 +33,33 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public class JdbcDataFetcherTest
 {
+  @Parameterized.Parameters
+  public static Collection<Object[]> parameters()
+  {
+    return Arrays.asList(new Object[][]{
+        {prefetchRangeProvider, "foo", prefetchRangeExpected}, {prefetchPointsProvider, "foo", prefetchPointsExpected}
+    });
+  }
+
+  public JdbcDataFetcherTest(PrefetchKeyProvider prefetchKeyProvider, String prefetchKey, Map<String, String> prefetchExpected) {
+    this.prefetchKeyProvider = prefetchKeyProvider;
+    this.prefetchKey = prefetchKey;
+    this.prefetchExpected = prefetchExpected;
+  }
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   Handle handle;
@@ -51,8 +69,6 @@ public class JdbcDataFetcherTest
   private final String keyColumn = "keyColumn";
   private final String valueColumn = "valueColumn";
 
-
-
   private static final Map<String, String> lookupMap = ImmutableMap.of(
       "foo", "bar",
       "bad", "bar",
@@ -60,13 +76,43 @@ public class JdbcDataFetcherTest
       "empty string", ""
   );
 
-  private List<String> prefetchRanges = ImmutableList.of("A", "Z", "a", "e", "z");
+  private final PrefetchKeyProvider prefetchKeyProvider;
+  private final String prefetchKey;
+  private final Map<String, String> prefetchExpected;
+
+  private static final PrefetchKeyProvider prefetchRangeProvider =
+      new PrefetchKeyRangeProvider(ImmutableList.of("A", "Z", "a", "e", "z"));
+  private static final Map<String, String> prefetchRangeExpected = ImmutableMap.of(
+      "foo", "bar",
+      "how about that", "foo",
+      "empty string", ""
+  );
+
+  private static final PrefetchKeyProvider prefetchPointsProvider = new PrefetchKeyProvider()
+  {
+    @Override
+    public ReturnType getReturnType()
+    {
+      return ReturnType.Points;
+    }
+
+    @Override
+    public String[] get(String key)
+    {
+      return new String[] {"foo", "bad"};
+    }
+  };
+
+  private static final Map<String, String> prefetchPointsExpected = ImmutableMap.of(
+      "foo", "bar",
+      "bad", "bar"
+  );
 
   @Before
   public void setUp() throws InterruptedException
   {
     jdbcDataFetcher = new JdbcDataFetcher(derbyConnectorRule.getMetadataConnectorConfig(), "tableName", "keyColumn", "valueColumn",
-                                          100, prefetchRanges);
+                                          100, prefetchKeyProvider);
 
     handle = derbyConnectorRule.getConnector().getDBI().open();
     Assert.assertEquals(
@@ -128,12 +174,7 @@ public class JdbcDataFetcherTest
   @Test
   public void testPrefetch()
   {
-    Map<String, String> expected = ImmutableMap.of(
-        "foo", "bar",
-        "how about that", "foo",
-        "empty string", ""
-    );
-    Assert.assertEquals(expected, jdbcDataFetcher.prefetch("foo"));
+    Assert.assertEquals(prefetchExpected, jdbcDataFetcher.prefetch(prefetchKey));
     assertMapLookup(lookupMap, jdbcDataFetcher);
   }
 
@@ -166,7 +207,7 @@ public class JdbcDataFetcherTest
   public void testSerDesr() throws IOException
   {
     JdbcDataFetcher jdbcDataFetcher = new JdbcDataFetcher(new MetadataStorageConnectorConfig(), "table", "keyColumn", "ValueColumn",
-                                                          100, prefetchRanges);
+                                                          100, prefetchRangeProvider);
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String jdbcDataFetcherSer = mapper.writeValueAsString(jdbcDataFetcher);
     Assert.assertEquals(jdbcDataFetcher, mapper.reader(DataFetcher.class).readValue(jdbcDataFetcherSer));
