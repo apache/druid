@@ -188,7 +188,7 @@ public class QueryResource
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
-            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource(), queryId));
+            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
