@@ -80,4 +80,10 @@ public class CoordinatorStats
     }
     return this;
   }
+
+  public void clear()
+  {
+    perTierStats.clear();
+    globalStats.clear();
+  }
 }

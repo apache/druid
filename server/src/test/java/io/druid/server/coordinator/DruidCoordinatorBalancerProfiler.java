@@ -174,7 +174,7 @@ public class DruidCoordinatorBalancerProfiler
                                 .build();
 
     DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
-    DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(coordinator);
+    DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(coordinator, 1);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
