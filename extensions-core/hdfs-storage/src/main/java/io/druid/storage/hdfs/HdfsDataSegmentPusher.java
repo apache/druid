@@ -103,14 +103,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
+      Path outDir = new Path(String.format("%s/%s", config.getStorageDirectory(), storageDir));
       dataSegment = createDescriptorFile(
-          segment.withLoadSpec(makeLoadSpec(tmpFile))
+          segment.withLoadSpec(makeLoadSpec(new Path(String.format("%s/%s", outDir.toUri().getPath(), "index.zip"))))
                  .withSize(size)
                  .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
           tmpFile.getParent(),
           fs
       );
-      Path outDir = new Path(String.format("%s/%s", config.getStorageDirectory(), storageDir));
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outDir.getParent());
