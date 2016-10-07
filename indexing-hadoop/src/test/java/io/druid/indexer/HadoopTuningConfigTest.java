@@ -56,6 +56,7 @@ public class HadoopTuningConfigTest
         null,
         null,
         null,
+        true,
         true
     );
 
@@ -76,6 +77,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(true, actual.getUseCombiner());
     Assert.assertEquals(0, actual.getNumBackgroundPersistThreads());
     Assert.assertEquals(true, actual.isForceExtendableShardSpecs());
+    Assert.assertEquals(true, actual.isUseExplicitVersion());
   }
 
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)

@@ -137,6 +137,7 @@ public class GranularityPathSpecTest
             null,
             null,
             null,
+            false,
             false
         )
     );
