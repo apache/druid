@@ -152,7 +152,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
-|version|String|The version of created segments.|no (default == datetime that indexing starts at)|
+|version|String|The version of created segments. Ignored for HadoopIndexTask unless useExplicitVersion is set to true|no (default == datetime that indexing starts at)|
 |partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See 'Partitioning specification' below.|no (default == 'hashed')|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. Note that this is the number of post-aggregation rows which may not be equal to the number of input events due to roll-up. This is used to manage the required JVM heap size.|no (default == 75000)|
 |leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
@@ -166,6 +166,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |buildV9Directly|Boolean|Build v9 index directly instead of building v8 index and converting it to v9 format.|no (default = false)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|no (default = false)|
+|useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
 
 #### jobProperties field of TuningConfig
 
