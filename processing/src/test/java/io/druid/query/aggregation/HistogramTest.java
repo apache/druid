@@ -38,7 +38,9 @@ public class HistogramTest
     Histogram hExpected = new Histogram(breaks, new long[]{1,3,2,3,1,1}, -3f, 2f);
 
     Histogram h = new Histogram(breaks);
-    for(float v : values) h.offer(v);
+    for(float v : values) {
+      h.offer(v);
+    }
 
     Assert.assertEquals("histogram matches expected histogram", hExpected, h);
   }

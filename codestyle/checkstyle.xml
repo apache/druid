@@ -31,5 +31,6 @@
       <!--<property name="max" value="120"/>-->
     <!--</module>-->
     <module name="AvoidStarImport"/>
+    <module name="NeedBraces"/>
   </module>
 </module>
