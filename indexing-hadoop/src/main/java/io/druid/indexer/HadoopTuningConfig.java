@@ -65,6 +65,7 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         DEFAULT_BUILD_V9_DIRECTLY,
         DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
+        false,
         false
     );
   }
@@ -85,6 +86,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Boolean buildV9Directly;
   private final int numBackgroundPersistThreads;
   private final boolean forceExtendableShardSpecs;
+  private final boolean useExplicitVersion;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -105,7 +107,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT,
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads,
-      final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs
+      final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
+      final @JsonProperty("useExplicitVersion") boolean useExplicitVersion
   )
   {
     this.workingPath = workingPath;
@@ -131,6 +134,7 @@ public class HadoopTuningConfig implements TuningConfig
                                        : numBackgroundPersistThreads;
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
+    this.useExplicitVersion = useExplicitVersion;
   }
 
   @JsonProperty
@@ -229,6 +233,12 @@ public class HadoopTuningConfig implements TuningConfig
     return forceExtendableShardSpecs;
   }
 
+  @JsonProperty
+  public boolean isUseExplicitVersion()
+  {
+    return useExplicitVersion;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -248,7 +258,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         buildV9Directly,
         numBackgroundPersistThreads,
-        forceExtendableShardSpecs
+        forceExtendableShardSpecs,
+        useExplicitVersion
     );
   }
 
@@ -271,7 +282,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         buildV9Directly,
         numBackgroundPersistThreads,
-        forceExtendableShardSpecs
+        forceExtendableShardSpecs,
+        useExplicitVersion
     );
   }
 
@@ -294,7 +306,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         buildV9Directly,
         numBackgroundPersistThreads,
-        forceExtendableShardSpecs
+        forceExtendableShardSpecs,
+        useExplicitVersion
     );
   }
 }
