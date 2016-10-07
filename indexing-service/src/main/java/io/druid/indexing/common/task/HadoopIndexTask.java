@@ -188,7 +188,7 @@ public class HadoopIndexTask extends HadoopTask
 
 
     // We should have a lock from before we started running only if interval was specified
-    final String version;
+    String version;
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
@@ -201,6 +201,18 @@ public class HadoopIndexTask extends HadoopTask
       Iterable<TaskLock> locks = getTaskLocks(toolbox);
       final TaskLock myLock = Iterables.getOnlyElement(locks);
       version = myLock.getVersion();
+    }
+
+    final String specVersion = indexerSchema.getTuningConfig().getVersion();
+    if (indexerSchema.getTuningConfig().isUseExplicitVersion() && version.compareTo(specVersion) > 0) {
+      version = specVersion;
+    } else {
+      log.error(
+          "Spec version can not be greater than lock version, Spec version: [%s] Lock version: [%s].",
+          specVersion,
+          version
+      );
+      return TaskStatus.failure(getId());
     }
 
     log.info("Setting version to: %s", version);
