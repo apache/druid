@@ -139,4 +139,17 @@ public class LoadingLookupFactory implements LookupExtractorFactory
            : that.reverseLoadingCache == null;
 
   }
+
+  @Override
+  public String toString()
+  {
+    return "LoadingLookupFactory{" +
+        "dataFetcher=" + dataFetcher +
+        ", loadingCache=" + loadingCache +
+        ", reverseLoadingCache=" + reverseLoadingCache +
+        ", id='" + id + '\'' +
+        ", loadingLookup=" + loadingLookup +
+        ", started=" + started +
+        '}';
+  }
 }
