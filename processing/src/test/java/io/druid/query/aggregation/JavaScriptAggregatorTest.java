@@ -357,7 +357,7 @@ public class JavaScriptAggregatorTest
       ++i;
     }
     long t1 = System.currentTimeMillis() - t;
-    System.out.println(String.format("JavaScript aggregator == %,f: %d ms", aggRhino.get(), t1));
+    System.out.println(String.format("JavaScript aggregator == %,f: %d ms", aggRhino.getFloat(), t1));
 
     t = System.currentTimeMillis();
     i = 0;
@@ -366,7 +366,7 @@ public class JavaScriptAggregatorTest
       ++i;
     }
     long t2 = System.currentTimeMillis() - t;
-    System.out.println(String.format("DoubleSum  aggregator == %,f: %d ms", doubleAgg.get(), t2));
+    System.out.println(String.format("DoubleSum  aggregator == %,f: %d ms", doubleAgg.getFloat(), t2));
 
     System.out.println(String.format("JavaScript is %2.1fx slower", (double) t1 / t2));
   }

@@ -50,7 +50,7 @@ public class CountingMapTest
     String defaultKey = "defaultKey";
     long actual;
     actual = mapObject.add(defaultKey,defaultValue);
-    Assert.assertEquals("Values does not match", actual, defaultValue);
+    Assert.assertEquals("Values does not match", defaultValue, actual);
   }
 
   @Test
@@ -63,7 +63,6 @@ public class CountingMapTest
     Assert.assertEquals("Maps size does not match",mapObject.size(),snapShotMap.size());
     long expected = (long) snapShotMap.get(defaultKey);
     AtomicLong actual = (AtomicLong) mapObject.get(defaultKey);
-    Assert.assertEquals("Values for key = " + defaultKey + " does not match",
-        actual.longValue(),expected);
+    Assert.assertEquals("Values for key = " + defaultKey + " does not match", expected, actual.longValue());
   }
 }

@@ -1352,6 +1352,7 @@ public class SchemalessTestFullTest
     );
   }
 
+  @SuppressWarnings("ArgumentParameterSwap")
   private List<Pair<QueryableIndex, String>> getIndexes(int index1, int index2)
   {
     return Arrays.asList(

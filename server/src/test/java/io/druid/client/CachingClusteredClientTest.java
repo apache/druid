@@ -398,6 +398,7 @@ public class CachingClusteredClientTest
                (ListenableFuture<T>) delegate.submit((Runnable) task);
       }
 
+      @SuppressWarnings("ParameterPackage")
       @Override
       public <T> ListenableFuture<T> submit(Callable<T> task)
       {

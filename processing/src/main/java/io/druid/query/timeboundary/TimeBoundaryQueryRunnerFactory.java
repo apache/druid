@@ -94,6 +94,7 @@ public class TimeBoundaryQueryRunnerFactory
       this.adapter = segment.asStorageAdapter();
       this.skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
       {
+        @SuppressWarnings("ArgumentParameterSwap")
         @Override
         public Result<DateTime> apply(Cursor cursor)
         {

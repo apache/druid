@@ -113,6 +113,9 @@ public class MetricHolder
       case FLOAT:
         holder.floatType.writeToChannel(out);
         break;
+      case LONG:
+        holder.longType.writeToChannel(out);
+        break;
       case COMPLEX:
         if (holder.complexType instanceof GenericIndexed) {
           ((GenericIndexed) holder.complexType).writeToChannel(out);

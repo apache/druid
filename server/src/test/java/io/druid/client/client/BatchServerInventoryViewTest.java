@@ -290,7 +290,9 @@ public class BatchServerInventoryViewTest
       @Override
       public int compare(DataSegment o1, DataSegment o2)
       {
-        return o1.getInterval().equals(o2.getInterval()) ? 0 : -1;
+        Interval i1 = o1.getInterval();
+        Interval i2 = o2.getInterval();
+        return Long.compare(i1.getStartMillis(), i2.getStartMillis());
       }
     };
 

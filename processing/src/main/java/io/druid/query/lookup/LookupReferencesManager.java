@@ -163,6 +163,7 @@ public class LookupReferencesManager
       return;
     }
 
+    @SuppressWarnings("ArgumentParameterSwap")
     LookupUpdateState swappedState = atomicallyUpdateStateRef(
         oldState -> new LookupUpdateState(oldState.lookupMap, ImmutableList.of(), oldState.pendingNotices)
     );
