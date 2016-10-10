@@ -40,6 +40,7 @@ public class ArithmeticPostAggregatorTest
   public void testCompute()
   {
     ArithmeticPostAggregator arithmeticPostAggregator;
+    MathPostAggregator mathPostAggregator;
     CountAggregator agg = new CountAggregator("rows");
     agg.aggregate();
     agg.aggregate();
@@ -57,17 +58,29 @@ public class ArithmeticPostAggregatorTest
             )
         );
 
+    for (PostAggregator postAggregator : postAggregatorList) {
+      metricValues.put(postAggregator.getName(), postAggregator.compute(metricValues));
+    }
+
     arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggregatorList);
+    mathPostAggregator = new MathPostAggregator("add", "roku + rows");
     Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(9.0, mathPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("subtract", "-", postAggregatorList);
+    mathPostAggregator = new MathPostAggregator("add", "roku - rows");
     Assert.assertEquals(3.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(3.0, mathPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("multiply", "*", postAggregatorList);
+    mathPostAggregator = new MathPostAggregator("add", "roku * rows");
     Assert.assertEquals(18.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(18.0, mathPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("divide", "/", postAggregatorList);
+    mathPostAggregator = new MathPostAggregator("add", "roku / rows");
     Assert.assertEquals(2.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(2.0, mathPostAggregator.compute(metricValues));
   }
 
   @Test

@@ -25,8 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Chars;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -35,6 +37,8 @@ import com.metamx.common.guava.Accumulator;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -46,6 +50,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -60,6 +65,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
@@ -646,6 +652,38 @@ public class RowBasedGrouperHelper
         public Object get()
         {
           return row.get().getRaw(columnName);
+        }
+      };
+    }
+
+    @Override
+    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    {
+      final Expr parsed = Parser.parse(expression);
+
+      final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+
+      for (final String columnName : required) {
+        values.put(
+            columnName, new Supplier<Number>()
+            {
+              @Override
+              public Number get()
+              {
+                return row.get().getFloatMetric(columnName);
+              }
+            }
+        );
+      }
+      final Expr.NumericBinding binding = Parser.withSuppliers(values);
+
+      return new NumericColumnSelector()
+      {
+        @Override
+        public Number get()
+        {
+          return parsed.eval(binding);
         }
       };
     }

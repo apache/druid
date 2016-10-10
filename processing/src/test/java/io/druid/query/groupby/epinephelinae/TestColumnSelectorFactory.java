@@ -20,11 +20,14 @@
 package io.druid.query.groupby.epinephelinae;
 
 import io.druid.data.input.Row;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
@@ -92,5 +95,20 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     return null;
+  }
+
+  @Override
+  public NumericColumnSelector makeMathExpressionSelector(String expression)
+  {
+    final Expr parsed = Parser.parse(expression);
+    final Expr.NumericBinding binding = Parser.withRow(row);
+    return new NumericColumnSelector()
+    {
+      @Override
+      public Number get()
+      {
+        return parsed.eval(binding);
+      }
+    };
   }
 }
