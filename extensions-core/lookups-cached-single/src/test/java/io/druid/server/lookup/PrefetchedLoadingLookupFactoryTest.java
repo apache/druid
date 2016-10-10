@@ -134,7 +134,7 @@ public class PrefetchedLoadingLookupFactoryTest
   }
 
 
-  @JsonTypeName("mock")
+  @JsonTypeName("prefetchMock")
   private static class MockPrefetchableFetcher extends PrefetchableFetcher
   {
     @JsonCreator
