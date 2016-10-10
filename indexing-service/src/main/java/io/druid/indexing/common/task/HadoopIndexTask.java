@@ -73,7 +73,7 @@ public class HadoopIndexTask extends HadoopTask
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
-   *             <p>
+   *             <p/>
    *             Here, we will ensure that the DbConnectorConfig field of the spec is set to null, such that the
    *             job does not push a list of published segments the database. Instead, we will use the method
    *             IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
@@ -204,15 +204,17 @@ public class HadoopIndexTask extends HadoopTask
     }
 
     final String specVersion = indexerSchema.getTuningConfig().getVersion();
-    if (indexerSchema.getTuningConfig().isUseExplicitVersion() && version.compareTo(specVersion) > 0) {
-      version = specVersion;
-    } else {
-      log.error(
-          "Spec version can not be greater than lock version, Spec version: [%s] Lock version: [%s].",
-          specVersion,
-          version
-      );
-      return TaskStatus.failure(getId());
+    if (indexerSchema.getTuningConfig().isUseExplicitVersion()) {
+      if (specVersion.compareTo(version) < 0) {
+        version = specVersion;
+      } else {
+        log.error(
+            "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
+            specVersion,
+            version
+        );
+        return TaskStatus.failure(getId());
+      }
     }
 
     log.info("Setting version to: %s", version);
