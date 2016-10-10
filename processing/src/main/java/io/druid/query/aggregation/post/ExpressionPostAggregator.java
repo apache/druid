@@ -35,7 +35,7 @@ import java.util.Set;
 
 /**
  */
-public class MathPostAggregator implements PostAggregator
+public class ExpressionPostAggregator implements PostAggregator
 {
   private static final Comparator<Number> DEFAULT_COMPARATOR = new Comparator<Number>()
   {
@@ -57,22 +57,14 @@ public class MathPostAggregator implements PostAggregator
   private final Expr parsed;
   private final List<String> dependentFields;
 
-  public MathPostAggregator(
-      String name,
-      String fnName
-  )
-  {
-    this(name, fnName, null);
-  }
-
   @JsonCreator
-  public MathPostAggregator(
+  public ExpressionPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
       @JsonProperty("ordering") String ordering
   )
   {
-    Preconditions.checkArgument(expression != null, "expression cannot not be null");
+    Preconditions.checkArgument(expression != null, "expression cannot be null");
 
     this.name = name;
     this.expression = expression;
@@ -81,6 +73,11 @@ public class MathPostAggregator implements PostAggregator
 
     this.parsed = Parser.parse(expression);
     this.dependentFields = Parser.findRequiredBindings(parsed);
+  }
+
+  public ExpressionPostAggregator(String name, String fnName)
+  {
+    this(name, fnName, null);
   }
 
   @Override
@@ -123,7 +120,7 @@ public class MathPostAggregator implements PostAggregator
   @Override
   public String toString()
   {
-    return "ArithmeticPostAggregator{" +
+    return "ExpressionPostAggregator{" +
            "name='" + name + '\'' +
            ", expression='" + expression + '\'' +
            ", ordering=" + ordering +
@@ -168,7 +165,7 @@ public class MathPostAggregator implements PostAggregator
       return false;
     }
 
-    MathPostAggregator that = (MathPostAggregator) o;
+    ExpressionPostAggregator that = (ExpressionPostAggregator) o;
 
     if (!comparator.equals(that.comparator)) {
       return false;

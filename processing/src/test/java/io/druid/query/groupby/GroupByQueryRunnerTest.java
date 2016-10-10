@@ -67,8 +67,8 @@ import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregato
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
+import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.aggregation.post.MathPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
@@ -3408,7 +3408,7 @@ public class GroupByQueryRunnerTest
 
     fullQuery = fullQuery.withPostAggregatorSpecs(
         Arrays.<PostAggregator>asList(
-            new MathPostAggregator("rows_times_10", "rows * 10.0")
+            new ExpressionPostAggregator("rows_times_10", "rows * 10.0")
         )
     );
 
@@ -3780,7 +3780,8 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index"),
+                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)

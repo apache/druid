@@ -317,7 +317,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
               }
           );
         }
-        final Expr.NumericBinding binding = Parser.withSuppliers(values);
+        final Expr.ObjectBinding binding = Parser.withSuppliers(values);
 
         return new NumericColumnSelector()
         {

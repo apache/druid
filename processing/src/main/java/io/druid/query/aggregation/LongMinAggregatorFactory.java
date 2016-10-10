@@ -42,23 +42,23 @@ public class LongMinAggregatorFactory extends AggregatorFactory
 
   private final String name;
   private final String fieldName;
-  private final String fieldExpression;
+  private final String expression;
 
   @JsonCreator
   public LongMinAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("fieldExpression") String fieldExpression
+      @JsonProperty("expression") String expression
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
-        fieldName == null ^ fieldExpression == null,
-        "Must have a valid, non-null fieldName or fieldExpression");
+        fieldName == null ^ expression == null,
+        "Must have a valid, non-null fieldName or expression");
 
     this.name = name;
     this.fieldName = fieldName;
-    this.fieldExpression = fieldExpression;
+    this.expression = expression;
   }
 
   public LongMinAggregatorFactory(String name, String fieldName)
@@ -80,7 +80,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
 
   private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, fieldExpression);
+    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression);
   }
 
   @Override
@@ -114,7 +114,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongMinAggregatorFactory(fieldName, fieldName, fieldExpression));
+    return Arrays.<AggregatorFactory>asList(new LongMinAggregatorFactory(fieldName, fieldName, expression));
   }
 
   @Override
@@ -136,9 +136,9 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
-  public String getFieldExpression()
+  public String getExpression()
   {
-    return fieldExpression;
+    return expression;
   }
 
   @Override
@@ -151,17 +151,21 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldName != null ? Arrays.asList(fieldName) : Parser.findRequiredBindings(fieldExpression);
+    return fieldName != null ? Arrays.asList(fieldName) : Parser.findRequiredBindings(expression);
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
-    byte[] fieldExpressionBytes = StringUtils.toUtf8WithNullToEmpty(fieldExpression);
+    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length + fieldExpressionBytes.length)
-                     .put(CACHE_TYPE_ID).put(fieldNameBytes).put(fieldExpressionBytes).array();
+    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
+                     .put(CACHE_TYPE_ID)
+                     .put(fieldNameBytes)
+                     .put(AggregatorUtil.STRING_SEPARATOR)
+                     .put(expressionBytes)
+                     .array();
   }
 
   @Override
@@ -187,7 +191,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   {
     return "LongMinAggregatorFactory{" +
            "fieldName='" + fieldName + '\'' +
-           ", fieldExpression='" + fieldExpression + '\'' +
+           ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
   }
@@ -207,7 +211,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
     if (!Objects.equals(fieldName, that.fieldName)) {
       return false;
     }
-    if (!Objects.equals(fieldExpression, that.fieldExpression)) {
+    if (!Objects.equals(expression, that.expression)) {
       return false;
     }
     if (!Objects.equals(name, that.name)) {
@@ -221,7 +225,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   public int hashCode()
   {
     int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (fieldExpression != null ? fieldExpression.hashCode() : 0);
+    result = 31 * result + (expression != null ? expression.hashCode() : 0);
     result = 31 * result + (name != null ? name.hashCode() : 0);
     return result;
   }

@@ -95,18 +95,21 @@ public class AggregatorUtil
       String fieldExpression
   )
   {
-    if (fieldName != null) {
+    if (fieldName != null && fieldExpression == null) {
       return metricFactory.makeFloatColumnSelector(fieldName);
     }
-    final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
-    return new FloatColumnSelector()
-    {
-      @Override
-      public float get()
+    if (fieldName == null && fieldExpression != null) {
+      final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
+      return new FloatColumnSelector()
       {
-        return numeric.get().floatValue();
-      }
-    };
+        @Override
+        public float get()
+        {
+          return numeric.get().floatValue();
+        }
+      };
+    }
+    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
   public static LongColumnSelector getLongColumnSelector(
@@ -115,17 +118,20 @@ public class AggregatorUtil
       String fieldExpression
   )
   {
-    if (fieldName != null) {
+    if (fieldName != null && fieldExpression == null) {
       return metricFactory.makeLongColumnSelector(fieldName);
     }
-    final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
-    return new LongColumnSelector()
-    {
-      @Override
-      public long get()
+    if (fieldName == null && fieldExpression != null) {
+      final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
+      return new LongColumnSelector()
       {
-        return numeric.get().longValue();
-      }
-    };
+        @Override
+        public long get()
+        {
+          return numeric.get().longValue();
+        }
+      };
+    }
+    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 }

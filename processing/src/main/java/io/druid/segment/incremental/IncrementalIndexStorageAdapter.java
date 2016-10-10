@@ -584,7 +584,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     );
                   }
                 }
-                final Expr.NumericBinding binding = Parser.withSuppliers(values);
+                final Expr.ObjectBinding binding = Parser.withSuppliers(values);
                 return new NumericColumnSelector() {
                   @Override
                   public Number get()

@@ -845,9 +845,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                 }
                               }
                           );
+                        } else {
+                          throw new UnsupportedOperationException(
+                              "Not supported type " + column.getType() + " for column " + columnName
+                          );
                         }
                       }
-                      final Expr.NumericBinding binding = Parser.withSuppliers(values);
+                      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
                       return new NumericColumnSelector() {
                         @Override
                         public Number get()

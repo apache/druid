@@ -23,6 +23,7 @@ package io.druid.math.expr;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import com.google.common.collect.Lists;
 import io.druid.math.expr.antlr.ExprLexer;
@@ -35,6 +36,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class Parser
 {
@@ -75,34 +77,27 @@ public class Parser
     return findRequiredBindings(parse(in));
   }
 
-  public static List<String> findRequiredBindings(Expr parsed)
+  public static List<String> findRequiredBindings(Expr expr)
   {
-    return findRecursive(parsed, Lists.<String>newArrayList());
+    final Set<String> found = Sets.newLinkedHashSet();
+    expr.visit(
+        new Expr.Visitor()
+        {
+          @Override
+          public void visit(Expr expr)
+          {
+            if (expr instanceof IdentifierExpr) {
+              found.add(expr.toString());
+            }
+          }
+        }
+    );
+    return Lists.newArrayList(found);
   }
 
-  private static List<String> findRecursive(Expr expr, List<String> found)
+  public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
   {
-    if (expr instanceof IdentifierExpr) {
-      found.add(expr.toString());
-    } else if (expr instanceof BinaryOpExprBase) {
-      BinaryOpExprBase binary = (BinaryOpExprBase) expr;
-      findRecursive(binary.left, found);
-      findRecursive(binary.right, found);
-    } else if (expr instanceof UnaryMinusExpr) {
-      findRecursive(((UnaryMinusExpr) expr).expr, found);
-    } else if (expr instanceof UnaryNotExpr) {
-      findRecursive(((UnaryNotExpr) expr).expr, found);
-    } else if (expr instanceof FunctionExpr) {
-      for (Expr child : ((FunctionExpr) expr).args) {
-        findRecursive(child, found);
-      }
-    }
-    return found;
-  }
-
-  public static Expr.NumericBinding withMap(final Map<String, ?> bindings)
-  {
-    return new Expr.NumericBinding()
+    return new Expr.ObjectBinding()
     {
       @Override
       public Number get(String name)
@@ -112,9 +107,9 @@ public class Parser
     };
   }
 
-  public static Expr.NumericBinding withSuppliers(final Map<String, Supplier<Number>> bindings)
+  public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Number>> bindings)
   {
-    return new Expr.NumericBinding()
+    return new Expr.ObjectBinding()
     {
       @Override
       public Number get(String name)

@@ -27,15 +27,31 @@ import java.util.List;
  */
 public interface Expr
 {
-  Number eval(NumericBinding bindings);
+  Number eval(ObjectBinding bindings);
 
-  interface NumericBinding
+  interface ObjectBinding
   {
     Number get(String name);
   }
+
+  void visit(Visitor visitor);
+
+  interface Visitor
+  {
+    void visit(Expr expr);
+  }
 }
 
-class LongExpr implements Expr
+abstract class ConstantExpr implements Expr
+{
+  @Override
+  public void visit(Visitor visitor)
+  {
+    visitor.visit(this);
+  }
+}
+
+class LongExpr extends ConstantExpr
 {
   private final long value;
 
@@ -51,13 +67,13 @@ class LongExpr implements Expr
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     return value;
   }
 }
 
-class DoubleExpr implements Expr
+class DoubleExpr extends ConstantExpr
 {
   private final double value;
 
@@ -73,13 +89,13 @@ class DoubleExpr implements Expr
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     return value;
   }
 }
 
-class IdentifierExpr implements Expr
+class IdentifierExpr extends ConstantExpr
 {
   private final String value;
 
@@ -95,7 +111,7 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number val = bindings.get(value);
     if (val == null) {
@@ -124,23 +140,47 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     return Parser.func.get(name.toLowerCase()).apply(args, bindings);
   }
+
+  @Override
+  public void visit(Visitor visitor)
+  {
+    for (Expr child : args) {
+      child.visit(visitor);
+    }
+    visitor.visit(this);
+  }
 }
 
-class UnaryMinusExpr implements Expr
+abstract class UnaryExpr implements Expr
 {
   final Expr expr;
 
-  UnaryMinusExpr(Expr expr)
+  UnaryExpr(Expr expr)
   {
     this.expr = expr;
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public void visit(Visitor visitor)
+  {
+    expr.visit(visitor);
+    visitor.visit(this);
+  }
+}
+
+class UnaryMinusExpr extends UnaryExpr
+{
+  UnaryMinusExpr(Expr expr)
+  {
+    super(expr);
+  }
+
+  @Override
+  public Number eval(ObjectBinding bindings)
   {
     Number valObj = expr.eval(bindings);
     if (valObj instanceof Long) {
@@ -151,23 +191,28 @@ class UnaryMinusExpr implements Expr
   }
 
   @Override
+  public void visit(Visitor visitor)
+  {
+    expr.visit(visitor);
+    visitor.visit(this);
+  }
+
+  @Override
   public String toString()
   {
     return "-" + expr.toString();
   }
 }
 
-class UnaryNotExpr implements Expr
+class UnaryNotExpr extends UnaryExpr
 {
-  final Expr expr;
-
   UnaryNotExpr(Expr expr)
   {
-    this.expr = expr;
+    super(expr);
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number valObj = expr.eval(bindings);
     return valObj.doubleValue() > 0 ? 0.0d : 1.0d;
@@ -199,6 +244,14 @@ abstract class BinaryOpExprBase implements Expr
   }
 
   @Override
+  public void visit(Visitor visitor)
+  {
+    left.visit(visitor);
+    right.visit(visitor);
+    visitor.visit(this);
+  }
+
+  @Override
   public String toString()
   {
     return "(" + op + " " + left + " " + right + ")";
@@ -214,7 +267,7 @@ class BinMinusExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -235,7 +288,7 @@ class BinPowExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -256,7 +309,7 @@ class BinMulExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -277,7 +330,7 @@ class BinDivExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -298,7 +351,7 @@ class BinModuloExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -319,7 +372,7 @@ class BinPlusExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -340,7 +393,7 @@ class BinLtExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -361,7 +414,7 @@ class BinLeqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -382,7 +435,7 @@ class BinGtExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -403,7 +456,7 @@ class BinGeqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -424,7 +477,7 @@ class BinEqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -445,7 +498,7 @@ class BinNeqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -466,7 +519,7 @@ class BinAndExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -499,7 +552,7 @@ class BinOrExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(NumericBinding bindings)
+  public Number eval(ObjectBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
