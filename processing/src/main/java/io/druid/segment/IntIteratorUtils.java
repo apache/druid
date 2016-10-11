@@ -152,6 +152,12 @@ public final class IntIteratorUtils
 
       return retVal;
     }
+
+    @Override
+    public int skip(int n)
+    {
+      return IntIteratorUtils.skip(this, n);
+    }
   }
 
   public static IntIterator fromRoaringBitmapIntIterator(org.roaringbitmap.IntIterator iterator)
@@ -159,7 +165,7 @@ public final class IntIteratorUtils
     return new RoaringBitmapDelegatingIntIterator(iterator);
   }
 
-  private static class RoaringBitmapDelegatingIntIterator implements IntIterator
+  private static class RoaringBitmapDelegatingIntIterator extends AbstractIntIterator
   {
     private final org.roaringbitmap.IntIterator delegate;
 
@@ -175,12 +181,6 @@ public final class IntIteratorUtils
     }
 
     @Override
-    public Integer next()
-    {
-      return delegate.next();
-    }
-
-    @Override
     public int nextInt()
     {
       return delegate.next();
@@ -190,12 +190,6 @@ public final class IntIteratorUtils
     public int skip(int n)
     {
       return IntIteratorUtils.skip(this, n);
-    }
-
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException();
     }
   }
 

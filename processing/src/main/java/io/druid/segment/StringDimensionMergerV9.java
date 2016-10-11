@@ -574,6 +574,12 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         {
           return conversionBuffer.get(baseIterator.nextInt());
         }
+
+        @Override
+        public int skip(int n)
+        {
+          return IntIteratorUtils.skip(this, n);
+        }
       };
     }
   }

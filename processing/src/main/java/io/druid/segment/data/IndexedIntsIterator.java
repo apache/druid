@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 
+import io.druid.segment.IntIteratorUtils;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 
 /**
@@ -51,4 +52,9 @@ public class IndexedIntsIterator extends AbstractIntIterator
     return baseInts.get(currIndex++);
   }
 
+  @Override
+  public int skip(int n)
+  {
+    return IntIteratorUtils.skip(this, n);
+  }
 }
