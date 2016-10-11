@@ -37,6 +37,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.logger.Logger;
+import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -304,6 +305,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
     }
 
+    // Find which segments are used (i.e. not overshadowed).
+    final Set<DataSegment> usedSegments = Sets.newHashSet();
+    for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
+                                                                                     .lookup(JodaUtils.ETERNITY)) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        usedSegments.add(chunk.getObject());
+      }
+    }
+
     final AtomicBoolean txnFailure = new AtomicBoolean(false);
 
     try {
@@ -334,7 +344,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               }
 
               for (final DataSegment segment : segments) {
-                if (announceHistoricalSegment(handle, segment)) {
+                if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
                   inserted.add(segment);
                 }
               }
@@ -575,7 +585,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return true if the segment was added, false if it already existed
    */
-  private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
+  private boolean announceHistoricalSegment(
+      final Handle handle,
+      final DataSegment segment,
+      final boolean used
+  ) throws IOException
   {
     try {
       if (segmentExists(handle, segment)) {
@@ -600,7 +614,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("end", segment.getInterval().getEnd().toString())
             .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
             .bind("version", segment.getVersion())
-            .bind("used", true)
+            .bind("used", used)
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
 
