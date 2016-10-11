@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.impl.MapInputRowParser;
+import com.metamx.common.parsers.ParseException;
+import com.metamx.common.parsers.Parser;
 import io.druid.data.input.impl.ParseSpec;
 
 import java.io.InputStream;
@@ -46,7 +46,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   private static final Logger log = new Logger(ProtoBufInputRowParser.class);
 
   private final ParseSpec parseSpec;
-  private final MapInputRowParser mapParser;
+  private Parser<String, Object> parser;
   private final String descriptorFileInClasspath;
 
   @JsonCreator
@@ -57,7 +57,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   {
     this.parseSpec = parseSpec;
     this.descriptorFileInClasspath = descriptorFileInClasspath;
-      this.mapParser = new MapInputRowParser(this.parseSpec);
+    this.parser = parseSpec.makeParser();
   }
 
   @Override
@@ -75,43 +75,27 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   @Override
   public InputRow parse(ByteBuffer input)
   {
-    // We should really create a ProtoBufBasedInputRow that does not need an intermediate map but accesses
-    // the DynamicMessage directly...
-    Map<String, Object> theMap = buildStringKeyMap(input);
-
-    return mapParser.parse(theMap);
-  }
-
-  private Map<String, Object> buildStringKeyMap(ByteBuffer input)
-  {
     final Descriptor descriptor = getDescriptor(descriptorFileInClasspath);
-    final Map<String, Object> theMap = Maps.newHashMap();
-
+    DynamicMessage message;
     try {
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
-      Map<Descriptors.FieldDescriptor, Object> allFields = message.getAllFields();
-
-      for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : allFields.entrySet()) {
-        String name = entry.getKey().getName();
-        if (theMap.containsKey(name)) {
-          continue;
-          // Perhaps throw an exception here?
-          // throw new RuntimeException("dupicate key " + name + " in " + message);
-        }
-        Object value = entry.getValue();
-        if (value instanceof Descriptors.EnumValueDescriptor) {
-          Descriptors.EnumValueDescriptor desc = (Descriptors.EnumValueDescriptor) value;
-          value = desc.getName();
-        }
-
-        theMap.put(name, value);
-      }
-
+      message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
     }
     catch (InvalidProtocolBufferException e) {
-      log.warn(e, "Problem with protobuf something");
+      throw new ParseException(e, "Invalid protobuf exception");
     }
-    return theMap;
+    String json = null;
+    try {
+      json = JsonFormat.printer().print(message);
+    }
+    catch (InvalidProtocolBufferException e) {
+      e.printStackTrace();
+    }
+    Map<String, Object> record = parser.parse(json);
+    return new MapBasedInputRow(
+        parseSpec.getTimestampSpec().extractTimestamp(record),
+        parseSpec.getDimensionsSpec().getDimensionNames(),
+        record
+    );
   }
 
   private Descriptor getDescriptor(String descriptorFileInClassPath)
@@ -121,7 +105,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
       FileDescriptorSet set = FileDescriptorSet.parseFrom(fin);
       FileDescriptor file = FileDescriptor.buildFrom(
           set.getFile(0), new FileDescriptor[]
-          {}
+              {}
       );
       return file.getMessageTypes().get(0);
     }
