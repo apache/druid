@@ -313,13 +313,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
     }
   }
 
-  private String toFilename(String key, final String suffix)
-  {
-    String filename = key.substring(key.lastIndexOf("/") + 1); // characters after last '/'
-    filename = filename.substring(0, filename.length() - suffix.length()); // remove the suffix from the end
-    return filename;
-  }
-
   private boolean isObjectInBucket(final S3Coords coords) throws SegmentLoadingException
   {
     try {
