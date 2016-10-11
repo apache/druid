@@ -21,6 +21,8 @@ package io.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Min;
+
 /**
  */
 public class S3DataSegmentPusherConfig
@@ -33,6 +35,10 @@ public class S3DataSegmentPusherConfig
 
   @JsonProperty
   private boolean disableAcl = false;
+
+  @JsonProperty
+  @Min(0)
+  private int maxListingLength = 1000;
 
   public void setBucket(String bucket)
   {
@@ -49,6 +55,11 @@ public class S3DataSegmentPusherConfig
     this.disableAcl = disableAcl;
   }
 
+  public void setMaxListingLength(int maxListingLength)
+  {
+    this.maxListingLength = maxListingLength;
+  }
+
   public String getBucket()
   {
     return bucket;
@@ -62,5 +73,10 @@ public class S3DataSegmentPusherConfig
   public boolean getDisableAcl()
   {
     return disableAcl;
+  }
+
+  public int getMaxListingLength()
+  {
+    return maxListingLength;
   }
 }
