@@ -94,3 +94,27 @@ and `druid-hdfs-storage` in the extension list.
 
 After running this command, the segments table in `mysql` should store the new location for each segment we just inserted.
 Note that for segments stored in HDFS, druid config must contain core-site.xml as described in [Druid Docs](http://druid.io/docs/latest/tutorials/cluster.html), as this new location is stored with relative path.
+
+It is also possible to use `s3` as deep storage. In order to work with it, specify `s3` as deep storage type and load 
+[`druid-s3-extensions`](../development/extensions-core/s3.html) as an extension.
+
+```
+java
+-Ddruid.metadata.storage.type=mysql 
+-Ddruid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid 
+-Ddruid.metadata.storage.connector.user=druid 
+-Ddruid.metadata.storage.connector.password=diurd
+-Ddruid.extensions.loadList=[\"mysql-metadata-storage\",\"druid-s3-extensions\"]
+-Ddruid.storage.type=s3
+-Ddruid.s3.accessKey=... 
+-Ddruid.s3.secretKey=...
+-Ddruid.storage.bucket=your-bucket
+-Ddruid.storage.baseKey=druid/storage/wikipedia
+-Ddruid.storage.maxListingLength=1000
+-cp $DRUID_CLASSPATH
+io.druid.cli.Main tools insert-segment-to-db --workingDir "druid/storage/wikipedia" --updateDescriptor true
+```
+
+ Note that you can provide the location of segments with either `druid.storage.baseKey` or `--workingDir`. If both are 
+ specified, `--workingDir` gets higher priority. `druid.storage.maxListingLength` is to determine the length of a
+ partial list in requesting a object listing to `s3`, which defaults to 1000.

@@ -58,7 +58,7 @@ public class InsertSegment extends GuiceRunnable
   private String workingDirPath;
 
   @Option(name = "--updateDescriptor", description = "if set to true, this tool will update loadSpec field in descriptor.json if the path in loadSpec is different from where desciptor.json was found. Default value is true", required = false)
-  private boolean updateDescriptor = true;
+  private String updateDescriptor;
 
   private ObjectMapper mapper;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -97,7 +97,7 @@ public class InsertSegment extends GuiceRunnable
 
     Set<DataSegment> segments = null;
     try {
-      segments = dataSegmentFinder.findSegments(workingDirPath, updateDescriptor);
+      segments = dataSegmentFinder.findSegments(workingDirPath, Boolean.valueOf(updateDescriptor));
     }
     catch (SegmentLoadingException e) {
       Throwables.propagate(e);
