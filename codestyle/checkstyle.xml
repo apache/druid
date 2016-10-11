@@ -24,6 +24,8 @@
   -->
 
 <module name="Checker">
+  <module name="NewlineAtEndOfFile"/>
+
   <module name="TreeWalker">
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
 
