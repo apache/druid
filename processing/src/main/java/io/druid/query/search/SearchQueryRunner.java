@@ -39,6 +39,7 @@ import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
+import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
@@ -48,14 +49,15 @@ import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.GenericColumn;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.joda.time.Interval;
@@ -75,6 +77,18 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   public SearchQueryRunner(Segment segment)
   {
     this.segment = segment;
+  }
+
+  private QueryDimensionInfo getDimInfoFromSpec(DimensionSpec dimSpec, StorageAdapter adapter, Cursor cursor)
+  {
+    final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+        dimSpec.getDimension(),
+        cursor,
+        Lists.<String>newArrayList(adapter.getAvailableDimensions())
+    );
+    final Object dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+    final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
+    return dimInfo;
   }
 
   @Override
@@ -102,16 +116,46 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
 
+    final StorageAdapter storageAdapter = segment.asStorageAdapter();
+
+    // Split dimension list into bitmap-supporting list and non-bitmap supporting list
+    Iterable<DimensionSpec> dimsToSearch;
+    if (dimensions == null || dimensions.isEmpty()) {
+      dimsToSearch = Iterables.transform(storageAdapter.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
+    } else {
+      dimsToSearch = dimensions;
+    }
+
+    final List<DimensionSpec> bitmapDims;
+    final List<DimensionSpec> nonbitmapDims;
     if (index != null) {
-      final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
+      bitmapDims = Lists.newArrayList();
+      nonbitmapDims = Lists.newArrayList();
+      for (DimensionSpec spec : dimsToSearch) {
+        if (spec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+          bitmapDims.add(spec);
+          continue;
+        }
+        ColumnCapabilities capabilities = storageAdapter.getColumnCapabilities(spec.getDimension());
+        if (capabilities == null) {
+          continue;
+        }
 
-      Iterable<DimensionSpec> dimsToSearch;
-      if (dimensions == null || dimensions.isEmpty()) {
-        dimsToSearch = Iterables.transform(index.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
-      } else {
-        dimsToSearch = dimensions;
+        if (capabilities.hasBitmapIndexes()) {
+          bitmapDims.add(spec);
+        } else {
+          nonbitmapDims.add(spec);
+        }
       }
+    } else {
+      // no QueryableIndex available, so nothing has bitmaps
+      bitmapDims = null;
+      nonbitmapDims = Lists.newArrayList(dimsToSearch);
+    }
 
+    // Get results from bitmap supporting dims first
+    if (bitmapDims != null) {
+      final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       final ImmutableBitmap baseFilter =
@@ -141,7 +185,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         timeFilteredBitmap = baseFilter;
       }
 
-      for (DimensionSpec dimension : dimsToSearch) {
+      for (DimensionSpec dimension : bitmapDims) {
         final Column column = index.getColumn(dimension.getDimension());
         if (column == null) {
           continue;
@@ -176,7 +220,9 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         }
       }
 
-      return makeReturnResult(limit, retVal);
+      if (nonbitmapDims.size() == 0 || retVal.size() >= limit) {
+        return makeReturnResult(limit, retVal);
+      }
     }
 
     final StorageAdapter adapter = segment.asStorageAdapter();
@@ -188,13 +234,6 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
-    }
-
-    final Iterable<DimensionSpec> dimsToSearch;
-    if (dimensions == null || dimensions.isEmpty()) {
-      dimsToSearch = Iterables.transform(adapter.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
-    } else {
-      dimsToSearch = dimensions;
     }
 
     final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), descending);
@@ -210,33 +249,18 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
               return set;
             }
 
-            Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-            for (DimensionSpec dim : dimsToSearch) {
-              dimSelectors.put(
-                  dim.getOutputName(),
-                  cursor.makeDimensionSelector(dim)
-              );
+            Map<String, QueryDimensionInfo> dimInfoMap = Maps.newLinkedHashMap();
+
+            for (DimensionSpec dim : nonbitmapDims) {
+              dimInfoMap.put(dim.getOutputName(), getDimInfoFromSpec(dim, adapter, cursor));
             }
-
             while (!cursor.isDone()) {
-              for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
-                final DimensionSelector selector = entry.getValue();
+              for (Map.Entry<String, QueryDimensionInfo> entry : dimInfoMap.entrySet()) {
+                final QueryDimensionInfo dimInfo = entry.getValue();
+                dimInfo.queryHelper.updateSearchResultSet(dimInfo.outputName, dimInfo.selector, searchQuerySpec, set, limit);
 
-                if (selector != null) {
-                  final IndexedInts vals = selector.getRow();
-                  for (int i = 0; i < vals.size(); ++i) {
-                    final String dimVal = selector.lookupName(vals.get(i));
-                    if (searchQuerySpec.accept(dimVal)) {
-                      MutableInt counter = new MutableInt(1);
-                      MutableInt prev = set.put(new SearchHit(entry.getKey(), dimVal), counter);
-                      if (prev != null) {
-                        counter.add(prev.intValue());
-                      }
-                      if (set.size() >= limit) {
-                        return set;
-                      }
-                    }
-                  }
+                if (set.size() >= limit) {
+                  return set;
                 }
               }
 

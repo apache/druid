@@ -24,6 +24,7 @@ import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.QueryDimensionInfo;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -57,13 +58,14 @@ public class PooledTopNAlgorithm
 
   @Override
   public PooledTopNParams makeInitParams(
-      DimensionSelector dimSelector, Cursor cursor
+      QueryDimensionInfo dimInfo, Cursor cursor
   )
   {
     ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
     ByteBuffer resultsBuf = resultsBufHolder.get();
     resultsBuf.clear();
 
+    final DimensionSelector dimSelector = (DimensionSelector) dimInfo.selector;
     final int cardinality = dimSelector.getValueCardinality();
 
     if (cardinality < 0) {
@@ -103,7 +105,7 @@ public class PooledTopNAlgorithm
     final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
     return PooledTopNParams.builder()
-                           .withDimSelector(dimSelector)
+                           .withDimInfo(dimInfo)
                            .withCursor(cursor)
                            .withResultsBufHolder(resultsBufHolder)
                            .withResultsBuf(resultsBuf)
@@ -192,7 +194,7 @@ public class PooledTopNAlgorithm
     final int numBytesPerRecord = params.getNumBytesPerRecord();
     final int[] aggregatorSizes = params.getAggregatorSizes();
     final Cursor cursor = params.getCursor();
-    final DimensionSelector dimSelector = params.getDimSelector();
+    final DimensionSelector dimSelector = (DimensionSelector) params.getDimSelector();
 
     final int[] aggregatorOffsets = new int[aggregatorSizes.length];
     for (int j = 0, offset = 0; j < aggregatorSizes.length; ++j) {
@@ -457,7 +459,7 @@ public class PooledTopNAlgorithm
   {
     final ByteBuffer resultsBuf = params.getResultsBuf();
     final int[] aggregatorSizes = params.getAggregatorSizes();
-    final DimensionSelector dimSelector = params.getDimSelector();
+    final DimensionSelector dimSelector = (DimensionSelector) params.getDimSelector();
 
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i];
@@ -507,7 +509,7 @@ public class PooledTopNAlgorithm
     private final TopNMetricSpecBuilder<int[]> arrayProvider;
 
     public PooledTopNParams(
-        DimensionSelector dimSelector,
+        QueryDimensionInfo dimInfo,
         Cursor cursor,
         ResourceHolder<ByteBuffer> resultsBufHolder,
         ByteBuffer resultsBuf,
@@ -517,7 +519,7 @@ public class PooledTopNAlgorithm
         TopNMetricSpecBuilder<int[]> arrayProvider
     )
     {
-      super(dimSelector, cursor, numValuesPerPass);
+      super(dimInfo, cursor, numValuesPerPass);
 
       this.resultsBufHolder = resultsBufHolder;
       this.resultsBuf = resultsBuf;
@@ -558,7 +560,7 @@ public class PooledTopNAlgorithm
 
     public static class Builder
     {
-      private DimensionSelector dimSelector;
+      private QueryDimensionInfo dimInfo;
       private Cursor cursor;
       private ResourceHolder<ByteBuffer> resultsBufHolder;
       private ByteBuffer resultsBuf;
@@ -569,7 +571,7 @@ public class PooledTopNAlgorithm
 
       public Builder()
       {
-        dimSelector = null;
+        dimInfo = null;
         cursor = null;
         resultsBufHolder = null;
         resultsBuf = null;
@@ -579,9 +581,9 @@ public class PooledTopNAlgorithm
         arrayProvider = null;
       }
 
-      public Builder withDimSelector(DimensionSelector dimSelector)
+      public Builder withDimInfo(QueryDimensionInfo dimInfo)
       {
-        this.dimSelector = dimSelector;
+        this.dimInfo = dimInfo;
         return this;
       }
 
@@ -630,7 +632,7 @@ public class PooledTopNAlgorithm
       public PooledTopNParams build()
       {
         return new PooledTopNParams(
-            dimSelector,
+            dimInfo,
             cursor,
             resultsBufHolder,
             resultsBuf,

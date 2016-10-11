@@ -28,17 +28,18 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
+import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.DateTime;
@@ -104,11 +105,17 @@ public class SelectQueryEngine
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-            final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-            for (DimensionSpec dim : dims) {
-              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
-              dimSelectors.put(dim.getOutputName(), dimSelector);
-              builder.addDimension(dim.getOutputName());
+            final Map<String, QueryDimensionInfo> dimInfoMap = Maps.newLinkedHashMap();
+            for (DimensionSpec dimSpec : dims) {
+              final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+                  dimSpec.getDimension(),
+                  cursor,
+                  Lists.<String>newArrayList(adapter.getAvailableDimensions())
+              );
+              final Object dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+              final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
+              dimInfoMap.put(dimSpec.getOutputName(), dimInfo);
+              builder.addDimension(dimSpec.getOutputName());
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
@@ -127,26 +134,10 @@ public class SelectQueryEngine
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
-              for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
-                final String dim = dimSelector.getKey();
-                final DimensionSelector selector = dimSelector.getValue();
-
-                if (selector == null) {
-                  theEvent.put(dim, null);
-                } else {
-                  final IndexedInts vals = selector.getRow();
-
-                  if (vals.size() == 1) {
-                    final String dimVal = selector.lookupName(vals.get(0));
-                    theEvent.put(dim, dimVal);
-                  } else {
-                    List<String> dimVals = Lists.newArrayList();
-                    for (int i = 0; i < vals.size(); ++i) {
-                      dimVals.add(selector.lookupName(vals.get(i)));
-                    }
-                    theEvent.put(dim, dimVals);
-                  }
-                }
+              for (Map.Entry<String, QueryDimensionInfo> entry : dimInfoMap.entrySet()) {
+                final String dim = entry.getKey();
+                final QueryDimensionInfo dimInfo = entry.getValue();
+                dimInfo.queryHelper.addRowValuesToSelectResult(dimInfo.outputName, dimInfo.selector, theEvent);
               }
 
               for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {

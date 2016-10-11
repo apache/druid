@@ -296,7 +296,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     return Sequences.filter(
         new CursorSequenceBuilder(
-            index,
+            this,
             actualInterval,
             gran,
             offset,
@@ -319,20 +319,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return columnObj.getCapabilities();
   }
 
-  private interface CursorAdvancer
-  {
-    public void advance();
-
-    public void advanceTo(int offset);
-
-    public boolean isDone();
-
-    public void reset();
-  }
-
   private static class CursorSequenceBuilder
   {
-    private final ColumnSelector index;
+    private final StorageAdapter storageAdapter;
+    private final QueryableIndex index;
     private final Interval interval;
     private final QueryGranularity gran;
     private final Offset offset;
@@ -343,7 +333,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final ColumnSelectorBitmapIndexSelector bitmapIndexSelector;
 
     public CursorSequenceBuilder(
-        ColumnSelector index,
+        QueryableIndexStorageAdapter storageAdapter,
         Interval interval,
         QueryGranularity gran,
         Offset offset,
@@ -354,7 +344,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         ColumnSelectorBitmapIndexSelector bitmapIndexSelector
     )
     {
-      this.index = index;
+      this.storageAdapter = storageAdapter;
+      this.index = storageAdapter.index;
       this.interval = interval;
       this.gran = gran;
       this.offset = offset;
@@ -913,7 +904,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     return new QueryableIndexBaseCursor()
                     {
                       CursorOffsetHolderValueMatcherFactory valueMatcherFactory = new CursorOffsetHolderValueMatcherFactory(
-                          index,
+                          storageAdapter,
                           this
                       );
                       RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
@@ -1025,108 +1016,57 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
   private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
   {
-    private final ColumnSelector index;
+    private final StorageAdapter storageAdapter;
     private final ColumnSelectorFactory cursor;
+    private final List<String> availableMetrics;
 
     public CursorOffsetHolderValueMatcherFactory(
-        ColumnSelector index,
+        StorageAdapter storageAdapter,
         ColumnSelectorFactory cursor
     )
     {
-      this.index = index;
+      this.storageAdapter = storageAdapter;
       this.cursor = cursor;
+      this.availableMetrics = Lists.newArrayList(storageAdapter.getAvailableMetrics());
     }
 
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
     {
-      if (getTypeForDimension(dimension) == ValueType.LONG) {
-        return Filters.getLongValueMatcher(
-            cursor.makeLongColumnSelector(dimension),
-            value
-        );
+      if (dimension.equals(Column.TIME_COLUMN_NAME) || availableMetrics.contains(dimension)) {
+        if (getTypeForDimension(dimension) == ValueType.LONG) {
+          return Filters.getLongValueMatcher(
+              cursor.makeLongColumnSelector(dimension),
+              value
+          );
+        }
       }
 
-      final DimensionSelector selector = cursor.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+          dimension,
+          cursor,
+          Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
       );
-
-      // if matching against null, rows with size 0 should also match
-      final boolean matchNull = isComparableNullOrEmpty(value);
-
-      final int id = selector.lookupId((String) value);
-      if (id < 0) {
-        return new BooleanValueMatcher(false);
-      } else {
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            IndexedInts row = selector.getRow();
-            if (row.size() == 0) {
-              return matchNull;
-            }
-            for (int i = 0; i < row.size(); i++) {
-              if (row.get(i) == id) {
-                return true;
-              }
-            }
-            return false;
-          }
-        };
-      }
+      return queryHelper.getValueMatcher(cursor, value);
     }
 
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
     {
-      ValueType type = getTypeForDimension(dimension);
-      switch (type) {
-        case LONG:
+      if (dimension.equals(Column.TIME_COLUMN_NAME) || availableMetrics.contains(dimension)) {
+        if (getTypeForDimension(dimension) == ValueType.LONG) {
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-        case STRING:
-          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
-        default:
-          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-      }
-    }
-
-    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<String> predicate)
-    {
-      final DimensionSelector selector = cursor.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      return new ValueMatcher()
-      {
-        final boolean matchNull = predicate.apply(null);
-
-        @Override
-        public boolean matches()
-        {
-          IndexedInts row = selector.getRow();
-          if (row.size() == 0) {
-            return matchNull;
-          }
-          for (int i = 0; i < row.size(); i++) {
-            if (predicate.apply(selector.lookupName(row.get(i)))) {
-              return true;
-            }
-          }
-          return false;
         }
-      };
+      }
+
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+          dimension,
+          cursor,
+          Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
+      );
+      return queryHelper.getValueMatcher(cursor, predicateFactory);
     }
 
     private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)
@@ -1139,7 +1079,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     private ValueType getTypeForDimension(String dimension)
     {
-      ColumnCapabilities capabilities = getColumnCapabilites(index, dimension);
+      ColumnCapabilities capabilities = cursor.getColumnCapabilities(dimension);
       return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }

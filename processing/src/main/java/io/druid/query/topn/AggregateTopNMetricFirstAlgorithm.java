@@ -25,9 +25,9 @@ import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.QueryDimensionInfo;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -55,11 +55,11 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   @Override
   public TopNParams makeInitParams(
-      DimensionSelector dimSelector, Cursor cursor
+      QueryDimensionInfo dimInfo, Cursor cursor
   )
   {
     return new TopNParams(
-        dimSelector,
+        dimInfo,
         cursor,
         Integer.MAX_VALUE
     );
@@ -91,7 +91,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector = null;
     try {
-      singleMetricParam = singleMetricAlgo.makeInitParams(params.getDimSelector(), params.getCursor());
+      singleMetricParam = singleMetricAlgo.makeInitParams(params.getDimInfo(), params.getCursor());
       singleMetricAlgo.run(
           singleMetricParam,
           singleMetricResultBuilder,
@@ -109,7 +109,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
       // Run topN for all metrics for top N dimension values
-      allMetricsParam = allMetricAlgo.makeInitParams(params.getDimSelector(), params.getCursor());
+      allMetricsParam = allMetricAlgo.makeInitParams(params.getDimInfo(), params.getCursor());
       allMetricAlgo.run(
           allMetricsParam,
           resultBuilder,

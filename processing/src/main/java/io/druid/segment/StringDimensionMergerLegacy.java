@@ -213,4 +213,12 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
       spatialIoPeon.cleanup();
     }
   }
+
+  @Override
+  public File makeDimFile() throws IOException
+  {
+    return IndexIO.makeDimFile(outDir, dimensionName);
+  }
 }
+
+

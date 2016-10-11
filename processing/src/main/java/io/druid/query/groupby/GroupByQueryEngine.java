@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
@@ -43,12 +42,13 @@ import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -57,7 +57,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,10 +67,60 @@ import java.util.NoSuchElementException;
  */
 public class GroupByQueryEngine
 {
-  private static final int MISSING_VALUE = -1;
-
   private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
+
+  /*
+   * Relative reads change the current position of a ByteBuffer.
+   * The key comparator uses absolute reads to avoid changing the state of the ByteBuffer.
+   * ByteBuffer does not provide an absolute bulk get() method, so this method provides that functionality.
+   */
+  private static void getBytesFromBuffer(ByteBuffer src, byte[] dst, int srcOffset, int readLen)
+  {
+    for (int i = 0; i < readLen; i++) {
+      dst[i] = src.get(srcOffset + i);
+    }
+  }
+
+  private static final Comparator<ByteBuffer> makeKeyComparator(final List<QueryDimensionInfo> dimInfo)
+  {
+    final int maxDimIndex = dimInfo.size();
+    final Comparator<byte[]>[] comparators = new Comparator[maxDimIndex];
+    final int[] keySizes = new int[maxDimIndex];
+
+    for (int i = 0; i < maxDimIndex; i++) {
+      comparators[i] = dimInfo.get(i).queryHelper.getGroupingKeyByteComparator();
+      keySizes[i] = dimInfo.get(i).queryHelper.getGroupingKeySize();
+    }
+
+    return new Comparator<ByteBuffer>()
+    {
+      public int compare(ByteBuffer o1, ByteBuffer o2)
+      {
+        int pos = 0;
+        int limit = o1.limit();
+        int ret = 0;
+        int dimIndex = 0;
+
+        while (pos < limit && dimIndex < maxDimIndex) {
+          int valLen = keySizes[dimIndex];
+          byte[] bytes1 = new byte[valLen];
+          byte[] bytes2 = new byte[valLen];
+
+          getBytesFromBuffer(o1, bytes1, pos, valLen);
+          getBytesFromBuffer(o2, bytes2, pos, valLen);
+          pos += valLen;
+          ret = comparators[dimIndex].compare(bytes1, bytes2);
+          if (ret != 0) {
+            return ret;
+          }
+          dimIndex++;
+        }
+        return ret;
+      }
+    };
+  }
+
 
   @Inject
   public GroupByQueryEngine(
@@ -121,7 +171,7 @@ public class GroupByQueryEngine
                           @Override
                           public RowIterator make()
                           {
-                            return new RowIterator(query, cursor, bufferHolder.get(), config.get());
+                            return new RowIterator(query, cursor, bufferHolder.get(), config.get(), storageAdapter);
                           }
 
                           @Override
@@ -152,19 +202,21 @@ public class GroupByQueryEngine
     private final BufferAggregator[] aggregators;
     private final PositionMaintainer positionMaintainer;
 
-    private final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
+    private final Map<ByteBuffer, Integer> positions;
     // GroupBy queries tend to do a lot of reads from this. We co-store a hash map to make those reads go faster.
     private final Map<ByteBuffer, Integer> positionsHash = Maps.newHashMap();
 
     public RowUpdater(
         ByteBuffer metricValues,
         BufferAggregator[] aggregators,
-        PositionMaintainer positionMaintainer
+        PositionMaintainer positionMaintainer,
+        List<QueryDimensionInfo> dimInfo
     )
     {
       this.metricValues = metricValues;
       this.aggregators = aggregators;
       this.positionMaintainer = positionMaintainer;
+      this.positions = Maps.newTreeMap(makeKeyComparator(dimInfo));
     }
 
     public int getNumRows()
@@ -179,26 +231,27 @@ public class GroupByQueryEngine
 
     private List<ByteBuffer> updateValues(
         ByteBuffer key,
-        List<DimensionSelector> dims
+        List<QueryDimensionInfo> dims
     )
     {
       if (dims.size() > 0) {
         List<ByteBuffer> retVal = null;
         List<ByteBuffer> unaggregatedBuffers = null;
 
-        final DimensionSelector dimSelector = dims.get(0);
-        final IndexedInts row = dimSelector.getRow();
-        if (row == null || row.size() == 0) {
-          ByteBuffer newKey = key.duplicate();
-          newKey.putInt(MISSING_VALUE);
-          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
-        } else {
-          for (Integer dimValue : row) {
-            ByteBuffer newKey = key.duplicate();
-            newKey.putInt(dimValue);
-            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+        final QueryDimensionInfo dimInfo = dims.get(0);
+        final Object selector = dimInfo.selector;
+        final DimensionQueryHelper queryHelper = dimInfo.queryHelper;
+        final List<QueryDimensionInfo> dimInfoSublist = dims.subList(1, dims.size());
+        final Function<ByteBuffer, List<ByteBuffer>> updateValuesFn = new Function<ByteBuffer, List<ByteBuffer>>()
+        {
+          @Override
+          public List<ByteBuffer> apply(ByteBuffer input)
+          {
+            return updateValues(input, dimInfoSublist);
           }
-        }
+        };
+
+        unaggregatedBuffers = queryHelper.addDimValuesToGroupingKey(selector, key, updateValuesFn);
         if (unaggregatedBuffers != null) {
           if (retVal == null) {
             retVal = Lists.newArrayList();
@@ -297,8 +350,6 @@ public class GroupByQueryEngine
     private final int maxIntermediateRows;
 
     private final List<DimensionSpec> dimensionSpecs;
-    private final List<DimensionSelector> dimensions;
-    private final ArrayList<String> dimNames;
     private final List<AggregatorFactory> aggregatorSpecs;
     private final BufferAggregator[] aggregators;
     private final String[] metricNames;
@@ -306,8 +357,11 @@ public class GroupByQueryEngine
 
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
+    private final List<QueryDimensionInfo> dimInfoList;
 
-    public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
+    private final int keySize;
+
+    public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config, StorageAdapter adapter)
     {
       final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
@@ -319,17 +373,20 @@ public class GroupByQueryEngine
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();
       dimensionSpecs = query.getDimensions();
-      dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
-      dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
+      dimInfoList =  Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
 
       for (int i = 0; i < dimensionSpecs.size(); ++i) {
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
-        final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
-        if (selector != null) {
-          dimensions.add(selector);
-          dimNames.add(dimSpec.getOutputName());
-        }
+        final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+            dimSpec.getDimension(),
+            cursor,
+            Lists.newArrayList(adapter.getAvailableDimensions())
+        );
+        final Object selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+        QueryDimensionInfo info = new QueryDimensionInfo(dimSpec, queryHelper, selector, 0);
+        dimInfoList.add(info);
       }
+      keySize = getTotalKeySize();
 
       aggregatorSpecs = query.getAggregatorSpecs();
       aggregators = new BufferAggregator[aggregatorSpecs.size()];
@@ -341,6 +398,15 @@ public class GroupByQueryEngine
         metricNames[i] = aggregatorSpec.getName();
         sizesRequired[i] = aggregatorSpec.getMaxIntermediateSize();
       }
+    }
+
+    private int getTotalKeySize()
+    {
+      int keySize = 0;
+      for (QueryDimensionInfo info : dimInfoList) {
+        keySize += info.queryHelper.getGroupingKeySize();
+      }
+      return keySize;
     }
 
     @Override
@@ -361,10 +427,10 @@ public class GroupByQueryEngine
       }
 
       final PositionMaintainer positionMaintainer = new PositionMaintainer(0, sizesRequired, metricsBuffer.remaining());
-      final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer);
+      final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer, dimInfoList);
       if (unprocessedKeys != null) {
         for (ByteBuffer key : unprocessedKeys) {
-          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
+          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<QueryDimensionInfo>of());
           if (unprocUnproc != null) {
             throw new ISE("Not enough memory to process the request.");
           }
@@ -372,9 +438,9 @@ public class GroupByQueryEngine
         cursor.advance();
       }
       while (!cursor.isDone() && rowUpdater.getNumRows() < maxIntermediateRows) {
-        ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Ints.BYTES);
+        ByteBuffer key = ByteBuffer.allocate(keySize);
 
-        unprocessedKeys = rowUpdater.updateValues(key, dimensions);
+        unprocessedKeys = rowUpdater.updateValues(key, dimInfoList);
         if (unprocessedKeys != null) {
           break;
         }
@@ -403,12 +469,10 @@ public class GroupByQueryEngine
                   Map<String, Object> theEvent = Maps.newLinkedHashMap();
 
                   ByteBuffer keyBuffer = input.getKey().duplicate();
-                  for (int i = 0; i < dimensions.size(); ++i) {
-                    final DimensionSelector dimSelector = dimensions.get(i);
-                    final int dimVal = keyBuffer.getInt();
-                    if (MISSING_VALUE != dimVal) {
-                      theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
-                    }
+                  for (int i = 0; i < dimInfoList.size(); ++i) {
+                    final QueryDimensionInfo dimInfo = dimInfoList.get(i);
+                    final Object dimSelector = dimInfo.selector;
+                    dimInfo.queryHelper.readDimValueFromGroupingKey(theEvent, dimInfo.outputName, dimSelector, keyBuffer);
                   }
 
                   int position = input.getValue();

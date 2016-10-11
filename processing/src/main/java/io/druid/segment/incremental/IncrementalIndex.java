@@ -57,6 +57,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.StringDimensionHandler;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -207,7 +208,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         // However, this method may still be called by FilteredAggregatorFactory's ValueMatcherFactory
         // to check column types.
         // Just return null, the caller will assume default types in that case.
-        return null;
+        //return null;
+        return columnCapabilities == null ? null : columnCapabilities.get(columnName);
       }
 
       @Override
@@ -412,6 +414,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             capabilities,
             dimSchema.getMultiValueHandling()
         );
+        if (handler == null) {
+          handler = new StringDimensionHandler(dimName, null);
+        }
         addNewDimension(dimName, capabilities, handler);
       }
       columnCapabilities.put(dimName, capabilities);
@@ -573,6 +578,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             columnCapabilities.put(dimension, capabilities);
           }
           DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dimension, capabilities, null);
+          if (handler == null) {
+            handler = new StringDimensionHandler(dimension, null);
+          }
           desc = addNewDimension(dimension, capabilities, handler);
         }
         DimensionHandler handler = desc.getHandler();
@@ -753,6 +761,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
           columnCapabilities.put(dim, capabilities);
           DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dim, capabilities, null);
+          if (handler == null) {
+            handler = new StringDimensionHandler(dim, null);
+          }
           addNewDimension(dim, capabilities, handler);
         }
       }

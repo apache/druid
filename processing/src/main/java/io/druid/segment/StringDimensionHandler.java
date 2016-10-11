@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.segment.column.Column;
@@ -214,6 +215,27 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   {
     return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
   }
+
+  @Override
+  public DimensionQueryHelper<Integer, int[], String> makeQueryHelper()
+  {
+    return new StringDimensionQueryHelper(dimensionName);
+  }
+
+  public static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
+  {
+    @Override
+    public String apply(final Object o)
+    {
+      if (o == null) {
+        return null;
+      }
+      if (o instanceof String) {
+        return (String) o;
+      }
+      return o.toString();
+    }
+  };
 
   public static final Comparator<Integer> ENCODED_COMPARATOR = new Comparator<Integer>()
   {

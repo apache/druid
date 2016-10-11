@@ -691,7 +691,7 @@ public class IndexMerger
         mergers.add(merger);
         merger.writeMergedValueMetadata(indexes);
 
-        FileOutputSupplier dimOut = new FileOutputSupplier(IndexIO.makeDimFile(v8OutDir, mergedDimensions.get(i)), true);
+        FileOutputSupplier dimOut = new FileOutputSupplier(merger.makeDimFile(), true);
         merger.writeValueMetadataToFile(dimOut);
         dimOuts.add(dimOut);
       }

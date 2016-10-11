@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
@@ -30,7 +31,11 @@ import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionHandler;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.StringDimensionHandler;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -228,67 +233,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         );
       }
 
-      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      // Compare "value" as a String.
-      final String valueString = value == null ? null : Strings.emptyToNull(value.toString());
-
-      // Missing columns match a null or empty string value, and don't match anything else.
-      if (selector == null) {
-        return new BooleanValueMatcher(valueString == null);
-      }
-
-      final int cardinality = selector.getValueCardinality();
-
-      if (cardinality >= 0) {
-        // Dictionary-encoded dimension. Compare by id instead of by value to save time.
-        final int valueId = selector.lookupId(valueString);
-
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return valueString == null;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (row.get(i) == valueId) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
-      } else {
-        // Not dictionary-encoded. Skip the optimization.
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return valueString == null;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (Objects.equals(selector.lookupName(row.get(i)), valueString)) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
-      }
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(dimension, columnSelectorFactory, null);
+      return queryHelper.getValueMatcher(columnSelectorFactory, value);
     }
 
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
@@ -298,77 +244,10 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
+          final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(dimension, columnSelectorFactory, null);
+          return queryHelper.getValueMatcher(columnSelectorFactory, predicateFactory);
         default:
           return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-      }
-    }
-
-    public ValueMatcher makeStringValueMatcher(final String dimension, final Predicate<String> predicate)
-    {
-      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      final boolean doesMatchNull = predicate.apply(null);
-
-      if (selector == null) {
-        return new BooleanValueMatcher(doesMatchNull);
-      }
-
-      final int cardinality = selector.getValueCardinality();
-
-      if (cardinality >= 0) {
-        // Dictionary-encoded dimension. Check every value; build a bitset of matching ids.
-        final BitSet valueIds = new BitSet(cardinality);
-        for (int i = 0; i < cardinality; i++) {
-          if (predicate.apply(selector.lookupName(i))) {
-            valueIds.set(i);
-          }
-        }
-
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return doesMatchNull;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (valueIds.get(row.get(i))) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
-      } else {
-        // Not dictionary-encoded. Skip the optimization.
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return doesMatchNull;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (predicate.apply(selector.lookupName(row.get(i)))) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
       }
     }
 

@@ -19,27 +19,27 @@
 
 package io.druid.query.topn;
 
+import io.druid.query.QueryDimensionInfo;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
 
 /**
  */
 public class TopNParams
 {
-  private final DimensionSelector dimSelector;
   private final Cursor cursor;
   private final int cardinality;
   private final int numValuesPerPass;
+  private final QueryDimensionInfo dimInfo;
 
   protected TopNParams(
-      DimensionSelector dimSelector,
+      QueryDimensionInfo dimInfo,
       Cursor cursor,
       int numValuesPerPass
   )
   {
-    this.dimSelector = dimSelector;
+    this.dimInfo = dimInfo;
     this.cursor = cursor;
-    this.cardinality = dimSelector.getValueCardinality();
+    this.cardinality = dimInfo.getCardinality();
     this.numValuesPerPass = numValuesPerPass;
 
     if (cardinality < 0) {
@@ -47,9 +47,14 @@ public class TopNParams
     }
   }
 
-  public DimensionSelector getDimSelector()
+  public Object getDimSelector()
   {
-    return dimSelector;
+    return dimInfo.selector;
+  }
+
+  public QueryDimensionInfo getDimInfo()
+  {
+    return dimInfo;
   }
 
   public Cursor getCursor()

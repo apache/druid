@@ -23,9 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
@@ -33,12 +31,14 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.QueryDimensionInfo;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionQueryHelper;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -133,44 +133,38 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    List<DimensionSelector> selectors = makeDimensionSelectors(columnFactory);
+    List<QueryDimensionInfo> dimInfoList = makeDimensionInfoList(columnFactory);
 
-    if (selectors.isEmpty()) {
+    if (dimInfoList.isEmpty()) {
       return Aggregators.noopAggregator();
     }
 
-    return new CardinalityAggregator(selectors, byRow);
+    return new CardinalityAggregator(name, dimInfoList, byRow);
   }
 
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    List<DimensionSelector> selectors = makeDimensionSelectors(columnFactory);
+    List<QueryDimensionInfo> dimInfoList = makeDimensionInfoList(columnFactory);
 
-    if (selectors.isEmpty()) {
+    if (dimInfoList.isEmpty()) {
       return Aggregators.noopBufferAggregator();
     }
 
-    return new CardinalityBufferAggregator(selectors, byRow);
+    return new CardinalityBufferAggregator(dimInfoList, byRow);
   }
 
-  private List<DimensionSelector> makeDimensionSelectors(final ColumnSelectorFactory columnFactory)
+  private List<QueryDimensionInfo> makeDimensionInfoList(final ColumnSelectorFactory columnSelectorFactory)
   {
-    return Lists.newArrayList(
-        Iterables.filter(
-            Iterables.transform(
-                fields, new Function<DimensionSpec, DimensionSelector>()
-            {
-              @Override
-              public DimensionSelector apply(DimensionSpec input)
-              {
-                return columnFactory.makeDimensionSelector(input);
-              }
-            }
-            ), Predicates.notNull()
-        )
-    );
+    List<QueryDimensionInfo> dimInfoList = Lists.newArrayList();
+    for (DimensionSpec dimSpec : fields) {
+      DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(dimSpec.getDimension(), columnSelectorFactory, null);
+      Object dimSelector = queryHelper.getColumnValueSelector(dimSpec, columnSelectorFactory);
+      QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
+      dimInfoList.add(dimInfo);
+    }
+    return dimInfoList;
   }
 
   @Override

@@ -21,8 +21,8 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
@@ -35,14 +35,15 @@ import io.druid.java.util.common.guava.ResourceClosingSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.QueryDimensionInfo;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.data.EmptyIndexedInts;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -87,7 +88,7 @@ public class GroupByQueryEngineV2
         false
     );
 
-    final Grouper.KeySerde<ByteBuffer> keySerde = new GroupByEngineKeySerde(query.getDimensions().size());
+
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     final String fudgeTimestampString = Strings.emptyToNull(
@@ -118,8 +119,8 @@ public class GroupByQueryEngineV2
                                 config,
                                 cursor,
                                 bufferHolder.get(),
-                                keySerde,
-                                fudgeTimestamp
+                                fudgeTimestamp,
+                                getDimensionInfo(query, storageAdapter, cursor)
                             );
                           }
 
@@ -145,6 +146,27 @@ public class GroupByQueryEngineV2
     );
   }
 
+  private static QueryDimensionInfo[] getDimensionInfo(GroupByQuery query, StorageAdapter adapter, Cursor cursor)
+  {
+    int dimCount = query.getDimensions().size();
+    int curPos = 0;
+    QueryDimensionInfo[] dims = new QueryDimensionInfo[dimCount];
+
+    for (int i = 0; i < dimCount; i++) {
+      final DimensionSpec dimSpec = query.getDimensions().get(i);
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+          dimSpec.getDimension(),
+          cursor,
+          Lists.newArrayList(adapter.getAvailableDimensions())
+      );
+      final Object selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+      final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, selector, curPos);
+      dims[i] = dimInfo;
+      curPos += queryHelper.getGroupingKeySize();
+    }
+    return dims;
+  }
+
   private static class GroupByEngineIterator implements Iterator<Row>, Closeable
   {
     private final GroupByQuery query;
@@ -153,10 +175,10 @@ public class GroupByQueryEngineV2
     private final ByteBuffer buffer;
     private final Grouper.KeySerde<ByteBuffer> keySerde;
     private final DateTime timestamp;
-    private final DimensionSelector[] selectors;
     private final ByteBuffer keyBuffer;
     private final int[] stack;
-    private final IndexedInts[] valuess;
+    private final Object[] valuess;
+    private final QueryDimensionInfo[] dims;
 
     private int stackp = Integer.MIN_VALUE;
     private boolean currentRowWasPartiallyAggregated = false;
@@ -167,8 +189,8 @@ public class GroupByQueryEngineV2
         final GroupByQueryConfig config,
         final Cursor cursor,
         final ByteBuffer buffer,
-        final Grouper.KeySerde<ByteBuffer> keySerde,
-        final DateTime fudgeTimestamp
+        final DateTime fudgeTimestamp,
+        final QueryDimensionInfo[] dims
     )
     {
       final int dimCount = query.getDimensions().size();
@@ -177,14 +199,11 @@ public class GroupByQueryEngineV2
       this.querySpecificConfig = config.withOverrides(query);
       this.cursor = cursor;
       this.buffer = buffer;
-      this.keySerde = keySerde;
+      this.keySerde = new GroupByEngineKeySerde(dims);
       this.keyBuffer = ByteBuffer.allocate(keySerde.keySize());
-      this.selectors = new DimensionSelector[dimCount];
-      for (int i = 0; i < dimCount; i++) {
-        this.selectors[i] = cursor.makeDimensionSelector(query.getDimensions().get(i));
-      }
+      this.dims = dims;
       this.stack = new int[dimCount];
-      this.valuess = new IndexedInts[dimCount];
+      this.valuess = new Object[dimCount];
 
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
@@ -224,19 +243,11 @@ outer:
           // Set up stack, valuess, and first grouping in keyBuffer for this row
           stackp = stack.length - 1;
 
-          for (int i = 0; i < selectors.length; i++) {
-            final DimensionSelector selector = selectors[i];
-
-            valuess[i] = selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
-
-            final int position = Ints.BYTES * i;
-            if (valuess[i].size() == 0) {
-              stack[i] = 0;
-              keyBuffer.putInt(position, -1);
-            } else {
-              stack[i] = 1;
-              keyBuffer.putInt(position, valuess[i].get(0));
-            }
+          for (int i = 0; i < dims.length; i++) {
+            final DimensionQueryHelper queryHelper = dims[i].queryHelper;
+            valuess[i] = queryHelper.getRowFromDimSelector(dims[i].selector);
+            int rowSize = queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
+            stack[i] = rowSize == 0 ? 0 : 1;
           }
         }
 
@@ -254,26 +265,14 @@ outer:
             doAggregate = false;
           }
 
-          if (stackp >= 0 && stack[stackp] < valuess[stackp].size()) {
+          if (stackp >= 0 && stack[stackp] < dims[stackp].queryHelper.getRowSize(valuess[stackp])) {
             // Load next value for current slot
-            keyBuffer.putInt(
-                Ints.BYTES * stackp,
-                valuess[stackp].get(stack[stackp])
-            );
+            dims[stackp].queryHelper.addValueToGroupingKeyV2(valuess[stackp], stack[stackp], keyBuffer, dims[stackp].keyBufferPosition);
             stack[stackp]++;
-
-            // Reset later slots
             for (int i = stackp + 1; i < stack.length; i++) {
-              final int position = Ints.BYTES * i;
-              if (valuess[i].size() == 0) {
-                stack[i] = 0;
-                keyBuffer.putInt(position, -1);
-              } else {
-                stack[i] = 1;
-                keyBuffer.putInt(position, valuess[i].get(0));
-              }
+              int rowSize = dims[i].queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
+              stack[i] = rowSize == 0 ? 0 : 1;
             }
-
             stackp = stack.length - 1;
             doAggregate = true;
           } else {
@@ -297,15 +296,8 @@ outer:
               Map<String, Object> theMap = Maps.newLinkedHashMap();
 
               // Add dimensions.
-              for (int i = 0; i < selectors.length; i++) {
-                final int id = entry.getKey().getInt(Ints.BYTES * i);
-
-                if (id >= 0) {
-                  theMap.put(
-                      query.getDimensions().get(i).getOutputName(),
-                      selectors[i].lookupName(id)
-                  );
-                }
+              for (int i = 0; i < dims.length; i++) {
+                dims[i].queryHelper.readValueFromGroupingKeyV2(dims[i], theMap, entry.getKey());
               }
 
               // Add aggregations.
@@ -354,9 +346,13 @@ outer:
   {
     private final int keySize;
 
-    public GroupByEngineKeySerde(final int dimCount)
+    public GroupByEngineKeySerde(final QueryDimensionInfo dims[])
     {
-      this.keySize = dimCount * Ints.BYTES;
+      int keySize = 0;
+      for (int i = 0; i < dims.length; i++) {
+        keySize += dims[i].queryHelper.getGroupingKeySize();
+      }
+      this.keySize = keySize;
     }
 
     @Override

@@ -36,7 +36,7 @@ import java.util.List;
 public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Parameters extends TopNParams>
     implements TopNAlgorithm<DimValSelector, Parameters>
 {
-  protected static Aggregator[] makeAggregators(Cursor cursor, List<AggregatorFactory> aggregatorSpecs)
+  public static Aggregator[] makeAggregators(Cursor cursor, List<AggregatorFactory> aggregatorSpecs)
   {
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     int aggregatorIndex = 0;
@@ -58,7 +58,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     return aggregators;
   }
 
-  private final Capabilities capabilities;
+  protected final Capabilities capabilities;
 
   protected BaseTopNAlgorithm(Capabilities capabilities)
   {
@@ -145,12 +145,12 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       DimValAggregateStore dimValAggregateStore
   );
 
-  protected class AggregatorArrayProvider extends BaseArrayProvider<Aggregator[][]>
+  public static class AggregatorArrayProvider extends BaseArrayProvider<Aggregator[][]>
   {
     Aggregator[][] expansionAggs;
     int cardinality;
 
-    public AggregatorArrayProvider(DimensionSelector dimSelector, TopNQuery query, int cardinality)
+    public AggregatorArrayProvider(DimensionSelector dimSelector, TopNQuery query, int cardinality, Capabilities capabilities)
     {
       super(dimSelector, query, capabilities);
 

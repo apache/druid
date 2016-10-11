@@ -26,6 +26,7 @@ import io.druid.segment.data.Indexed;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 
 /**
  * Processing related interface
@@ -93,7 +94,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
       IOPeon ioPeon,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  );
+  ) throws IOException;
 
 
   /**
@@ -116,7 +117,10 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
       IOPeon ioPeon,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  );
+  ) throws IOException;
+
+
+  public DimensionQueryHelper<EncodedType, EncodedTypeArray, ActualType> makeQueryHelper();
 
 
   /**

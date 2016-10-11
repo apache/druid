@@ -23,6 +23,7 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.OutputSupplier;
 import io.druid.common.guava.FileOutputSupplier;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -62,4 +63,7 @@ public interface DimensionMergerLegacy<EncodedTypeArray> extends DimensionMerger
       ByteSink invertedOut,
       OutputSupplier<FileOutputStream> spatialOut
   ) throws IOException;
+
+
+  public File makeDimFile() throws IOException;
 }
