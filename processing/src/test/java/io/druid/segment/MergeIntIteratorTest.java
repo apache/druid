@@ -42,14 +42,14 @@ import static org.junit.Assert.fail;
 
 public class MergeIntIteratorTest
 {
-  @Test
+  @Test(expected = NoSuchElementException.class)
   public void testNoIterators()
   {
     IntIterator it = mergeAscending(Collections.<IntIterator>emptyList());
     assertEmpty(it);
   }
 
-  @Test
+  @Test(expected = NoSuchElementException.class)
   public void testMergeEmptyIterators()
   {
     IntIterator it = mergeAscending(Arrays.<IntIterator>asList(EMPTY_ITERATOR, EMPTY_ITERATOR));
@@ -66,13 +66,8 @@ public class MergeIntIteratorTest
     catch (NoSuchElementException ignore) {
       // expected
     }
-    try {
-      it.nextInt();
-      fail("expected NoSuchElementException on it.nextInt() after it.hasNext() = false");
-    }
-    catch (NoSuchElementException ignore) {
-      // expected
-    }
+    // expected to fail with NoSuchElementException
+    it.nextInt();
   }
 
   /**

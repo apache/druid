@@ -43,12 +43,11 @@ public class IntIteratorUtilsTest
     assertEquals(6, skip(it, 100));
     assertEquals(0, skip(it, 100));
     assertFalse(it.hasNext());
-    try {
-      skip(it, -1);
-      Assert.fail("expected IAE on skip(it, -1)");
-    }
-    catch (IllegalArgumentException e) {
-      // expected
-    }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testNegativeSkipArgument()
+  {
+    skip(IntIterators.fromTo(0, 10), -1);
   }
 }
