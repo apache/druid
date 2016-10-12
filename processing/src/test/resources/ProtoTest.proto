@@ -1,6 +1,6 @@
-
+syntax = "proto2";
 package prototest;
-option java_package = "io.druid.indexer.data";
+option java_package = "io.druid.data.input";
 option java_outer_classname = "ProtoTestEventWrapper";
 
 
