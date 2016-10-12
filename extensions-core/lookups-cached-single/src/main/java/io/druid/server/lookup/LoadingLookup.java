@@ -42,16 +42,16 @@ public class LoadingLookup extends LookupExtractor
 {
   private static final Logger LOGGER = new Logger(LoadingLookup.class);
 
-  private final DataFetcher<String, String> dataFetcher;
-  private final LoadingCache<String, String> loadingCache;
-  private final LoadingCache<String, List<String>> reverseLoadingCache;
+  private final DataFetcher<Object, String> dataFetcher;
+  private final LoadingCache<Object, String> loadingCache;
+  private final LoadingCache<String, List<Object>> reverseLoadingCache;
   private final AtomicBoolean isOpen;
   private final String id = Integer.toHexString(System.identityHashCode(this));
 
   public LoadingLookup(
       DataFetcher dataFetcher,
-      LoadingCache<String, String> loadingCache,
-      LoadingCache<String, List<String>> reverseLoadingCache
+      LoadingCache<Object, String> loadingCache,
+      LoadingCache<String, List<Object>> reverseLoadingCache
   )
   {
     this.dataFetcher = Preconditions.checkNotNull(dataFetcher, "lookup must have a DataFetcher");
@@ -62,7 +62,7 @@ public class LoadingLookup extends LookupExtractor
 
 
   @Override
-  public String apply(final String key)
+  public String apply(final Object key)
   {
     if (key == null) {
       return null;
@@ -79,13 +79,13 @@ public class LoadingLookup extends LookupExtractor
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<Object> unapply(final String value)
   {
     // null value maps to empty list
     if (value == null) {
       return Collections.EMPTY_LIST;
     }
-    final List<String> retList;
+    final List<Object> retList;
     try {
       retList = reverseLoadingCache.get(value, new unapplyCallable(value));
       return retList;
@@ -121,9 +121,9 @@ public class LoadingLookup extends LookupExtractor
 
   private class applyCallable implements Callable<String>
   {
-    private final String key;
+    private final Object key;
 
-    public applyCallable(String key) {this.key = key;}
+    public applyCallable(Object key) {this.key = key;}
 
     @Override
     public String call() throws Exception
@@ -133,14 +133,14 @@ public class LoadingLookup extends LookupExtractor
     }
   }
 
-  private class unapplyCallable implements Callable<List<String>>
+  private class unapplyCallable implements Callable<List<Object>>
   {
     private final String value;
 
     public unapplyCallable(String value) {this.value = value;}
 
     @Override
-    public List<String> call() throws Exception
+    public List<Object> call() throws Exception
     {
       return dataFetcher.reverseFetchKeys(value);
     }

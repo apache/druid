@@ -37,13 +37,13 @@ public class LoadingLookupFactory implements LookupExtractorFactory
   private final static Logger LOGGER = new Logger(LoadingLookupFactory.class);
 
   @JsonProperty("dataFetcher")
-  private final DataFetcher<String, String> dataFetcher;
+  private final DataFetcher<Object, String> dataFetcher;
 
   @JsonProperty("loadingCacheSpec")
-  private final LoadingCache<String, String> loadingCache;
+  private final LoadingCache<Object, String> loadingCache;
 
   @JsonProperty("reverseLoadingCacheSpec")
-  private final LoadingCache<String, List<String>> reverseLoadingCache;
+  private final LoadingCache<String, List<Object>> reverseLoadingCache;
 
   private final String id =  Integer.toHexString(System.identityHashCode(this));
   private final LoadingLookup loadingLookup;
@@ -51,8 +51,8 @@ public class LoadingLookupFactory implements LookupExtractorFactory
 
   public LoadingLookupFactory(
       @JsonProperty("dataFetcher") DataFetcher dataFetcher,
-      @JsonProperty("loadingCacheSpec") LoadingCache<String, String> loadingCache,
-      @JsonProperty("reverseLoadingCacheSpec") LoadingCache<String, List<String>> reverseLoadingCache
+      @JsonProperty("loadingCacheSpec") LoadingCache<Object, String> loadingCache,
+      @JsonProperty("reverseLoadingCacheSpec") LoadingCache<String, List<Object>> reverseLoadingCache
   )
   {
     this(dataFetcher, loadingCache, reverseLoadingCache, new LoadingLookup(dataFetcher,loadingCache,reverseLoadingCache));
@@ -60,8 +60,8 @@ public class LoadingLookupFactory implements LookupExtractorFactory
 
   protected LoadingLookupFactory(
       DataFetcher dataFetcher,
-      LoadingCache<String, String> loadingCache,
-      LoadingCache<String, List<String>> reverseLoadingCache,
+      LoadingCache<Object, String> loadingCache,
+      LoadingCache<String, List<Object>> reverseLoadingCache,
       LoadingLookup loadingLookup
   )
   {

@@ -33,8 +33,6 @@ import java.util.regex.Pattern;
  */
 public class RegexDimExtractionFn extends DimExtractionFn
 {
-  private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
-
   private final String expr;
   private final Pattern pattern;
   private final boolean replaceMissingValue;
@@ -76,9 +74,9 @@ public class RegexDimExtractionFn extends DimExtractionFn
     return ByteBuffer.allocate(totalLen)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_REGEX)
                      .put(exprBytes)
-                     .put(CACHE_KEY_SEPARATOR)
+                     .put(ExtractionCacheHelper.CACHE_KEY_SEPARATOR)
                      .put(replaceStrBytes)
-                     .put(CACHE_KEY_SEPARATOR)
+                     .put(ExtractionCacheHelper.CACHE_KEY_SEPARATOR)
                      .put(replaceBytes)
                      .array();
   }
@@ -124,6 +122,12 @@ public class RegexDimExtractionFn extends DimExtractionFn
   public ExtractionType getExtractionType()
   {
     return ExtractionType.MANY_TO_ONE;
+  }
+
+  @Override
+  public int arity()
+  {
+    return 1;
   }
 
   @Override

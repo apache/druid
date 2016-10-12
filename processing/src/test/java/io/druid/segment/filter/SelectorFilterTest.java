@@ -147,7 +147,7 @@ public class SelectorFilterTest extends BaseFilterTest
   @Test
   public void testSelectorWithLookupExtractionFn()
   {
-    final Map<String, String> stringMap = ImmutableMap.of(
+    final Map<Object, String> stringMap = ImmutableMap.<Object, String>of(
         "1", "HELLO",
         "a", "HELLO",
         "def", "HELLO",
@@ -171,33 +171,33 @@ public class SelectorFilterTest extends BaseFilterTest
     assertFilterMatches(new SelectorDimFilter("dim4", "HELLO", lookupFn), ImmutableList.<String>of());
     assertFilterMatches(new SelectorDimFilter("dim4", "UNKNOWN", lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
 
-    final Map<String, String> stringMap2 = ImmutableMap.of(
+    final Map<Object, String> stringMap2 = ImmutableMap.<Object, String>of(
         "2", "5"
     );
     LookupExtractor mapExtractor2 = new MapLookupExtractor(stringMap2, false);
     LookupExtractionFn lookupFn2 = new LookupExtractionFn(mapExtractor2, true, null, false, true);
     assertFilterMatches(new SelectorDimFilter("dim0", "5", lookupFn2), ImmutableList.of("2", "5"));
 
-    final Map<String, String> stringMap3 = ImmutableMap.of(
+    final Map<Object, String> stringMap3 = ImmutableMap.<Object, String>of(
         "1", ""
     );
     LookupExtractor mapExtractor3 = new MapLookupExtractor(stringMap3, false);
     LookupExtractionFn lookupFn3 = new LookupExtractionFn(mapExtractor3, false, null, false, true);
     assertFilterMatches(new SelectorDimFilter("dim0", null, lookupFn3), ImmutableList.of("0", "1", "2", "3", "4", "5"));
 
-    final Map<String, String> stringMap4 = ImmutableMap.of(
+    final Map<Object, String> stringMap4 = ImmutableMap.<Object, String>of(
         "9", "4"
     );
     LookupExtractor mapExtractor4 = new MapLookupExtractor(stringMap4, false);
     LookupExtractionFn lookupFn4 = new LookupExtractionFn(mapExtractor4, true, null, false, true);
 
-    final Map<String, String> stringMap5 = ImmutableMap.of(
+    final Map<Object, String> stringMap5 = ImmutableMap.<Object, String>of(
         "5", "44"
     );
     LookupExtractor mapExtractor5 = new MapLookupExtractor(stringMap5, false);
     LookupExtractionFn lookupFn5 = new LookupExtractionFn(mapExtractor5, true, null, false, true);
 
-    final Map<String, String> stringMap6 = ImmutableMap.of(
+    final Map<Object, String> stringMap6 = ImmutableMap.<Object, String>of(
         "5", "5"
     );
     LookupExtractor mapExtractor6 = new MapLookupExtractor(stringMap6, false);

@@ -42,13 +42,13 @@ import java.util.Map;
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
 {
-  private final Map<String, String> map;
+  private final Map<Object, String> map;
 
   private final boolean isOneToOne;
 
   @JsonCreator
   public MapLookupExtractor(
-      @JsonProperty("map") Map<String, String> map,
+      @JsonProperty("map") Map<Object, String> map,
       @JsonProperty("isOneToOne") boolean isOneToOne
   )
   {
@@ -57,24 +57,24 @@ public class MapLookupExtractor extends LookupExtractor
   }
 
   @JsonProperty
-  public Map<String, String> getMap()
+  public Map<Object, String> getMap()
   {
     return ImmutableMap.copyOf(map);
   }
 
   @Nullable
   @Override
-  public String apply(@NotNull String val)
+  public String apply(@NotNull Object val)
   {
     return map.get(val);
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<Object> unapply(final String value)
   {
-    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
+    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<Object>()
     {
-      @Override public boolean apply(@Nullable String key)
+      @Override public boolean apply(@Nullable Object key)
       {
         return map.get(key).equals(Strings.nullToEmpty(value));
       }
@@ -94,17 +94,17 @@ public class MapLookupExtractor extends LookupExtractor
   {
     try {
       final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      for (Map.Entry<String, String> entry : map.entrySet()) {
-        final String key = entry.getKey();
+      for (Map.Entry<Object, String> entry : map.entrySet()) {
+        final String key = entry.getKey().toString();
         final String val = entry.getValue();
         if (!Strings.isNullOrEmpty(key)) {
           outputStream.write(StringUtils.toUtf8(key));
         }
-        outputStream.write((byte)0xFF);
+        outputStream.write(ExtractionCacheHelper.CACHE_KEY_SEPARATOR);
         if (!Strings.isNullOrEmpty(val)) {
           outputStream.write(StringUtils.toUtf8(val));
         }
-        outputStream.write((byte)0xFF);
+        outputStream.write(ExtractionCacheHelper.CACHE_KEY_SEPARATOR);
       }
       return outputStream.toByteArray();
     }

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 
+import java.util.List;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacyDimensionSpec.class)
@@ -36,7 +38,7 @@ import io.druid.segment.DimensionSelector;
 })
 public interface DimensionSpec
 {
-  String getDimension();
+  List<String> getDimensions();
 
   String getOutputName();
 

@@ -23,6 +23,7 @@ package io.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.extraction.MultiKeyMapLookupExtractor;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -33,7 +34,8 @@ import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class)
+    @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class),
+    @JsonSubTypes.Type(name = "multiKeyMap", value = MultiKeyMapLookupExtractor.class)
 })
 public abstract class LookupExtractor
 {
@@ -45,7 +47,7 @@ public abstract class LookupExtractor
    * @return The lookup, or null key cannot have the lookup applied to it and should be treated as missing.
    */
   @Nullable
-  public abstract String apply(@NotNull String key);
+  public abstract String apply(@NotNull Object key);
 
   /**
    * @param keys set of keys to apply lookup for each element
@@ -55,13 +57,13 @@ public abstract class LookupExtractor
    * User can override this method if there is a better way to perform bulk lookup
    */
 
-  public Map<String, String> applyAll(Iterable<String> keys)
+  public Map<Object, String> applyAll(Iterable<Object> keys)
   {
     if (keys == null) {
       return Collections.emptyMap();
     }
-    Map<String, String> map = new HashMap<>();
-    for (String key : keys) {
+    Map<Object, String> map = new HashMap<>();
+    for (Object key : keys) {
       map.put(key, apply(key));
     }
     return map;
@@ -79,7 +81,7 @@ public abstract class LookupExtractor
    * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
    */
 
-  public abstract List<String> unapply(String value);
+  public abstract List<Object> unapply(String value);
 
   /**
    * @param values Iterable of values for which will perform reverse lookup
@@ -89,12 +91,12 @@ public abstract class LookupExtractor
    * User can override this method if there is a better way to perform bulk reverse lookup
    */
 
-  public Map<String, List<String>> unapplyAll(Iterable<String> values)
+  public Map<String, List<Object>> unapplyAll(Iterable<String> values)
   {
     if (values == null) {
       return Collections.emptyMap();
     }
-    Map<String, List<String>> map = new HashMap<>();
+    Map<String, List<Object>> map = new HashMap<>();
     for (String value : values) {
       map.put(value, unapply(value));
     }

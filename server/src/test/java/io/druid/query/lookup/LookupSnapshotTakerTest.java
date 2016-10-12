@@ -62,7 +62,7 @@ public class LookupSnapshotTakerTest
 
     LookupBean lookupBean = new LookupBean();
     lookupBean.name = "name";
-    lookupBean.factory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
+    lookupBean.factory = new MapLookupExtractorFactory(ImmutableMap.<Object, String>of("key", "value"), true);
     List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
     lookupSnapshotTaker.takeSnapshot(lookupBeanList);
     List<LookupBean> actualList = lookupSnapshotTaker.pullExistingSnapshot();
@@ -80,7 +80,7 @@ public class LookupSnapshotTakerTest
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
     LookupBean lookupBean = new LookupBean();
     lookupBean.name = "name";
-    lookupBean.factory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
+    lookupBean.factory = new MapLookupExtractorFactory(ImmutableMap.<Object, String>of("key", "value"), true);
     List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
     lookupSnapshotTaker.takeSnapshot(lookupBeanList);
   }

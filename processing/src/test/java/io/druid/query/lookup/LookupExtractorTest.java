@@ -38,7 +38,7 @@ import java.util.Map;
 public class LookupExtractorTest
 {
 
-  static final Map<String, String> EXPECTED_MAP = ImmutableMap.of(
+  static final Map<Object, String> EXPECTED_MAP = ImmutableMap.<Object, String>of(
       "key1",
       "value1",
       "key2",
@@ -49,13 +49,13 @@ public class LookupExtractorTest
       "emptyString"
   );
 
-  static final Map<String, List<String>> EXPECTED_REVERSE_MAP = ImmutableMap.of(
+  static final Map<String, List<Object>> EXPECTED_REVERSE_MAP = ImmutableMap.<String, List<Object>>of(
       "value1",
-      Arrays.asList("key1", "key-1"),
+      Arrays.<Object>asList("key1", "key-1"),
       "value2",
-      Arrays.asList("key2"),
+      Arrays.<Object>asList("key2"),
       "emptyString",
-      Arrays.asList("")
+      Arrays.<Object>asList("")
   );
   LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP, false);
 
@@ -81,15 +81,15 @@ public class LookupExtractorTest
   @Test
   public void testApplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.<String>emptySet()));
+    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.emptySet()));
   }
 
   @Test
   public void testApplyAllWithNotExisting()
   {
-    Map<String, String> actual = new HashMap<>();
+    Map<Object, String> actual = new HashMap<>();
     actual.put("not there", null);
-    Assert.assertEquals(actual, lookupExtractor.applyAll(Lists.newArrayList("not there")));
+    Assert.assertEquals(actual, lookupExtractor.applyAll(Lists.<Object>newArrayList("not there")));
   }
 
   @Test

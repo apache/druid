@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 public class RegisteredLookupExtractionFn implements ExtractionFn
 {
   // Protected for moving to not-null by `delegateLock`
-  private volatile LookupExtractionFn delegate = null;
+  private volatile ExtractionFn delegate = null;
   private final Object delegateLock = new Object();
   private final LookupReferencesManager manager;
   private final String lookup;
@@ -39,6 +39,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   private final String replaceMissingValueWith;
   private final boolean injective;
   private final boolean optimize;
+  private final Integer keyNums;
 
   @JsonCreator
   public RegisteredLookupExtractionFn(
@@ -47,7 +48,8 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
       @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
       @JsonProperty("injective") final boolean injective,
-      @JsonProperty("optimize") Boolean optimize
+      @JsonProperty("optimize") Boolean optimize,
+      @JsonProperty("keyNums") Integer keyNums
   )
   {
     Preconditions.checkArgument(lookup != null, "`lookup` required");
@@ -57,6 +59,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     this.injective = injective;
     this.optimize = optimize == null ? true : optimize;
     this.lookup = lookup;
+    this.keyNums = keyNums == null ? 1: keyNums;
   }
 
   @JsonProperty("lookup")
@@ -87,6 +90,12 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   public boolean isOptimize()
   {
     return optimize;
+  }
+
+  @JsonProperty("keyNums")
+  public Integer getKeyNums()
+  {
+    return keyNums;
   }
 
   @Override
@@ -133,19 +142,33 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return ensureDelegate().getExtractionType();
   }
 
-  private LookupExtractionFn ensureDelegate()
+  @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  private ExtractionFn ensureDelegate()
   {
     if (null == delegate) {
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
-          delegate = new LookupExtractionFn(
-              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
-              isRetainMissingValue(),
-              getReplaceMissingValueWith(),
-              isInjective(),
-              isOptimize()
-          );
+          delegate = (getKeyNums() == 1) ?
+              new LookupExtractionFn(
+                  Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+                  isRetainMissingValue(),
+                  getReplaceMissingValueWith(),
+                  isInjective(),
+                  isOptimize()
+              )
+              :
+              new MultiDimLookupExtractionFn(
+                  Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+                  getReplaceMissingValueWith(),
+                  isOptimize(),
+                  getKeyNums()
+              );
         }
       }
     }

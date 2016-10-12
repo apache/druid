@@ -151,7 +151,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testJavascriptFilterWithLookupExtractionFn()
   {
-    final Map<String, String> stringMap = ImmutableMap.of(
+    final Map<Object, String> stringMap = ImmutableMap.<Object, String>of(
         "1", "HELLO",
         "a", "HELLO",
         "def", "HELLO",

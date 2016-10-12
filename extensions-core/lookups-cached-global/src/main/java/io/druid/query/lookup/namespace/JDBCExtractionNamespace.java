@@ -23,12 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -41,7 +44,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   @JsonProperty
   private final String table;
   @JsonProperty
-  private final String keyColumn;
+  private final List<String> keyColumns;
   @JsonProperty
   private final String valueColumn;
   @JsonProperty
@@ -55,8 +58,8 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
       final MetadataStorageConnectorConfig connectorConfig,
       @NotNull @JsonProperty(value = "table", required = true)
       final String table,
-      @NotNull @JsonProperty(value = "keyColumn", required = true)
-      final String keyColumn,
+      @NotNull @JsonProperty(value = "keyColumns", required = true)
+      final List<String> keyColumns,
       @NotNull @JsonProperty(value = "valueColumn", required = true)
       final String valueColumn,
       @Nullable @JsonProperty(value = "tsColumn", required = false)
@@ -68,10 +71,22 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
     Preconditions.checkNotNull(connectorConfig.getConnectURI(), "connectorConfig.connectURI");
     this.table = Preconditions.checkNotNull(table, "table");
-    this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
+    this.keyColumns = Preconditions.checkNotNull(keyColumns, "keyColumns");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
     this.tsColumn = tsColumn;
     this.pollPeriod = pollPeriod == null ? new Period(0L) : pollPeriod;
+  }
+
+  public JDBCExtractionNamespace(
+      final MetadataStorageConnectorConfig connectorConfig,
+      final String table,
+      final String keyColumn,
+      final String valueColumn,
+      final String tsColumn,
+      final Period pollPeriod
+  )
+  {
+    this(connectorConfig, table, keyColumn == null ? null: Lists.newArrayList(keyColumn), valueColumn, tsColumn, pollPeriod);
   }
 
   public MetadataStorageConnectorConfig getConnectorConfig()
@@ -84,9 +99,9 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     return table;
   }
 
-  public String getKeyColumn()
+  public List<String> getKeyColumns()
   {
-    return keyColumn;
+    return keyColumns;
   }
 
   public String getValueColumn()
@@ -109,10 +124,10 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return String.format(
-        "JDBCExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
+        "JDBCExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumns = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,
-        keyColumn,
+        Arrays.toString(keyColumns.toArray()),
         valueColumn,
         tsColumn,
         pollPeriod
@@ -137,7 +152,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     if (!table.equals(that.table)) {
       return false;
     }
-    if (!keyColumn.equals(that.keyColumn)) {
+    if (!keyColumns.equals(that.keyColumns)) {
       return false;
     }
     if (!valueColumn.equals(that.valueColumn)) {
@@ -155,7 +170,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   {
     int result = connectorConfig.hashCode();
     result = 31 * result + table.hashCode();
-    result = 31 * result + keyColumn.hashCode();
+    result = 31 * result + keyColumns.hashCode();
     result = 31 * result + valueColumn.hashCode();
     result = 31 * result + (tsColumn != null ? tsColumn.hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();

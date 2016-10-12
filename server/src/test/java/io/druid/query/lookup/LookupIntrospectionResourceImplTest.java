@@ -47,7 +47,7 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
   {
     super.setUp();
     EasyMock.reset(lookupReferencesManager);
-    LookupExtractorFactory lookupExtractorFactory1 = new MapLookupExtractorFactory(ImmutableMap.of(
+    LookupExtractorFactory lookupExtractorFactory1 = new MapLookupExtractorFactory(ImmutableMap.<Object, String>of(
         "key",
         "value",
         "key2",

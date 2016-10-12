@@ -98,7 +98,7 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
     }
   }
 
-  private Map<String, String> getLatest()
+  private Map<Object, String> getLatest()
   {
     return ((MapLookupExtractor) factory.get()).getMap();
   }

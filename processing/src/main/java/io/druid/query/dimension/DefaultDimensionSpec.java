@@ -22,6 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
@@ -74,6 +75,11 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public List<String> getDimensions()
+  {
+    return ImmutableList.of(dimension);
+  }
+
   @JsonProperty
   public String getDimension()
   {
@@ -105,9 +111,9 @@ public class DefaultDimensionSpec implements DimensionSpec
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .array();
+        .put(CACHE_TYPE_ID)
+        .put(dimensionBytes)
+        .array();
   }
 
   @Override
@@ -120,9 +126,9 @@ public class DefaultDimensionSpec implements DimensionSpec
   public String toString()
   {
     return "DefaultDimensionSpec{" +
-           "dimension='" + dimension + '\'' +
-           ", outputName='" + outputName + '\'' +
-           '}';
+        "dimension='" + dimension + '\'' +
+        ", outputName='" + outputName + '\'' +
+        '}';
   }
 
   @Override

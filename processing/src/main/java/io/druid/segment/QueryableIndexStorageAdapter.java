@@ -23,14 +23,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.UOE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -66,7 +65,6 @@ import org.roaringbitmap.IntIterator;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -442,145 +440,67 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                     @Override
                     public DimensionSelector makeDimensionSelector(
-                        DimensionSpec dimensionSpec
+                        final DimensionSpec dimensionSpec
                     )
                     {
-                      return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
-                    }
-
-                    private DimensionSelector makeDimensionSelectorUndecorated(
-                        DimensionSpec dimensionSpec
-                    )
-                    {
-                      final String dimension = dimensionSpec.getDimension();
-                      final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-
-                      final Column columnDesc = index.getColumn(dimension);
-                      if (columnDesc == null) {
-                        return NULL_DIMENSION_SELECTOR;
-                      }
-
-                      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                        return new SingleScanTimeDimSelector(
-                            makeLongColumnSelector(dimension),
-                            extractionFn,
-                            descending
-                        );
-                      }
-
-                      DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
-                      if (cachedColumn == null) {
-                        cachedColumn = columnDesc.getDictionaryEncoding();
-                        dictionaryColumnCache.put(dimension, cachedColumn);
-                      }
-
-                      final DictionaryEncodedColumn<String> column = cachedColumn;
-
-                      if (column == null) {
-                        return NULL_DIMENSION_SELECTOR;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
-                        return new DimensionSelector()
-                        {
-                          @Override
-                          public IndexedInts getRow()
+                      Function<Pair<String, DimensionSpec>, DimensionSelector> dimSelectorGenerator =
+                          new Function<Pair<String, DimensionSpec>, DimensionSelector>()
                           {
-                            return column.getMultiValueRow(cursorOffset.getOffset());
-                          }
-
-                          @Override
-                          public int getValueCardinality()
-                          {
-                            return column.getCardinality();
-                          }
-
-                          @Override
-                          public String lookupName(int id)
-                          {
-                            final String value = column.lookupName(id);
-                            return extractionFn == null ?
-                                   value :
-                                   extractionFn.apply(value);
-                          }
-
-                          @Override
-                          public int lookupId(String name)
-                          {
-                            if (extractionFn != null) {
-                              throw new UnsupportedOperationException(
-                                  "cannot perform lookup when applying an extraction function"
-                              );
-                            }
-                            return column.lookupId(name);
-                          }
-                        };
-                      } else {
-                        return new DimensionSelector()
-                        {
-                          @Override
-                          public IndexedInts getRow()
-                          {
-                            // using an anonymous class is faster than creating a class that stores a copy of the value
-                            return new IndexedInts()
+                            @Override
+                            public DimensionSelector apply(Pair<String, DimensionSpec> pair)
                             {
-                              @Override
-                              public int size()
-                              {
-                                return 1;
+                              String dimension = pair.lhs;
+                              DimensionSpec dimSpec = pair.rhs;
+                              ExtractionFn extractionFn = dimSpec.getExtractionFn();
+
+                              Column columnDesc = index.getColumn(dimension);
+                              if (columnDesc == null) {
+                                return NULL_DIMENSION_SELECTOR;
                               }
 
-                              @Override
-                              public int get(int index)
-                              {
-                                return column.getSingleValueRow(cursorOffset.getOffset());
+                              if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+                                return new SingleScanTimeDimSelector(
+                                    makeLongColumnSelector(dimension),
+                                    extractionFn,
+                                    descending
+                                );
                               }
 
-                              @Override
-                              public Iterator<Integer> iterator()
-                              {
-                                return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
+                              DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
+                              if (cachedColumn == null) {
+                                cachedColumn = columnDesc.getDictionaryEncoding();
+                                dictionaryColumnCache.put(dimension, cachedColumn);
                               }
 
-                              @Override
-                              public void fill(int index, int[] toFill)
-                              {
-                                throw new UnsupportedOperationException("fill not supported");
+                              final DictionaryEncodedColumn<String> column = cachedColumn;
+
+                              if (column == null) {
+                                return NULL_DIMENSION_SELECTOR;
+                              } else {
+                                return DimensionSelectors.makeSelectorFromQueryableIndex(
+                                    column,
+                                    columnDesc,
+                                    new Supplier<Offset>()
+                                    {
+                                      @Override
+                                      public Offset get()
+                                      {
+                                        return cursorOffset;
+                                      }
+                                    },
+                                    extractionFn
+                                );
                               }
-
-                              @Override
-                              public void close() throws IOException
-                              {
-
-                              }
-                            };
-                          }
-
-                          @Override
-                          public int getValueCardinality()
-                          {
-                            return column.getCardinality();
-                          }
-
-                          @Override
-                          public String lookupName(int id)
-                          {
-                            final String value = column.lookupName(id);
-                            return extractionFn == null ? value : extractionFn.apply(value);
-                          }
-
-                          @Override
-                          public int lookupId(String name)
-                          {
-                            if (extractionFn != null) {
-                              throw new UnsupportedOperationException(
-                                  "cannot perform lookup when applying an extraction function"
-                              );
                             }
-                            return column.lookupId(name);
-                          }
-                        };
-                      }
-                    }
+                          };
 
+                      return dimensionSpec.decorate(
+                          DimensionSelectors.makeMultiDimensionalSelectorFromIndex(
+                            dimensionSpec,
+                            dimSelectorGenerator
+                          )
+                      );
+                    }
 
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)

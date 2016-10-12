@@ -41,7 +41,7 @@ public class LegacyDimensionSpecTest
         {
         }
     );
-    Assert.assertEquals(dimension, deserializedSpecs.get(0).getDimension());
+    Assert.assertEquals(dimension, deserializedSpecs.get(0).getDimensions().get(0));
     Assert.assertEquals(dimension, deserializedSpecs.get(0).getOutputName());
     Assert.assertEquals(new LegacyDimensionSpec(dimension), deserializedSpecs.get(0));
   }

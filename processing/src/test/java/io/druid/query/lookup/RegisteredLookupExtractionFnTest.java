@@ -36,7 +36,7 @@ import java.util.Map;
 
 public class RegisteredLookupExtractionFnTest
 {
-  private static Map<String, String> MAP = ImmutableMap.of(
+  private static Map<Object, String> MAP = ImmutableMap.<Object, String>of(
       "foo", "bar",
       "bat", "baz"
   );
@@ -58,7 +58,8 @@ public class RegisteredLookupExtractionFnTest
         true,
         null,
         true,
-        false
+        false,
+        1
     );
     EasyMock.verify(manager);
     for (String orig : Arrays.asList("", "foo", "bat")) {
@@ -83,7 +84,8 @@ public class RegisteredLookupExtractionFnTest
           true,
           null,
           true,
-          false
+          false,
+          1
       ).apply("foo");
     }
     finally {
@@ -101,7 +103,8 @@ public class RegisteredLookupExtractionFnTest
         true,
         null,
         true,
-        false
+        false,
+        1
     );
   }
 
@@ -119,7 +122,8 @@ public class RegisteredLookupExtractionFnTest
         true,
         null,
         true,
-        false
+        false,
+        1
     );
     EasyMock.verify(manager);
 
@@ -147,7 +151,8 @@ public class RegisteredLookupExtractionFnTest
         false,
         "something",
         true,
-        false
+        false,
+        1
     );
     Assert.assertEquals(
         fn,
@@ -157,7 +162,8 @@ public class RegisteredLookupExtractionFnTest
             false,
             "something",
             true,
-            false
+            false,
+            1
         )
     );
     Assert.assertNotEquals(
@@ -168,7 +174,8 @@ public class RegisteredLookupExtractionFnTest
             true,
             null,
             true,
-            false
+            false,
+            1
         )
     );
 
@@ -180,7 +187,8 @@ public class RegisteredLookupExtractionFnTest
             false,
             "something else",
             true,
-            false
+            false,
+            1
         )
     );
 
@@ -193,7 +201,8 @@ public class RegisteredLookupExtractionFnTest
             false,
             "something",
             false,
-            false
+            false,
+            1
         )
     );
 
@@ -205,7 +214,8 @@ public class RegisteredLookupExtractionFnTest
             false,
             "something",
             true,
-            true
+            true,
+            1
         )
     );
 
@@ -218,7 +228,8 @@ public class RegisteredLookupExtractionFnTest
             false,
             null,
             true,
-            false
+            false,
+            1
         )
     );
     EasyMock.verify(manager);

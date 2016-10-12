@@ -353,7 +353,7 @@ public abstract class NamespaceExtractionCacheManager
         try {
           startLatch.await(); // wait for "election" to leadership or cancellation
           if (!Thread.currentThread().isInterrupted()) {
-            final Map<String, String> cache = getCacheMap(cacheId);
+            final Map<Object, String> cache = getCacheMap(cacheId);
             final String preVersion = lastVersion.get(id);
             final Callable<String> runnable = factory.getCachePopulator(id, namespace, preVersion, cache);
 
@@ -428,7 +428,7 @@ public abstract class NamespaceExtractionCacheManager
    *
    * @return A ConcurrentMap<String, String> that is backed by the impl which implements this method.
    */
-  public abstract ConcurrentMap<String, String> getCacheMap(String namespaceOrCacheKey);
+  public abstract ConcurrentMap<Object, String> getCacheMap(String namespaceOrCacheKey);
 
   /**
    * Clears out resources used by the namespace such as threads. Implementations may override this and call super.delete(...) if they have resources of their own which need cleared.

@@ -23,6 +23,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.Closer;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -36,6 +37,8 @@ import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
 import io.druid.server.lookup.namespace.JDBCExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
+import org.apache.commons.collections.keyvalue.MultiKey;
+import org.apache.commons.lang.StringUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -49,6 +52,7 @@ import org.skife.jdbi.v2.Handle;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -69,14 +73,14 @@ public class JDBCExtractionNamespaceTest
   private static final Logger log = new Logger(JDBCExtractionNamespaceTest.class);
   private static final String namespace = "testNamespace";
   private static final String tableName = "abstractDbRenameTest";
-  private static final String keyName = "keyName";
+  private static final List<String> keyNames = ImmutableList.of("keyName1", "keyName2");
   private static final String valName = "valName";
   private static final String tsColumn_ = "tsColumn";
-  private static final Map<String, String> renames = ImmutableMap.of(
-      "foo", "bar",
-      "bad", "bar",
-      "how about that", "foo",
-      "empty string", ""
+  private static final Map<List<String>, String> renames = ImmutableMap.<List<String>, String>of(
+      ImmutableList.of("foo1", "foo2"), "bar",
+      ImmutableList.of("bad1", "bad2"), "bar",
+      ImmutableList.of("how about that", "whats up"), "foo",
+      ImmutableList.of("empty string", "null"), ""
   );
 
   @Parameterized.Parameters(name = "{0}")
@@ -122,7 +126,7 @@ public class JDBCExtractionNamespaceTest
                         "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64))",
                         tableName,
                         tsColumn_,
-                        keyName,
+                        StringUtils.join(keyNames, " VARCHAR(64), "),
                         valName
                     )
                 ).setQueryTimeout(1).execute()
@@ -174,7 +178,7 @@ public class JDBCExtractionNamespaceTest
                 }
               }
             });
-            for (Map.Entry<String, String> entry : renames.entrySet()) {
+            for (Map.Entry<List<String>, String> entry : renames.entrySet()) {
               try {
                 insertValues(handle, entry.getKey(), entry.getValue(), "2015-01-01 00:00:00");
               }
@@ -196,7 +200,7 @@ public class JDBCExtractionNamespaceTest
                           final String id,
                           final JDBCExtractionNamespace namespace,
                           final String lastVersion,
-                          final Map<String, String> cache
+                          final Map<Object, String> cache
                       )
                       {
                         final Callable<String> cachePopulator = super.getCachePopulator(
@@ -332,26 +336,32 @@ public class JDBCExtractionNamespaceTest
     }
   }
 
-  private void insertValues(final Handle handle, final String key, final String val, final String updateTs)
+  private void insertValues(final Handle handle, final List<String> keys, final String val, final String updateTs)
       throws InterruptedException
   {
     final String query;
+
+    String[] deleteWhere = new String[keyNames.size()];
+    for (int idx = 0; idx < keyNames.size(); idx++)
+    {
+      deleteWhere[idx] = String.format("%s='%s'", keyNames.get(idx), keys.get(idx));
+    }
     if (tsColumn == null) {
       handle.createStatement(
-          String.format("DELETE FROM %s WHERE %s='%s'", tableName, keyName, key)
+          String.format("DELETE FROM %s WHERE %s", tableName, StringUtils.join(deleteWhere, " AND "))
       ).setQueryTimeout(1).execute();
       query = String.format(
           "INSERT INTO %s (%s, %s) VALUES ('%s', '%s')",
           tableName,
-          keyName, valName,
-          key, val
+          StringUtils.join(keyNames, ", "), valName,
+          StringUtils.join(keys, "', '"), val
       );
     } else {
       query = String.format(
           "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', '%s')",
           tableName,
-          tsColumn, keyName, valName,
-          updateTs, key, val
+          tsColumn, StringUtils.join(keyNames, ", "), valName,
+          updateTs, StringUtils.join(keys, "', '"), val
       );
     }
     Assert.assertEquals(1, handle.createStatement(query).setQueryTimeout(1).execute());
@@ -364,25 +374,52 @@ public class JDBCExtractionNamespaceTest
   @Test(timeout = 10_000L)
   public void testMapping()
       throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
-             InterruptedException, TimeoutException
+      InterruptedException, TimeoutException
   {
+    String singleKey = "keyName1";
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
-        keyName,
+        singleKey,
         valName,
         tsColumn,
         new Period(0)
     );
     NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(namespace, extractionNamespace));
-    final Map<String, String> map = extractionCacheManager.getCacheMap(namespace);
+    final Map<Object, String> map = extractionCacheManager.getCacheMap(namespace);
 
-    for (Map.Entry<String, String> entry : renames.entrySet()) {
-      String key = entry.getKey();
+    for (Map.Entry<List<String>, String> entry : renames.entrySet()) {
+      List<String> key = entry.getKey();
+
       String val = entry.getValue();
-      Assert.assertEquals("non-null check", Strings.emptyToNull(val), Strings.emptyToNull(map.get(key)));
+      Assert.assertEquals("non-null check", Strings.emptyToNull(val), Strings.emptyToNull(map.get(key.get(0))));
     }
     Assert.assertEquals("null check", null, map.get("baz"));
+  }
+
+  @Test(timeout = 10_000L)
+  public void testMappingMultiKey()
+      throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
+             InterruptedException, TimeoutException
+  {
+    final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        tableName,
+        keyNames,
+        valName,
+        tsColumn,
+        new Period(0)
+    );
+    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(namespace, extractionNamespace));
+    final Map<Object, String> map = extractionCacheManager.getCacheMap(namespace);
+
+    for (Map.Entry<List<String>, String> entry : renames.entrySet()) {
+      List<String> key = entry.getKey();
+
+      String val = entry.getValue();
+      Assert.assertEquals("non-null check", Strings.emptyToNull(val), Strings.emptyToNull(map.get(new MultiKey(key.toArray(), false))));
+    }
+    Assert.assertEquals("null check", null, map.get(Lists.newArrayList("baz")));
   }
 
   @Test(timeout = 10_000L)
@@ -391,13 +428,13 @@ public class JDBCExtractionNamespaceTest
   {
     final JDBCExtractionNamespace extractionNamespace = ensureNamespace();
 
-    assertUpdated(namespace, "foo", "bar");
+    assertUpdated(namespace, ImmutableList.of("foo1", "foo2"), "bar");
 
     if (tsColumn != null) {
-      insertValues(handleRef, "foo", "baz", "1900-01-01 00:00:00");
+      insertValues(handleRef, ImmutableList.of("foo1", "foo2"), "baz", "1900-01-01 00:00:00");
     }
 
-    assertUpdated(namespace, "foo", "bar");
+    assertUpdated(namespace, ImmutableList.of("foo1", "foo2"), "bar");
   }
 
   @Test(timeout = 60_000L)
@@ -406,11 +443,11 @@ public class JDBCExtractionNamespaceTest
   {
     final JDBCExtractionNamespace extractionNamespace = ensureNamespace();
 
-    assertUpdated(namespace, "foo", "bar");
+    assertUpdated(namespace, ImmutableList.of("foo1", "foo2"), "bar");
 
-    insertValues(handleRef, "foo", "baz", "2900-01-01 00:00:00");
+    insertValues(handleRef, ImmutableList.of("foo1", "foo2"), "baz", "2900-01-01 00:00:00");
 
-    assertUpdated(namespace, "foo", "baz");
+    assertUpdated(namespace, ImmutableList.of("foo1", "foo2"), "baz");
   }
 
   private JDBCExtractionNamespace ensureNamespace()
@@ -419,7 +456,7 @@ public class JDBCExtractionNamespaceTest
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
-        keyName,
+        keyNames,
         valName,
         tsColumn,
         new Period(10)
@@ -431,7 +468,7 @@ public class JDBCExtractionNamespaceTest
     Assert.assertEquals(
         "sanity check not correct",
         "bar",
-        extractionCacheManager.getCacheMap(namespace).get("foo")
+        extractionCacheManager.getCacheMap(namespace).get(new MultiKey("foo1", "foo2"))
     );
     return extractionNamespace;
   }
@@ -463,12 +500,13 @@ public class JDBCExtractionNamespaceTest
     } while (post < pre + numUpdates);
   }
 
-  private void assertUpdated(String namespace, String key, String expected) throws InterruptedException
+  private void assertUpdated(String namespace, List<String> keys, String expected) throws InterruptedException
   {
     waitForUpdates(1_000L, 2L);
 
-    Map<String, String> map = extractionCacheManager.getCacheMap(namespace);
+    Map<Object, String> map = extractionCacheManager.getCacheMap(namespace);
 
+    MultiKey key = new MultiKey(keys.toArray(), false);
     // rely on test timeout to break out of this loop
     while (!expected.equals(map.get(key))) {
       Thread.sleep(100);

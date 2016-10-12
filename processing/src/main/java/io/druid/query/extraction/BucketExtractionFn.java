@@ -103,6 +103,12 @@ public class BucketExtractionFn implements ExtractionFn
   }
 
   @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return ByteBuffer.allocate(1 + 2 * Doubles.BYTES)

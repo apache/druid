@@ -64,6 +64,11 @@ public class CascadeExtractionFn implements ExtractionFn
           return ExtractionType.MANY_TO_ONE;
         }
 
+        public int arity()
+        {
+          return 1;
+        }
+
         @Override
         public String toString()
         {
@@ -134,6 +139,12 @@ public class CascadeExtractionFn implements ExtractionFn
   public ExtractionType getExtractionType()
   {
     return chainedExtractionFn.getExtractionType();
+  }
+
+  @Override
+  public int arity()
+  {
+    return chainedExtractionFn.numberOfDimensionInputs();
   }
 
   @Override
@@ -217,6 +228,11 @@ public class CascadeExtractionFn implements ExtractionFn
       } else {
         return fn.getExtractionType();
       }
+    }
+
+    public int numberOfDimensionInputs()
+    {
+      return (child != null) ? 1 : fn.arity();
     }
 
     public boolean equals(Object o)

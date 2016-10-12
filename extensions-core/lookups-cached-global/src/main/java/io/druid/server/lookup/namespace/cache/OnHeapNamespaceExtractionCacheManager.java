@@ -41,7 +41,7 @@ import java.util.concurrent.locks.Lock;
 public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
   private static final Logger LOG = new Logger(OnHeapNamespaceExtractionCacheManager.class);
-  private final ConcurrentMap<String, ConcurrentMap<String, String>> mapMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, ConcurrentMap<Object, String>> mapMap = new ConcurrentHashMap<>();
   private final Striped<Lock> nsLocks = Striped.lock(32);
 
   @Inject
@@ -60,11 +60,11 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      ConcurrentMap<String, String> cacheMap = mapMap.get(cacheKey);
+      ConcurrentMap<Object, String> cacheMap = mapMap.get(cacheKey);
       if (cacheMap == null) {
         throw new IAE("Extraction Cache [%s] does not exist", cacheKey);
       }
-      ConcurrentMap<String, String> prior = mapMap.put(namespaceKey, cacheMap);
+      ConcurrentMap<Object, String> prior = mapMap.put(namespaceKey, cacheMap);
       mapMap.remove(cacheKey);
       if (prior != null) {
         // Old map will get GC'd when it is not used anymore
@@ -79,11 +79,11 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   }
 
   @Override
-  public ConcurrentMap<String, String> getCacheMap(String namespaceOrCacheKey)
+  public ConcurrentMap<Object, String> getCacheMap(String namespaceOrCacheKey)
   {
-    ConcurrentMap<String, String> map = mapMap.get(namespaceOrCacheKey);
+    ConcurrentMap<Object, String> map = mapMap.get(namespaceOrCacheKey);
     if (map == null) {
-      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<String, String>());
+      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<Object, String>());
       map = mapMap.get(namespaceOrCacheKey);
     }
     return map;
@@ -107,21 +107,21 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   {
     long numEntries = 0;
     long size = 0;
-    for (Map.Entry<String, ConcurrentMap<String, String>> entry : mapMap.entrySet()) {
-      final ConcurrentMap<String, String> map = entry.getValue();
+    for (Map.Entry<String, ConcurrentMap<Object, String>> entry : mapMap.entrySet()) {
+      final ConcurrentMap<Object, String> map = entry.getValue();
       if (map == null) {
         LOG.debug("missing cache key for reporting [%s]", entry.getKey());
         continue;
       }
       numEntries += map.size();
-      for (Map.Entry<String, String> sEntry : map.entrySet()) {
-        final String key = sEntry.getKey();
+      for (Map.Entry<Object, String> sEntry : map.entrySet()) {
+        final Object key = sEntry.getKey();
         final String value = sEntry.getValue();
         if (key == null || value == null) {
           LOG.debug("Missing entries for cache key [%s]", entry.getKey());
           continue;
         }
-        size += key.length() + value.length();
+        size += key.toString().length() + value.length();
       }
     }
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/numEntries", numEntries));

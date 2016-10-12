@@ -88,6 +88,12 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   }
 
   @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("regex_matches(%s)", expr);

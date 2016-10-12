@@ -108,7 +108,7 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
-  public String apply(@NotNull String key)
+  public String apply(@NotNull Object key)
   {
     final CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
     if (cacheRefKeeper == null) {
@@ -130,7 +130,7 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<Object> unapply(final String value)
   {
     CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
     if (cacheRefKeeper == null) {

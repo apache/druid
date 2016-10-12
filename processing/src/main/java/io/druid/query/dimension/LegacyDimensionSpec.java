@@ -22,6 +22,8 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.metamx.common.IAE;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,7 +37,12 @@ public class LegacyDimensionSpec extends DefaultDimensionSpec
     if (dimension instanceof String) {
       retVal = (String) dimension;
     } else if (dimension instanceof Map) {
-      retVal = (String) ((Map) dimension).get(name);
+      Object value = ((Map) dimension).get(name);
+      if (value instanceof List) {
+        retVal = (String) ((List) value).get(0);
+      } else {
+        retVal = (String) value;
+      }
     } else {
       throw new IAE("Unknown type[%s] for dimension[%s]", dimension.getClass(), dimension);
     }

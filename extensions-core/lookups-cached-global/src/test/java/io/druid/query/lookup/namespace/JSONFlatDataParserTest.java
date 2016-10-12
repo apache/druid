@@ -66,7 +66,7 @@ public class JSONFlatDataParserTest
         "key",
         "val"
     );
-    final Map<String, String> map = new HashMap<>();
+    final Map<Object, String> map = new HashMap<>();
     new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
     Assert.assertEquals(VAL, map.get(KEY));
   }
@@ -97,7 +97,7 @@ public class JSONFlatDataParserTest
         "keyWHOOPS",
         "val"
     );
-    final Map<String, String> map = new HashMap<>();
+    final Map<Object, String> map = new HashMap<>();
     new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
     Assert.assertEquals(VAL, map.get(KEY));
   }

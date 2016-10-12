@@ -121,4 +121,10 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   {
     return extractionType;
   }
+
+  @Override
+  public int arity()
+  {
+    return 1;
+  }
 }

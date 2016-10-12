@@ -73,12 +73,18 @@ public class LowerExtractionFn extends DimExtractionFn
   }
 
   @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] localeBytes = StringUtils.toUtf8(Strings.nullToEmpty(localeString));
     return ByteBuffer.allocate(2 + localeBytes.length)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_LOWER)
-                     .put((byte) 0XFF)
+                     .put(ExtractionCacheHelper.CACHE_KEY_SEPARATOR)
                      .put(localeBytes)
                      .array();
   }

@@ -36,7 +36,7 @@ public class StaticMapExtractionNamespaceCacheFactory
       final String id,
       final StaticMapExtractionNamespace extractionNamespace,
       final String lastVersion,
-      final Map<String, String> swap
+      final Map<Object, String> swap
   )
   {
     return new Callable<String>()

@@ -295,23 +295,23 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                 }
                 final GroupByQuery delegateGroupByQuery = groupByQuery;
                 ArrayList<DimensionSpec> dimensionSpecs = new ArrayList<>();
-                Set<String> optimizedDimensions = ImmutableSet.copyOf(
+                Set<List<String>> optimizedDimensions = ImmutableSet.copyOf(
                     Iterables.transform(
                         extractionsToRewrite(delegateGroupByQuery),
-                        new Function<DimensionSpec, String>()
+                        new Function<DimensionSpec, List<String>>()
                         {
                           @Override
-                          public String apply(DimensionSpec input)
+                          public List<String> apply(DimensionSpec input)
                           {
-                            return input.getDimension();
+                            return input.getDimensions();
                           }
                         }
                     )
                 );
                 for (DimensionSpec dimensionSpec : delegateGroupByQuery.getDimensions()) {
-                  if (optimizedDimensions.contains(dimensionSpec.getDimension())) {
+                  if (optimizedDimensions.contains(dimensionSpec.getDimensions())) {
                     dimensionSpecs.add(
-                        new DefaultDimensionSpec(dimensionSpec.getDimension(), dimensionSpec.getOutputName())
+                        new DefaultDimensionSpec(dimensionSpec.getDimensions().get(0), dimensionSpec.getOutputName())
                     );
                   } else {
                     dimensionSpecs.add(dimensionSpec);

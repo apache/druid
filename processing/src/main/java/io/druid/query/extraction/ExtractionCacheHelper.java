@@ -24,6 +24,8 @@ package io.druid.query.extraction;
  */
 public class ExtractionCacheHelper
 {
+  public static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
+
   public static final byte CACHE_TYPE_ID_TIME_DIM = 0x0;
   public static final byte CACHE_TYPE_ID_REGEX = 0x1;
   public static final byte CACHE_TYPE_ID_MATCHING_DIM = 0x2;
@@ -38,4 +40,6 @@ public class ExtractionCacheHelper
   public static final byte CACHE_TYPE_ID_UPPER = 0xB;
   public static final byte CACHE_TYPE_ID_LOWER = 0xC;
   public static final byte CACHE_TYPE_ID_BUCKET = 0xD;
+  public static final byte CACHE_TYPE_ID_MULTILOOKUP = 0xE;
+  public static final byte CACHE_TYPE_ID_MULTICONCAT = 0xF;
 }

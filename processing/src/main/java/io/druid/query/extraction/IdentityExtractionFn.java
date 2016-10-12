@@ -67,6 +67,12 @@ public class IdentityExtractionFn implements ExtractionFn
   }
 
   @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  @Override
   public String toString()
   {
      return "Identity";

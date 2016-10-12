@@ -32,4 +32,10 @@ public abstract class DimExtractionFn implements ExtractionFn
   {
     return apply(Long.toString(value));
   }
+
+  @Override
+  public int arity()
+  {
+    return 1;
+  }
 }

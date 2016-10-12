@@ -24,6 +24,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import org.apache.commons.collections.keyvalue.MultiKey;
+import org.apache.commons.lang.StringUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
@@ -54,7 +56,7 @@ public class JDBCExtractionNamespaceCacheFactory
       final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
-      final Map<String, String> cache
+      final Map<Object, String> cache
   )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
@@ -77,44 +79,71 @@ public class JDBCExtractionNamespaceCacheFactory
         final DBI dbi = ensureDBI(id, namespace);
         final String table = namespace.getTable();
         final String valueColumn = namespace.getValueColumn();
-        final String keyColumn = namespace.getKeyColumn();
+        final List<String> keyColumns = namespace.getKeyColumns();
 
         LOG.debug("Updating [%s]", id);
-        final List<Pair<String, String>> pairs = dbi.withHandle(
-            new HandleCallback<List<Pair<String, String>>>()
+        final List<Pair<Object, String>> pairs = dbi.withHandle(
+            new HandleCallback<List<Pair<Object, String>>>()
             {
               @Override
-              public List<Pair<String, String>> withHandle(Handle handle) throws Exception
+              public List<Pair<Object, String>> withHandle(Handle handle) throws Exception
               {
                 final String query;
                 query = String.format(
                     "SELECT %s, %s FROM %s",
-                    keyColumn,
+                    StringUtils.join(keyColumns, ", "),
                     valueColumn,
                     table
                 );
-                return handle
-                    .createQuery(
-                        query
-                    ).map(
-                        new ResultSetMapper<Pair<String, String>>()
-                        {
-
-                          @Override
-                          public Pair<String, String> map(
-                              final int index,
-                              final ResultSet r,
-                              final StatementContext ctx
-                          ) throws SQLException
+                if (keyColumns.size() > 1) {
+                  return handle
+                      .createQuery(
+                          query
+                      ).map(
+                          new ResultSetMapper<Pair<Object, String>>()
                           {
-                            return new Pair<String, String>(r.getString(keyColumn), r.getString(valueColumn));
+
+                            @Override
+                            public Pair<Object, String> map(
+                                final int index,
+                                final ResultSet r,
+                                final StatementContext ctx
+                            ) throws SQLException
+                            {
+                              String[] key = new String[keyColumns.size()];
+                              int idx = 0;
+                              for (String keyColumn: keyColumns) {
+                                key[idx++] = r.getString(keyColumn);
+                              }
+                              return new Pair<Object, String>(new MultiKey(key, false), r.getString(valueColumn));
+                            }
                           }
-                        }
-                    ).list();
+                      ).list();
+                } else {
+                  return handle
+                      .createQuery(
+                          query
+                      ).map(
+                          new ResultSetMapper<Pair<Object, String>>()
+                          {
+
+                            @Override
+                            public Pair<Object, String> map(
+                                final int index,
+                                final ResultSet r,
+                                final StatementContext ctx
+                            ) throws SQLException
+                            {
+
+                              return new Pair<Object, String>(r.getString(keyColumns.get(0)), r.getString(valueColumn));
+                            }
+                          }
+                      ).list();
+                }
               }
             }
         );
-        for (Pair<String, String> pair : pairs) {
+        for (Pair<Object, String> pair : pairs) {
           cache.put(pair.lhs, pair.rhs);
         }
         LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);

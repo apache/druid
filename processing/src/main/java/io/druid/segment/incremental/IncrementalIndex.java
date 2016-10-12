@@ -42,12 +42,12 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionHandlerUtil;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectors;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
@@ -56,7 +56,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -66,7 +65,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -211,85 +209,19 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           DimensionSpec dimensionSpec
       )
       {
-        return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
-      }
-
-      private DimensionSelector makeDimensionSelectorUndecorated(
-          DimensionSpec dimensionSpec
-      )
-      {
-        final String dimension = dimensionSpec.getDimension();
-        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-
-        return new DimensionSelector()
-        {
-          @Override
-          public IndexedInts getRow()
-          {
-            final List<String> dimensionValues = in.get().getDimension(dimension);
-            final ArrayList<Integer> vals = Lists.newArrayList();
-            if (dimensionValues != null) {
-              for (int i = 0; i < dimensionValues.size(); ++i) {
-                vals.add(i);
-              }
-            }
-
-            return new IndexedInts()
-            {
-              @Override
-              public int size()
-              {
-                return vals.size();
-              }
-
-              @Override
-              public int get(int index)
-              {
-                return vals.get(index);
-              }
-
-              @Override
-              public Iterator<Integer> iterator()
-              {
-                return vals.iterator();
-              }
-
-              @Override
-              public void close() throws IOException
-              {
-
-              }
-
-              @Override
-              public void fill(int index, int[] toFill)
-              {
-                throw new UnsupportedOperationException("fill not supported");
-              }
-            };
-          }
-
-          @Override
-          public int getValueCardinality()
-          {
-            return DimensionSelector.CARDINALITY_UNKNOWN;
-          }
-
-          @Override
-          public String lookupName(int id)
-          {
-            final String value = in.get().getDimension(dimension).get(id);
-            return extractionFn == null ? value : extractionFn.apply(value);
-          }
-
-          @Override
-          public int lookupId(String name)
-          {
-            if (extractionFn != null) {
-              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
-            }
-            return in.get().getDimension(dimension).indexOf(name);
-          }
-        };
+        return dimensionSpec.decorate(
+            DimensionSelectors.makeMultiDimensionalSelectorFromRow(
+                new Supplier<Row>()
+                {
+                  @Override
+                  public Row get()
+                  {
+                    return in.get();
+                  }
+                },
+                dimensionSpec
+            )
+        );
       }
     };
   }

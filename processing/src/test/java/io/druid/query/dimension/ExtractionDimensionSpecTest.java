@@ -36,7 +36,7 @@ public class ExtractionDimensionSpecTest
     final String oldJson = "{\n"
                            + "    \"type\": \"extraction\",\n"
                            + "    \"outputName\": \"first3Letters\",\n"
-                           + "    \"dimension\": \"myDim\","
+                           + "    \"dimensions\": [\"myDim\"],"
                            + "    \"extractionFn\": {\n"
                            + "        \"type\": \"regex\",\n"
                            + "        \"expr\": \"(...).*\"\n"
@@ -46,7 +46,7 @@ public class ExtractionDimensionSpecTest
     final ExtractionDimensionSpec extractionDimensionSpec = (ExtractionDimensionSpec) objectMapper.readValue(oldJson, DimensionSpec.class);
 
     Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
-    Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
+    Assert.assertEquals("myDim", extractionDimensionSpec.getDimensions().get(0));
     Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
     Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
 
@@ -67,7 +67,7 @@ public class ExtractionDimensionSpecTest
     final String oldJson = "{\n"
                         + "    \"type\": \"extraction\",\n"
                         + "    \"outputName\": \"first3Letters\",\n"
-                        + "    \"dimension\": \"myDim\","
+                        + "    \"dimensions\": [\"myDim\"],"
                         + "    \"dimExtractionFn\": {\n"
                         + "        \"type\": \"regex\",\n"
                         + "        \"expr\": \"(...).*\"\n"
@@ -77,7 +77,7 @@ public class ExtractionDimensionSpecTest
     final ExtractionDimensionSpec extractionDimensionSpec = (ExtractionDimensionSpec) objectMapper.readValue(oldJson, DimensionSpec.class);
 
     Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
-    Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
+    Assert.assertEquals("myDim", extractionDimensionSpec.getDimensions().get(0));
     Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
     Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
 
@@ -93,7 +93,7 @@ public class ExtractionDimensionSpecTest
     final String oldAndNewJson = "{\n"
                            + "    \"type\": \"extraction\",\n"
                            + "    \"outputName\": \"first3Letters\",\n"
-                           + "    \"dimension\": \"myDim\","
+                           + "    \"dimensions\": [\"myDim\"],"
                            + "    \"extractionFn\": {\n"
                            + "        \"type\": \"partial\",\n"
                            + "        \"expr\": \"(...).*\"\n"

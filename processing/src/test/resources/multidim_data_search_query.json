@@ -1,0 +1,38 @@
+{
+  "queryType": "search",
+  "dataSource": "test_datasource",
+  "granularity": "day",
+  "searchDimensions":[
+    {
+      "type":"extraction",
+      "dimensions":["product", "pty_country"],
+      "outputName":"multilookup",
+      "extractionFn": {
+        "type" : "multilookup",
+        "lookup" : {
+          "type" : "multiKeyMap",
+          "keyValueList" : [
+            ["product_1", "pty_country_16", "xxx"]
+          ],
+          "isOneToOne":false
+        },
+        "replaceMissingValueWith" : "a",
+        "numKeys" : 2
+      }
+    }
+  ],
+  "query": {
+    "type": "insensitive_contains",
+    "value": "xxx"
+  },
+  "sort" : {
+    "type": "lexicographic"
+  },
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
+  ],
+  "context": {
+    "useCache" : "false",
+    "populateCache" : "false"
+  }
+}

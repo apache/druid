@@ -24,13 +24,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -41,6 +41,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectors;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
@@ -338,28 +339,42 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
               @Override
               public DimensionSelector makeDimensionSelector(
-                  DimensionSpec dimensionSpec
+                  final DimensionSpec dimensionSpec
               )
               {
-                final String dimension = dimensionSpec.getDimension();
-                final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+                final Function<Pair<String, DimensionSpec>, DimensionSelector> dimSelectorGenerator =
+                    new Function<Pair<String, DimensionSpec>, DimensionSelector>()
+                    {
+                      @Override
+                      public DimensionSelector apply(Pair<String, DimensionSpec> pair)
+                      {
+                        String dimension = pair.lhs;
+                        DimensionSpec dimSpec = pair.rhs;
 
-                if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                  DimensionSelector selector = new SingleScanTimeDimSelector(
-                      makeLongColumnSelector(dimension),
-                      extractionFn,
-                      descending
-                  );
-                  return dimensionSpec.decorate(selector);
-                }
+                        if (pair.lhs.equals(Column.TIME_COLUMN_NAME)) {
+                          return new SingleScanTimeDimSelector(
+                              makeLongColumnSelector(dimension),
+                              dimSpec.getExtractionFn(),
+                              descending
+                          );
+                        }
 
-                final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
-                if (dimensionDesc == null) {
-                  return dimensionSpec.decorate(NULL_DIMENSION_SELECTOR);
-                }
+                        IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
 
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                return dimensionSpec.decorate((DimensionSelector) indexer.makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc));
+                        if (dimensionDesc == null) {
+                          return NULL_DIMENSION_SELECTOR;
+                        } else {
+                          return (DimensionSelector) dimensionDesc.getIndexer().makeColumnValueSelector(dimSpec, currEntry, dimensionDesc);
+                        }
+                      }
+                    };
+
+                return dimensionSpec.decorate(
+                    DimensionSelectors.makeMultiDimensionalSelectorFromIndex(
+                        dimensionSpec,
+                        dimSelectorGenerator
+                    )
+                );
               }
 
               @Override

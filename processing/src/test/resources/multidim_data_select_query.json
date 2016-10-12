@@ -1,0 +1,28 @@
+{
+  "queryType": "select",
+  "dataSource": "test_datasource",
+  "dimensions":[
+    {
+      "type":"extraction",
+      "dimensions":["product", "pty_country"],
+      "outputName":"multilookup",
+      "extractionFn": {
+        "type" : "multilookup",
+        "lookup" : {
+          "type" : "multiKeyMap",
+          "keyValueList" : [
+            ["product_1", "pty_country_16", "xxx"]
+          ],
+          "isOneToOne":false
+        },
+        "numKeys" : 2
+      }
+    }
+  ],
+  "metrics":[],
+  "granularity": "ALL",
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
+  ],
+  "pagingSpec":{"pagingIdentifiers": {}, "threshold":4000}
+}

@@ -78,6 +78,12 @@ public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
   }
 
   @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  @Override
   public String toString()
   {
     return "SearchQuerySpecDimExtractionFn{" +

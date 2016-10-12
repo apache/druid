@@ -47,5 +47,5 @@ public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
    * @return A callable that will be used to refresh resources of the namespace and return the version string used in
    * the populating
    */
-  Callable<String> getCachePopulator(String id, T extractionNamespace, String lastVersion, Map<String, String> swap);
+  Callable<String> getCachePopulator(String id, T extractionNamespace, String lastVersion, Map<Object, String> swap);
 }

@@ -128,6 +128,12 @@ public class TimeFormatExtractionFn implements ExtractionFn
   }
 
   @Override
+  public int arity()
+  {
+    return 1;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

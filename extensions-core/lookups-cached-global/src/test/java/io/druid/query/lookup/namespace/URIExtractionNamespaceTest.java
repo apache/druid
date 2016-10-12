@@ -31,10 +31,12 @@ import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
+import org.apache.commons.collections.keyvalue.MultiKey;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -89,6 +91,24 @@ public class URIExtractionNamespaceTest
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
   }
 
+  @Test
+  public void testCSVMultiKey()
+  {
+    URIExtractionNamespace.CSVFlatDataParser parser = new URIExtractionNamespace.CSVFlatDataParser(
+        ImmutableList.of(
+            "col1",
+            "col2",
+            "col3"
+        ),
+        ImmutableList.of(
+            "col1",
+            "col2"
+        ),
+        "col3"
+    );
+    Assert.assertEquals(ImmutableMap.of(new MultiKey("A", "B"), "C"), parser.getParser().parse("A,B,C"));
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void testBadCSV()
   {
@@ -112,7 +132,7 @@ public class URIExtractionNamespaceTest
             "col3"
         ), "col2", "col3"
     );
-    Map<String, String> map = parser.getParser().parse("A");
+    Map<Object, String> map = parser.getParser().parse("A");
   }
 
   @Test
@@ -125,6 +145,21 @@ public class URIExtractionNamespaceTest
         "col3"
     );
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A|B|C"));
+  }
+
+  @Test
+  public void testTSVMultiKey() {
+    URIExtractionNamespace.TSVFlatDataParser parser = new URIExtractionNamespace.TSVFlatDataParser(
+        ImmutableList.of("col1", "col2", "col3"),
+        "|",
+        null,
+        ImmutableList.of(
+            "col1",
+            "col2"
+        ),
+        "col3"
+    );
+    Assert.assertEquals(ImmutableMap.of(new MultiKey("A", "B"), "C"), parser.getParser().parse("A|B|C"));
   }
 
   @Test
@@ -148,7 +183,7 @@ public class URIExtractionNamespaceTest
         null, "col2",
         "col3"
     );
-    Map<String, String> map = parser.getParser().parse("A,B,C");
+    Map<Object, String> map = parser.getParser().parse("A,B,C");
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
   }
 
@@ -162,7 +197,7 @@ public class URIExtractionNamespaceTest
         null, "col2",
         "col3"
     );
-    Map<String, String> map = parser.getParser().parse("A");
+    Map<Object, String> map = parser.getParser().parse("A");
     Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
   }
 
@@ -189,6 +224,29 @@ public class URIExtractionNamespaceTest
     );
   }
 
+  @Test
+  public void testJSONFlatDataMultiKeyParser()
+  {
+    final List<String> keyFields = ImmutableList.of("keyField1", "keyField2");
+    final String valueField = "valueField";
+    URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+        new ObjectMapper(),
+        keyFields,
+        valueField
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(new MultiKey("A", "B"), "C"),
+        parser.getParser()
+            .parse(
+                String.format(
+                    "{\"%s\":\"B\", \"%s\":\"C\", \"%s\":\"A\",\"FOO\":\"BAR\"}",
+                    keyFields.get(1),
+                    valueField,
+                    keyFields.get(0)
+                )
+            )
+    );
+  }
 
   @Test(expected = NullPointerException.class)
   public void testJSONFlatDataParserBad()
@@ -217,10 +275,11 @@ public class URIExtractionNamespaceTest
   public void testJSONFlatDataParserBad2()
   {
     final String keyField = "keyField";
+    final String nullKeyField = null;
     final String valueField = "valueField";
     URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
         registerTypes(new ObjectMapper()),
-        null,
+        nullKeyField,
         valueField
     );
     Assert.assertEquals(
@@ -306,6 +365,43 @@ public class URIExtractionNamespaceTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
         new URIExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
         new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+    )) {
+      final String str = mapper.writeValueAsString(parser);
+      final URIExtractionNamespace.FlatDataParser parser2 = mapper.readValue(
+          str,
+          URIExtractionNamespace.FlatDataParser.class
+      );
+      Assert.assertEquals(str, mapper.writeValueAsString(parser2));
+    }
+  }
+
+  @Test
+  public void testSimpleJSONSerDeMultiKey() throws IOException
+  {
+    final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
+    for (URIExtractionNamespace.FlatDataParser parser : ImmutableList.of(
+        new URIExtractionNamespace.CSVFlatDataParser(
+            ImmutableList.of(
+                "col1",
+                "col2",
+                "col3"
+            ),
+            ImmutableList.of("col1", "col2"),
+            "col3"
+        ),
+        new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
+        new URIExtractionNamespace.JSONFlatDataParser(
+            mapper,
+            ImmutableList.of("keyField1", "keyField2"),
+            "valueField"
+        ),
+        new URIExtractionNamespace.TSVFlatDataParser(
+            ImmutableList.of("A", "B", "C"),
+            ",",
+            null,
+            ImmutableList.of("A", "B"),
+            "C"
+        )
     )) {
       final String str = mapper.writeValueAsString(parser);
       final URIExtractionNamespace.FlatDataParser parser2 = mapper.readValue(

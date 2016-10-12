@@ -55,7 +55,10 @@ Globally cached lookups can be specified as part of the [cluster wide config for
          "password": "diurd"
        },
        "table": "lookupTable",
-       "keyColumn": "mykeyColumn",
+       "keyColumns": [ 
+         "mykeyColumn1",
+         "mykeyColumn2",
+       ],
        "valueColumn": "MyValueColumn",
        "tsColumn": "timeColumn"
     },
@@ -199,15 +202,15 @@ Only ONE file which matches the search will be used. For most implementations, t
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`columns`|The list of columns in the csv file|yes|`null`|
-|`keyColumn`|The name of the column containing the key|no|The first column|
-|`valueColumn`|The name of the column containing the value|no|The second column|
+|`keyColumns`|The list of columns merged to make up the key|no|All columns expect last column|
+|`valueColumn`|The name of the column containing the value|no|The last column|
 
 *example input*
 
 ```
-bar,something,foo
-bat,something2,baz
-truck,something3,buck
+bar,something,foo,a
+bat,something2,baz,b
+truck,something3,buck,c
 ```
 
 *example namespaceParseSpec*
@@ -215,8 +218,17 @@ truck,something3,buck
 ```json
 "namespaceParseSpec": {
   "format": "csv",
-  "columns": ["value","somethingElse","key"],
-  "keyColumn": "key",
+  "columns": ["value","somethingElse","key","another"],
+  "keyColumns": ["key"],
+  "valueColumn": "value"
+}
+```
+
+```json
+"namespaceParseSpec": {
+  "format": "csv",
+  "columns": ["value","somethingElse","key1", "key2"],
+  "keyColumns": ["key1", "key2"],
   "valueColumn": "value"
 }
 ```
@@ -226,8 +238,8 @@ truck,something3,buck
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`columns`|The list of columns in the csv file|yes|`null`|
-|`keyColumn`|The name of the column containing the key|no|The first column|
-|`valueColumn`|The name of the column containing the value|no|The second column|
+|`keyColumns`|The list of columns merged to make up the key|no|All columns expect last column|
+|`valueColumn`|The name of the column containing the value|no|The last column|
 |`delimiter`|The delimiter in the file|no|tab (`\t`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
 
@@ -235,9 +247,9 @@ truck,something3,buck
 *example input*
 
 ```
-bar|something,1|foo
-bat|something,2|baz
-truck|something,3|buck
+bar|something,1|foo|a
+bat|something,2|baz|b
+truck|something,3|buck|c
 ```
 
 *example namespaceParseSpec*
@@ -245,8 +257,18 @@ truck|something,3|buck
 ```json
 "namespaceParseSpec": {
   "format": "tsv",
-  "columns": ["value","somethingElse","key"],
-  "keyColumn": "key",
+  "columns": ["value","somethingElse","key","another"],
+  "keyColumns": ["key"],
+  "valueColumn": "value",
+  "delimiter": "|"
+}
+```
+
+```json
+"namespaceParseSpec": {
+  "format": "tsv",
+  "columns": ["value","somethingElse","key1","key2"],
+  "keyColumns": ["key1", "key2"],
   "valueColumn": "value",
   "delimiter": "|"
 }
@@ -256,15 +278,15 @@ truck|something,3|buck
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`keyFieldName`|The field name of the key|yes|null|
+|`keyFieldNames`|The list of field names whose value are merged to make up the key|yes|null|
 |`valueFieldName`|The field name of the value|yes|null|
 
 *example input*
 
 ```json
-{"key": "foo", "value": "bar", "somethingElse" : "something"}
-{"key": "baz", "value": "bat", "somethingElse" : "something"}
-{"key": "buck", "somethingElse": "something", "value": "truck"}
+{"key": "foo", "key2" : "a", "value": "bar", "somethingElse" : "something"}
+{"key": "baz", "key2" : "b", "value": "bat", "somethingElse" : "something"}
+{"key": "buck", "key2" : "c", "somethingElse": "something", "value": "truck"}
 ```
 
 *example namespaceParseSpec*
@@ -272,11 +294,18 @@ truck|something,3|buck
 ```json
 "namespaceParseSpec": {
   "format": "customJson",
-  "keyFieldName": "key",
+  "keyFieldNames": ["key"],
   "valueFieldName": "value"
 }
 ```
 
+```json
+"namespaceParseSpec": {
+  "format": "customJson",
+  "keyFieldNames": ["key","key2"],
+  "valueFieldName": "value"
+}
+```
 
 ### simpleJson lookupParseSpec
 The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value.
@@ -306,7 +335,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`namespace`|The namespace to define|Yes||
 |`connectorConfig`|The connector config to use|Yes||
 |`table`|The table which contains the key value pairs|Yes||
-|`keyColumn`|The column in `table` which contains the keys|Yes||
+|`keyColumns`|list of columns in `table` which are merged to make up the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
@@ -322,7 +351,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
     "password":"diurd"
   },
   "table":"some_lookup_table",
-  "keyColumn":"the_old_dim_value",
+  "keyColumns":["the_old_dim1_value", "the_old_dim2_value"],
   "valueColumn":"the_new_dim_value",
   "tsColumn":"timestamp_column",
   "pollPeriod":600000
