@@ -17,50 +17,37 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.segment;
 
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
+import it.unimi.dsi.fastutil.ints.IntListIterator;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.IOException;
+import static io.druid.segment.IntIteratorUtils.skip;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
-/**
- */
-public class EmptyIndexedInts implements IndexedInts
+public class IntIteratorUtilsTest
 {
-  public static final EmptyIndexedInts EMPTY_INDEXED_INTS = new EmptyIndexedInts();
 
-  private EmptyIndexedInts()
+  @Test
+  public void testSkip()
   {
+    assertEquals(0, skip(IntIterators.EMPTY_ITERATOR, 5));
+    assertEquals(0, skip(IntIterators.EMPTY_ITERATOR, 0));
+
+    IntListIterator it = IntIterators.fromTo(0, 10);
+    assertEquals(3, skip(it, 3));
+    assertEquals(3, it.nextInt());
+    assertEquals(6, skip(it, 100));
+    assertEquals(0, skip(it, 100));
+    assertFalse(it.hasNext());
   }
 
-  @Override
-  public int size()
+  @Test(expected = IllegalArgumentException.class)
+  public void testNegativeSkipArgument()
   {
-    return 0;
-  }
-
-  @Override
-  public int get(int index)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return IntIterators.EMPTY_ITERATOR;
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-
+    skip(IntIterators.fromTo(0, 10), -1);
   }
 }

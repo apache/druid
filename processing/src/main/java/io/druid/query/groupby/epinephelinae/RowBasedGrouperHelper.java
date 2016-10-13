@@ -50,14 +50,14 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -530,31 +530,30 @@ public class RowBasedGrouperHelper
         public IndexedInts getRow()
         {
           final List<String> dimensionValues = row.get().getDimension(dimension);
-          final ArrayList<Integer> vals = Lists.newArrayList();
-          if (dimensionValues != null) {
-            for (int i = 0; i < dimensionValues.size(); ++i) {
-              vals.add(i);
-            }
-          }
+
+          final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
 
           return new IndexedInts()
           {
             @Override
             public int size()
             {
-              return vals.size();
+              return dimensionValuesSize;
             }
 
             @Override
             public int get(int index)
             {
-              return vals.get(index);
+              if (index < 0 || index >= dimensionValuesSize) {
+                throw new IndexOutOfBoundsException("index: " + index);
+              }
+              return index;
             }
 
             @Override
-            public Iterator<Integer> iterator()
+            public IntIterator iterator()
             {
-              return vals.iterator();
+              return IntIterators.fromTo(0, dimensionValuesSize);
             }
 
             @Override
