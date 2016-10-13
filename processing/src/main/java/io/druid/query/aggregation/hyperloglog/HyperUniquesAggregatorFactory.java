@@ -227,13 +227,21 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
 
-    if (!fieldName.equals(that.fieldName)) return false;
-    if (!name.equals(that.name)) return false;
+    if (!fieldName.equals(that.fieldName)) {
+      return false;
+    }
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
     return true;
   }
