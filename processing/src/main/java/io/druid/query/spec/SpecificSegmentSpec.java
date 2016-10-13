@@ -57,12 +57,18 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     SpecificSegmentSpec that = (SpecificSegmentSpec) o;
 
-    if (descriptor != null ? !descriptor.equals(that.descriptor) : that.descriptor != null) return false;
+    if (descriptor != null ? !descriptor.equals(that.descriptor) : that.descriptor != null) {
+      return false;
+    }
 
     return true;
   }

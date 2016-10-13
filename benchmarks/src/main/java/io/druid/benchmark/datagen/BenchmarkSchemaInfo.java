@@ -19,7 +19,6 @@
 
 package io.druid.benchmark.datagen;
 
-import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Interval;
 

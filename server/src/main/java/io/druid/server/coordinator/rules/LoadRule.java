@@ -244,13 +244,16 @@ public abstract class LoadRule implements Rule
   }
 
   protected void validateTieredReplicants(Map<String, Integer> tieredReplicants){
-    if(tieredReplicants.size() == 0)
+    if(tieredReplicants.size() == 0) {
       throw new IAE("A rule with empty tiered replicants is invalid");
+    }
     for (Map.Entry<String, Integer> entry: tieredReplicants.entrySet()) {
-      if (entry.getValue() == null)
+      if (entry.getValue() == null) {
         throw new IAE("Replicant value cannot be empty");
-      if (entry.getValue() < 0)
+      }
+      if (entry.getValue() < 0) {
         throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
+      }
     }
   }
 
