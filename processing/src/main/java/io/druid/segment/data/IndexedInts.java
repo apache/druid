@@ -19,12 +19,14 @@
 
 package io.druid.segment.data;
 
+import it.unimi.dsi.fastutil.ints.IntIterable;
+
 import java.io.Closeable;
 
 /**
  * Get a int an index (array or list lookup abstraction without boxing).
  */
-public interface IndexedInts extends Iterable<Integer>, Closeable
+public interface IndexedInts extends IntIterable, Closeable
 {
   int size();
   int get(int index);

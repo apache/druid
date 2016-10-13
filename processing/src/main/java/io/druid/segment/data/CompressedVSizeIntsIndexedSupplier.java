@@ -28,6 +28,7 @@ import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.segment.CompressedPools;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -366,7 +367,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     }
 
     @Override
-    public Iterator<Integer> iterator()
+    public IntIterator iterator()
     {
       return new IndexedIntsIterator(this);
     }
