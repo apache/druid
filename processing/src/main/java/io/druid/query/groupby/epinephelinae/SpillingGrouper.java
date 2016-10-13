@@ -48,7 +48,7 @@ import java.util.List;
  *
  * When the underlying grouper is full, its contents are sorted and written to temporary files using "spillMapper".
  */
-public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(SpillingGrouper.class);
 
@@ -172,7 +172,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
       closeables.add(fileIterator);
     }
 
-    return Groupers.mergeIterators(iterators, sorted);
+    return Groupers.mergeIterators(iterators, sorted ? keySerde.entryComparator() : null);
   }
 
   private void spill() throws IOException

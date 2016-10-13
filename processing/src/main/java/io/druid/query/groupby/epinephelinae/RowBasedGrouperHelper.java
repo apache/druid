@@ -63,6 +63,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -223,7 +224,7 @@ public class RowBasedGrouperHelper
     );
   }
 
-  static class RowBasedKey implements Comparable<RowBasedKey>
+  static class RowBasedKey
   {
     private final long timestamp;
     private final String[] dimensions;
@@ -277,24 +278,6 @@ public class RowBasedGrouperHelper
       int result = (int) (timestamp ^ (timestamp >>> 32));
       result = 31 * result + Arrays.hashCode(dimensions);
       return result;
-    }
-
-    @Override
-    public int compareTo(RowBasedKey other)
-    {
-      final int timeCompare = Longs.compare(timestamp, other.getTimestamp());
-      if (timeCompare != 0) {
-        return timeCompare;
-      }
-
-      for (int i = 0; i < dimensions.length; i++) {
-        final int cmp = dimensions[i].compareTo(other.getDimensions()[i]);
-        if (cmp != 0) {
-          return cmp;
-        }
-      }
-
-      return 0;
     }
 
     @Override
@@ -465,6 +448,36 @@ public class RowBasedGrouperHelper
           }
         };
       }
+    }
+
+    @Override
+    public Comparator<Grouper.Entry<RowBasedKey>> entryComparator()
+    {
+      return new Comparator<Grouper.Entry<RowBasedKey>>()
+      {
+        @Override
+        public int compare(
+            Grouper.Entry<RowBasedKey> o1, Grouper.Entry<RowBasedKey> o2
+        )
+        {
+          RowBasedKey row1 = o1.getKey();
+          RowBasedKey row2 = o2.getKey();
+
+          final int timeCompare = Longs.compare(row1.getTimestamp(), row2.getTimestamp());
+          if (timeCompare != 0) {
+            return timeCompare;
+          }
+
+          for (int i = 0; i < row1.getDimensions().length; i++) {
+            final int cmp = row1.getDimensions()[i].compareTo(row2.getDimensions()[i]);
+            if (cmp != 0) {
+              return cmp;
+            }
+          }
+
+          return 0;
+        }
+      };
     }
 
     @Override
