@@ -60,13 +60,12 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -1189,7 +1188,10 @@ public class IndexMerger
   {
     private final AggregatorFactory[] metricAggs;
 
-    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs) {this.metricAggs = metricAggs;}
+    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs)
+    {
+      this.metricAggs = metricAggs;
+    }
 
     @Override
     public Class<? extends String> getClazz()

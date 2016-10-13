@@ -60,6 +60,8 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -227,31 +229,29 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           public IndexedInts getRow()
           {
             final List<String> dimensionValues = in.get().getDimension(dimension);
-            final ArrayList<Integer> vals = Lists.newArrayList();
-            if (dimensionValues != null) {
-              for (int i = 0; i < dimensionValues.size(); ++i) {
-                vals.add(i);
-              }
-            }
+            final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
 
             return new IndexedInts()
             {
               @Override
               public int size()
               {
-                return vals.size();
+                return dimensionValuesSize;
               }
 
               @Override
               public int get(int index)
               {
-                return vals.get(index);
+                if (index < 0 || index >= dimensionValuesSize) {
+                  throw new IndexOutOfBoundsException("index: " + index);
+                }
+                return index;
               }
 
               @Override
-              public Iterator<Integer> iterator()
+              public IntIterator iterator()
               {
-                return vals.iterator();
+                return IntIterators.fromTo(0, dimensionValuesSize);
               }
 
               @Override
