@@ -111,8 +111,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         y -= y % years;
         long tt = chronology.years().add(origin, y);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.years().add(tt, -years);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.years().add(tt, -years);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -130,8 +133,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         m -= m % months;
         long tt = chronology.months().add(origin, m);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.months().add(tt, -months);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.months().add(tt, -months);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -150,8 +156,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         w -= w % weeks;
         long tt = chronology.weeks().add(origin, w);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.weeks().add(tt, -weeks);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.weeks().add(tt, -weeks);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -172,8 +181,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         d -= d % days;
         long tt = chronology.days().add(origin, d);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.days().add(tt, -days);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.days().add(tt, -days);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -193,8 +205,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         h -= h % hours;
         long tt = chronology.hours().add(origin, h);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.hours().add(tt, -hours);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.hours().add(tt, -hours);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -214,8 +229,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         m -=  m % minutes;
         long tt = chronology.minutes().add(origin, m);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.minutes().add(tt, -minutes);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.minutes().add(tt, -minutes);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -235,8 +253,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         s -= s % seconds;
         long tt = chronology.seconds().add(origin, s);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.seconds().add(tt, -seconds);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.seconds().add(tt, -seconds);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else
@@ -254,8 +275,11 @@ public class  PeriodGranularity extends BaseQueryGranularity
         ms -= ms % millis;
         long tt = chronology.millis().add(origin, ms);
         // always round down to the previous period (for timestamps prior to origin)
-        if(t < tt) t = chronology.millis().add(tt, -millis);
-        else t = tt;
+        if(t < tt) {
+          t = chronology.millis().add(tt, -millis);
+        } else {
+          t = tt;
+        }
         return t;
       }
       else {
@@ -274,7 +298,9 @@ public class  PeriodGranularity extends BaseQueryGranularity
     {
       if(v > 0)
       {
-        if(single) return true;
+        if(single) {
+          return true;
+        }
         single = true;
       }
     }
