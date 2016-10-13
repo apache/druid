@@ -13,7 +13,7 @@ shared:
   settings:
     SSH_OPTIONS: "-o StrictHostKeyChecking=no -o CheckHostIP=no -o UserKnownHostsFile=/dev/null"
     # Change only the variables' values below to replicate this pipeline
-    SMOKE_HOST: "druid-vm004.us.bf1.yahoo.com"
+    SMOKE_HOST: "druid-vm011.us.bf1.yahoo.com"
     PROMOTE_HOST: "druid-launcher-003.adx.bf1.yahoo.com"
     DRUID_PKG_NAME: "druid_dev"
     DRUID_INABOX_PKG_NAME: "druid_inabox_dev"
