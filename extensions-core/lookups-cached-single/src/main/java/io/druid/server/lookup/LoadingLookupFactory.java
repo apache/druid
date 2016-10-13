@@ -96,7 +96,9 @@ public class LoadingLookupFactory implements LookupExtractorFactory
       @Nullable LookupExtractorFactory lookupExtractorFactory
   )
   {
-    if (lookupExtractorFactory == null) return true;
+    if (lookupExtractorFactory == null) {
+      return true;
+    }
     return !this.equals(lookupExtractorFactory);
   }
 

@@ -324,7 +324,9 @@ public final class ProtoTestEventWrapper {
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
+      if (isInitialized != -1) {
+        return isInitialized == 1;
+      }
       
       if (!hasEventType()) {
         memoizedIsInitialized = 0;
@@ -378,7 +380,9 @@ public final class ProtoTestEventWrapper {
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) return size;
+      if (size != -1) {
+        return size;
+      }
     
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -649,7 +653,9 @@ public final class ProtoTestEventWrapper {
       }
       
       public Builder mergeFrom(ProtoTestEventWrapper.ProtoTestEvent other) {
-        if (other == ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance()) return this;
+        if (other == ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance()) {
+          return this;
+        }
         if (other.hasEventType()) {
           setEventType(other.getEventType());
         }

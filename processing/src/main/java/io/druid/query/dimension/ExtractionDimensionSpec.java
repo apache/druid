@@ -121,15 +121,24 @@ public class ExtractionDimensionSpec implements DimensionSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     ExtractionDimensionSpec that = (ExtractionDimensionSpec) o;
 
-    if (extractionFn != null ? !extractionFn.equals(that.extractionFn) : that.extractionFn != null)
+    if (extractionFn != null ? !extractionFn.equals(that.extractionFn) : that.extractionFn != null) {
       return false;
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) return false;
-    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) return false;
+    }
+    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
+      return false;
+    }
+    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) {
+      return false;
+    }
 
     return true;
   }

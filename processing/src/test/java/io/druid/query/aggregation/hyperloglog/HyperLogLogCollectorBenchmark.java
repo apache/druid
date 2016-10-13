@@ -83,7 +83,9 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     int pos = 0;
     for(int i = 0; i < count; ++i) {
       HyperLogLogCollector c = HyperLogLogCollector.makeLatestCollector();
-      for(int k = 0; k < 40; ++k) c.add(fn.hashInt(++val).asBytes());
+      for(int k = 0; k < 40; ++k) {
+        c.add(fn.hashInt(++val).asBytes());
+      }
       final ByteBuffer sparseHeapCopy = c.toByteBuffer();
       int size = sparseHeapCopy.remaining();
 

@@ -256,11 +256,11 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       int mid = (low + high) >>> 1;
       long midVal = timeValues.getLongSingleValueRow(mid);
 
-      if (midVal < time)
+      if (midVal < time) {
         low = mid + 1;
-      else if (midVal > time)
+      } else if (midVal > time) {
         high = mid - 1;
-      else { // key found
+      } else { // key found
         int i;
         // rewind the index of the same time values
         for (i = mid - 1; i >= 0; i--) {

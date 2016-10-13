@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.MapLookupExtractor;
-import io.druid.query.lookup.LookupExtractor;
 import org.junit.Assert;
 import org.junit.Test;
 

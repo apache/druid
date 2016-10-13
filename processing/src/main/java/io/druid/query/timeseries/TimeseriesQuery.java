@@ -190,18 +190,30 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     TimeseriesQuery that = (TimeseriesQuery) o;
 
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null)
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null) {
       return false;
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null)
+    }
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
       return false;
+    }
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
+      return false;
+    }
+    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null) {
+      return false;
+    }
 
     return true;
   }

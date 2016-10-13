@@ -32,7 +32,6 @@ import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

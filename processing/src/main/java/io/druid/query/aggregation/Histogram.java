@@ -51,12 +51,18 @@ public class Histogram
     this.bins   = bins;
     this.min = min;
     this.max = max;
-    for(long k : bins) this.count += k;
+    for(long k : bins) {
+      this.count += k;
+    }
   }
 
   public void offer(float d) {
-    if(d > max) max = d;
-    if(d < min) min = d;
+    if(d > max) {
+      max = d;
+    }
+    if(d < min) {
+      min = d;
+    }
 
     int index = Arrays.binarySearch(breaks, d);
     int pos = (index >= 0) ? index : -(index + 1);
@@ -67,8 +73,12 @@ public class Histogram
   public Histogram fold(Histogram h) {
     Preconditions.checkArgument(Arrays.equals(breaks, h.breaks), "Cannot fold histograms with different breaks");
 
-    if(h.min < min) min = h.min;
-    if(h.max > max) max = h.max;
+    if(h.min < min) {
+      min = h.min;
+    }
+    if(h.max > max) {
+      max = h.max;
+    }
 
     count += h.count;
     for (int i = 0; i < bins.length; ++i) {
@@ -124,8 +134,12 @@ public class Histogram
                                          Longs.BYTES * bins.length + Floats.BYTES * 2);
 
     buf.putInt(breaks.length);
-    for(float b : breaks) buf.putFloat(b);
-    for(long  c : bins  ) buf.putLong(c);
+    for(float b : breaks) {
+      buf.putFloat(b);
+    }
+    for(long  c : bins  ) {
+      buf.putLong(c);
+    }
     buf.putFloat(min);
     buf.putFloat(max);
 
@@ -141,7 +155,9 @@ public class Histogram
    */
   public HistogramVisual asVisual() {
     float[] visualCounts = new float[bins.length - 2];
-    for(int i = 0; i < visualCounts.length; ++i) visualCounts[i] = (float)bins[i + 1];
+    for(int i = 0; i < visualCounts.length; ++i) {
+      visualCounts[i] = (float) bins[i + 1];
+    }
     return new HistogramVisual(breaks, visualCounts, new float[]{min, max});
   }
 
@@ -155,8 +171,12 @@ public class Histogram
     float[] breaks = new float[n];
     long[]  bins   = new long[n + 1];
 
-    for (int i = 0; i < breaks.length; ++i) breaks[i] = buf.getFloat();
-    for (int i = 0; i < bins.length  ; ++i) bins[i]   = buf.getLong();
+    for (int i = 0; i < breaks.length; ++i) {
+      breaks[i] = buf.getFloat();
+    }
+    for (int i = 0; i < bins.length  ; ++i) {
+      bins[i] = buf.getLong();
+    }
 
     float min = buf.getFloat();
     float max = buf.getFloat();

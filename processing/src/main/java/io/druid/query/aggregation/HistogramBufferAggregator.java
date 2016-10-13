@@ -60,8 +60,12 @@ public class HistogramBufferAggregator implements BufferAggregator
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 
-    if(value < buf.getFloat(minPos)) buf.putFloat(minPos, value);
-    if(value > buf.getFloat(maxPos)) buf.putFloat(maxPos, value);
+    if(value < buf.getFloat(minPos)) {
+      buf.putFloat(minPos, value);
+    }
+    if(value > buf.getFloat(maxPos)) {
+      buf.putFloat(maxPos, value);
+    }
 
     int index = Arrays.binarySearch(breaks, value);
     index = (index >= 0) ? index : -(index + 1);

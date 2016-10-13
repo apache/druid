@@ -73,7 +73,9 @@ public class AzureTaskLogs implements TaskLogs {
     final String taskKey = getTaskLogKey(taskid);
 
     try {
-      if (!azureStorage.getBlobExists(container, taskKey)) return Optional.absent();
+      if (!azureStorage.getBlobExists(container, taskKey)) {
+        return Optional.absent();
+      }
 
       return Optional.<ByteSource>of(
           new ByteSource() {

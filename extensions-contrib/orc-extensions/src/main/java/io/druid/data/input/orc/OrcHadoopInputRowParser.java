@@ -199,16 +199,19 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @Override
   public boolean equals(Object o)
   {
-    if (!(o instanceof OrcHadoopInputRowParser))
+    if (!(o instanceof OrcHadoopInputRowParser)) {
       return false;
+    }
 
     OrcHadoopInputRowParser other = (OrcHadoopInputRowParser)o;
 
-    if (!parseSpec.equals(other.parseSpec))
+    if (!parseSpec.equals(other.parseSpec)) {
       return false;
+    }
 
-    if (!typeString.equals(other.typeString))
+    if (!typeString.equals(other.typeString)) {
       return false;
+    }
 
     return true;
   }

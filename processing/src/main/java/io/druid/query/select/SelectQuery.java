@@ -227,17 +227,33 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     SelectQuery that = (SelectQuery) o;
 
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (metrics != null ? !metrics.equals(that.metrics) : that.metrics != null) return false;
-    if (pagingSpec != null ? !pagingSpec.equals(that.pagingSpec) : that.pagingSpec != null) return false;
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
+      return false;
+    }
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
+      return false;
+    }
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
+      return false;
+    }
+    if (metrics != null ? !metrics.equals(that.metrics) : that.metrics != null) {
+      return false;
+    }
+    if (pagingSpec != null ? !pagingSpec.equals(that.pagingSpec) : that.pagingSpec != null) {
+      return false;
+    }
 
     return true;
   }

@@ -19,7 +19,6 @@
 
 package io.druid.server.lookup.cache;
 
-import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;

@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.ordering.StringComparator;
 
 public class StringComparatorsTest
 {

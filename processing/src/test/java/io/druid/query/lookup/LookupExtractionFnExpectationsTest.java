@@ -20,7 +20,6 @@
 package io.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import org.junit.Assert;
 import org.junit.Test;
