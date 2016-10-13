@@ -89,6 +89,7 @@ public class RowBasedGrouperHelper
     final DateTime fudgeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query);
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         fudgeTimestamp,
+        query.getContextSortByDimsFirst(),
         query.getDimensions().size(),
         querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
     );
@@ -293,12 +294,14 @@ public class RowBasedGrouperHelper
   private static class RowBasedKeySerdeFactory implements Grouper.KeySerdeFactory<RowBasedKey>
   {
     private final DateTime fudgeTimestamp;
+    private final boolean sortByDimsFirst;
     private final int dimCount;
     private final long maxDictionarySize;
 
-    public RowBasedKeySerdeFactory(DateTime fudgeTimestamp, int dimCount, long maxDictionarySize)
+    public RowBasedKeySerdeFactory(DateTime fudgeTimestamp, boolean sortByDimsFirst, int dimCount, long maxDictionarySize)
     {
       this.fudgeTimestamp = fudgeTimestamp;
+      this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
     }
@@ -306,7 +309,7 @@ public class RowBasedGrouperHelper
     @Override
     public Grouper.KeySerde<RowBasedKey> factorize()
     {
-      return new RowBasedKeySerde(fudgeTimestamp, dimCount, maxDictionarySize);
+      return new RowBasedKeySerde(fudgeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize);
     }
   }
 
@@ -316,6 +319,7 @@ public class RowBasedGrouperHelper
     private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
 
     private final DateTime fudgeTimestamp;
+    private final boolean sortByDimsFirst;
     private final int dimCount;
     private final int keySize;
     private final ByteBuffer keyBuffer;
@@ -331,11 +335,13 @@ public class RowBasedGrouperHelper
 
     public RowBasedKeySerde(
         final DateTime fudgeTimestamp,
+        final boolean sortByDimsFirst,
         final int dimCount,
         final long maxDictionarySize
     )
     {
       this.fudgeTimestamp = fudgeTimestamp;
+      this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
       this.keySize = (fudgeTimestamp == null ? Longs.BYTES : 0) + dimCount * Ints.BYTES;
@@ -409,7 +415,8 @@ public class RowBasedGrouperHelper
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
           {
             final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-            if (timeCompare != 0) {
+
+            if (!sortByDimsFirst && timeCompare != 0) {
               return timeCompare;
             }
 
@@ -422,6 +429,10 @@ public class RowBasedGrouperHelper
               if (cmp != 0) {
                 return cmp;
               }
+            }
+
+            if (sortByDimsFirst && timeCompare != 0) {
+              return timeCompare;
             }
 
             return 0;
@@ -464,7 +475,8 @@ public class RowBasedGrouperHelper
           RowBasedKey row2 = o2.getKey();
 
           final int timeCompare = Longs.compare(row1.getTimestamp(), row2.getTimestamp());
-          if (timeCompare != 0) {
+
+          if (!sortByDimsFirst && timeCompare != 0) {
             return timeCompare;
           }
 
@@ -473,6 +485,10 @@ public class RowBasedGrouperHelper
             if (cmp != 0) {
               return cmp;
             }
+          }
+
+          if (sortByDimsFirst && timeCompare != 0) {
+            return timeCompare;
           }
 
           return 0;

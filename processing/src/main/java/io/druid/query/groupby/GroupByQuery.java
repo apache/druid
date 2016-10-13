@@ -20,6 +20,7 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -65,6 +66,8 @@ import java.util.Set;
  */
 public class GroupByQuery extends BaseQuery<Row>
 {
+  public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+
   public static Builder builder()
   {
     return new Builder();
@@ -234,6 +237,12 @@ public class GroupByQuery extends BaseQuery<Row>
     return GROUP_BY;
   }
 
+  @JsonIgnore
+  public boolean getContextSortByDimsFirst()
+  {
+    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+  }
+
   @Override
   public Ordering getResultOrdering()
   {
@@ -259,6 +268,8 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public Ordering<Row> getRowOrdering(final boolean granular)
   {
+    final boolean sortByDimsFirst = getContextSortByDimsFirst();
+
     final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
 
     return Ordering.from(
@@ -281,7 +292,7 @@ public class GroupByQuery extends BaseQuery<Row>
               );
             }
 
-            if (timeCompare != 0) {
+            if (!sortByDimsFirst && timeCompare != 0) {
               return timeCompare;
             }
 
@@ -293,6 +304,10 @@ public class GroupByQuery extends BaseQuery<Row>
               if (dimCompare != 0) {
                 return dimCompare;
               }
+            }
+
+            if (sortByDimsFirst && timeCompare != 0) {
+              return timeCompare;
             }
 
             return 0;
