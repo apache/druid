@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -42,6 +43,9 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.plumber.Committers;
+import io.druid.timeline.partition.LinearShardSpec;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,7 +60,7 @@ public class DefaultOfflineAppenderatorFactoryTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void testBuild() throws IOException
+  public void testBuild() throws IOException, SegmentNotWritableException
   {
     Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -142,14 +146,21 @@ public class DefaultOfflineAppenderatorFactoryTest
         null
     );
 
-    Appenderator appenderator = defaultOfflineAppenderatorFactory.build(
+    try(Appenderator appenderator = defaultOfflineAppenderatorFactory.build(
         schema,
         tuningConfig,
         new FireDepartmentMetrics()
-    );
-    Assert.assertEquals(null, appenderator.startJob());
-    Assert.assertEquals("dataSourceName", appenderator.getDataSource());
-    appenderator.close();
+    )){
+      Assert.assertEquals("dataSourceName", appenderator.getDataSource());
+      Assert.assertEquals(null, appenderator.startJob());
+      SegmentIdentifier identifier = new SegmentIdentifier("dataSourceName", new Interval("2000/2001"), "A", new LinearShardSpec(0));
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(identifier, AppenderatorTest.IR("2000", "bar", 1), Suppliers.ofInstance(Committers.nil()));
+      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(identifier, AppenderatorTest.IR("2000", "baz", 1), Suppliers.ofInstance(Committers.nil()));
+      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+    }
   }
-
 }

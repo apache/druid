@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.client.cache.MapCache;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -124,10 +123,9 @@ public class Appenderators
         null,
         indexIO,
         indexMerger,
-        MapCache.create(500000),
-        new CacheConfig()
+        null,
+        null
     );
   }
-
 
 }
