@@ -41,9 +41,13 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
+import io.druid.query.aggregation.post.DoubleGreatestPostAggregator;
+import io.druid.query.aggregation.post.DoubleLeastPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.aggregation.post.JavaScriptPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
+import io.druid.query.aggregation.post.LongGreatestPostAggregator;
+import io.druid.query.aggregation.post.LongLeastPostAggregator;
 import io.druid.segment.serde.ComplexMetrics;
 
 /**
@@ -88,7 +92,11 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "fieldAccess", value = FieldAccessPostAggregator.class),
       @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptPostAggregator.class),
-      @JsonSubTypes.Type(name = "hyperUniqueCardinality", value = HyperUniqueFinalizingPostAggregator.class)
+      @JsonSubTypes.Type(name = "hyperUniqueCardinality", value = HyperUniqueFinalizingPostAggregator.class),
+      @JsonSubTypes.Type(name = "doubleGreatest", value = DoubleGreatestPostAggregator.class),
+      @JsonSubTypes.Type(name = "doubleLeast", value = DoubleLeastPostAggregator.class),
+      @JsonSubTypes.Type(name = "longGreatest", value = LongGreatestPostAggregator.class),
+      @JsonSubTypes.Type(name = "longLeast", value = LongLeastPostAggregator.class)
   })
   public static interface PostAggregatorMixin
   {
