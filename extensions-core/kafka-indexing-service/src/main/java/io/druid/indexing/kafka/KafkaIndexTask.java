@@ -161,9 +161,22 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final Lock pauseLock = new ReentrantLock();
   private final Condition hasPaused = pauseLock.newCondition();
   private final Condition shouldResume = pauseLock.newCondition();
+
+  // [pollRetryLock] and [isAwaitingRetry] is used when the Kafka consumer returns an OffsetOutOfRangeException and we
+  // pause polling from Kafka for POLL_RETRY_MS before trying again. This allows us to signal the sleeping thread and
+  // resume the main run loop in the case of a pause or stop request from a Jetty thread.
   private final Lock pollRetryLock = new ReentrantLock();
   private final Condition isAwaitingRetry = pollRetryLock.newCondition();
+
+  // [statusLock] is used to synchronize the Jetty thread calling stopGracefully() with the main run thread. It prevents
+  // the main run thread from switching into a publishing state while the stopGracefully() thread thinks it's still in
+  // a pre-publishing state. This is important because stopGracefully() will try to use the [stopRequested] flag to stop
+  // the main thread where possible, but this flag is not honored once publishing has begun so in this case we must
+  // interrupt the thread. The lock ensures that if the run thread is about to transition into publishing state, it
+  // blocks until after stopGracefully() has set [stopRequested] and then does a final check on [stopRequested] before
+  // transitioning to publishing state.
   private final Object statusLock = new Object();
+
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
 
