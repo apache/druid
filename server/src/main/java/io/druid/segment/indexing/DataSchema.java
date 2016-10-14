@@ -25,17 +25,21 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -107,14 +111,23 @@ public class DataSchema
     }
 
     if (inputRowParser.getParseSpec() != null) {
-      final DimensionsSpec dimensionsSpec = inputRowParser.getParseSpec().getDimensionsSpec();
+      DimensionsSpec dimensionsSpec = inputRowParser.getParseSpec().getDimensionsSpec();
       final TimestampSpec timestampSpec = inputRowParser.getParseSpec().getTimestampSpec();
 
       // exclude timestamp from dimensions by default, unless explicitly included in the list of dimensions
       if (timestampSpec != null) {
         final String timestampColumn = timestampSpec.getTimestampColumn();
-        if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensionNames().contains(timestampColumn))) {
+        boolean includeTruncatedTsColumnAsDimension = dimensionsSpec.isIncludeTruncatedTimestampColumnAsDimension();
+        if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensionNames().contains(timestampColumn))
+            && !includeTruncatedTsColumnAsDimension) {
           dimensionExclusions.add(timestampColumn);
+        }
+        if (dimensionsSpec.hasCustomDimensions()
+            && includeTruncatedTsColumnAsDimension
+            && !dimensionsSpec.getDimensionNames().contains(timestampColumn)) {
+          List<DimensionSchema> dimensions = Lists.newArrayList(dimensionsSpec.getDimensions());
+          dimensions.add(new StringDimensionSchema(timestampColumn));
+          dimensionsSpec = dimensionsSpec.withDimensions(dimensions);
         }
       }
       if (dimensionsSpec != null) {

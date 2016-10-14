@@ -37,6 +37,7 @@ public class IncrementalIndexSchema
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
   private final boolean rollup;
+  private final boolean includeTruncatedTimestampColumnAsDimension;
 
   public IncrementalIndexSchema(
       long minTimestamp,
@@ -44,7 +45,8 @@ public class IncrementalIndexSchema
       QueryGranularity gran,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
-      boolean rollup
+      boolean rollup,
+      boolean includeTruncatedTimestampColumnAsDimension
   )
   {
     this.minTimestamp = minTimestamp;
@@ -53,6 +55,7 @@ public class IncrementalIndexSchema
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
     this.rollup = rollup;
+    this.includeTruncatedTimestampColumnAsDimension = includeTruncatedTimestampColumnAsDimension;
   }
 
   public long getMinTimestamp()
@@ -85,6 +88,11 @@ public class IncrementalIndexSchema
     return rollup;
   }
 
+  public boolean isIncludeTruncatedTimestampColumnAsDimension()
+  {
+    return includeTruncatedTimestampColumnAsDimension;
+  }
+
   public static class Builder
   {
     private long minTimestamp;
@@ -93,6 +101,7 @@ public class IncrementalIndexSchema
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
     private boolean rollup;
+    private boolean includeTruncatedTimestampColumnAsDimension;
 
     public Builder()
     {
@@ -101,11 +110,31 @@ public class IncrementalIndexSchema
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
       this.rollup = true;
+      this.includeTruncatedTimestampColumnAsDimension = false;
     }
 
     public Builder withMinTimestamp(long minTimestamp)
     {
       this.minTimestamp = minTimestamp;
+      return this;
+    }
+
+    public Builder withIncludeTruncatedTimestampColumnAsDimension(boolean includeTruncatedTimestampColumnAsDimension)
+    {
+      this.includeTruncatedTimestampColumnAsDimension = includeTruncatedTimestampColumnAsDimension;
+      return this;
+    }
+
+    public Builder withIncludeTruncatedTimestampColumnAsDimension(InputRowParser parser)
+    {
+      if (parser != null
+          && parser.getParseSpec() != null
+          && parser.getParseSpec().getDimensionsSpec() != null) {
+        this.includeTruncatedTimestampColumnAsDimension = parser.getParseSpec().getDimensionsSpec()
+                                                                .isIncludeTruncatedTimestampColumnAsDimension();
+      } else {
+        this.includeTruncatedTimestampColumnAsDimension = false;
+      }
       return this;
     }
 
@@ -167,7 +196,7 @@ public class IncrementalIndexSchema
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics, rollup
+          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics, rollup, includeTruncatedTimestampColumnAsDimension
       );
     }
   }

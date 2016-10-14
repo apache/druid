@@ -39,6 +39,7 @@ public class DimensionsSpec
 {
   private final List<DimensionSchema> dimensions;
   private final Set<String> dimensionExclusions;
+  private final Boolean includeTruncatedTimestampColumnAsDimension;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
 
   public static List<DimensionSchema> getDefaultSchemas(List<String> dimNames)
@@ -65,6 +66,7 @@ public class DimensionsSpec
   public DimensionsSpec(
       @JsonProperty("dimensions") List<DimensionSchema> dimensions,
       @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
+      @JsonProperty("includeTruncatedTimestampColumnAsDimension") Boolean includeTruncatedTimestampColumnAsDimension,
       @Deprecated @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
   )
   {
@@ -75,6 +77,10 @@ public class DimensionsSpec
     this.dimensionExclusions = (dimensionExclusions == null)
                                ? Sets.<String>newHashSet()
                                : Sets.newHashSet(dimensionExclusions);
+
+    this.includeTruncatedTimestampColumnAsDimension = includeTruncatedTimestampColumnAsDimension == null
+                                                      ? false
+                                                      : includeTruncatedTimestampColumnAsDimension;
 
     List<SpatialDimensionSchema> spatialDims = (spatialDimensions == null)
                                                ? Lists.<SpatialDimensionSchema>newArrayList()
@@ -88,13 +94,21 @@ public class DimensionsSpec
       dimensionSchemaMap.put(schema.getName(), schema);
     }
 
-    for(SpatialDimensionSchema spatialSchema : spatialDims) {
+    for (SpatialDimensionSchema spatialSchema : spatialDims) {
       DimensionSchema newSchema = DimensionsSpec.convertSpatialSchema(spatialSchema);
       this.dimensions.add(newSchema);
       dimensionSchemaMap.put(newSchema.getName(), newSchema);
     }
   }
 
+  public DimensionsSpec(
+      List<DimensionSchema> dimensions,
+      List<String> dimensionExclusions,
+      List<SpatialDimensionSchema> spatialDimensions
+  )
+  {
+    this(dimensions, dimensionExclusions, false, spatialDimensions);
+  }
 
   @JsonProperty
   public List<DimensionSchema> getDimensions()
@@ -106,6 +120,12 @@ public class DimensionsSpec
   public Set<String> getDimensionExclusions()
   {
     return dimensionExclusions;
+  }
+
+  @JsonProperty
+  public Boolean isIncludeTruncatedTimestampColumnAsDimension()
+  {
+    return includeTruncatedTimestampColumnAsDimension;
   }
 
   @Deprecated @JsonIgnore
@@ -220,8 +240,10 @@ public class DimensionsSpec
     if (!dimensions.equals(that.dimensions)) {
       return false;
     }
-
-    return dimensionExclusions.equals(that.dimensionExclusions);
+    if (!dimensionExclusions.equals(that.dimensionExclusions)) {
+      return false;
+    }
+    return includeTruncatedTimestampColumnAsDimension.equals(that.includeTruncatedTimestampColumnAsDimension);
   }
 
   @Override
@@ -229,6 +251,7 @@ public class DimensionsSpec
   {
     int result = dimensions.hashCode();
     result = 31 * result + dimensionExclusions.hashCode();
+    result = 31 * result + includeTruncatedTimestampColumnAsDimension.hashCode();
     return result;
   }
 }

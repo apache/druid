@@ -41,6 +41,7 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
@@ -225,13 +226,15 @@ public class IndexGeneratorJob implements Jobby
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
+    InputRowParser parser = config.getSchema().getDataSchema().getParser();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(theBucket.time.getMillis())
-        .withTimestampSpec(config.getSchema().getDataSchema().getParser().getParseSpec().getTimestampSpec())
-        .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+        .withTimestampSpec(parser)
+        .withDimensionsSpec(parser)
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
+        .withIncludeTruncatedTimestampColumnAsDimension(parser)
         .build();
 
     OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(

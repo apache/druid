@@ -389,6 +389,14 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+
+    if (incrementalIndexSchema.isIncludeTruncatedTimestampColumnAsDimension()
+        && metadata.getTimestampSpec() != null
+        && columnCapabilities.containsKey(metadata.getTimestampSpec().getTimestampColumn())) {
+      this.rowTransformers.add(
+          new TruncateTimestampColumnRowTransformer(gran, metadata)
+      );
+    }
   }
 
   public boolean isRollup()
