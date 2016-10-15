@@ -56,7 +56,7 @@ public class Aggregators
       @Override
       public String getName()
       {
-        return null;
+        throw new UnsupportedOperationException("getName is deprecated");
       }
 
       @Override

@@ -41,7 +41,6 @@ public class ApproximateHistogramAggregator implements Aggregator
     return ((ApproximateHistogram) lhs).foldFast((ApproximateHistogram) rhs);
   }
 
-  private final String name;
   private final FloatColumnSelector selector;
   private final int resolution;
   private final float lowerLimit;
@@ -50,14 +49,12 @@ public class ApproximateHistogramAggregator implements Aggregator
   private ApproximateHistogram histogram;
 
   public ApproximateHistogramAggregator(
-      String name,
       FloatColumnSelector selector,
       int resolution,
       float lowerLimit,
       float upperLimit
   )
   {
-    this.name = name;
     this.selector = selector;
     this.resolution = resolution;
     this.lowerLimit = lowerLimit;
@@ -98,7 +95,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return name;
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override

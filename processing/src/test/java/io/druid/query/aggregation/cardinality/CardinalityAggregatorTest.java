@@ -310,7 +310,6 @@ public class CardinalityAggregatorTest
   public void testAggregateRows() throws Exception
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         selectorList,
         true
     );
@@ -326,7 +325,6 @@ public class CardinalityAggregatorTest
   public void testAggregateValues() throws Exception
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         selectorList,
         false
     );
@@ -385,8 +383,8 @@ public class CardinalityAggregatorTest
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
 
-    CardinalityAggregator agg1 = new CardinalityAggregator("billy", selector1, true);
-    CardinalityAggregator agg2 = new CardinalityAggregator("billy", selector2, true);
+    CardinalityAggregator agg1 = new CardinalityAggregator(selector1, true);
+    CardinalityAggregator agg2 = new CardinalityAggregator(selector2, true);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -416,8 +414,8 @@ public class CardinalityAggregatorTest
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
 
-    CardinalityAggregator agg1 = new CardinalityAggregator("billy", selector1, false);
-    CardinalityAggregator agg2 = new CardinalityAggregator("billy", selector2, false);
+    CardinalityAggregator agg1 = new CardinalityAggregator(selector1, false);
+    CardinalityAggregator agg2 = new CardinalityAggregator(selector2, false);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -445,7 +443,6 @@ public class CardinalityAggregatorTest
   public void testAggregateRowsWithExtraction() throws Exception
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         selectorListWithExtraction,
         true
     );
@@ -455,7 +452,6 @@ public class CardinalityAggregatorTest
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
 
     CardinalityAggregator agg2 = new CardinalityAggregator(
-        "billy",
         selectorListConstantVal,
         true
     );
@@ -469,7 +465,6 @@ public class CardinalityAggregatorTest
   public void testAggregateValuesWithExtraction() throws Exception
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         selectorListWithExtraction,
         false
     );
@@ -479,7 +474,6 @@ public class CardinalityAggregatorTest
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
 
     CardinalityAggregator agg2 = new CardinalityAggregator(
-        "billy",
         selectorListConstantVal,
         false
     );
