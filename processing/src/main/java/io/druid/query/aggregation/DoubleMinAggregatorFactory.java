@@ -56,7 +56,7 @@ public class DoubleMinAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMinAggregator(name, metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleMinAggregator(metricFactory.makeFloatColumnSelector(fieldName));
   }
 
   @Override

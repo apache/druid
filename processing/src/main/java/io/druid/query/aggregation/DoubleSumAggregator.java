@@ -44,13 +44,11 @@ public class DoubleSumAggregator implements Aggregator
   }
 
   private final FloatColumnSelector selector;
-  private final String name;
 
   private double sum;
 
-  public DoubleSumAggregator(String name, FloatColumnSelector selector)
+  public DoubleSumAggregator(FloatColumnSelector selector)
   {
-    this.name = name;
     this.selector = selector;
 
     this.sum = 0;
@@ -87,15 +85,9 @@ public class DoubleSumAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return this.name;
-  }
-
-  @Override
   public Aggregator clone()
   {
-    return new DoubleSumAggregator(name, selector);
+    return new DoubleSumAggregator(selector);
   }
 
   @Override

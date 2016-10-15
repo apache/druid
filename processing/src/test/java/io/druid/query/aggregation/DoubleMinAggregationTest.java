@@ -59,8 +59,6 @@ public class DoubleMinAggregationTest
   {
     DoubleMinAggregator agg = (DoubleMinAggregator) doubleMinAggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     aggregate(selector, agg);
     aggregate(selector, agg);
     aggregate(selector, agg);

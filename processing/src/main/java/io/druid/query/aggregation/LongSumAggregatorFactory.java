@@ -57,7 +57,6 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new LongSumAggregator(
-        name,
         metricFactory.makeLongColumnSelector(fieldName)
     );
   }

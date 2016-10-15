@@ -139,7 +139,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       return Aggregators.noopAggregator();
     }
 
-    return new CardinalityAggregator(name, selectors, byRow);
+    return new CardinalityAggregator(selectors, byRow);
   }
 
 

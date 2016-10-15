@@ -42,9 +42,9 @@ public class TimeseriesResultBuilder
     this.timestamp = timestamp;
   }
 
-  public TimeseriesResultBuilder addMetric(Aggregator aggregator)
+  public TimeseriesResultBuilder addMetric(String name, Aggregator aggregator)
   {
-    metricValues.put(aggregator.getName(), aggregator.get());
+    metricValues.put(name, aggregator.get());
     return this;
   }
 

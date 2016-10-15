@@ -40,12 +40,10 @@ public class HistogramAggregator implements Aggregator
   }
 
   private final FloatColumnSelector selector;
-  private final String name;
 
   private Histogram histogram;
 
-  public HistogramAggregator(String name, FloatColumnSelector selector, float[] breaks) {
-    this.name = name;
+  public HistogramAggregator(FloatColumnSelector selector, float[] breaks) {
     this.selector = selector;
     this.histogram = new Histogram(breaks);
   }
@@ -78,12 +76,6 @@ public class HistogramAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("HistogramAggregator does not support getLong()");
-  }
-
-  @Override
-  public String getName()
-  {
-    return name;
   }
 
   @Override

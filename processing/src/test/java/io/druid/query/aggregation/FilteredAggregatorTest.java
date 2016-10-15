@@ -74,8 +74,6 @@ public class FilteredAggregatorTest
      makeColumnSelector(selector)
     );
 
-    Assert.assertEquals("billy", agg.getName());
-
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
     double expectedThird = expectedSecond;
@@ -228,8 +226,6 @@ public class FilteredAggregatorTest
         makeColumnSelector(selector)
     );
 
-    Assert.assertEquals("billy", agg.getName());
-
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
     double expectedThird = expectedSecond + new Float(values[2]).doubleValue();
@@ -351,8 +347,6 @@ public class FilteredAggregatorTest
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
         makeColumnSelector(selector)
     );
-
-    Assert.assertEquals("billy", agg.getName());
 
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;

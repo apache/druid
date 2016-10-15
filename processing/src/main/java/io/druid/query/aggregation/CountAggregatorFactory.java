@@ -50,7 +50,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new CountAggregator(name);
+    return new CountAggregator();
   }
 
   @Override

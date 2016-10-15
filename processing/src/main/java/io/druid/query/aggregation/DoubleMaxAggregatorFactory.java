@@ -56,7 +56,7 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(name, metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleMaxAggregator(metricFactory.makeFloatColumnSelector(fieldName));
   }
 
   @Override

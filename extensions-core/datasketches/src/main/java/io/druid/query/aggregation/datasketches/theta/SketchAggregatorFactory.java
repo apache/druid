@@ -77,9 +77,9 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
     if (selector == null) {
-      return new EmptySketchAggregator(name);
+      return new EmptySketchAggregator();
     } else {
-      return new SketchAggregator(name, selector, size);
+      return new SketchAggregator(selector, size);
     }
   }
 

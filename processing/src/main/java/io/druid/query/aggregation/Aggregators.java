@@ -54,12 +54,6 @@ public class Aggregators
       }
 
       @Override
-      public String getName()
-      {
-        return null;
-      }
-
-      @Override
       public void close()
       {
 

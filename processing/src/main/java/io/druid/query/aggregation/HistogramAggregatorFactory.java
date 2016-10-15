@@ -67,7 +67,6 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new HistogramAggregator(
-        name,
         metricFactory.makeFloatColumnSelector(fieldName),
         breaks
     );

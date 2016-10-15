@@ -35,13 +35,11 @@ public class LongMinAggregator implements Aggregator
   }
 
   private final LongColumnSelector selector;
-  private final String name;
 
   private long min;
 
-  public LongMinAggregator(String name, LongColumnSelector selector)
+  public LongMinAggregator(LongColumnSelector selector)
   {
-    this.name = name;
     this.selector = selector;
 
     reset();
@@ -78,15 +76,9 @@ public class LongMinAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return this.name;
-  }
-
-  @Override
   public Aggregator clone()
   {
-    return new LongMinAggregator(name, selector);
+    return new LongMinAggregator(selector);
   }
 
   @Override

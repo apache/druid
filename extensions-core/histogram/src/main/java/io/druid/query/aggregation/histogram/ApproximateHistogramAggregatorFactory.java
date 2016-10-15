@@ -80,7 +80,6 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramAggregator(
-        name,
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
         lowerLimit,
