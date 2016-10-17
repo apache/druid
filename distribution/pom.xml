@@ -90,6 +90,8 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-lookups-cached-global</argument>
                                 <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-lookups-cached-single</argument>
+                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-s3-extensions</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-stats</argument>
