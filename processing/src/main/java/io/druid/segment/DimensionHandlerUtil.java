@@ -20,7 +20,8 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 

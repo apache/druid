@@ -21,7 +21,8 @@ package io.druid.segment.loading;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
 

@@ -19,6 +19,7 @@
 
 package io.druid.guice.http;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.http.client.HttpClient;
@@ -27,6 +28,7 @@ import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.lang.annotation.Annotation;
 
@@ -113,8 +115,27 @@ public class HttpClientModule implements Module
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());
       }
+      final Lifecycle druidLifecycle = getLifecycleProvider().get();
+      final com.metamx.common.lifecycle.Lifecycle metamxLifecycle = new com.metamx.common.lifecycle.Lifecycle();
+      try {
+        druidLifecycle.addMaybeStartHandler(new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
+          {
+            metamxLifecycle.start();
+          }
 
-      return HttpClientInit.createClient(builder.build(), getLifecycleProvider().get());
+          @Override
+          public void stop()
+          {
+            metamxLifecycle.stop();
+          }
+        });
+      } catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+      return HttpClientInit.createClient(builder.build(), metamxLifecycle);
     }
   }
 }

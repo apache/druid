@@ -22,8 +22,9 @@ package io.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import com.metamx.common.ISE;
+
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.ISE;
 
 import java.util.HashMap;
 import java.util.List;

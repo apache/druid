@@ -20,7 +20,8 @@
 package io.druid.query.ordering;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
 
 import java.util.Comparator;
 

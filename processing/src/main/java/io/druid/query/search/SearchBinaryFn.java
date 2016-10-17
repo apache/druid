@@ -21,9 +21,10 @@ package io.druid.query.search;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.nary.BinaryFn;
+
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchHit;

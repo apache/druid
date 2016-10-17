@@ -26,9 +26,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.parsers.ParseException;
+
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.Query;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;

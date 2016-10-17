@@ -19,9 +19,9 @@
 
 package io.druid.query;
 
-import com.metamx.common.guava.Sequence;
-
 import java.util.Map;
+
+import io.druid.java.util.common.guava.Sequence;
 
 /**
  * If there's a subquery, run it instead of the outer query

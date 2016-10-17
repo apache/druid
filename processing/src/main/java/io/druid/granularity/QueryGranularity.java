@@ -20,7 +20,9 @@
 package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
+
 import org.joda.time.DateTime;
 import org.joda.time.ReadableDuration;
 

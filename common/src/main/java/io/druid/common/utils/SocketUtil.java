@@ -19,10 +19,10 @@
 
 package io.druid.common.utils;
 
-import com.metamx.common.ISE;
-
 import java.io.IOException;
 import java.net.ServerSocket;
+
+import io.druid.java.util.common.ISE;
 
 /**
  */

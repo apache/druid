@@ -22,7 +22,8 @@ package io.druid.data.input;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
-import com.metamx.common.parsers.Parser;
+
+import io.druid.java.util.common.parsers.Parser;
 
 import java.io.IOException;
 import java.util.Map;

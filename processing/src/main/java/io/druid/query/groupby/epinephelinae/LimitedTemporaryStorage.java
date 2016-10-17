@@ -21,8 +21,9 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.io.File;

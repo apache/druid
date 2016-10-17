@@ -26,7 +26,8 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
-import com.metamx.common.StringUtils;
+
+import io.druid.java.util.common.StringUtils;
 
 public class StringComparators
 {

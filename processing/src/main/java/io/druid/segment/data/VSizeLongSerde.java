@@ -19,13 +19,13 @@
 
 package io.druid.segment.data;
 
-import com.metamx.common.IAE;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+
+import io.druid.java.util.common.IAE;
 
 /**
  * Currently only support big endian

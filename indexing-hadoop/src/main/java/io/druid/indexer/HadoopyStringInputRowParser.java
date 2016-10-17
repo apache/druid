@@ -20,11 +20,12 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.IAE;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.java.util.common.IAE;
+
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 

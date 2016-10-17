@@ -22,7 +22,8 @@ package io.druid.indexer;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;

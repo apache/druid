@@ -21,7 +21,8 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.metamx.common.io.smoosh.FileSmoosher;
+
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.segment.column.Column;

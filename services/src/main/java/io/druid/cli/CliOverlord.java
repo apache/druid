@@ -29,7 +29,7 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
@@ -73,6 +73,7 @@ import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.supervisor.SupervisorResource;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.http.RedirectFilter;

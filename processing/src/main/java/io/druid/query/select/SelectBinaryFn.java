@@ -20,9 +20,10 @@
 package io.druid.query.select;
 
 import com.google.common.collect.Sets;
-import com.metamx.common.guava.nary.BinaryFn;
+
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 
 import java.util.Set;

@@ -20,8 +20,9 @@
 package io.druid.segment.loading;
 
 import com.google.common.io.ByteStreams;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.StringUtils;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;

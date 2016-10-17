@@ -23,8 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;

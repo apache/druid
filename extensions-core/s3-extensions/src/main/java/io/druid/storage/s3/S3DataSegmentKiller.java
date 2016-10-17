@@ -20,8 +20,9 @@
 package io.druid.storage.s3;
 
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;

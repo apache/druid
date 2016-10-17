@@ -21,7 +21,7 @@ package io.druid.common.utils;
 
 /**
  */
-public class StringUtils extends com.metamx.common.StringUtils
+public class StringUtils extends io.druid.java.util.common.StringUtils
 {
   private static final byte[] EMPTY_BYTES = new byte[0];
 

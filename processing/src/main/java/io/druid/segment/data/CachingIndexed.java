@@ -19,14 +19,14 @@
 
 package io.druid.segment.data;
 
-import com.metamx.common.Pair;
-import com.metamx.common.logger.Logger;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.logger.Logger;
 
 public class CachingIndexed<T> implements Indexed<T>, Closeable
 {

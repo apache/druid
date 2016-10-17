@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.query.lookup.LookupIntrospectHandler;
 import io.druid.server.lookup.cache.polling.PollingCacheFactory;

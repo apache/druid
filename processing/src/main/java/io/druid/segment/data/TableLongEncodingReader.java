@@ -19,9 +19,9 @@
 
 package io.druid.segment.data;
 
-import com.metamx.common.IAE;
-
 import java.nio.ByteBuffer;
+
+import io.druid.java.util.common.IAE;
 
 public class TableLongEncodingReader implements CompressionFactory.LongEncodingReader
 {

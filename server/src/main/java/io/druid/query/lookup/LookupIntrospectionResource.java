@@ -20,7 +20,8 @@
 package io.druid.query.lookup;
 
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;

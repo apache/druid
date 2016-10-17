@@ -50,11 +50,23 @@
       <groupId>io.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.metamx</groupId>
+                        <artifactId>java-util</artifactId>
+                    </exclusion>
+                </exclusions>
     </dependency>
     <dependency>
       <groupId>io.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.metamx</groupId>
+                        <artifactId>java-util</artifactId>
+                    </exclusion>
+                </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.wnameless</groupId>

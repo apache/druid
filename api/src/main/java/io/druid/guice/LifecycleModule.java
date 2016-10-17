@@ -27,7 +27,8 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
-import com.metamx.common.lifecycle.Lifecycle;
+
+import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
@@ -48,8 +49,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link com.metamx.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link com.metamx.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
@@ -69,8 +70,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link com.metamx.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link com.metamx.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
@@ -91,8 +92,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link com.metamx.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link com.metamx.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is also possible to just bind things eagerly with Guice,
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
@@ -113,8 +114,8 @@ public class LifecycleModule implements Module
    * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
    * side-effect even if nothing actually directly depends on the instance.
    *
-   * This mechanism exists to allow the {@link com.metamx.common.lifecycle.Lifecycle} to be the primary entry point
-   * from the injector, not to auto-register things with the {@link com.metamx.common.lifecycle.Lifecycle}.  It is
+   * This mechanism exists to allow the {@link io.druid.java.util.common.lifecycle.Lifecycle} to be the primary entry point
+   * from the injector, not to auto-register things with the {@link io.druid.java.util.common.lifecycle.Lifecycle}.  It is
    * also possible to just bind things eagerly with Guice, it is not clear which is actually the best approach.
    * This is more explicit, but eager bindings inside of modules is less error-prone.
    *
