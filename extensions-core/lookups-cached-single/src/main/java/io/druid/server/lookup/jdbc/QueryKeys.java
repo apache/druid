@@ -21,19 +21,19 @@ package io.druid.server.lookup.jdbc;
 
 
 import com.google.common.collect.ImmutableSet;
-import io.dropwizard.jdbi.ImmutableSetContainerFactory;
+import org.skife.jdbi.v2.ContainerBuilder;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.customizers.Define;
 import org.skife.jdbi.v2.sqlobject.customizers.RegisterContainerMapper;
 import org.skife.jdbi.v2.sqlobject.stringtemplate.UseStringTemplate3StatementLocator;
+import org.skife.jdbi.v2.tweak.ContainerFactory;
 import org.skife.jdbi.v2.unstable.BindIn;
 
 import java.util.List;
 import java.util.Map;
 
-
 @UseStringTemplate3StatementLocator()
-@RegisterContainerMapper(ImmutableSetContainerFactory.class)
+@RegisterContainerMapper(QueryKeys.QueryKeysContainerFactory.class)
 public interface QueryKeys
 {
   @SqlQuery("SELECT <keyColumn>, <valueColumn> FROM <table> WHERE <keyColumn> IN (<keys>)")
@@ -43,5 +43,35 @@ public interface QueryKeys
       @Define("keyColumn") String keyColumn,
       @Define("valueColumn") String valueColumn
   );
-}
 
+  static class QueryKeysContainerFactory implements ContainerFactory<ImmutableSet<?>>
+  {
+    @Override
+    public boolean accepts(Class<?> type)
+    {
+      return ImmutableSet.class.isAssignableFrom(type);
+    }
+
+    @Override
+    public ContainerBuilder<ImmutableSet<?>> newContainerBuilderFor(Class<?> type)
+    {
+      return new ContainerBuilder<ImmutableSet<?>>()
+      {
+        final ImmutableSet.Builder<Object> builder = new ImmutableSet.Builder<>();
+
+        @Override
+        public ContainerBuilder<ImmutableSet<?>> add(final Object obj)
+        {
+          builder.add(obj);
+          return this;
+        }
+
+        @Override
+        public ImmutableSet<?> build()
+        {
+          return builder.build();
+        }
+      };
+    }
+  }
+}
