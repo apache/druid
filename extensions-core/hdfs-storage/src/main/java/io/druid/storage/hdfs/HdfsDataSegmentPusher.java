@@ -103,9 +103,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
-      Path outDir = new Path(String.format("%s/%s", config.getStorageDirectory(), storageDir));
+      final Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
+      final Path outDir = outFile.getParent();
       dataSegment = createDescriptorFile(
-          segment.withLoadSpec(makeLoadSpec(new Path(String.format("%s/%s", outDir.toUri().getPath(), "index.zip"))))
+          segment.withLoadSpec(makeLoadSpec(outFile))
                  .withSize(size)
                  .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
           tmpFile.getParent(),
@@ -150,7 +151,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private ImmutableMap<String, Object> makeLoadSpec(Path outFile)
   {
-    return ImmutableMap.<String, Object>of("type", "hdfs", "path", outFile.toString());
+    return ImmutableMap.<String, Object>of("type", "hdfs", "path", outFile.toUri().toString());
   }
 
   private static class HdfsOutputStreamSupplier extends ByteSink
