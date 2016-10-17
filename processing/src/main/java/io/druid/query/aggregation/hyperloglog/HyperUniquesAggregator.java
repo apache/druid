@@ -57,7 +57,8 @@ public class HyperUniquesAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return collector;
+    // Workaround for OnheapIncrementalIndex's penchant for calling "aggregate" and "get" simultaneously.
+    return HyperLogLogCollector.makeCollector(collector.getStorageBuffer().duplicate());
   }
 
   @Override

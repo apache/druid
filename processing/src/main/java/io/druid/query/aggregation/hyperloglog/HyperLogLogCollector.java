@@ -39,10 +39,15 @@ import java.nio.ByteBuffer;
  * }
  * </code>
  *
- * This class is *not* multi-threaded.  It can be passed among threads, but it is written with the assumption that
+ * This class is *not* multi-threaded. It can be passed among threads, but it is written with the assumption that
  * only one thread is ever calling methods on it.
  *
- * If you have multiple threads calling methods on this concurrently, I hope you manage to get correct behavior
+ * If you have multiple threads calling methods on this concurrently, I hope you manage to get correct behavior.
+ *
+ * Note that despite the non-thread-safety of this class, it is actually currently used by multiple threads during
+ * realtime indexing. HyperUniquesAggregator's "aggregate" and "get" methods can be called simultaneously by
+ * OnheapIncrementalIndex, since its "doAggregate" and "getMetricObjectValue" methods are not synchronized. So, watch
+ * out for that.
  */
 public abstract class HyperLogLogCollector implements Comparable<HyperLogLogCollector>
 {
