@@ -120,7 +120,7 @@ public class Execs
               executor.getQueue().put(r);
             }
             catch (InterruptedException e) {
-              throw new RejectedExecutionException("Got Interrupted while adding to the Queue");
+              throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
             }
           }
         }
