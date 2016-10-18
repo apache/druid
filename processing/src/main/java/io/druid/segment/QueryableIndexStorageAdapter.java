@@ -69,7 +69,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  */
@@ -812,7 +811,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public NumericColumnSelector makeMathExpressionSelector(String expression)
                     {
                       final Expr parsed = Parser.parse(expression);
-                      final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+                      final List<String> required = Parser.findRequiredBindings(parsed);
 
                       final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
                       for (String columnName : index.getColumnNames()) {

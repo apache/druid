@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -40,6 +39,7 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
+import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -81,7 +81,6 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -302,7 +301,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       {
         final Expr parsed = Parser.parse(expression);
 
-        final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+        final List<String> required = Parser.findRequiredBindings(parsed);
         final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
 
         for (final String columnName : required) {
@@ -312,7 +311,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                 @Override
                 public Number get()
                 {
-                  return in.get().getFloatMetric(columnName);
+                  return Evals.toNumber(in.get().getRaw(columnName));
                 }
               }
           );

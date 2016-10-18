@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
@@ -66,8 +65,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  */
@@ -550,7 +549,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               {
                 final Expr parsed = Parser.parse(expression);
 
-                final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+                final List<String> required = Parser.findRequiredBindings(parsed);
                 final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
 
                 for (String columnName : index.getMetricNames()) {
