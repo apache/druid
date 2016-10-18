@@ -332,6 +332,10 @@ public class CostBalancerStrategy implements BalancerStrategy
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
 
     for (final ServerHolder server : serverHolders) {
+      if (server.getAvailableSize() < proposalSegment.getSize()) {
+        log.debug("Server %s is too small. Need at least %d", server, proposalSegment.getSize());
+        continue;
+      }
       futures.add(
           exec.submit(
               new Callable<Pair<Double, ServerHolder>>()
