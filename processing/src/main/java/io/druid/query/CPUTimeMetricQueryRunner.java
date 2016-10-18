@@ -86,11 +86,16 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           }
 
           @Override
-          public <OutType> Yielder<OutType> toYielder(
-              OutType initValue, YieldingAccumulator<OutType, T> accumulator
-          )
+          public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
           {
-            final Yielder<OutType> delegateYielder = baseSequence.toYielder(initValue, accumulator);
+            final long start = VMUtils.getCurrentThreadCpuTime();
+            final Yielder<OutType> delegateYielder;
+            try {
+              delegateYielder = baseSequence.toYielder(initValue, accumulator);
+            }
+            finally {
+              cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
+            }
             return new Yielder<OutType>()
             {
               @Override
@@ -101,9 +106,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
                   return delegateYielder.get();
                 }
                 finally {
-                  cpuTimeAccumulator.addAndGet(
-                      VMUtils.getCurrentThreadCpuTime() - start
-                  );
+                  cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
                 }
               }
 
@@ -115,9 +118,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
                   return delegateYielder.next(initValue);
                 }
                 finally {
-                  cpuTimeAccumulator.addAndGet(
-                      VMUtils.getCurrentThreadCpuTime() - start
-                  );
+                  cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
                 }
               }
 
