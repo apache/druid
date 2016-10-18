@@ -21,8 +21,6 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -33,6 +31,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.common.utils.VMUtils;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -70,7 +69,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
   )
   {
     final Sequence<T> baseSequence = delegate.run(query, responseContext);
-    return Sequences.withEffect(
+    return Sequences.withBaggage(
         new Sequence<T>()
         {
           @Override
@@ -135,10 +134,10 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             };
           }
         },
-        new Runnable()
+        new Closeable()
         {
           @Override
-          public void run()
+          public void close()
           {
             if (report) {
               final long cpuTime = cpuTimeAccumulator.get();
@@ -148,8 +147,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
               }
             }
           }
-        },
-        MoreExecutors.sameThreadExecutor()
+        }
     );
   }
 
