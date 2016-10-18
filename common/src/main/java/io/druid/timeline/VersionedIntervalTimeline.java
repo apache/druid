@@ -268,36 +268,44 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
   public boolean isOvershadowed(Interval interval, VersionType version)
   {
-    TimelineEntry entry = completePartitionsTimeline.get(interval);
-    if (entry != null) {
-      return versionComparator.compare(version, entry.getVersion()) < 0;
-    }
+    try {
+      lock.readLock().lock();
 
-    Interval lower = completePartitionsTimeline.floorKey(
-        new Interval(interval.getStartMillis(), JodaUtils.MAX_INSTANT));
+      TimelineEntry entry = completePartitionsTimeline.get(interval);
+      if (entry != null) {
+        return versionComparator.compare(version, entry.getVersion()) < 0;
+      }
 
-    if (lower == null || !lower.overlaps(interval)) {
-      return false;
-    }
+      Interval lower = completePartitionsTimeline.floorKey(
+          new Interval(interval.getStartMillis(), JodaUtils.MAX_INSTANT)
+      );
 
-    Interval prev = null;
-    Interval curr = lower;
-
-    do {
-      if (curr == null ||  //no further keys
-          (prev != null && curr.getStartMillis() > prev.getEndMillis()) || //a discontinuity
-          //lower or same version
-          versionComparator.compare(version, completePartitionsTimeline.get(curr).getVersion()) >= 0
-          ) {
+      if (lower == null || !lower.overlaps(interval)) {
         return false;
       }
 
-      prev = curr;
-      curr = completePartitionsTimeline.higherKey(curr);
+      Interval prev = null;
+      Interval curr = lower;
 
-    } while (interval.getEndMillis() > prev.getEndMillis());
+      do {
+        if (curr == null ||  //no further keys
+            (prev != null && curr.getStartMillis() > prev.getEndMillis()) || //a discontinuity
+            //lower or same version
+            versionComparator.compare(version, completePartitionsTimeline.get(curr).getVersion()) >= 0
+            ) {
+          return false;
+        }
 
-    return true;
+        prev = curr;
+        curr = completePartitionsTimeline.higherKey(curr);
+
+      } while (interval.getEndMillis() > prev.getEndMillis());
+
+      return true;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
   private void add(
