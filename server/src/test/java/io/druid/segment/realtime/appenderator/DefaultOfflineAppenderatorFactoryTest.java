@@ -104,9 +104,10 @@ public class DefaultOfflineAppenderatorFactoryTest
                                  }
         )
     );
-    DefaultOfflineAppenderatorFactory defaultOfflineAppenderatorFactory = injector.getInstance(
-        DefaultOfflineAppenderatorFactory.class);
     ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
+    AppenderatorFactory defaultOfflineAppenderatorFactory = objectMapper.reader(AppenderatorFactory.class)
+                                                                        .readValue("{\"type\":\"offline\"}");
+
     final Map<String, Object> parserMap = objectMapper.convertValue(
         new MapInputRowParser(
             new JSONParseSpec(
@@ -146,14 +147,19 @@ public class DefaultOfflineAppenderatorFactoryTest
         null
     );
 
-    try(Appenderator appenderator = defaultOfflineAppenderatorFactory.build(
+    try (Appenderator appenderator = defaultOfflineAppenderatorFactory.build(
         schema,
         tuningConfig,
         new FireDepartmentMetrics()
-    )){
+    )) {
       Assert.assertEquals("dataSourceName", appenderator.getDataSource());
       Assert.assertEquals(null, appenderator.startJob());
-      SegmentIdentifier identifier = new SegmentIdentifier("dataSourceName", new Interval("2000/2001"), "A", new LinearShardSpec(0));
+      SegmentIdentifier identifier = new SegmentIdentifier(
+          "dataSourceName",
+          new Interval("2000/2001"),
+          "A",
+          new LinearShardSpec(0)
+      );
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(identifier, AppenderatorTest.IR("2000", "bar", 1), Suppliers.ofInstance(Committers.nil()));
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());

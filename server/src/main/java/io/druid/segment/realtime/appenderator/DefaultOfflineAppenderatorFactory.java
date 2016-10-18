@@ -20,8 +20,8 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
@@ -37,7 +37,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
 
-  @Inject
+  @JsonCreator
   public DefaultOfflineAppenderatorFactory(
       @JacksonInject DataSegmentPusher dataSegmentPusher,
       @JacksonInject ObjectMapper objectMapper,
