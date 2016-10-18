@@ -45,6 +45,20 @@ public class ComparatorsTest
   }
 
   @Test
+  public void testInverseOverflow()
+  {
+    Comparator<Integer> invertedSimpleIntegerComparator = Comparators.inverse(new Comparator<Integer>()
+    {
+      @Override
+      public int compare(Integer o1, Integer o2)
+      {
+        return o1 - o2;
+      }
+    });
+    Assert.assertTrue(invertedSimpleIntegerComparator.compare(0, Integer.MIN_VALUE) < 0);
+  }
+
+  @Test
   public void testIntervalsByStartThenEnd() throws Exception
   {
     Comparator<Interval> comp = Comparators.intervalsByStartThenEnd();

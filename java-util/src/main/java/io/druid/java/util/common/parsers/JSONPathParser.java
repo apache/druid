@@ -44,7 +44,6 @@ import java.util.Map;
 public class JSONPathParser implements Parser<String, Object>
 {
   private final Map<String, Pair<FieldType, JsonPath>> fieldPathMap;
-  private final List<FieldSpec> fieldSpecs;
   private final boolean useFieldDiscovery;
   private final ObjectMapper mapper;
   private final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
@@ -60,7 +59,6 @@ public class JSONPathParser implements Parser<String, Object>
    */
   public JSONPathParser(List<FieldSpec> fieldSpecs, boolean useFieldDiscovery, ObjectMapper mapper)
   {
-    this.fieldSpecs = fieldSpecs;
     this.fieldPathMap = generateFieldPaths(fieldSpecs);
     this.useFieldDiscovery = useFieldDiscovery;
     this.mapper = mapper == null ? new ObjectMapper() : mapper;
@@ -145,9 +143,10 @@ public class JSONPathParser implements Parser<String, Object>
 
   private void discoverFields(Map<String, Object> map, Map<String, Object> document)
   {
-    for (String field : document.keySet()) {
+    for (Map.Entry<String, Object> e : document.entrySet()) {
+      String field = e.getKey();
       if (!map.containsKey(field)) {
-        Object val = document.get(field);
+        Object val = e.getValue();
         if (val == null) {
           continue;
         }

@@ -33,7 +33,6 @@ import java.util.IllegalFormatException;
  */
 public class StringUtils
 {
-  private static final Logger log = new Logger(StringUtils.class);
   @Deprecated // Charset parameters to String are currently slower than the charset's string name
   public static final Charset UTF8_CHARSET = Charsets.UTF_8;
   public static final String UTF8_STRING = com.google.common.base.Charsets.UTF_8.toString();

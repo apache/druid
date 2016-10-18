@@ -32,7 +32,6 @@ import java.util.Map;
 
 public class DelimitedParser implements Parser<String, Object>
 {
-  private static final Logger log = new Logger(DelimitedParser.class);
   private static final String DEFAULT_DELIMITER = "\t";
 
   private final String delimiter;

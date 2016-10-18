@@ -453,10 +453,6 @@ public enum Granularity
       },
   WEEK
       {
-        DateTimeFormatter defaultFormat = DateTimeFormat.forPattern("'y'=yyyy/'m'=MM/'d'=dd");
-        DateTimeFormatter hiveFormat = DateTimeFormat.forPattern("'dt'=yyyy-MM-dd");
-        DateTimeFormatter lowerDefaultFormat = DateTimeFormat.forPattern("'y'=yyyy/'m'=MM/'d'=dd");
-
         @Override
         public DateTimeFormatter getFormatter(Formatter type)
         {

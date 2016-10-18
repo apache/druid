@@ -86,7 +86,7 @@ public class FileUtils
   public static class FileCopyResult
   {
     private final Collection<File> files = Lists.newArrayList();
-    private long size = 0l;
+    private long size = 0L;
 
     public Collection<File> getFiles()
     {
@@ -114,7 +114,7 @@ public class FileUtils
       if (files == null || files.isEmpty()) {
         return;
       }
-      long size = 0l;
+      long size = 0L;
       for (File file : files) {
         size += file.length();
       }

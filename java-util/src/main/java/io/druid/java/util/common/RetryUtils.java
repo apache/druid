@@ -24,8 +24,8 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.logger.Logger;
 
-import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RetryUtils
 {
@@ -85,7 +85,7 @@ public class RetryUtils
   {
     final long baseSleepMillis = 1000;
     final long maxSleepMillis = 60000;
-    final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * new Random().nextGaussian(), 0), 2);
+    final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
     final long sleepMillis = (long) (Math.min(maxSleepMillis, baseSleepMillis * Math.pow(2, nTry - 1))
                                      * fuzzyMultiplier);
     if (quiet) {

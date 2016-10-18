@@ -135,9 +135,9 @@ StreamUtils
   public static long copyWithTimeout(InputStream is, OutputStream os, long timeout) throws IOException, TimeoutException
   {
     byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
-    int n = 0;
+    int n;
     long startTime = System.currentTimeMillis();
-    long size = 0l;
+    long size = 0;
     while (-1 != (n = is.read(buffer))) {
       if (System.currentTimeMillis() - startTime > timeout) {
         throw new TimeoutException(String.format("Copy time has exceeded %,d millis", timeout));

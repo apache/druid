@@ -26,8 +26,6 @@ import org.joda.time.format.DateTimeFormatter;
 
 public class TimestampParser
 {
-  private static final Logger log = new Logger(TimestampParser.class);
-
   public static Function<String, DateTime> createTimestampParser(
       final String format
   )

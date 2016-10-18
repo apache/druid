@@ -151,7 +151,7 @@ public class CompressionUtils
     } else {
       final File tmpFile = File.createTempFile("compressionUtilZipCache", ZIP_SUFFIX);
       try {
-        FileUtils.FileCopyResult copyResult = FileUtils.retryCopy(
+        FileUtils.retryCopy(
             byteSource,
             tmpFile,
             shouldRetry,
