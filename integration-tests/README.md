@@ -62,7 +62,7 @@ To run tests on any druid cluster that is already running, create a configuratio
        "indexer_port": "<indexer_port>",
        "coordinator_host": "<coordinator_ip>",
        "coordinator_port": "<coordinator_port>",
-       "middle_manager_host": "<middle_manager_ip>",
+       "middlemanager_host": "<middle_manager_ip>",
        "zookeeper_hosts": "<comma-separated list of zookeeper_ip:zookeeper_port>",
     }
 
