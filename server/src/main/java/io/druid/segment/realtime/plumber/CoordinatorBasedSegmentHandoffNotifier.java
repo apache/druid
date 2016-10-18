@@ -24,7 +24,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 import io.druid.client.ImmutableSegmentLoadInfo;
-import io.druid.client.SegmentLoadInfo;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.Pair;

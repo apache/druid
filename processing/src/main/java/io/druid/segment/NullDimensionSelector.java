@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterators;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;

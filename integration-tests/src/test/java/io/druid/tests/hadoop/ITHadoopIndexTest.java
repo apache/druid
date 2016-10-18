@@ -22,8 +22,6 @@ package io.druid.tests.hadoop;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 
-import io.druid.indexing.common.TaskStatus;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;

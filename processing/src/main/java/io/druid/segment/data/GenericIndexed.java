@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 

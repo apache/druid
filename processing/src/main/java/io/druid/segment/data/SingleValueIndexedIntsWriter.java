@@ -19,9 +19,9 @@
 
 package io.druid.segment.data;
 
-import java.io.IOException;
-
 import io.druid.java.util.common.IAE;
+
+import java.io.IOException;
 
 public abstract class SingleValueIndexedIntsWriter implements IndexedIntsWriter
 {

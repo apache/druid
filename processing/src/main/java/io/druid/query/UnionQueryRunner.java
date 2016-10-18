@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;

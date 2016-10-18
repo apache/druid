@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.google.common.collect.Maps;
-
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Map;

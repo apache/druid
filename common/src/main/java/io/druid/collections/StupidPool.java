@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
-import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;

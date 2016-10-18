@@ -49,7 +49,6 @@ import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
-import org.joda.time.DateTime;
 
 import java.util.List;
 

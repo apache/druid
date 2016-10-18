@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
-
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;

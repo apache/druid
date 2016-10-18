@@ -19,8 +19,6 @@
 
 package io.druid.collections;
 
-import java.io.IOException;
-
 /**
  */
 public class StupidResourceHolder<T> implements ResourceHolder<T>

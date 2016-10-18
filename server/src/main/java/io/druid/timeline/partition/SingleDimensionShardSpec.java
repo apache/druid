@@ -26,7 +26,6 @@ import com.google.common.collect.Range;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

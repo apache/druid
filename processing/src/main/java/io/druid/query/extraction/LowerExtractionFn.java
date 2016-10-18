@@ -24,7 +24,6 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Strings;
-
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;

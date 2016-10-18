@@ -20,7 +20,6 @@
 package io.druid.query.topn;
 
 import com.google.inject.Inject;
-
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;

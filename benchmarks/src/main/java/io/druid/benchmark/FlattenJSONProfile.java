@@ -20,24 +20,6 @@
 package io.druid.benchmark;
 
 //import com.yourkit.api.Controller;
-import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.JSONPathFieldSpec;
-import io.druid.data.input.impl.JSONPathSpec;
-import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.data.input.impl.TimestampSpec;
-import io.druid.java.util.common.parsers.JSONPathParser;
-import io.druid.java.util.common.parsers.Parser;
-
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Test app for profiling JSON parsing behavior. Uses the proprietary YourKit API, so this file

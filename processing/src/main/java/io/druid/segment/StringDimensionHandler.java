@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;

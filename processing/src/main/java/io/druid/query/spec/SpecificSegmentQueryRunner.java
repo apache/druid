@@ -21,7 +21,6 @@ package io.druid.query.spec;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;

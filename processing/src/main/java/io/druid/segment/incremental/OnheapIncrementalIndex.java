@@ -21,7 +21,6 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.logger.Logger;

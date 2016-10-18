@@ -23,9 +23,7 @@ import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
-
 import io.druid.java.util.common.logger.Logger;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;

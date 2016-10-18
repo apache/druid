@@ -22,7 +22,6 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-
 import io.druid.collections.StupidPool;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;

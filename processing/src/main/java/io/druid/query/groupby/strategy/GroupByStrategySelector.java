@@ -21,7 +21,6 @@ package io.druid.query.groupby.strategy;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.ISE;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;

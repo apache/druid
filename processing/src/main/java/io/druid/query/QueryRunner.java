@@ -19,9 +19,9 @@
 
 package io.druid.query;
 
-import java.util.Map;
-
 import io.druid.java.util.common.guava.Sequence;
+
+import java.util.Map;
 
 /**
  */

@@ -21,8 +21,8 @@ package io.druid.segment;
 
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.IOException;
 import java.nio.ByteOrder;

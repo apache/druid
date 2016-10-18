@@ -20,7 +20,6 @@
 package io.druid.query.metadata;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryRunner;

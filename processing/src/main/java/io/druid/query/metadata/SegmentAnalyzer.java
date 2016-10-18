@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-
 import io.druid.common.utils.StringUtils;
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Accumulator;

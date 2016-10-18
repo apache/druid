@@ -20,7 +20,6 @@
 package io.druid.query.groupby.strategy;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-
 import io.druid.data.input.Row;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunner;

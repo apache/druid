@@ -40,7 +40,6 @@ import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
-
 import io.druid.collections.CombiningIterable;
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;

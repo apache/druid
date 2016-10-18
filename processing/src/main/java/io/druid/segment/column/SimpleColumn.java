@@ -20,7 +20,6 @@
 package io.druid.segment.column;
 
 import com.google.common.base.Supplier;
-
 import io.druid.java.util.common.guava.CloseQuietly;
 
 /**

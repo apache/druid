@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
-
 import io.druid.java.util.common.IAE;
 
 import java.io.IOException;

@@ -21,7 +21,6 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;

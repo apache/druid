@@ -20,7 +20,6 @@
 package io.druid.query.timeseries;
 
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;

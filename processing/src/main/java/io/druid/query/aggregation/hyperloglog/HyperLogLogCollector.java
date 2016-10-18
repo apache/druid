@@ -21,7 +21,6 @@ package io.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.primitives.UnsignedBytes;
-
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 

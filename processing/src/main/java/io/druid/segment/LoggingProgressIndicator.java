@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 

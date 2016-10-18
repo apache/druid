@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;

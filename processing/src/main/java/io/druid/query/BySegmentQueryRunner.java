@@ -20,10 +20,8 @@
 package io.druid.query;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-
 import org.joda.time.DateTime;
 
 import java.util.Arrays;

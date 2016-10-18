@@ -21,9 +21,7 @@ package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-
 import io.druid.java.util.common.IAE;
-
 import org.joda.time.DateTime;
 
 import java.util.Map;

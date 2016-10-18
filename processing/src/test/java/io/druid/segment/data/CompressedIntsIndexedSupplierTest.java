@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
 import org.junit.After;

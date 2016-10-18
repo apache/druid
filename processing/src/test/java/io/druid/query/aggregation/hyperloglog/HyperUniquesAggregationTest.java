@@ -20,7 +20,6 @@
 package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;

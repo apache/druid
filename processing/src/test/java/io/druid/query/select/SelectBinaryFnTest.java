@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.ISE;
 import io.druid.query.Result;

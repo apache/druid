@@ -29,7 +29,6 @@ import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
-
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ByteBufferUtils;

@@ -20,7 +20,6 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.Maps;
-
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
