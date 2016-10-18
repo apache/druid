@@ -21,9 +21,6 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.parsers.JavaScriptParser;
-import io.druid.java.util.common.parsers.Parser;
 import junit.framework.Assert;
 import org.junit.Test;
 

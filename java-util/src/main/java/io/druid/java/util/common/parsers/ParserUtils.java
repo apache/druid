@@ -18,7 +18,6 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Sets;
-
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;

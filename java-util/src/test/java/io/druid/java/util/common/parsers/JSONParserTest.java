@@ -20,9 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.parsers.JSONParser;
-import io.druid.java.util.common.parsers.Parser;
 import junit.framework.Assert;
 import org.junit.Test;
 

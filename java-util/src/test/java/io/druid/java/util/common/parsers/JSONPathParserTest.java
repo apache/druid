@@ -21,11 +21,6 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
-import io.druid.java.util.common.parsers.JSONPathParser;
-import io.druid.java.util.common.parsers.ParseException;
-import io.druid.java.util.common.parsers.Parser;
-
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

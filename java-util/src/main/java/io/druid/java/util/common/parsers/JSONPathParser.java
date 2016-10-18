@@ -27,7 +27,6 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
-
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 

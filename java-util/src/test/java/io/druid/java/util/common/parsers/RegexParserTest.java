@@ -22,10 +22,6 @@ package io.druid.java.util.common.parsers;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.parsers.ParseException;
-import io.druid.java.util.common.parsers.Parser;
-import io.druid.java.util.common.parsers.RegexParser;
 import junit.framework.Assert;
 import org.junit.Test;
 

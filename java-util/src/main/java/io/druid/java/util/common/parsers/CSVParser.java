@@ -21,7 +21,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.collect.Utils;
 import io.druid.java.util.common.logger.Logger;
 

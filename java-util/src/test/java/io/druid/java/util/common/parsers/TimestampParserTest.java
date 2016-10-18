@@ -17,10 +17,6 @@
 package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
-
-import io.druid.java.util.common.parsers.ParserUtils;
-import io.druid.java.util.common.parsers.TimestampParser;
-
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;

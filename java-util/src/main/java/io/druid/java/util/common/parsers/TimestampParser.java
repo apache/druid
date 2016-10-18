@@ -18,10 +18,8 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
-
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;

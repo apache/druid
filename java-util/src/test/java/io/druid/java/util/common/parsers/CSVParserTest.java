@@ -18,9 +18,6 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
-
-import io.druid.java.util.common.parsers.CSVParser;
-import io.druid.java.util.common.parsers.Parser;
 import junit.framework.Assert;
 import org.junit.Test;
 
