@@ -39,6 +39,9 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
+import io.druid.math.expr.Evals;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -51,6 +54,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -288,6 +292,38 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
               throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
             }
             return in.get().getDimension(dimension).indexOf(name);
+          }
+        };
+      }
+
+      @Override
+      public NumericColumnSelector makeMathExpressionSelector(String expression)
+      {
+        final Expr parsed = Parser.parse(expression);
+
+        final List<String> required = Parser.findRequiredBindings(parsed);
+        final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+
+        for (final String columnName : required) {
+          values.put(
+              columnName, new Supplier<Number>()
+              {
+                @Override
+                public Number get()
+                {
+                  return Evals.toNumber(in.get().getRaw(columnName));
+                }
+              }
+          );
+        }
+        final Expr.ObjectBinding binding = Parser.withSuppliers(values);
+
+        return new NumericColumnSelector()
+        {
+          @Override
+          public Number get()
+          {
+            return parsed.eval(binding);
           }
         };
       }
