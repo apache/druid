@@ -33,6 +33,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
+import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.ordering.StringComparators;
@@ -251,8 +252,19 @@ public class DefaultLimitSpecTest
         )
     );
     Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+        (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
+        (List)Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+    );
+
+    // makes same result
+    limitFn = limitSpec.build(
+        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
+        ImmutableList.<AggregatorFactory>of(new LongSumAggregatorFactory("k2", "k2")),
+        ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1"))
+    );
+    Assert.assertEquals(
+        (List)ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
+        (List)Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
   }
 
