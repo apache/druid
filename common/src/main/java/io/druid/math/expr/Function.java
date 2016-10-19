@@ -20,7 +20,6 @@
 package io.druid.math.expr;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -28,12 +27,12 @@ interface Function
 {
   String name();
 
-  Number apply(List<Expr> args, Map<String, Number> bindings);
+  Number apply(List<Expr> args, Expr.ObjectBinding bindings);
 
   abstract class SingleParam implements Function
   {
     @Override
-    public Number apply(List<Expr> args, Map<String, Number> bindings)
+    public Number apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
         throw new RuntimeException("function '" + name() + "' needs 1 argument");
@@ -48,7 +47,7 @@ interface Function
   abstract class DoubleParam implements Function
   {
     @Override
-    public Number apply(List<Expr> args, Map<String, Number> bindings)
+    public Number apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
         throw new RuntimeException("function '" + name() + "' needs 1 argument");
@@ -616,7 +615,7 @@ interface Function
     }
 
     @Override
-    public Number apply(List<Expr> args, Map<String, Number> bindings)
+    public Number apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 3) {
         throw new RuntimeException("function 'if' needs 3 argument");

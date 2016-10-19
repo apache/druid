@@ -17,20 +17,27 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.math.expr;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ColumnCapabilities;
+import com.google.common.primitives.Longs;
 
 /**
- * Factory class for MetricSelectors
  */
-public interface ColumnSelectorFactory
+public class Evals
 {
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
-  public NumericColumnSelector makeMathExpressionSelector(String expression);
-  public ColumnCapabilities getColumnCapabilities(String columnName);
+  public static Number toNumber(Object value)
+  {
+    if (value == null) {
+      return 0L;
+    }
+    if (value instanceof Number) {
+      return (Number) value;
+    }
+    String stringValue = String.valueOf(value);
+    Long longValue = Longs.tryParse(stringValue);
+    if (longValue == null) {
+      return Double.valueOf(stringValue);
+    }
+    return longValue;
+  }
 }

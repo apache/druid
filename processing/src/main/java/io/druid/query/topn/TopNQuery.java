@@ -169,7 +169,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
-  public TopNQuery withDimensionSpec(DimensionSpec spec){
+  public TopNQuery withDimensionSpec(DimensionSpec spec)
+  {
     return new TopNQuery(
         getDataSource(),
         spec,
@@ -183,7 +184,25 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         getContext()
     );
   }
-  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs){
+
+  public TopNQuery withAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
+  {
+    return new TopNQuery(
+        getDataSource(),
+        getDimensionSpec(),
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
+  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs)
+  {
     return new TopNQuery(
         getDataSource(),
         getDimensionSpec(),

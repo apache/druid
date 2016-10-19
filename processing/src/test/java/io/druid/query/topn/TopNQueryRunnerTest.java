@@ -45,6 +45,7 @@ import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
@@ -1641,6 +1642,27 @@ public class TopNQueryRunnerTest
             )
         )
     );
+
+    assertExpectedResults(expectedResults, query);
+
+    query = query.withAggregatorSpecs(
+        Arrays.asList(
+            QueryRunnerTestHelper.rowsCount,
+            new DoubleSumAggregatorFactory("index", null, "-index + 100")
+        )
+    );
+
+    expectedResults = Arrays.asList(
+        TopNQueryRunnerTestHelper.createExpectedRows(
+            "2011-01-12T00:00:00.000Z",
+            new String[]{QueryRunnerTestHelper.qualityDimension, "rows", "index", "addRowsIndexConstant"},
+            Arrays.asList(
+                new Object[]{"n", 93L, -2786.472755432129, -2692.472755432129},
+                new Object[]{"u", 186L, -3949.824363708496, -3762.824363708496}
+            )
+        )
+    );
+
     assertExpectedResults(expectedResults, query);
   }
 

@@ -70,88 +70,47 @@ public class ParserTest
     Assert.assertEquals(expected, actual);
   }
 
+  private void validateParser(String expression, String expected, String identifiers)
+  {
+    Assert.assertEquals(expected, Parser.parse(expression).toString());
+    Assert.assertEquals(identifiers, Parser.findRequiredBindings(expression).toString());
+  }
+
   @Test
   public void testSimpleLogicalOps1()
   {
-    String actual = Parser.parse("x>y").toString();
-    String expected = "(> x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x<y").toString();
-    expected = "(< x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x<=y").toString();
-    expected = "(<= x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x>=y").toString();
-    expected = "(>= x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x==y").toString();
-    expected = "(== x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x!=y").toString();
-    expected = "(!= x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x && y").toString();
-    expected = "(&& x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x || y").toString();
-    expected = "(|| x y)";
-    Assert.assertEquals(expected, actual);
+    validateParser("x>y", "(> x y)", "[x, y]");
+    validateParser("x<y", "(< x y)", "[x, y]");
+    validateParser("x<=y", "(<= x y)", "[x, y]");
+    validateParser("x>=y", "(>= x y)", "[x, y]");
+    validateParser("x==y", "(== x y)", "[x, y]");
+    validateParser("x!=y", "(!= x y)", "[x, y]");
+    validateParser("x && y", "(&& x y)", "[x, y]");
+    validateParser("x || y", "(|| x y)", "[x, y]");
   }
 
   @Test
   public void testSimpleAdditivityOp1()
   {
-    String actual = Parser.parse("x+y").toString();
-    String expected = "(+ x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x-y").toString();
-    expected = "(- x y)";
-    Assert.assertEquals(expected, actual);
+    validateParser("x+y", "(+ x y)", "[x, y]");
+    validateParser("x-y", "(- x y)", "[x, y]");
   }
 
   @Test
   public void testSimpleAdditivityOp2()
   {
-    String actual = Parser.parse("x+y+z").toString();
-    String expected = "(+ (+ x y) z)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x+y-z").toString();
-    expected = "(- (+ x y) z)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x-y+z").toString();
-    expected = "(+ (- x y) z)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x-y-z").toString();
-    expected = "(- (- x y) z)";
-    Assert.assertEquals(expected, actual);
+    validateParser("x+y+z", "(+ (+ x y) z)", "[x, y, z]");
+    validateParser("x+y-z", "(- (+ x y) z)", "[x, y, z]");
+    validateParser("x-y+z", "(+ (- x y) z)", "[x, y, z]");
+    validateParser("x-y-z", "(- (- x y) z)", "[x, y, z]");
   }
 
   @Test
   public void testSimpleMultiplicativeOp1()
   {
-    String actual = Parser.parse("x*y").toString();
-    String expected = "(* x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x/y").toString();
-    expected = "(/ x y)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("x%y").toString();
-    expected = "(% x y)";
-    Assert.assertEquals(expected, actual);
+    validateParser("x*y", "(* x y)", "[x, y]");
+    validateParser("x/y", "(/ x y)", "[x, y]");
+    validateParser("x%y", "(% x y)", "[x, y]");
   }
 
   @Test
@@ -255,12 +214,7 @@ public class ParserTest
   @Test
   public void testFunctions()
   {
-    String actual = Parser.parse("sqrt(x)").toString();
-    String expected = "(sqrt [x])";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("if(cond,then,else)").toString();
-    expected = "(if [cond, then, else])";
-    Assert.assertEquals(expected, actual);
+    validateParser("sqrt(x)", "(sqrt [x])", "[x]");
+    validateParser("if(cond,then,else)", "(if [cond, then, else])", "[cond, then, else]");
   }
 }

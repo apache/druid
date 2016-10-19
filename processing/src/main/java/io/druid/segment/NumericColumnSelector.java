@@ -19,18 +19,9 @@
 
 package io.druid.segment;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ColumnCapabilities;
-
 /**
- * Factory class for MetricSelectors
  */
-public interface ColumnSelectorFactory
+public interface NumericColumnSelector
 {
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
-  public NumericColumnSelector makeMathExpressionSelector(String expression);
-  public ColumnCapabilities getColumnCapabilities(String columnName);
+  Number get();
 }
