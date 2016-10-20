@@ -34,6 +34,7 @@ import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
@@ -77,25 +78,6 @@ public class HttpEmitterModule implements Module
     if (sslContext != null) {
       builder.withSslContext(sslContext);
     }
-    final com.metamx.common.lifecycle.Lifecycle metamxLifecycle = new com.metamx.common.lifecycle.Lifecycle();
-    try {
-      lifecycle.addMaybeStartHandler(new Lifecycle.Handler()
-      {
-        @Override
-        public void start() throws Exception
-        {
-          metamxLifecycle.start();
-        }
-
-        @Override
-        public void stop()
-        {
-          metamxLifecycle.stop();
-        }
-      });
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), metamxLifecycle), jsonMapper);
+    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)), jsonMapper);
   }
 }

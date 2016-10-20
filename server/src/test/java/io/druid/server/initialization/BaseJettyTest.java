@@ -27,6 +27,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.annotations.Self;
+import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
@@ -111,30 +112,11 @@ public abstract class BaseJettyTest
     ClientHolder(int maxClientConnections)
     {
       final Lifecycle druidLifecycle = new Lifecycle();
-      final com.metamx.common.lifecycle.Lifecycle metamxLifecycle = new com.metamx.common.lifecycle.Lifecycle();
-      try {
-        druidLifecycle.addMaybeStartHandler(new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            metamxLifecycle.start();
-          }
-
-          @Override
-          public void stop()
-          {
-            metamxLifecycle.stop();
-          }
-        });
-      } catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
 
       try {
         this.client = HttpClientInit.createClient(
             new HttpClientConfig(maxClientConnections, SSLContext.getDefault(), Duration.ZERO),
-            metamxLifecycle
+            LifecycleUtils.asMmxLifecycle(druidLifecycle)
         );
       }
       catch (Exception e) {

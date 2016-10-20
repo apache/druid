@@ -115,27 +115,7 @@ public class HttpClientModule implements Module
       if (getSslContextBinding() != null) {
         builder.withSslContext(getSslContextBinding().getProvider().get());
       }
-      final Lifecycle druidLifecycle = getLifecycleProvider().get();
-      final com.metamx.common.lifecycle.Lifecycle metamxLifecycle = new com.metamx.common.lifecycle.Lifecycle();
-      try {
-        druidLifecycle.addMaybeStartHandler(new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            metamxLifecycle.start();
-          }
-
-          @Override
-          public void stop()
-          {
-            metamxLifecycle.stop();
-          }
-        });
-      } catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-      return HttpClientInit.createClient(builder.build(), metamxLifecycle);
+      return HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(getLifecycleProvider().get()));
     }
   }
 }

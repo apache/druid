@@ -568,15 +568,6 @@
                 <artifactId>fastutil</artifactId>
                 <version>7.0.13</version>
             </dependency>
-
-            <!-- Test Scope -->
-<!--             <dependency> -->
-<!--                 <groupId>io.druid</groupId> -->
-<!--                 <artifactId>java-util</artifactId> -->
-<!--                 <type>test-jar</type> -->
-<!--                 <scope>test</scope> -->
-<!--                 <version>${metamx.java-util.version}</version> -->
-<!--             </dependency> -->
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>

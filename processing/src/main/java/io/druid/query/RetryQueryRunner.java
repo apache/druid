@@ -23,7 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import com.metamx.emitter.EmittingLogger;
+
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -75,8 +77,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
         if (!missingSegments.isEmpty()) {
           for (int i = 0; i < config.getNumTries(); i++) {
-            // log.info("[%,d] missing segments found. Retry attempt [%,d]",
-            // missingSegments.size(), i);
+            log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
             context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
             final Query<T> retryQuery = query.withQuerySegmentSpec(
