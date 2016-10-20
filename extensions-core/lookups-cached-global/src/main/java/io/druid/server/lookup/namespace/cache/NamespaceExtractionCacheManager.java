@@ -147,10 +147,8 @@ public abstract class NamespaceExtractionCacheManager
   }
 
 
-  protected <T extends ExtractionNamespace> Runnable getPostRunnable(
+  protected Runnable getPostRunnable(
       final String id,
-      final T namespace,
-      final ExtractionNamespaceCacheFactory<T> factory,
       final String cacheId
   )
   {
@@ -320,7 +318,7 @@ public abstract class NamespaceExtractionCacheManager
       throw new ISE("Cannot find factory for namespace [%s]", namespace);
     }
     final String cacheId = String.format("namespace-cache-%s-%s", id, UUID.randomUUID().toString());
-    return schedule(id, namespace, factory, getPostRunnable(id, namespace, factory, cacheId), cacheId);
+    return schedule(id, namespace, factory, getPostRunnable(id, cacheId), cacheId);
   }
 
   // For testing purposes this is protected
