@@ -30,14 +30,14 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-public class FinalFieldAccessPostAggregator implements PostAggregator, HasDependentAggFactories
+public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasDependentAggFactories
 {
   private final String name;
   private final String fieldName;
   private Map<String, AggregatorFactory> aggFactoryMap;
 
   @JsonCreator
-  public FinalFieldAccessPostAggregator(
+  public FinalizingFieldAccessPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName
   )
@@ -86,7 +86,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
   @Override
   public String toString()
   {
-    return "FinalFieldAccessPostAggregator{" +
+    return "FinalizingFieldAccessPostAggregator{" +
            "name'" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", aggFactoryMap='" + aggFactoryMap + '\'' +
@@ -99,7 +99,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
 
-    FinalFieldAccessPostAggregator that = (FinalFieldAccessPostAggregator)o;
+    FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator)o;
 
     if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) return false;
     if (name != null ? !name.equals(that.name) : that.name != null) return false;

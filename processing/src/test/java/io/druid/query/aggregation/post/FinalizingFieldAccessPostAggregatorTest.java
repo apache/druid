@@ -26,7 +26,6 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.Aggregator;
@@ -40,9 +39,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 
-public class FinalFieldAccessPostAggregatorTest
+public class FinalizingFieldAccessPostAggregatorTest
 {
   @Rule
   public final TemporaryFolder tempFoler = new TemporaryFolder();
@@ -58,7 +58,7 @@ public class FinalFieldAccessPostAggregatorTest
     Map<String, Object> metricValues = Maps.newHashMap();
     metricValues.put(agg.getName(), agg.get());
 
-    PostAggregator postAgg = new FinalFieldAccessPostAggregator("final_rows", "rows");
+    PostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", "rows");
     Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
   }
 
@@ -71,7 +71,7 @@ public class FinalFieldAccessPostAggregatorTest
             .times(1);
     EasyMock.replay(aggFactory);
 
-    FinalFieldAccessPostAggregator postAgg = new FinalFieldAccessPostAggregator("final_billy", "billy");
+    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_billy", "billy");
     postAgg.setDependentAggFactories(ImmutableMap.of("billy", aggFactory));
 
     Map<String, Object> metricValues = Maps.newHashMap();
@@ -79,6 +79,30 @@ public class FinalFieldAccessPostAggregatorTest
 
     Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
+  }
+
+  @Test
+  public void testComputedInArithmeticPostAggregator()
+  {
+    AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(aggFactory.finalizeComputation("test"))
+            .andReturn(new Long(3L))
+            .times(1);
+    EasyMock.replay(aggFactory);
+
+    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_billy", "billy");
+    postAgg.setDependentAggFactories(ImmutableMap.of("billy", aggFactory));
+
+    Map<String, Object> metricValues = Maps.newHashMap();
+    metricValues.put("billy", "test");
+
+    List<PostAggregator> postAggsList = Lists.newArrayList(
+        new ConstantPostAggregator("roku", 6), postAgg);
+
+    ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
+
+    Assert.assertEquals(new Double(9.0f), arithmeticPostAggregator.compute(metricValues));
+    EasyMock.verify();
   }
 
   @Test
@@ -121,7 +145,7 @@ public class FinalFieldAccessPostAggregatorTest
                    + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
                    + "],"
                    + "\"postAggregations\": ["
-                   + "  { \"type\": \"finalFieldAccess\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
+                   + "  { \"type\": \"finalizingFieldAccess\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
                    + "],"
                    + "\"intervals\": [ \"1970/2050\" ]"
                    + "}";

@@ -48,7 +48,7 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.DoubleGreatestPostAggregator;
 import io.druid.query.aggregation.post.DoubleLeastPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.aggregation.post.FinalFieldAccessPostAggregator;
+import io.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import io.druid.query.aggregation.post.JavaScriptPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.aggregation.post.LongGreatestPostAggregator;
@@ -99,7 +99,7 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "expression", value = ExpressionPostAggregator.class),
       @JsonSubTypes.Type(name = "arithmetic", value = ArithmeticPostAggregator.class),
       @JsonSubTypes.Type(name = "fieldAccess", value = FieldAccessPostAggregator.class),
-      @JsonSubTypes.Type(name = "finalFieldAccess", value = FinalFieldAccessPostAggregator.class),
+      @JsonSubTypes.Type(name = "finalizingFieldAccess", value = FinalizingFieldAccessPostAggregator.class),
       @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptPostAggregator.class),
       @JsonSubTypes.Type(name = "hyperUniqueCardinality", value = HyperUniqueFinalizingPostAggregator.class),
