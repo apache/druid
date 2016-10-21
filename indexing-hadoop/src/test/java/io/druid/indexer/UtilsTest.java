@@ -22,7 +22,9 @@ package io.druid.indexer;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

@@ -22,7 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Floats;
-import com.metamx.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.CloseQuietly;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

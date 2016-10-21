@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Query;
 

@@ -19,12 +19,12 @@
 
 package io.druid.server.metrics;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 public class EventReceiverFirehoseRegister
 {

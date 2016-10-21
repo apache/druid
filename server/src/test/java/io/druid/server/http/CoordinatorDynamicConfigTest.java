@@ -22,7 +22,8 @@ package io.druid.server.http;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
 import io.druid.segment.TestHelper;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.junit.Assert;

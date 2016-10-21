@@ -22,8 +22,10 @@ package io.druid.server.listener.resource;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.StringUtils;
+
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
+
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;

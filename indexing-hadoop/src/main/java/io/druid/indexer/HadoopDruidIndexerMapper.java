@@ -19,12 +19,12 @@
 
 package io.druid.indexer;
 
-import com.metamx.common.RE;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;

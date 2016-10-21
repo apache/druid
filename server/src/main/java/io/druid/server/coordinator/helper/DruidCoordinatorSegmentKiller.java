@@ -22,9 +22,10 @@ package io.druid.server.coordinator.helper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;

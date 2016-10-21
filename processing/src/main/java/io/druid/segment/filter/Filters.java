@@ -26,9 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.parsers.ParseException;
+import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.query.Query;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
@@ -36,16 +34,12 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 

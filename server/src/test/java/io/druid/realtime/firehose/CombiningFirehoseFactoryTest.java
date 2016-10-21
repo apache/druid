@@ -20,12 +20,13 @@
 package io.druid.realtime.firehose;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.parsers.ParseException;
+
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.utils.Runnables;
 import org.joda.time.DateTime;

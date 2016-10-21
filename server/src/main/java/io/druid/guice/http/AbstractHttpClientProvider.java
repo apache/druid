@@ -26,7 +26,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
-import com.metamx.common.lifecycle.Lifecycle;
+
+import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;

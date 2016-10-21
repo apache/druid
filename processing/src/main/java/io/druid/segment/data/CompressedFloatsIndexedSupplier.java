@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

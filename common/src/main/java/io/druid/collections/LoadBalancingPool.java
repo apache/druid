@@ -22,9 +22,9 @@ package io.druid.collections;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.metamx.common.logger.Logger;
 
-import java.io.IOException;
+import io.druid.java.util.common.logger.Logger;
+
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 

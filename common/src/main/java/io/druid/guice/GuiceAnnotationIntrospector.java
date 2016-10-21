@@ -25,7 +25,8 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.NopAnnotationIntrospector;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
 
 import java.lang.annotation.Annotation;
 

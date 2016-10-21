@@ -22,8 +22,9 @@ package io.druid.server.coordinator.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.IAE;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.IAE;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinator;

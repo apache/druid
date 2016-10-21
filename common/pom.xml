@@ -31,8 +31,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.metamx</groupId>
+            <groupId>io.druid</groupId>
             <artifactId>java-util</artifactId>
+            <version>${project.parent.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
         </dependency>
         <dependency>
             <groupId>io.druid</groupId>
@@ -178,8 +185,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.metamx</groupId>
+            <groupId>io.druid</groupId>
             <artifactId>java-util</artifactId>
+            <version>${project.parent.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

@@ -27,7 +27,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.HttpPostEmitter;
 import com.metamx.http.client.HttpClientConfig;
@@ -35,6 +34,8 @@ import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.http.LifecycleUtils;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
@@ -77,7 +78,6 @@ public class HttpEmitterModule implements Module
     if (sslContext != null) {
       builder.withSslContext(sslContext);
     }
-
-    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), lifecycle), jsonMapper);
+    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)), jsonMapper);
   }
 }

@@ -21,7 +21,8 @@ package io.druid.collections;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.guava.DefaultingHashMap;
+
+import io.druid.java.util.common.guava.DefaultingHashMap;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
