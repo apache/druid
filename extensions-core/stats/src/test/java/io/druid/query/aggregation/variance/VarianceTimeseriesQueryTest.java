@@ -20,7 +20,8 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequences;
+
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;

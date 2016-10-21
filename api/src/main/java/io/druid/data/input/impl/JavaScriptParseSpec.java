@@ -22,9 +22,10 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.ISE;
-import com.metamx.common.parsers.JavaScriptParser;
-import com.metamx.common.parsers.Parser;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.parsers.JavaScriptParser;
+import io.druid.java.util.common.parsers.Parser;
 import io.druid.js.JavaScriptConfig;
 
 import java.util.List;

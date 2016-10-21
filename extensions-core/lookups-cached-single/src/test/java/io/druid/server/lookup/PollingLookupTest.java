@@ -25,7 +25,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.polling.OffHeapPollingCache;
 import io.druid.server.lookup.cache.polling.OnHeapPollingCache;
@@ -59,7 +60,7 @@ public class PollingLookupTest
       "new-bad", "new-bar"
   );
 
-  private static final long POLL_PERIOD = 100L;
+  private static final long POLL_PERIOD = 1000L;
 
   @JsonTypeName("mock")
   private static class MockDataFetcher implements DataFetcher

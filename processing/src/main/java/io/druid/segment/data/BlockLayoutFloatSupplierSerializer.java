@@ -31,7 +31,6 @@ import io.druid.segment.CompressedPools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.channels.Channels;
@@ -102,7 +101,7 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
     try (OutputStream out = consolidatedOut.openStream();
          InputStream meta = ioPeon.makeInputStream(metaFile)) {
       ByteStreams.copy(meta, out);
-      flattener.combineStreams().copyTo(out);
+      ByteStreams.copy(flattener.combineStreams(), out);
     }
   }
 
@@ -135,7 +134,7 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     try (InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream input = flattener.combineStreams().openStream()) {
+         InputStream input = flattener.combineStreams().getInput()) {
       ByteStreams.copy(Channels.newChannel(meta), channel);
       final ReadableByteChannel from = Channels.newChannel(input);
       ByteStreams.copy(from, channel);

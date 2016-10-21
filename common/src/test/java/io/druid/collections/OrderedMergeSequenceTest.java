@@ -23,12 +23,14 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.MergeSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.SequenceTestHelper;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.TestSequence;
+
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.MergeSequence;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.SequenceTestHelper;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.TestSequence;
+
 import org.junit.Assert;
 import org.junit.Test;
 

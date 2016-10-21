@@ -29,8 +29,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
@@ -43,6 +41,8 @@ import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -176,6 +176,7 @@ public class KafkaIndexTaskClient
       );
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
+        log.info("Task [%s] paused successfully", id);
         return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>() {});
       }
 
@@ -187,6 +188,7 @@ public class KafkaIndexTaskClient
 
         final Duration delay = retryPolicy.getAndIncrementRetryDelay();
         if (delay == null) {
+          log.error("Task [%s] failed to pause, aborting", id);
           throw new ISE("Task [%s] failed to pause, aborting", id);
         } else {
           final long sleepTime = delay.getMillis();
@@ -200,9 +202,11 @@ public class KafkaIndexTaskClient
       }
     }
     catch (NoTaskLocationException e) {
+      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
+      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
       throw Throwables.propagate(e);
     }
   }

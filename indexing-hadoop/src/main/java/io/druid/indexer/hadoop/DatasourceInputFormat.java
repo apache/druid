@@ -26,14 +26,17 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.logger.Logger;
+
 import io.druid.collections.CountingMap;
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
@@ -158,6 +161,18 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
         @Override
         protected boolean isSplitable(FileSystem fs, Path file) {
           return false;
+        }
+
+        @Override
+        protected FileStatus[] listStatus(JobConf job) throws IOException
+        {
+          // to avoid globbing which needs input path should be hadoop-compatible (':' is not acceptable in path, etc.)
+          List<FileStatus> statusList = Lists.newArrayList();
+          for (Path path : FileInputFormat.getInputPaths(job)) {
+            // load spec in segment points specifically zip file itself
+            statusList.add(path.getFileSystem(job).getFileStatus(path));
+          }
+          return statusList.toArray(new FileStatus[statusList.size()]);
         }
       };
     }

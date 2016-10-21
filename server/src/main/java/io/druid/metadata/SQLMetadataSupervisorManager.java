@@ -27,12 +27,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.Pair;
-import com.metamx.common.lifecycle.LifecycleStart;
+
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;

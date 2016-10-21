@@ -20,7 +20,8 @@
 package io.druid.segment.loading;
 
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
+
+import io.druid.java.util.common.MapUtils;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;

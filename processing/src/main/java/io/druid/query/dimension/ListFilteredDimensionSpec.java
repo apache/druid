@@ -22,7 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 
@@ -78,7 +78,9 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     if (selectorCardinality < 0) {
       throw new UnsupportedOperationException("Cannot decorate a selector with no dictionary");
     }
-    int cardinality = isWhitelist ? values.size() : selectorCardinality - values.size();
+
+    // Upper bound on cardinality of the filtered spec.
+    final int cardinality = isWhitelist ? values.size() : selectorCardinality;
 
     int count = 0;
     final Map<Integer,Integer> forwardMapping = new HashMap<>(cardinality);

@@ -22,11 +22,12 @@ package io.druid.segment.realtime.firehose;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.server.DruidNode;
 import io.druid.guice.annotations.RemoteChatHandler;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;

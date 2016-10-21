@@ -28,11 +28,11 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -143,10 +143,11 @@ public class DetermineHashedPartitionsJob implements Jobby
                 config.getGranularitySpec().getSegmentGranularity(),
                 config.getGranularitySpec().getQueryGranularity(),
                 config.getGranularitySpec().isRollup(),
-                intervals
+                intervals,
+                config.getGranularitySpec().getTimezone()
             )
         );
-        log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
+        log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
@@ -416,6 +417,3 @@ public class DetermineHashedPartitionsJob implements Jobby
   }
 
 }
-
-
-

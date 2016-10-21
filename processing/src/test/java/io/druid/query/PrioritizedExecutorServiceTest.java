@@ -23,7 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;

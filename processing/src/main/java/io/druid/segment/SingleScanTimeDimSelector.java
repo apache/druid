@@ -19,13 +19,13 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 public class SingleScanTimeDimSelector implements DimensionSelector
@@ -108,9 +108,9 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       }
 
       @Override
-      public Iterator<Integer> iterator()
+      public IntIterator iterator()
       {
-        return Iterators.singletonIterator(dimensionValueIndex);
+        return IntIterators.singleton(dimensionValueIndex);
       }
 
       @Override

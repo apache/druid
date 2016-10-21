@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.9.2-SNAPSHOT</version>
+        <version>0.9.3-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -90,6 +90,8 @@
                                 <argument>io.druid.extensions:druid-kafka-indexing-service</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-lookups-cached-global</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-lookups-cached-single</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-s3-extensions</argument>
                                 <argument>-c</argument>

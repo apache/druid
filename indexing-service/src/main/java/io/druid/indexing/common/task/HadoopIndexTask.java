@@ -29,7 +29,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.metamx.common.logger.Logger;
+
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -44,6 +44,7 @@ import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -73,7 +74,7 @@ public class HadoopIndexTask extends HadoopTask
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
-   *             <p>
+   *             <p/>
    *             Here, we will ensure that the DbConnectorConfig field of the spec is set to null, such that the
    *             job does not push a list of published segments the database. Instead, we will use the method
    *             IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
@@ -188,7 +189,7 @@ public class HadoopIndexTask extends HadoopTask
 
 
     // We should have a lock from before we started running only if interval was specified
-    final String version;
+    String version;
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
@@ -201,6 +202,20 @@ public class HadoopIndexTask extends HadoopTask
       Iterable<TaskLock> locks = getTaskLocks(toolbox);
       final TaskLock myLock = Iterables.getOnlyElement(locks);
       version = myLock.getVersion();
+    }
+
+    final String specVersion = indexerSchema.getTuningConfig().getVersion();
+    if (indexerSchema.getTuningConfig().isUseExplicitVersion()) {
+      if (specVersion.compareTo(version) < 0) {
+        version = specVersion;
+      } else {
+        log.error(
+            "Spec version can not be greater than or equal to the lock version, Spec version: [%s] Lock version: [%s].",
+            specVersion,
+            version
+        );
+        return TaskStatus.failure(getId());
+      }
     }
 
     log.info("Setting version to: %s", version);

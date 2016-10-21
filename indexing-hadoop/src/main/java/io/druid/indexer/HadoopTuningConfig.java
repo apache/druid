@@ -64,7 +64,9 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         DEFAULT_BUILD_V9_DIRECTLY,
-        DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
+        DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
+        false,
+        false
     );
   }
 
@@ -83,6 +85,8 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean useCombiner;
   private final Boolean buildV9Directly;
   private final int numBackgroundPersistThreads;
+  private final boolean forceExtendableShardSpecs;
+  private final boolean useExplicitVersion;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -102,7 +106,9 @@ public class HadoopTuningConfig implements TuningConfig
       // See https://github.com/druid-io/druid/pull/1922
       final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT,
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
-      final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads
+      final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads,
+      final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
+      final @JsonProperty("useExplicitVersion") boolean useExplicitVersion
   )
   {
     this.workingPath = workingPath;
@@ -126,7 +132,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.numBackgroundPersistThreads = numBackgroundPersistThreads == null
                                        ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
                                        : numBackgroundPersistThreads;
+    this.forceExtendableShardSpecs = forceExtendableShardSpecs;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
+    this.useExplicitVersion = useExplicitVersion;
   }
 
   @JsonProperty
@@ -219,6 +227,18 @@ public class HadoopTuningConfig implements TuningConfig
     return numBackgroundPersistThreads;
   }
 
+  @JsonProperty
+  public boolean isForceExtendableShardSpecs()
+  {
+    return forceExtendableShardSpecs;
+  }
+
+  @JsonProperty
+  public boolean isUseExplicitVersion()
+  {
+    return useExplicitVersion;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -237,7 +257,9 @@ public class HadoopTuningConfig implements TuningConfig
         useCombiner,
         null,
         buildV9Directly,
-        numBackgroundPersistThreads
+        numBackgroundPersistThreads,
+        forceExtendableShardSpecs,
+        useExplicitVersion
     );
   }
 
@@ -259,7 +281,9 @@ public class HadoopTuningConfig implements TuningConfig
         useCombiner,
         null,
         buildV9Directly,
-        numBackgroundPersistThreads
+        numBackgroundPersistThreads,
+        forceExtendableShardSpecs,
+        useExplicitVersion
     );
   }
 
@@ -281,7 +305,9 @@ public class HadoopTuningConfig implements TuningConfig
         useCombiner,
         null,
         buildV9Directly,
-        numBackgroundPersistThreads
+        numBackgroundPersistThreads,
+        forceExtendableShardSpecs,
+        useExplicitVersion
     );
   }
 }

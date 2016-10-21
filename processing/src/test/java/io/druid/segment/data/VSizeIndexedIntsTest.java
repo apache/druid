@@ -19,10 +19,9 @@
 
 package io.druid.segment.data;
 
+import com.google.common.primitives.Ints;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.common.primitives.Ints;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;

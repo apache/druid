@@ -21,8 +21,10 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.metamx.common.IAE;
+
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
+import io.druid.java.util.common.IAE;
+
 import org.joda.time.DateTime;
 
 import java.util.List;

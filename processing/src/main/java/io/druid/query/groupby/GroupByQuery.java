@@ -29,11 +29,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
@@ -398,6 +398,40 @@ public class GroupByQuery extends BaseQuery<Row>
         getPostAggregatorSpecs(),
         getHavingSpec(),
         limitSpec,
+        getContext()
+    );
+  }
+
+  public GroupByQuery withAggregatorSpecs(final List<AggregatorFactory> aggregatorSpecs)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        getDimensions(),
+        aggregatorSpecs,
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        getLimitSpec(),
+        limitFn,
+        getContext()
+    );
+  }
+
+  public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        getDimensions(),
+        getAggregatorSpecs(),
+        postAggregatorSpecs,
+        getHavingSpec(),
+        getLimitSpec(),
+        limitFn,
         getContext()
     );
   }

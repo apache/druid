@@ -28,13 +28,13 @@ import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -256,11 +256,11 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       int mid = (low + high) >>> 1;
       long midVal = timeValues.getLongSingleValueRow(mid);
 
-      if (midVal < time)
+      if (midVal < time) {
         low = mid + 1;
-      else if (midVal > time)
+      } else if (midVal > time) {
         high = mid - 1;
-      else { // key found
+      } else { // key found
         int i;
         // rewind the index of the same time values
         for (i = mid - 1; i >= 0; i--) {

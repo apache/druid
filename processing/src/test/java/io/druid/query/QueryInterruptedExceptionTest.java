@@ -21,8 +21,8 @@ package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -120,11 +120,11 @@ public class QueryInterruptedExceptionTest
         new QueryInterruptedException(null).getErrorClass()
     );
     Assert.assertEquals(
-        "com.metamx.common.ISE",
+        "io.druid.java.util.common.ISE",
         new QueryInterruptedException(new ISE("Something bad!")).getErrorClass()
     );
     Assert.assertEquals(
-        "com.metamx.common.ISE",
+        "io.druid.java.util.common.ISE",
         new QueryInterruptedException(new QueryInterruptedException(new ISE("Something bad!"))).getErrorClass()
     );
   }
@@ -170,11 +170,11 @@ public class QueryInterruptedExceptionTest
         roundTrip(new QueryInterruptedException(null)).getErrorClass()
     );
     Assert.assertEquals(
-        "com.metamx.common.ISE",
+        "io.druid.java.util.common.ISE",
         roundTrip(new QueryInterruptedException(new ISE("Something bad!"))).getErrorClass()
     );
     Assert.assertEquals(
-        "com.metamx.common.ISE",
+        "io.druid.java.util.common.ISE",
         roundTrip(new QueryInterruptedException(new QueryInterruptedException(new ISE("Something bad!")))).getErrorClass()
     );
     Assert.assertEquals(

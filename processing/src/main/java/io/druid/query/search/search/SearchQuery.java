@@ -22,8 +22,8 @@ package io.druid.query.search.search;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.granularity.QueryGranularity;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
@@ -223,18 +223,36 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     SearchQuery that = (SearchQuery) o;
 
-    if (limit != that.limit) return false;
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) return false;
-    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) return false;
+    if (limit != that.limit) {
+      return false;
+    }
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
+      return false;
+    }
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
+      return false;
+    }
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
+      return false;
+    }
+    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) {
+      return false;
+    }
+    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) {
+      return false;
+    }
 
     return true;
   }

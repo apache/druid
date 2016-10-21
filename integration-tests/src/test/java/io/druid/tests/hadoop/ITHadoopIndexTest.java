@@ -21,9 +21,8 @@ package io.druid.tests.hadoop;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import io.druid.indexing.common.TaskStatus;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import io.druid.testing.utils.RetryUtil;

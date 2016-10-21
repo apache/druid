@@ -25,8 +25,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.metamx.common.Pair;
+
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Pair;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.IntegerPartitionChunk;
 import io.druid.timeline.partition.PartitionChunk;

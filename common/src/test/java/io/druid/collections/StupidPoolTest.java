@@ -20,7 +20,9 @@
 package io.druid.collections;
 
 import com.google.common.base.Supplier;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
+
 import org.easymock.EasyMock;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.After;

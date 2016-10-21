@@ -21,7 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
+import io.druid.java.util.common.Pair;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;

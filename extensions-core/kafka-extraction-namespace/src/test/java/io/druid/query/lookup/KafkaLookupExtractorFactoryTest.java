@@ -26,8 +26,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.StringUtils;
+
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
@@ -283,7 +284,7 @@ public class KafkaLookupExtractorFactoryTest
         threadWasInterrupted.set(Thread.currentThread().isInterrupted());
         return null;
       }
-    }).once();
+    }).times(2);
 
     EasyMock.replay(cacheManager, kafkaStream, consumerConnector, consumerIterator);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
@@ -364,6 +365,8 @@ public class KafkaLookupExtractorFactoryTest
             .andReturn(new ConcurrentHashMap<String, String>())
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(false).once();
+    consumerConnector.shutdown();
+    EasyMock.expectLastCall().anyTimes();
 
     EasyMock.replay(cacheManager, kafkaStream, consumerConnector, consumerIterator);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
@@ -404,7 +407,7 @@ public class KafkaLookupExtractorFactoryTest
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
     consumerConnector.shutdown();
-    EasyMock.expectLastCall().once();
+    EasyMock.expectLastCall().times(2);
     EasyMock.replay(cacheManager, kafkaStream, consumerConnector, consumerIterator);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
@@ -444,7 +447,7 @@ public class KafkaLookupExtractorFactoryTest
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
     consumerConnector.shutdown();
-    EasyMock.expectLastCall().once();
+    EasyMock.expectLastCall().times(3);
     EasyMock.replay(cacheManager, kafkaStream, consumerConnector, consumerIterator);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,

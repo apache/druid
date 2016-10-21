@@ -21,18 +21,18 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
+
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.common.utils.VMUtils;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.YieldingAccumulator;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -70,7 +70,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
   )
   {
     final Sequence<T> baseSequence = delegate.run(query, responseContext);
-    return Sequences.withEffect(
+    return Sequences.withBaggage(
         new Sequence<T>()
         {
           @Override
@@ -86,11 +86,16 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           }
 
           @Override
-          public <OutType> Yielder<OutType> toYielder(
-              OutType initValue, YieldingAccumulator<OutType, T> accumulator
-          )
+          public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
           {
-            final Yielder<OutType> delegateYielder = baseSequence.toYielder(initValue, accumulator);
+            final long start = VMUtils.getCurrentThreadCpuTime();
+            final Yielder<OutType> delegateYielder;
+            try {
+              delegateYielder = baseSequence.toYielder(initValue, accumulator);
+            }
+            finally {
+              cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
+            }
             return new Yielder<OutType>()
             {
               @Override
@@ -101,9 +106,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
                   return delegateYielder.get();
                 }
                 finally {
-                  cpuTimeAccumulator.addAndGet(
-                      VMUtils.getCurrentThreadCpuTime() - start
-                  );
+                  cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
                 }
               }
 
@@ -115,9 +118,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
                   return delegateYielder.next(initValue);
                 }
                 finally {
-                  cpuTimeAccumulator.addAndGet(
-                      VMUtils.getCurrentThreadCpuTime() - start
-                  );
+                  cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
                 }
               }
 
@@ -135,10 +136,10 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             };
           }
         },
-        new Runnable()
+        new Closeable()
         {
           @Override
-          public void run()
+          public void close()
           {
             if (report) {
               final long cpuTime = cpuTimeAccumulator.get();
@@ -148,8 +149,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
               }
             }
           }
-        },
-        MoreExecutors.sameThreadExecutor()
+        }
     );
   }
 

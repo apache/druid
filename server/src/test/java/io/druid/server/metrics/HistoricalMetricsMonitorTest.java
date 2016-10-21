@@ -33,12 +33,10 @@ import io.druid.timeline.DataSegment;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRule;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 
 import javax.annotation.Nullable;

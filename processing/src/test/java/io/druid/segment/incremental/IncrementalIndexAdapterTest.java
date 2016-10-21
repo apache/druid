@@ -27,7 +27,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
-
 import org.junit.Assert;
 import org.junit.Test;
 

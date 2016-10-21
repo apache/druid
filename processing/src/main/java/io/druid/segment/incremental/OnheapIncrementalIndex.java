@@ -20,12 +20,11 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -33,10 +32,10 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -402,6 +401,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     public ColumnCapabilities getColumnCapabilities(String columnName)
     {
       return delegate.getColumnCapabilities(columnName);
+    }
+
+    @Override
+    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    {
+      return delegate.makeMathExpressionSelector(expression);
     }
   }
 

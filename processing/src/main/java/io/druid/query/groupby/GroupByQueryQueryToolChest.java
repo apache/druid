@@ -31,14 +31,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
@@ -138,9 +138,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     final DataSource dataSource = query.getDataSource();
 
     if (dataSource instanceof QueryDataSource) {
-      GroupByQuery subquery;
+      final GroupByQuery subquery;
       try {
-        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(query.getContext());
+        // Inject outer query context keys into subquery if they don't already exist in the subquery context.
+        // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
+        final Map<String, Object> subqueryContext = Maps.newTreeMap();
+        if (query.getContext() != null) {
+          for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
+            if (entry.getValue() != null) {
+              subqueryContext.put(entry.getKey(), entry.getValue());
+            }
+          }
+        }
+        if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
+          subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
+        }
+        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");

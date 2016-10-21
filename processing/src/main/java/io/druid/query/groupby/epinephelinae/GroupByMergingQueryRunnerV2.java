@@ -30,18 +30,18 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.logger.Logger;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.Releaser;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ChainedExecutionQueryRunner;
@@ -205,49 +205,32 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
                                 );
                               }
 
-                              final Releaser bufferReleaser = mergeBufferHolder.increment();
-                              try {
-                                final Releaser grouperReleaser = grouperHolder.increment();
-                                try {
-                                  return exec.submit(
-                                      new AbstractPrioritizedCallable<Boolean>(priority)
-                                      {
-                                        @Override
-                                        public Boolean call() throws Exception
-                                        {
-                                          try {
-                                            final Object retVal = input.run(queryForRunners, responseContext)
-                                                                       .accumulate(grouper, accumulator);
+                              return exec.submit(
+                                  new AbstractPrioritizedCallable<Boolean>(priority)
+                                  {
+                                    @Override
+                                    public Boolean call() throws Exception
+                                    {
+                                      try (
+                                          Releaser bufferReleaser = mergeBufferHolder.increment();
+                                          Releaser grouperReleaser = grouperHolder.increment()
+                                      ) {
+                                        final Object retVal = input.run(queryForRunners, responseContext)
+                                                                   .accumulate(grouper, accumulator);
 
-                                            // Return true if OK, false if resources were exhausted.
-                                            return retVal == grouper;
-                                          }
-                                          catch (QueryInterruptedException e) {
-                                            throw e;
-                                          }
-                                          catch (Exception e) {
-                                            log.error(e, "Exception with one of the sequences!");
-                                            throw Throwables.propagate(e);
-                                          }
-                                          finally {
-                                            grouperReleaser.close();
-                                            bufferReleaser.close();
-                                          }
-                                        }
+                                        // Return true if OK, false if resources were exhausted.
+                                        return retVal == grouper;
                                       }
-                                  );
-                                }
-                                catch (Exception e) {
-                                  // Exception caught while submitting the task; release resources.
-                                  grouperReleaser.close();
-                                  throw e;
-                                }
-                              }
-                              catch (Exception e) {
-                                // Exception caught while submitting the task; release resources.
-                                bufferReleaser.close();
-                                throw e;
-                              }
+                                      catch (QueryInterruptedException e) {
+                                        throw e;
+                                      }
+                                      catch (Exception e) {
+                                        log.error(e, "Exception with one of the sequences!");
+                                        throw Throwables.propagate(e);
+                                      }
+                                    }
+                                  }
+                              );
                             }
                           }
                       )

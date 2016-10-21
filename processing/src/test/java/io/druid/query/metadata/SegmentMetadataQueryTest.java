@@ -26,11 +26,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.guava.Sequences;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
@@ -194,7 +194,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap1 ? 71982 : 72755,
+        ), mmap1 ? 93744 : 94517,
         1209,
         null,
         null,
@@ -238,7 +238,7 @@ public class SegmentMetadataQueryTest
                 null
             )
         // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), mmap2 ? 71982 : 72755,
+        ), mmap2 ? 93744 : 94517,
         1209,
         null,
         null,

@@ -22,7 +22,8 @@ package io.druid.server.lookup;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.query.lookup.LookupIntrospectHandler;
 import io.druid.server.lookup.cache.loading.LoadingCache;
@@ -96,7 +97,9 @@ public class LoadingLookupFactory implements LookupExtractorFactory
       @Nullable LookupExtractorFactory lookupExtractorFactory
   )
   {
-    if (lookupExtractorFactory == null) return true;
+    if (lookupExtractorFactory == null) {
+      return true;
+    }
     return !this.equals(lookupExtractorFactory);
   }
 

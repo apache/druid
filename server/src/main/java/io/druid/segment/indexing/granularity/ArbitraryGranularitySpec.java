@@ -26,11 +26,14 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Comparators;
+
 import io.druid.common.utils.JodaUtils;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.guava.Comparators;
+
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -42,17 +45,22 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   private final TreeSet<Interval> intervals;
   private final QueryGranularity queryGranularity;
   private final Boolean rollup;
+  private final String timezone;
 
   @JsonCreator
   public ArbitraryGranularitySpec(
       @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup,
-      @JsonProperty("intervals") List<Interval> inputIntervals
+      @JsonProperty("intervals") List<Interval> inputIntervals,
+      @JsonProperty("timezone") String timezone
+
   )
   {
     this.queryGranularity = queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    this.timezone = timezone;
+    final DateTimeZone timeZone = DateTimeZone.forID(this.timezone);
 
     if (inputIntervals == null) {
       inputIntervals = Lists.newArrayList();
@@ -60,7 +68,11 @@ public class ArbitraryGranularitySpec implements GranularitySpec
 
     // Insert all intervals
     for (final Interval inputInterval : inputIntervals) {
-      intervals.add(inputInterval);
+      Interval adjustedInterval = inputInterval;
+      if (this.timezone != null) {
+        adjustedInterval = new Interval(inputInterval.getStartMillis(), inputInterval.getEndMillis(), timeZone);
+      }
+      intervals.add(adjustedInterval);
     }
 
     // Ensure intervals are non-overlapping (but they may abut each other)
@@ -88,7 +100,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
       List<Interval> inputIntervals
   )
   {
-    this(queryGranularity, true, inputIntervals);
+    this(queryGranularity, true, inputIntervals, null);
   }
 
   @Override
@@ -132,6 +144,13 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
+  @JsonProperty("timezone")
+  public String getTimezone()
+  {
+    return timezone;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -149,6 +168,10 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     if (!rollup.equals(that.rollup)) {
       return false;
     }
+    if (timezone != null ? !timezone.equals(that.timezone): that.timezone != null) {
+      return false;
+    }
+
     return !(queryGranularity != null
              ? !queryGranularity.equals(that.queryGranularity)
              : that.queryGranularity != null);
@@ -161,6 +184,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     int result = intervals.hashCode();
     result = 31 * result + rollup.hashCode();
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
+    result = 31 * result + (timezone != null ? timezone.hashCode() : 0);
     return result;
   }
 }

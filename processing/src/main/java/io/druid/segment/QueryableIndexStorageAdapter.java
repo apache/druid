@@ -23,18 +23,18 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.UOE;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -59,6 +59,7 @@ import io.druid.segment.data.Offset;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
@@ -66,7 +67,6 @@ import org.roaringbitmap.IntIterator;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -535,9 +535,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               }
 
                               @Override
-                              public Iterator<Integer> iterator()
+                              public it.unimi.dsi.fastutil.ints.IntIterator iterator()
                               {
-                                return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
+                                return IntIterators.singleton(column.getSingleValueRow(cursorOffset.getOffset()));
                               }
 
                               @Override
@@ -808,6 +808,59 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
+                    public NumericColumnSelector makeMathExpressionSelector(String expression)
+                    {
+                      final Expr parsed = Parser.parse(expression);
+                      final List<String> required = Parser.findRequiredBindings(parsed);
+
+                      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+                      for (String columnName : index.getColumnNames()) {
+                        if (!required.contains(columnName)) {
+                          continue;
+                        }
+                        final GenericColumn column = index.getColumn(columnName).getGenericColumn();
+                        if (column == null) {
+                          continue;
+                        }
+                        if (column.getType() == ValueType.FLOAT) {
+                          values.put(
+                              columnName, new Supplier<Number>()
+                              {
+                                @Override
+                                public Number get()
+                                {
+                                  return column.getFloatSingleValueRow(cursorOffset.getOffset());
+                                }
+                              }
+                          );
+                        } else if (column.getType() == ValueType.LONG) {
+                          values.put(
+                              columnName, new Supplier<Number>()
+                              {
+                                @Override
+                                public Number get()
+                                {
+                                  return column.getLongSingleValueRow(cursorOffset.getOffset());
+                                }
+                              }
+                          );
+                        } else {
+                          throw new UnsupportedOperationException(
+                              "Not supported type " + column.getType() + " for column " + columnName
+                          );
+                        }
+                      }
+                      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
+                      return new NumericColumnSelector() {
+                        @Override
+                        public Number get()
+                        {
+                          return parsed.eval(binding);
+                        }
+                      };
+                    }
+
+                    @Override
                     public ColumnCapabilities getColumnCapabilities(String columnName)
                     {
                       return getColumnCapabilites(index, columnName);
@@ -950,6 +1003,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
                     };
                   }
+
                 }
               }
           ),

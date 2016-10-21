@@ -19,24 +19,7 @@
 
 package io.druid.benchmark;
 
-import com.metamx.common.parsers.JSONPathParser;
-import com.metamx.common.parsers.Parser;
 //import com.yourkit.api.Controller;
-import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.JSONPathFieldSpec;
-import io.druid.data.input.impl.JSONPathSpec;
-import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.data.input.impl.TimestampSpec;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Test app for profiling JSON parsing behavior. Uses the proprietary YourKit API, so this file

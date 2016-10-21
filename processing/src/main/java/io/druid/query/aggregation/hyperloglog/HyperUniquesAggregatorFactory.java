@@ -22,8 +22,8 @@ package io.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Ordering;
-import com.metamx.common.IAE;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -227,13 +227,21 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
 
-    if (!fieldName.equals(that.fieldName)) return false;
-    if (!name.equals(that.name)) return false;
+    if (!fieldName.equals(that.fieldName)) {
+      return false;
+    }
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
     return true;
   }

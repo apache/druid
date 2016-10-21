@@ -37,8 +37,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -49,6 +47,8 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
@@ -336,6 +336,11 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getPartitionsSpec().getTargetPartitionSize();
   }
 
+  public boolean isForceExtendableShardSpecs()
+  {
+    return schema.getTuningConfig().isForceExtendableShardSpecs();
+  }
+
   public long getMaxPartitionSize()
   {
     return schema.getTuningConfig().getPartitionsSpec().getMaxPartitionSize();
@@ -359,6 +364,11 @@ public class HadoopDruidIndexerConfig
   public HadoopyShardSpec getShardSpec(Bucket bucket)
   {
     return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
+  }
+
+  public int getShardSpecCount(Bucket bucket)
+  {
+    return schema.getTuningConfig().getShardSpecs().get(bucket.time).size();
   }
 
   public boolean isBuildV9Directly()

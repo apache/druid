@@ -127,6 +127,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`chatThreads`|Integer|The number of threads that will be used for communicating with indexing tasks.|no (default == min(10, taskCount * replicas))|
 |`chatRetries`|Integer|The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.|no (default == 8)|
 |`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
+|`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
 
 #### IndexSpec
 
@@ -221,6 +222,24 @@ Returns an audit history of specs for all supervisors (current and past).
 GET /druid/indexer/v1/supervisor/<supervisorId>/history
 ```
 Returns an audit history of specs for the supervisor with the provided ID.
+
+#### Reset Supervisor
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/reset
+```
+The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
+guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
+generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
+(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
+refuse to start and in-flight tasks will fail.
+
+This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
+either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
+running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
+and re-create any active tasks so that tasks begin reading from valid offsets.
+
+Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
+may cause some Kafka messages to be skipped or to be read twice.
 
 ## Capacity Planning
 

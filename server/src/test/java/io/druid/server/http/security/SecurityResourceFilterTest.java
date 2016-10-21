@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.sun.jersey.spi.container.ResourceFilter;
+import io.druid.server.BrokerQueryResource;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.QueryResource;
 import io.druid.server.StatusResource;
@@ -67,7 +68,8 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPaths(ClientInfoResource.class),
             getRequestPaths(CoordinatorDynamicConfigsResource.class),
             getRequestPaths(QueryResource.class),
-            getRequestPaths(StatusResource.class)
+            getRequestPaths(StatusResource.class),
+            getRequestPaths(BrokerQueryResource.class)
         )
     );
   }

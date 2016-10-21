@@ -27,10 +27,12 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
+
 import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;

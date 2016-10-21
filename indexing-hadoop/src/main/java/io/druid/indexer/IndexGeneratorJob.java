@@ -33,25 +33,26 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NumberedShardSpec;
+import io.druid.timeline.partition.ShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -700,6 +701,18 @@ public class IndexGeneratorJob implements Jobby
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())
             .getFileSystem(context.getConfiguration());
+
+        // ShardSpec used for partitioning within this Hadoop job.
+        final ShardSpec shardSpecForPartitioning = config.getShardSpec(bucket).getActualSpec();
+
+        // ShardSpec to be published.
+        final ShardSpec shardSpecForPublishing;
+        if (config.isForceExtendableShardSpecs()) {
+          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(),config.getShardSpecCount(bucket));
+        } else {
+          shardSpecForPublishing = shardSpecForPartitioning;
+        }
+
         final DataSegment segmentTemplate = new DataSegment(
             config.getDataSource(),
             interval,
@@ -707,7 +720,7 @@ public class IndexGeneratorJob implements Jobby
             null,
             ImmutableList.copyOf(allDimensionNames),
             metricNames,
-            config.getShardSpec(bucket).getActualSpec(),
+            shardSpecForPublishing,
             -1,
             -1
         );

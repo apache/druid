@@ -105,21 +105,21 @@ public class FunctionalExtractionTest
   private static String MISSING = "missing";
 
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{NULL_FN},
-        new Object[]{TURTLE_FN},
-        new Object[]{EMPTY_STR_FN},
-        new Object[]{IDENTITY_FN},
-        new Object[]{ONLY_PRESENT}
+        new Object[]{"null", NULL_FN},
+        new Object[]{"turtle", TURTLE_FN},
+        new Object[]{"empty", EMPTY_STR_FN},
+        new Object[]{"identity", IDENTITY_FN},
+        new Object[]{"only_PRESENT", ONLY_PRESENT}
     );
   }
 
   private final Function<String, String> fn;
 
-  public FunctionalExtractionTest(Function<String, String> fn)
+  public FunctionalExtractionTest(String label, Function<String, String> fn)
   {
     this.fn = fn;
   }
@@ -128,6 +128,20 @@ public class FunctionalExtractionTest
   public void testRetainMissing()
   {
     final String in = "NOT PRESENT";
+    final FunctionalExtraction exFn = new SimpleFunctionExtraction(
+        fn,
+        true,
+        null,
+        false
+    );
+    final String out = fn.apply(in);
+    Assert.assertEquals(Strings.isNullOrEmpty(out) ? in : out, exFn.apply(in));
+  }
+
+  @Test
+  public void testRetainMissingButFound()
+  {
+    final String in = PRESENT_KEY;
     final FunctionalExtraction exFn = new SimpleFunctionExtraction(
         fn,
         true,

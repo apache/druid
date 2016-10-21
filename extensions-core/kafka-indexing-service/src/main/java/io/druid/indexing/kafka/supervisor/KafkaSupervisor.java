@@ -39,7 +39,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskInfoProvider;
@@ -64,6 +63,7 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
+import io.druid.java.util.common.ISE;
 import io.druid.metadata.EntryExistsException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -101,7 +101,6 @@ public class KafkaSupervisor implements Supervisor
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
   private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000; // prevent us from running too often in response to events
-  private static final int SHUTDOWN_TIMEOUT_MILLIS = 15000;
   private static final long NOT_SET = -1;
 
   // Internal data structures
@@ -311,28 +310,30 @@ public class KafkaSupervisor implements Supervisor
               }
             }
         );
+        firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
+        scheduledExec.scheduleAtFixedRate(
+            buildRunTask(),
+            ioConfig.getStartDelay().getMillis(),
+            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
+            TimeUnit.MILLISECONDS
+        );
+
+        started = true;
+        log.info(
+            "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
+            dataSource,
+            ioConfig.getStartDelay(),
+            spec.toString()
+        );
       }
       catch (Exception e) {
+        if (consumer != null) {
+          consumer.close();
+        }
         log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
            .emit();
         throw Throwables.propagate(e);
       }
-
-      firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
-      scheduledExec.scheduleAtFixedRate(
-          buildRunTask(),
-          ioConfig.getStartDelay().getMillis(),
-          Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
-          TimeUnit.MILLISECONDS
-      );
-
-      started = true;
-      log.info(
-          "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
-          dataSource,
-          ioConfig.getStartDelay(),
-          spec.toString()
-      );
     }
   }
 
@@ -365,11 +366,12 @@ public class KafkaSupervisor implements Supervisor
             notices.add(new ShutdownNotice());
           }
 
-          long endTime = System.currentTimeMillis() + SHUTDOWN_TIMEOUT_MILLIS;
+          long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
+          long endTime = System.currentTimeMillis() + shutdownTimeoutMillis;
           while (!stopped) {
             long sleepTime = endTime - System.currentTimeMillis();
             if (sleepTime <= 0) {
-              log.info("Timed out while waiting for shutdown");
+              log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
               stopped = true;
               break;
             }
@@ -396,6 +398,12 @@ public class KafkaSupervisor implements Supervisor
   public SupervisorReport getStatus()
   {
     return generateReport(true);
+  }
+
+  @Override
+  public void reset() {
+    log.info("Posting ResetNotice");
+    notices.add(new ResetNotice());
   }
 
   public void possiblyRegisterListener()
@@ -477,6 +485,33 @@ public class KafkaSupervisor implements Supervisor
         stopLock.notifyAll();
       }
     }
+  }
+
+  private class ResetNotice implements Notice
+  {
+    @Override
+    public void handle()
+    {
+      resetInternal();
+    }
+  }
+
+  @VisibleForTesting
+  void resetInternal()
+  {
+    boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
+    log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
+
+    for (TaskGroup taskGroup : taskGroups.values()) {
+      for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+        String taskId = entry.getKey();
+        log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
+        killTask(taskId);
+      }
+    }
+
+    partitionGroups.clear();
+    taskGroups.clear();
   }
 
   @VisibleForTesting
@@ -1237,7 +1272,7 @@ public class KafkaSupervisor implements Supervisor
           spec.getDataSchema(),
           taskTuningConfig,
           kafkaIOConfig,
-          ImmutableMap.<String, Object>of(),
+          spec.getContext(),
           null
       );
 
@@ -1289,8 +1324,9 @@ public class KafkaSupervisor implements Supervisor
       long latestKafkaOffset = getOffsetFromKafkaForPartition(partition, false);
       if (offset > latestKafkaOffset) {
         throw new ISE(
-            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition [%d]. If your Kafka offsets have"
-            + " been reset, you will need to remove the entry for [%s] from the dataSource table.",
+            "Offset in metadata storage [%,d] > latest Kafka offset [%,d] for partition[%d] dataSource[%s]. If these "
+            + "messages are no longer available (perhaps you deleted and re-created your Kafka topic) you can use the "
+            + "supervisor reset API to restart ingestion.",
             offset,
             latestKafkaOffset,
             partition,

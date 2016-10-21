@@ -18,7 +18,6 @@
  */
 package io.druid.data.input.avro;
 
-import com.metamx.common.logger.Logger;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.mapreduce.AvroJob;
@@ -31,6 +30,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 

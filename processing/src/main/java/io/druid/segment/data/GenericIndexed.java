@@ -21,8 +21,8 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
-import com.metamx.common.guava.CloseQuietly;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.guava.CloseQuietly;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -334,7 +334,7 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      return com.metamx.common.StringUtils.fromUtf8(buffer, numBytes);
+      return io.druid.java.util.common.StringUtils.fromUtf8(buffer, numBytes);
     }
 
     @Override
@@ -343,7 +343,7 @@ public class GenericIndexed<T> implements Indexed<T>
       if (val == null) {
         return new byte[]{};
       }
-      return com.metamx.common.StringUtils.toUtf8(val);
+      return io.druid.java.util.common.StringUtils.toUtf8(val);
     }
 
     @Override

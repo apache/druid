@@ -23,18 +23,18 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.FloatSupplierSerializer;
-import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedLongs;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -84,12 +84,12 @@ public class MetricHolder
   }
 
   public static void writeFloatMetric(
-      ByteSink outSupplier, String name, FloatSupplierSerializer column
+      final ByteSink outSupplier, String name, FloatSupplierSerializer column
   ) throws IOException
   {
     outSupplier.write(version);
-    serializerUtils.writeString(outSupplier, name);
-    serializerUtils.writeString(outSupplier, "float");
+    serializerUtils.writeString(toOutputSupplier(outSupplier), name);
+    serializerUtils.writeString(toOutputSupplier(outSupplier), "float");
     column.closeAndConsolidate(outSupplier);
   }
 
@@ -98,8 +98,8 @@ public class MetricHolder
   ) throws IOException
   {
     outSupplier.write(version);
-    serializerUtils.writeString(outSupplier, name);
-    serializerUtils.writeString(outSupplier, "long");
+    serializerUtils.writeString(toOutputSupplier(outSupplier), name);
+    serializerUtils.writeString(toOutputSupplier(outSupplier), "long");
     column.closeAndConsolidate(outSupplier);
   }
 
@@ -162,6 +162,18 @@ public class MetricHolder
     }
 
     return holder;
+  }
+
+  // This is only for guava14 compat. Eventually it should be able to be removed.
+  private static OutputSupplier<? extends OutputStream> toOutputSupplier(final ByteSink sink) {
+    return new OutputSupplier<OutputStream>()
+    {
+      @Override
+      public OutputStream getOutput() throws IOException
+      {
+        return sink.openStream();
+      }
+    };
   }
 
   private final String name;

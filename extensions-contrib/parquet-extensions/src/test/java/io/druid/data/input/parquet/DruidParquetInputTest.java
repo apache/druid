@@ -18,10 +18,7 @@
  */
 package io.druid.data.input.parquet;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.path.StaticPathSpec;
 import org.apache.avro.generic.GenericRecord;
@@ -35,23 +32,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.parquet.ParquetRuntimeException;
-import org.apache.parquet.avro.AvroParquetWriter;
-import org.apache.parquet.hadoop.ParquetFileWriter;
-import org.apache.parquet.hadoop.ParquetWriter;
-import org.apache.parquet.hadoop.api.WriteSupport;
-import org.apache.parquet.io.api.Binary;
-import org.apache.parquet.io.api.RecordConsumer;
-import org.apache.parquet.schema.GroupType;
-import org.apache.parquet.schema.MessageType;
-import org.apache.parquet.schema.PrimitiveType;
-import org.apache.parquet.schema.Type;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.apache.parquet.avro.AvroParquetWriter.builder;
 import static org.junit.Assert.assertEquals;
 
 public class DruidParquetInputTest

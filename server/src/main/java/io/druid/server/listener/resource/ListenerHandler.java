@@ -21,7 +21,6 @@ package io.druid.server.listener.resource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 

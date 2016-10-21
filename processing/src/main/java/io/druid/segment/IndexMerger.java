@@ -40,19 +40,19 @@ import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.MergeIterable;
-import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.common.io.smoosh.Smoosh;
-import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.guava.MergeIterable;
+import io.druid.java.util.common.guava.nary.BinaryFn;
+import io.druid.java.util.common.io.smoosh.Smoosh;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -60,13 +60,12 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -1189,7 +1188,10 @@ public class IndexMerger
   {
     private final AggregatorFactory[] metricAggs;
 
-    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs) {this.metricAggs = metricAggs;}
+    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs)
+    {
+      this.metricAggs = metricAggs;
+    }
 
     @Override
     public Class<? extends String> getClazz()

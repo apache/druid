@@ -22,3 +22,11 @@ This product contains variable length long deserialization code adapted from Apa
     * https://github.com/apache/lucene-solr/blob/master/lucene/LICENSE.txt (Apache License, Version 2.0)
   * HOMEPAGE:
     * https://github.com/apache/lucene-solr
+
+This product contains a modified version of Metamarkets java-util library
+  * LICENSE:
+    * https://github.com/metamx/java-util/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/metamx/java-util
+  * COMMIT TAG:
+    * https://github.com/metamx/java-util/commit/826021f

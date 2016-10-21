@@ -25,16 +25,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Accumulator;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.math.expr.Evals;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -46,18 +50,19 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -530,31 +535,30 @@ public class RowBasedGrouperHelper
         public IndexedInts getRow()
         {
           final List<String> dimensionValues = row.get().getDimension(dimension);
-          final ArrayList<Integer> vals = Lists.newArrayList();
-          if (dimensionValues != null) {
-            for (int i = 0; i < dimensionValues.size(); ++i) {
-              vals.add(i);
-            }
-          }
+
+          final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
 
           return new IndexedInts()
           {
             @Override
             public int size()
             {
-              return vals.size();
+              return dimensionValuesSize;
             }
 
             @Override
             public int get(int index)
             {
-              return vals.get(index);
+              if (index < 0 || index >= dimensionValuesSize) {
+                throw new IndexOutOfBoundsException("index: " + index);
+              }
+              return index;
             }
 
             @Override
-            public Iterator<Integer> iterator()
+            public IntIterator iterator()
             {
-              return vals.iterator();
+              return IntIterators.fromTo(0, dimensionValuesSize);
             }
 
             @Override
@@ -646,6 +650,38 @@ public class RowBasedGrouperHelper
         public Object get()
         {
           return row.get().getRaw(columnName);
+        }
+      };
+    }
+
+    @Override
+    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    {
+      final Expr parsed = Parser.parse(expression);
+
+      final List<String> required = Parser.findRequiredBindings(parsed);
+      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+
+      for (final String columnName : required) {
+        values.put(
+            columnName, new Supplier<Number>()
+            {
+              @Override
+              public Number get()
+              {
+                return Evals.toNumber(row.get().getRaw(columnName));
+              }
+            }
+        );
+      }
+      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
+
+      return new NumericColumnSelector()
+      {
+        @Override
+        public Number get()
+        {
+          return parsed.eval(binding);
         }
       };
     }

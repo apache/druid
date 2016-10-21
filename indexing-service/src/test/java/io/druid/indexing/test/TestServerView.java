@@ -21,10 +21,11 @@ package io.druid.indexing.test;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
+
 import io.druid.client.DruidServer;
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerView;
+import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
