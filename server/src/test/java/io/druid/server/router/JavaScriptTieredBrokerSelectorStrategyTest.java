@@ -36,7 +36,6 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 
 import java.util.LinkedHashMap;

@@ -19,9 +19,9 @@
 
 package io.druid.query.topn;
 
-import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;

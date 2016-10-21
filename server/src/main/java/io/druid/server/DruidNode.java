@@ -25,9 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
+
 import io.druid.common.utils.SocketUtil;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;

@@ -7,13 +7,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wnameless.json.flattener.JsonFlattener;
-import com.metamx.common.parsers.Parser;
+
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.JSONPathFieldSpec;
 import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.parsers.Parser;
 
 import java.util.ArrayList;
 import java.util.List;

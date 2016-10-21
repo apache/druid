@@ -21,7 +21,6 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import java.util.List;

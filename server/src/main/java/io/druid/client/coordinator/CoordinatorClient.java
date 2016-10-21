@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
@@ -33,6 +32,8 @@ import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.ISE;
+
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;

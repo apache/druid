@@ -31,9 +31,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
-import com.metamx.common.Granularity;
+
 import io.druid.jackson.CommaListJoinDeserializer;
 import io.druid.jackson.CommaListJoinSerializer;
+import io.druid.java.util.common.Granularity;
 import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;

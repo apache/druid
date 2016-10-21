@@ -26,13 +26,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ExecutorServices;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ExecutorServices;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 

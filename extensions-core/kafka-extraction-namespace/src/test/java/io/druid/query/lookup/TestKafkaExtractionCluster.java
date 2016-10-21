@@ -27,11 +27,12 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.lookup.namespace.NamespaceExtractionModule;
 import kafka.admin.AdminUtils;
 import kafka.javaapi.producer.Producer;

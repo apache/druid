@@ -21,7 +21,9 @@ package io.druid.concurrent;
 
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
+
 import org.junit.Assert;
 import org.junit.Test;
 

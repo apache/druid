@@ -22,7 +22,8 @@ package io.druid.data.input;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
 
 import java.util.List;
 import java.util.Map;

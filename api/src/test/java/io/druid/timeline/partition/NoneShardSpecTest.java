@@ -1,6 +1,5 @@
 package io.druid.timeline.partition;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.TestObjectMapper;
 import org.junit.Assert;

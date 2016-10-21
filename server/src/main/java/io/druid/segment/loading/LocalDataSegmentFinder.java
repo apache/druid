@@ -22,8 +22,9 @@ package io.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
 import io.druid.guice.LocalDataStorageDruidModule;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 

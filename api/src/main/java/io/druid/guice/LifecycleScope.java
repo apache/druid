@@ -23,8 +23,9 @@ import com.google.common.collect.Lists;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.Scope;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 
 import java.util.List;
 

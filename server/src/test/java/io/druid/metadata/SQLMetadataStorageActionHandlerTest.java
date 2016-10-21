@@ -25,8 +25,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.common.Pair;
+
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Pair;
+
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;

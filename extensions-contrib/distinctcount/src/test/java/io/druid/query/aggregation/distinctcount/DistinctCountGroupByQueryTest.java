@@ -19,16 +19,11 @@
 
 package io.druid.query.aggregation.distinctcount;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularities;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -36,8 +31,6 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.GroupByQueryEngine;
-import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
@@ -50,7 +43,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 

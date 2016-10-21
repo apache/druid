@@ -21,7 +21,8 @@ package io.druid.testing.utils;
 
 import org.testng.ITestResult;
 import org.testng.TestListenerAdapter;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 
 public class LoggerListener extends TestListenerAdapter
 {

@@ -21,8 +21,9 @@ package io.druid.cli;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 
 /**
  */

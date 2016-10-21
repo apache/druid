@@ -21,7 +21,8 @@ package io.druid.collections;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import com.metamx.common.guava.nary.BinaryFn;
+
+import io.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.util.Comparator;
 import java.util.Iterator;

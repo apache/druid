@@ -23,10 +23,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.Pair;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.metadata.MetadataSupervisorManager;
 
 import java.util.List;

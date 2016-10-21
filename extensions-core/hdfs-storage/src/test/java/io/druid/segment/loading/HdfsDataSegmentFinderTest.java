@@ -44,7 +44,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Map;
 import java.util.Set;
 
 /**

@@ -24,7 +24,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;

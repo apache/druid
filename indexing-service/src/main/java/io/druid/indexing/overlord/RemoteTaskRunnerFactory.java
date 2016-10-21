@@ -22,22 +22,17 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConfig;
-import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
-
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */

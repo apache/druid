@@ -23,8 +23,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;

@@ -22,10 +22,12 @@ package io.druid.benchmark;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.MergeSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.MergeSequence;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;

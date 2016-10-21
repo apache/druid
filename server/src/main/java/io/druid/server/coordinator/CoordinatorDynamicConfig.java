@@ -21,7 +21,8 @@ package io.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
 
 import java.util.Collection;
 import java.util.HashSet;

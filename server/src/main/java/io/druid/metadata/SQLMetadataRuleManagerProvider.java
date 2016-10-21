@@ -23,8 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.lifecycle.Lifecycle;
+
 import io.druid.audit.AuditManager;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.audit.SQLAuditManager;
 import org.skife.jdbi.v2.IDBI;
 

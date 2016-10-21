@@ -24,14 +24,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.RE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 
 import javax.servlet.http.HttpServletRequest;

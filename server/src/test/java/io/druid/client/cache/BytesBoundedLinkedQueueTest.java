@@ -20,9 +20,10 @@
 package io.druid.client.cache;
 
 
-import com.metamx.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
+
+import io.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.List;

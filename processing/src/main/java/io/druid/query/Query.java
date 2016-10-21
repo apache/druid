@@ -22,7 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Ordering;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;

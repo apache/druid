@@ -20,11 +20,11 @@
 package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import org.junit.Assert;
 import org.junit.Rule;

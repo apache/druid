@@ -25,8 +25,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
+
 import io.druid.granularity.DurationGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.granularity.QueryGranularities;
@@ -34,6 +33,8 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.ISE;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;

@@ -26,9 +26,11 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
-import com.metamx.common.StringUtils;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
+
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;

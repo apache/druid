@@ -19,12 +19,11 @@
 
 package io.druid.query.search;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
-import com.metamx.common.guava.Sequences;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -37,7 +36,6 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

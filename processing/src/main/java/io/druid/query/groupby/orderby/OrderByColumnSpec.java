@@ -25,11 +25,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-
-import io.druid.query.ordering.StringComparators;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
+import io.druid.query.ordering.StringComparators;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

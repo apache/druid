@@ -20,11 +20,11 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.NumericColumnSelector;
+import io.druid.java.util.common.Pair;
 
 import java.util.HashSet;
 import java.util.LinkedList;

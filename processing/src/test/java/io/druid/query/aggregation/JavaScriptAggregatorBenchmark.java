@@ -23,7 +23,6 @@ import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.js.JavaScriptConfig;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.util.Map;

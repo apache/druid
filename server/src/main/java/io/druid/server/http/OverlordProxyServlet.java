@@ -21,10 +21,12 @@ package io.druid.server.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
+
 import io.druid.client.indexing.IndexingService;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.ISE;
+
 import org.eclipse.jetty.proxy.ProxyServlet;
 
 import javax.servlet.http.HttpServletRequest;

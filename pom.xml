@@ -58,7 +58,6 @@
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.27.10</metamx.java-util.version>
         <apache.curator.version>2.11.0</apache.curator.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
@@ -84,6 +83,7 @@
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>aws-common</module>
+        <module>java-util</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -124,17 +124,6 @@
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
                 <version>1.0.5</version>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>java-util</artifactId>
-                <version>${metamx.java-util.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -578,15 +567,6 @@
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
                 <version>7.0.13</version>
-            </dependency>
-
-            <!-- Test Scope -->
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>java-util</artifactId>
-                <type>test-jar</type>
-                <scope>test</scope>
-                <version>${metamx.java-util.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>

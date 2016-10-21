@@ -20,7 +20,7 @@
 package io.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.ISE;
+import io.druid.java.util.common.ISE;
 
 /**
  */

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 
 import java.io.IOException;
 import java.io.OutputStream;

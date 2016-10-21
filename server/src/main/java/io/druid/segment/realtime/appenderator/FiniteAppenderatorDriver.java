@@ -35,10 +35,11 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;

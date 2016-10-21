@@ -31,8 +31,7 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -66,6 +65,8 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;

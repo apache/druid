@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import com.metamx.common.ISE;
+import io.druid.java.util.common.ISE;
 
 public class SegmentMissingException extends ISE
 {

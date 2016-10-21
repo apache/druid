@@ -20,7 +20,7 @@
 package io.druid.segment.serde;
 
 import com.google.common.collect.Maps;
-import com.metamx.common.ISE;
+import io.druid.java.util.common.ISE;
 
 import java.util.Map;
 

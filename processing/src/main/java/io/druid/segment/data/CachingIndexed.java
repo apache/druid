@@ -19,8 +19,8 @@
 
 package io.druid.segment.data;
 
-import com.metamx.common.Pair;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;

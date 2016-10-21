@@ -20,7 +20,6 @@
 package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
 import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Rule;

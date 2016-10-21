@@ -20,7 +20,6 @@
 package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -30,7 +29,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;

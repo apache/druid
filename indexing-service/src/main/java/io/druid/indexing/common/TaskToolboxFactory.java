@@ -27,7 +27,6 @@ import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
-import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;

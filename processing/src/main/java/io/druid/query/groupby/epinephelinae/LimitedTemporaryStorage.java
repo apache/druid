@@ -21,12 +21,11 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.channels.Channels;

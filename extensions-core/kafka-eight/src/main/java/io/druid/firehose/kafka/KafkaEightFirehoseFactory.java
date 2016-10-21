@@ -24,11 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.metamx.common.logger.Logger;
+
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.logger.Logger;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;

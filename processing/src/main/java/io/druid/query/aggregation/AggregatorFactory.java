@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;

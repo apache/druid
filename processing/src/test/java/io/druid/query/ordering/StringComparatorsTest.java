@@ -19,19 +19,17 @@
 
 package io.druid.query.ordering;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import io.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
-import io.druid.jackson.DefaultObjectMapper;
 
 public class StringComparatorsTest
 {

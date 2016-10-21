@@ -20,10 +20,10 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;

@@ -30,9 +30,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.logger.Logger;
+
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;

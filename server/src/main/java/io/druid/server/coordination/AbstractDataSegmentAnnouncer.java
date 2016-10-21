@@ -22,10 +22,11 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.announcement.Announcer;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 

@@ -21,7 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.metamx.common.ISE;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 

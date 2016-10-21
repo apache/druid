@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.common.IAE;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
+
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
+
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

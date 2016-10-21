@@ -19,12 +19,13 @@
 
 package io.druid.common.utils;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 // The issue here is that parameters to the logging system are evaluated eagerly
 // So CPU or resource heavy clauses in the log parameters get evaluated even if there is no debug logging

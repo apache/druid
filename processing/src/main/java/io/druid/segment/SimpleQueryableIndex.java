@@ -22,7 +22,7 @@ package io.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;

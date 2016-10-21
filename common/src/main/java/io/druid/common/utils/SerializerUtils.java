@@ -22,7 +22,7 @@ package io.druid.common.utils;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import com.metamx.common.StringUtils;
+
 import io.druid.collections.IntList;
 
 import java.io.IOException;

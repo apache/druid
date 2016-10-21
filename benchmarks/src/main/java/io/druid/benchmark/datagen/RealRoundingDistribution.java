@@ -21,11 +21,6 @@ package io.druid.benchmark.datagen;
 
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
-import org.apache.commons.math3.distribution.EnumeratedDistribution;
-import org.apache.commons.math3.util.Pair;
-
-import java.util.List;
-import java.util.TreeMap;
 
 /*
  * Rounds the output values from the sample() function of an AbstractRealDistribution.

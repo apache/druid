@@ -21,10 +21,11 @@ package io.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.ISE;
-import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -48,7 +49,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     this.azureStorage = azureStorage;
   }
 
-  public com.metamx.common.FileUtils.FileCopyResult getSegmentFiles(
+  public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
       final String containerName,
       final String blobPath,
       final File outDir
@@ -60,7 +61,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     try {
 
       final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
-      final com.metamx.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
+      final io.druid.java.util.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
           AzureUtils.AZURE_RETRY,

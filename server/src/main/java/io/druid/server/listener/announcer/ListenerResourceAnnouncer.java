@@ -22,10 +22,12 @@ package io.druid.server.listener.announcer;
 import com.google.common.base.Throwables;
 import com.google.common.net.HostAndPort;
 import com.google.common.primitives.Longs;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.announcement.Announcer;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 

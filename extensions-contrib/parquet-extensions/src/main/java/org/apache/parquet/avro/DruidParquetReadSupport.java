@@ -24,7 +24,6 @@ import com.google.common.collect.Sets;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.conf.Configuration;

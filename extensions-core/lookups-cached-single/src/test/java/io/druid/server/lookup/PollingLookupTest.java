@@ -25,7 +25,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.polling.OffHeapPollingCache;
 import io.druid.server.lookup.cache.polling.OnHeapPollingCache;

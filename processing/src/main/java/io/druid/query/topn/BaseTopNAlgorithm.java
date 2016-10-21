@@ -19,7 +19,7 @@
 
 package io.druid.query.topn;
 
-import com.metamx.common.Pair;
+import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;

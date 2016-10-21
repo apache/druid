@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
+
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -39,6 +39,7 @@ import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;

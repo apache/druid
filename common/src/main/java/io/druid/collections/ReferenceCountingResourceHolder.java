@@ -19,11 +19,11 @@
 
 package io.druid.collections;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
 {

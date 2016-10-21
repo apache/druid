@@ -19,24 +19,13 @@
 
 package io.druid.segment;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.metamx.common.io.smoosh.FileSmoosher;
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 
 import java.io.Closeable;
 import java.io.File;
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Processing related interface

@@ -26,9 +26,10 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
+
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.ColumnCapabilitiesImpl;

@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import com.metamx.common.guava.Sequence;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
 

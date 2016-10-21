@@ -19,18 +19,11 @@
 
 package io.druid.indexing.overlord;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class ForkingTaskRunnerTest
 {

@@ -27,13 +27,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.SegmentLoadingException;

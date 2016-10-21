@@ -21,9 +21,11 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.IAE;
+
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IAE;
+
 import org.junit.Assert;
 import org.junit.Test;
 

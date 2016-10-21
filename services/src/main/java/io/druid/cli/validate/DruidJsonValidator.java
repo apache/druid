@@ -31,8 +31,7 @@ import com.google.common.io.Resources;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
-import com.metamx.common.UOE;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.cli.GuiceRunnable;
@@ -48,6 +47,8 @@ import io.druid.indexer.IndexingHadoopModule;
 import io.druid.indexing.common.task.Task;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Query;
 import org.apache.commons.io.output.NullWriter;
 

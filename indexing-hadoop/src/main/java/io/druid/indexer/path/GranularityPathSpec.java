@@ -22,11 +22,13 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.FSSpideringIterator;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

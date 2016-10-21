@@ -23,9 +23,11 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
+
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+
 import org.junit.Assert;
 import org.junit.Test;
 

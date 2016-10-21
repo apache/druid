@@ -20,14 +20,12 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.YieldingAccumulator;
 
 import java.io.IOException;
 import java.util.Map;

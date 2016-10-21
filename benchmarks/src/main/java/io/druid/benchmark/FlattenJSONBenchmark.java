@@ -19,7 +19,6 @@
 
 package io.druid.benchmark;
 
-import com.metamx.common.parsers.Parser;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -31,6 +30,8 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+
+import io.druid.java.util.common.parsers.Parser;
 
 import java.util.ArrayList;
 import java.util.List;

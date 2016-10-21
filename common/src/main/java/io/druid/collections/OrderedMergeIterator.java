@@ -23,7 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import com.metamx.common.guava.FunctionalIterator;
+
+import io.druid.java.util.common.guava.FunctionalIterator;
 
 import java.util.Comparator;
 import java.util.Iterator;

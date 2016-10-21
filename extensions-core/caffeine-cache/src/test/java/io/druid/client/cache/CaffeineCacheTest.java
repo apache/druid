@@ -26,12 +26,14 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.common.lifecycle.Lifecycle;
+
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

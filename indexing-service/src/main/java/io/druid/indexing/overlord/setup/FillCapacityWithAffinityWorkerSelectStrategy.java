@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
-import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.List;

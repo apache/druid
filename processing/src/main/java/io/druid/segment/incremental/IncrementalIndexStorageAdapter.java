@@ -26,11 +26,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+
 import io.druid.granularity.QueryGranularity;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;

@@ -20,8 +20,9 @@
 package io.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.ISE;
+
 import io.druid.common.utils.ServletResourceUtils;
+import io.druid.java.util.common.ISE;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 

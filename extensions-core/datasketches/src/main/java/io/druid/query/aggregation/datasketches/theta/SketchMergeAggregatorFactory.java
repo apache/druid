@@ -25,7 +25,6 @@ import com.yahoo.sketches.theta.Sketch;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 

@@ -27,8 +27,7 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
@@ -41,6 +40,8 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
 import io.druid.metadata.MetadataRuleManagerProvider;

@@ -21,12 +21,12 @@ package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.collections.CountingMap;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;

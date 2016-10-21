@@ -21,8 +21,8 @@ package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
-import com.metamx.common.StringUtils;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;

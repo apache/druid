@@ -25,8 +25,9 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;

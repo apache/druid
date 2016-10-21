@@ -20,17 +20,12 @@
 package io.druid.query.topn;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.ordering.StringComparators;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 public class DimensionTopNMetricSpecTest
 {

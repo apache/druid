@@ -18,14 +18,13 @@
  */
 
 package io.druid.query.extraction;
-import com.google.common.collect.Sets;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Set;
 
 /**
  */

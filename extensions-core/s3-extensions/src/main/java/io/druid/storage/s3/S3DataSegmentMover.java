@@ -24,10 +24,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.MapUtils;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;

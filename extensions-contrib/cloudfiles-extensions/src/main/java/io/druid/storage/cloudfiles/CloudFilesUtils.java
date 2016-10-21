@@ -20,7 +20,8 @@
 package io.druid.storage.cloudfiles;
 
 import com.google.common.base.Predicate;
-import com.metamx.common.RetryUtils;
+
+import io.druid.java.util.common.RetryUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 

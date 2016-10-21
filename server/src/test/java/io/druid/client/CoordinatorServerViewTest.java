@@ -26,9 +26,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
+
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Pair;
 import io.druid.query.TableDataSource;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;

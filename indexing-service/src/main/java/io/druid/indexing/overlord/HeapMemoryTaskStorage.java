@@ -29,12 +29,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
 

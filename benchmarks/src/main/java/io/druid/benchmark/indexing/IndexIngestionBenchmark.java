@@ -20,14 +20,14 @@
 package io.druid.benchmark.indexing;
 
 import com.google.common.hash.Hashing;
-import com.metamx.common.logger.Logger;
+
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
-
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;

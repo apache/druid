@@ -20,7 +20,8 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
+
+import io.druid.java.util.common.Pair;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import org.junit.Assert;

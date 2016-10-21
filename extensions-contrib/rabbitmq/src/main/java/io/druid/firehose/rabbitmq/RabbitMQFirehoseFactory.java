@@ -21,7 +21,6 @@ package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.logger.Logger;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -35,6 +34,7 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.logger.Logger;
 import net.jodah.lyra.ConnectionOptions;
 import net.jodah.lyra.Connections;
 import net.jodah.lyra.config.Config;

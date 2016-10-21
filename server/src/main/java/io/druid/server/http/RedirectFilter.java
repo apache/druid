@@ -20,7 +20,8 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;

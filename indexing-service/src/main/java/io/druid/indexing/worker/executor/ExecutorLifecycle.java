@@ -26,9 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
@@ -36,6 +33,10 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+
 import org.joda.time.DateTime;
 
 import java.io.File;

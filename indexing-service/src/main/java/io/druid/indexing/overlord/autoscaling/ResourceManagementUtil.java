@@ -20,10 +20,9 @@
 package io.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Predicate;
-import com.metamx.common.ISE;
+
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
-import io.druid.indexing.overlord.ZkWorker;
-import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.ISE;
 
 public class ResourceManagementUtil
 {

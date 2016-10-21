@@ -24,9 +24,10 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.ISE;
+
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
 
 import java.util.List;
 

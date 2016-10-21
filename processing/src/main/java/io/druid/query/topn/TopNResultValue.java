@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;

@@ -19,8 +19,8 @@
 
 package io.druid.query;
 
-import io.druid.granularity.QueryGranularity;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;

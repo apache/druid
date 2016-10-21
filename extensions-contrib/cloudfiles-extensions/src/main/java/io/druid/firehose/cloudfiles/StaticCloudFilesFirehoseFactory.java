@@ -27,13 +27,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
+
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.storage.cloudfiles.CloudFilesByteSource;
 import io.druid.storage.cloudfiles.CloudFilesObjectApiProxy;
 import org.apache.commons.io.IOUtils;

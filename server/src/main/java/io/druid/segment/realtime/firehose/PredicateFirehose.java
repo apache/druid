@@ -20,9 +20,10 @@
 package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Predicate;
-import com.metamx.common.logger.Logger;
+
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 

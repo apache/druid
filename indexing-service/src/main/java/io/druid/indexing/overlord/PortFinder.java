@@ -20,8 +20,9 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 
 import java.io.IOException;
 import java.net.BindException;

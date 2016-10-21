@@ -27,12 +27,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
-import com.metamx.common.FileUtils;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.RetryUtils;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;

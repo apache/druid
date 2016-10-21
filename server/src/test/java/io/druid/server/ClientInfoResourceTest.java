@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import io.druid.client.DruidServer;
 import io.druid.client.FilteredServerInventoryView;
-import io.druid.client.InventoryView;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
 import io.druid.query.TableDataSource;

@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
 

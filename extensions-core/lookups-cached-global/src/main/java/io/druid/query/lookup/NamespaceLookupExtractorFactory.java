@@ -26,9 +26,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;

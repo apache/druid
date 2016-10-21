@@ -20,9 +20,9 @@
 package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.StringUtils;
 import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;

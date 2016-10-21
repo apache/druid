@@ -22,7 +22,9 @@ package io.druid.server.lookup.cache.loading;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
+
 import org.mapdb.Bind;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;

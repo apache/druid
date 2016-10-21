@@ -19,13 +19,14 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.memory.MemoryRegion;
 import com.yahoo.sketches.memory.NativeMemory;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ObjectColumnSelector;
 

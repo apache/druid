@@ -22,10 +22,11 @@ package io.druid.server.log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
+
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;

@@ -20,7 +20,7 @@
 package io.druid.query;
 
 import com.google.common.collect.Maps;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;

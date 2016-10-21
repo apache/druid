@@ -20,7 +20,8 @@
 package io.druid.indexing.worker.executor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.ISE;
+
+import io.druid.java.util.common.ISE;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;

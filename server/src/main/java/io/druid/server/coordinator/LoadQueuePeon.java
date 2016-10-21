@@ -22,8 +22,9 @@ package io.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.ISE;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;

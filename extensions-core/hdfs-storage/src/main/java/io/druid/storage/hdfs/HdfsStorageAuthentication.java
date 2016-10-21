@@ -22,11 +22,13 @@ package io.druid.storage.hdfs;
 
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
+
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 

@@ -23,11 +23,12 @@ import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.annotations.Self;
+import io.druid.guice.http.LifecycleUtils;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -110,10 +111,12 @@ public abstract class BaseJettyTest
 
     ClientHolder(int maxClientConnections)
     {
+      final Lifecycle druidLifecycle = new Lifecycle();
+
       try {
         this.client = HttpClientInit.createClient(
             new HttpClientConfig(maxClientConnections, SSLContext.getDefault(), Duration.ZERO),
-            new Lifecycle()
+            LifecycleUtils.asMmxLifecycle(druidLifecycle)
         );
       }
       catch (Exception e) {

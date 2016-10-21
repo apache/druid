@@ -23,9 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.logger.Logger;
 import com.microsoft.azure.storage.StorageException;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.DataSegmentPusherUtil;

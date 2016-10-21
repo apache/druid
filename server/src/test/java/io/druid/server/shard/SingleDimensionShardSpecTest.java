@@ -25,9 +25,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
+
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.Pair;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Test;

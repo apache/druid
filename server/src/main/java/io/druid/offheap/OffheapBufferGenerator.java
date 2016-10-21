@@ -20,7 +20,8 @@
 package io.druid.offheap;
 
 import com.google.common.base.Supplier;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;

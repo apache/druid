@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;

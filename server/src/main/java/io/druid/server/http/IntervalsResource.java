@@ -21,10 +21,11 @@ package io.druid.server.http;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
-import com.metamx.common.guava.Comparators;
+
 import io.druid.client.DruidDataSource;
 import io.druid.client.InventoryView;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizationInfo;
 import io.druid.timeline.DataSegment;

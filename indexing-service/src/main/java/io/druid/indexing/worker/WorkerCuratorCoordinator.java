@@ -25,13 +25,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;

@@ -23,10 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.logger.Logger;
+
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;

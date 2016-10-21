@@ -19,10 +19,11 @@
 
 package io.druid.indexer;
 
-import com.metamx.common.StringUtils;
 import org.apache.hadoop.io.WritableComparator;
 import org.junit.Assert;
 import org.junit.Test;
+
+import io.druid.java.util.common.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;

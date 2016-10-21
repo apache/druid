@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.IAE;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
@@ -36,6 +35,8 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IAE;
+
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMockSupport;

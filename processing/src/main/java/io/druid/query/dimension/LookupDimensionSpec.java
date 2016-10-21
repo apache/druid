@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.lookup.LookupExtractionFn;

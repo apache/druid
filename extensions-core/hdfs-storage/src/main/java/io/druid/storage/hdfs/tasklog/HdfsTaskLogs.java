@@ -22,7 +22,8 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;

@@ -20,14 +20,12 @@
 package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import io.druid.TestObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class JSONPathSpecTest

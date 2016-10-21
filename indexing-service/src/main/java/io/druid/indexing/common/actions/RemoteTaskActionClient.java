@@ -23,8 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
@@ -34,6 +32,9 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
+
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;

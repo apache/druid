@@ -22,7 +22,8 @@ package io.druid.server.lookup;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 

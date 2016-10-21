@@ -20,7 +20,8 @@
 package io.druid.benchmark.query;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.guava.Sequence;
+
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;

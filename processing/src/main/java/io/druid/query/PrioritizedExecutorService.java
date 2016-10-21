@@ -26,7 +26,7 @@ import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;

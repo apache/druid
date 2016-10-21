@@ -26,13 +26,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.BoundDimFilter;
@@ -61,10 +61,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)

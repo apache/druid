@@ -20,7 +20,9 @@
 package io.druid.segment.loading;
 
 import com.google.common.io.Files;
-import com.metamx.common.CompressionUtils;
+
+import io.druid.java.util.common.CompressionUtils;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

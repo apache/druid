@@ -26,13 +26,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
-import com.metamx.common.Granularity;
-import com.metamx.common.IAE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;

@@ -20,7 +20,9 @@ package io.druid.data.input.schemarepo;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.Pair;
+
+import io.druid.java.util.common.Pair;
+
 import org.schemarepo.api.converter.Converter;
 import org.schemarepo.api.converter.IdentityConverter;
 import org.schemarepo.api.converter.IntegerConverter;

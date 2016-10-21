@@ -19,7 +19,7 @@
 
 package io.druid.storage.s3;
 
-import com.metamx.common.FileUtils;
+import io.druid.java.util.common.FileUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import java.io.File;
 import java.io.FileInputStream;

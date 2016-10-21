@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;

@@ -22,12 +22,12 @@ package io.druid.segment.realtime.plumber;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
-import com.metamx.common.logger.Logger;
+
 import io.druid.client.ImmutableSegmentLoadInfo;
-import io.druid.client.SegmentLoadInfo;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.coordination.DruidServerMetadata;
 

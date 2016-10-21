@@ -22,9 +22,9 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
 

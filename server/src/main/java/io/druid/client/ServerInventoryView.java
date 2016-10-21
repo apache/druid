@@ -19,21 +19,20 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
-import com.metamx.common.StringUtils;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
 import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import io.druid.curator.inventory.InventoryManagerConfig;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 

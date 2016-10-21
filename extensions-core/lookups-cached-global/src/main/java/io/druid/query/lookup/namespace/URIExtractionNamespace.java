@@ -33,13 +33,15 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.IAE;
-import com.metamx.common.UOE;
-import com.metamx.common.parsers.CSVParser;
-import com.metamx.common.parsers.DelimitedParser;
-import com.metamx.common.parsers.JSONParser;
-import com.metamx.common.parsers.Parser;
+
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.parsers.CSVParser;
+import io.druid.java.util.common.parsers.DelimitedParser;
+import io.druid.java.util.common.parsers.JSONParser;
+import io.druid.java.util.common.parsers.Parser;
+
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;

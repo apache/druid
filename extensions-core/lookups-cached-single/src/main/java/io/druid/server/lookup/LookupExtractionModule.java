@@ -23,8 +23,9 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.metamx.common.StringUtils;
+
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.StringUtils;
 
 import java.util.List;
 import java.util.UUID;

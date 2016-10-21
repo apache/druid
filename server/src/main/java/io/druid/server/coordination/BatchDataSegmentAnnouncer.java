@@ -27,10 +27,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.common.utils.UUIDUtils;
 import io.druid.curator.announcement.Announcer;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;

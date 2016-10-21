@@ -26,7 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DruidPredicateFactory;

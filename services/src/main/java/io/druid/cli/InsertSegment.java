@@ -27,13 +27,14 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.DruidNode;
@@ -41,7 +42,6 @@ import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**

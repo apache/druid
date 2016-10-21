@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.server.lookup.DataFetcher;
 import org.skife.jdbi.v2.DBI;

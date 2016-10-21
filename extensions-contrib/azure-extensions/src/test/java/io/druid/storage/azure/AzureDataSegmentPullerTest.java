@@ -20,8 +20,9 @@
 package io.druid.storage.azure;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.FileUtils;
 import com.microsoft.azure.storage.StorageException;
+
+import io.druid.java.util.common.FileUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;

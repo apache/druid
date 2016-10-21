@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntListIterator;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static io.druid.segment.IntIteratorUtils.skip;

@@ -28,12 +28,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;

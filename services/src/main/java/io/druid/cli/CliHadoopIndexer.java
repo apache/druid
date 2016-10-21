@@ -22,13 +22,14 @@ package io.druid.cli;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.lang.reflect.Method;

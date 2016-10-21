@@ -26,10 +26,12 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Comparators;
+
 import io.druid.common.utils.JodaUtils;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.guava.Comparators;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;

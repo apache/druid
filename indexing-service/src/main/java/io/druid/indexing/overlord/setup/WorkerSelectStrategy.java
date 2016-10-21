@@ -25,7 +25,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
-import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 /**

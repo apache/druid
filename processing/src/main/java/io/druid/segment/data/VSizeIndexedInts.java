@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;

@@ -19,33 +19,33 @@
 
 package io.druid.query.timeboundary;
 
-import com.google.inject.Inject;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import com.google.inject.Inject;
+import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
-import io.druid.granularity.AllGranularity;
-import io.druid.segment.Segment;
-import io.druid.segment.StorageAdapter;
-import io.druid.segment.filter.Filters;
-import io.druid.query.QueryRunnerHelper;
 import io.druid.segment.Cursor;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 
 import java.util.Iterator;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 

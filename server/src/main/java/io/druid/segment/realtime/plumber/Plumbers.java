@@ -20,12 +20,13 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Supplier;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
+
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 

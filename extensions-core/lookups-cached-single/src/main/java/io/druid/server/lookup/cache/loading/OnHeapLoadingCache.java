@@ -26,7 +26,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
 import java.util.concurrent.Callable;

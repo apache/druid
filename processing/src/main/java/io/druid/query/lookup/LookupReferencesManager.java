@@ -28,12 +28,12 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;

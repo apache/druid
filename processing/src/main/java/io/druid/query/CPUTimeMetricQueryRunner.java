@@ -21,15 +21,16 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
+
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.common.utils.VMUtils;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.YieldingAccumulator;
 
 import java.io.Closeable;
 import java.io.IOException;

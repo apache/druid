@@ -20,7 +20,7 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.config.Config;
+import io.druid.java.util.common.config.Config;
 import org.junit.Assert;
 import org.junit.Test;
 import org.skife.config.ConfigurationObjectFactory;

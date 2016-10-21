@@ -131,7 +131,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] metricBytes = com.metamx.common.StringUtils.toUtf8(metric);
+    byte[] metricBytes = io.druid.java.util.common.StringUtils.toUtf8(metric);
 
     return ByteBuffer.allocate(1 + metricBytes.length)
                      .put(CACHE_TYPE_ID)

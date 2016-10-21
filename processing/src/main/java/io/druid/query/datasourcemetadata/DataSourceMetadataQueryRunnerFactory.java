@@ -20,9 +20,9 @@
 package io.druid.query.datasourcemetadata;
 
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;

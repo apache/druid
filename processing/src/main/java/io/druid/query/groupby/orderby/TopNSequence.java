@@ -22,9 +22,9 @@ package io.druid.query.groupby.orderby;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.Sequence;
 
 import java.util.Iterator;
 

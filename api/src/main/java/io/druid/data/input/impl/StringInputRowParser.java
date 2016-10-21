@@ -20,10 +20,11 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
-import com.metamx.common.parsers.ParseException;
-import com.metamx.common.parsers.Parser;
+
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.parsers.ParseException;
+import io.druid.java.util.common.parsers.Parser;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
