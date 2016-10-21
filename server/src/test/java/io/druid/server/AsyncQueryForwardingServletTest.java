@@ -29,7 +29,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.common.lifecycle.Lifecycle;
+
 import io.druid.common.utils.SocketUtil;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
@@ -40,6 +40,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;

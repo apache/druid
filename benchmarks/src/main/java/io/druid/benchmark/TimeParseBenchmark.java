@@ -19,7 +19,9 @@
 package io.druid.benchmark;
 
 import com.google.common.base.Function;
-import com.metamx.common.parsers.TimestampParser;
+
+import io.druid.java.util.common.parsers.TimestampParser;
+
 import org.joda.time.DateTime;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

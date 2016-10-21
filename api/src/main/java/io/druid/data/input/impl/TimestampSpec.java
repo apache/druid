@@ -20,7 +20,9 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.metamx.common.parsers.TimestampParser;
+
+import io.druid.java.util.common.parsers.TimestampParser;
+
 import org.joda.time.DateTime;
 
 import java.util.List;

@@ -20,8 +20,9 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Throwables;
-import com.metamx.common.RetryUtils;
+
 import io.druid.data.SearchableVersionedDataFinder;
+import io.druid.java.util.common.RetryUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;

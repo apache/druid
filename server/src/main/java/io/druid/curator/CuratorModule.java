@@ -23,11 +23,11 @@ import com.google.common.base.Optional;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
 
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;

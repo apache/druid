@@ -25,9 +25,11 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.Granularity;
+
 import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.Granularity;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.DateTimeZone;

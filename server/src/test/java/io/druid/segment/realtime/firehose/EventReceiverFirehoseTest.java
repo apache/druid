@@ -21,13 +21,14 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.metamx.common.ISE;
+
 import io.druid.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.commons.io.IOUtils;

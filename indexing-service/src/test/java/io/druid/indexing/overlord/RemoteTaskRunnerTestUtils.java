@@ -25,7 +25,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
-import com.metamx.common.concurrent.ScheduledExecutors;
+
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
@@ -39,6 +39,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;

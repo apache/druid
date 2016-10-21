@@ -30,8 +30,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
@@ -59,6 +58,8 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.security.DruidAuthModule;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;

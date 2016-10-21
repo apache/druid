@@ -22,13 +22,14 @@ package io.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
+
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.util.Map;

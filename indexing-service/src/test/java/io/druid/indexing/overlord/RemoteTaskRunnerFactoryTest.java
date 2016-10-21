@@ -23,8 +23,6 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.TestUtils;
@@ -33,6 +31,8 @@ import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConf
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import junit.framework.Assert;

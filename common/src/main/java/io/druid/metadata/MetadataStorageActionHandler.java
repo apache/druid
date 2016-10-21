@@ -20,7 +20,9 @@
 package io.druid.metadata;
 
 import com.google.common.base.Optional;
-import com.metamx.common.Pair;
+
+import io.druid.java.util.common.Pair;
+
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

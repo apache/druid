@@ -21,13 +21,12 @@ package io.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.metamx.common.logger.Logger;
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;

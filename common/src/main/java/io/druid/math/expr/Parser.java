@@ -24,8 +24,9 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.logger.Logger;
 import com.google.common.collect.Lists;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.ANTLRInputStream;

@@ -21,10 +21,10 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;

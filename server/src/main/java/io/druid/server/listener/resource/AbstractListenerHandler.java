@@ -26,8 +26,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.metamx.common.logger.Logger;
+
 import io.druid.common.utils.ServletResourceUtils;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;

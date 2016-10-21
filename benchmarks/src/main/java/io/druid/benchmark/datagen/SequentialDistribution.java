@@ -22,10 +22,8 @@ package io.druid.benchmark.datagen;
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.util.Pair;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.TreeMap;
 
 public class SequentialDistribution extends EnumeratedDistribution
 {

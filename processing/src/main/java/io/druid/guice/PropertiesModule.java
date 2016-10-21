@@ -21,11 +21,10 @@ package io.druid.guice;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Ordering;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.BufferedInputStream;
 import java.io.File;

@@ -23,8 +23,10 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
+
+import io.druid.java.util.common.Pair;
 import junit.framework.Assert;
+
 import org.apache.commons.io.LineIterator;
 import org.junit.Test;
 

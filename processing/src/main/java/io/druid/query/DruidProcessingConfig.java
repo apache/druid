@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.metamx.common.concurrent.ExecutorServiceConfig;
+import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.segment.column.ColumnConfig;
 import org.skife.config.Config;
 

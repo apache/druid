@@ -26,10 +26,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.lifecycle.Lifecycle;
+
 import io.druid.concurrent.Execs;
 import io.druid.data.SearchableVersionedDataFinder;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;

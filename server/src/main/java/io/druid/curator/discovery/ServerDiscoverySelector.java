@@ -22,11 +22,13 @@ package io.druid.curator.discovery;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.net.HostAndPort;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
+
 import io.druid.client.selector.DiscoverySelector;
 import io.druid.client.selector.Server;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 

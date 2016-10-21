@@ -23,7 +23,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageService;

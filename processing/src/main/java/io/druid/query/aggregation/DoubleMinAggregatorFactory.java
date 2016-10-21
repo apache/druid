@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
+
 import io.druid.common.utils.StringUtils;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;

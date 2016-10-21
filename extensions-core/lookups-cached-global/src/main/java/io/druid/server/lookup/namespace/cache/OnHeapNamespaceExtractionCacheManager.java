@@ -22,11 +22,12 @@ package io.druid.server.lookup.namespace.cache;
 import com.google.common.primitives.Chars;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 

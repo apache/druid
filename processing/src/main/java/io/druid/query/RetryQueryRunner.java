@@ -23,13 +23,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.MergeSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
-import com.metamx.common.guava.YieldingSequenceBase;
+
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.guava.MergeSequence;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.guava.Yielder;
+import io.druid.java.util.common.guava.YieldingAccumulator;
+import io.druid.java.util.common.guava.YieldingSequenceBase;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.SegmentMissingException;
 

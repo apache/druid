@@ -26,10 +26,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.ISE;
+
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
+import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
 
 import javax.script.Compilable;

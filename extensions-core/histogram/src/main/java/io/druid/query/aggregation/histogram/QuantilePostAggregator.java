@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
+
+import io.druid.java.util.common.IAE;
 
 import java.util.Comparator;
 import java.util.Map;

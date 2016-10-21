@@ -32,7 +32,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -41,6 +40,8 @@ import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 

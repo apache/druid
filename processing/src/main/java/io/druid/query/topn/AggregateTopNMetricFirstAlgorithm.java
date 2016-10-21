@@ -19,9 +19,9 @@
 
 package io.druid.query.topn;
 
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
 import io.druid.collections.StupidPool;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
