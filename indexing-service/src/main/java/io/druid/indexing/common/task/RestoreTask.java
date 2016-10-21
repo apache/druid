@@ -22,7 +22,6 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
@@ -33,6 +32,7 @@ import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -94,15 +94,15 @@ public class RestoreTask extends AbstractFixedIntervalTask
       log.info("OK to restore segment: %s", unusedSegment.getIdentifier());
     }
 
-    List<DataSegment> restoredSegments = Lists.newLinkedList();
+    final List<DataSegment> restoredSegments = new ArrayList<>();
 
     // Move segments
     for (DataSegment segment : unusedSegments) {
       final DataSegment restored = toolbox.getDataSegmentArchiver().restore(segment);
-      if (restored == null) {
-        log.info("Segment [%s] did not move, not updating metadata", segment);
+      if (restored != null) {
+        restoredSegments.add(restored);
       } else {
-        restoredSegments.add(toolbox.getDataSegmentArchiver().restore(segment));
+        log.info("Segment [%s] did not move, not updating metadata", segment);
       }
     }
 

@@ -21,6 +21,8 @@ package io.druid.segment.loading;
 
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 public interface DataSegmentArchiver
 {
   /**
@@ -32,6 +34,7 @@ public interface DataSegmentArchiver
    *
    * @throws SegmentLoadingException on error
    */
+  @Nullable
   DataSegment archive(DataSegment segment) throws SegmentLoadingException;
 
   /**
@@ -43,5 +46,6 @@ public interface DataSegmentArchiver
    *
    * @throws SegmentLoadingException on error
    */
+  @Nullable
   DataSegment restore(DataSegment segment) throws SegmentLoadingException;
 }
