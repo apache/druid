@@ -22,7 +22,7 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.common.config.Config;
+import io.druid.java.util.common.config.Config;
 import org.skife.config.ConfigurationObjectFactory;
 
 import javax.validation.Validation;

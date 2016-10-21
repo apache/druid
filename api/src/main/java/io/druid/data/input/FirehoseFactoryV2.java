@@ -20,8 +20,9 @@
 package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.common.parsers.ParseException;
+
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 /**

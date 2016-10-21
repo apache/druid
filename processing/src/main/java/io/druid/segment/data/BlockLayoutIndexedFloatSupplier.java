@@ -22,8 +22,8 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
-import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.guava.CloseQuietly;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

@@ -19,14 +19,14 @@
 
 package io.druid.query.ordering;
 
-import java.math.BigDecimal;
-import java.util.Comparator;
-
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
+
+import java.math.BigDecimal;
+import java.util.Comparator;
 
 public class StringComparators
 {

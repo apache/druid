@@ -20,7 +20,9 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;

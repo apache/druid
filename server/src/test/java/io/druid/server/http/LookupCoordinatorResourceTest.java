@@ -23,9 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
-import com.metamx.common.StringUtils;
+
 import io.druid.audit.AuditInfo;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.easymock.Capture;
 import org.easymock.EasyMock;

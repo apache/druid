@@ -22,7 +22,6 @@ package io.druid.common.utils;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 public class ServletResourceUtils

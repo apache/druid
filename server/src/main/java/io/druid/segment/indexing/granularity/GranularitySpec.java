@@ -22,8 +22,10 @@ package io.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
-import com.metamx.common.Granularity;
+
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.Granularity;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

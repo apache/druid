@@ -21,8 +21,8 @@ package io.druid.query.groupby.orderby;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.metamx.common.guava.Sequence;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;

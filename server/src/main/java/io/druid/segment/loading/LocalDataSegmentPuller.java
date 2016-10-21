@@ -21,11 +21,12 @@ package io.druid.segment.loading;
 
 import com.google.common.base.Predicate;
 import com.google.common.io.Files;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.FileUtils;
-import com.metamx.common.MapUtils;
-import com.metamx.common.UOE;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import javax.tools.FileObject;

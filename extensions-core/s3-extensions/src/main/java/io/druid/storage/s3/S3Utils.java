@@ -22,7 +22,8 @@ package io.druid.storage.s3;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
-import com.metamx.common.RetryUtils;
+
+import io.druid.java.util.common.RetryUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;

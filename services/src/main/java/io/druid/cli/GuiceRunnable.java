@@ -25,10 +25,11 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
+
 import io.druid.initialization.Initialization;
 import io.druid.initialization.LogLevelAdjuster;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.log.StartupLoggingConfig;
 
 import java.util.List;

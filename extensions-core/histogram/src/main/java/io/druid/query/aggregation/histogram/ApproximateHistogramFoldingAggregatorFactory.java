@@ -24,8 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
-import com.metamx.common.StringUtils;
+
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;

@@ -21,7 +21,8 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Query;
 import io.druid.server.RequestLogLine;
 import org.slf4j.MDC;

@@ -28,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.JvmCpuMonitor;
 import com.metamx.metrics.JvmMonitor;
@@ -40,6 +39,7 @@ import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.ExecutorServiceMonitor;
 
 import java.util.List;

@@ -23,8 +23,9 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import com.microsoft.azure.storage.StorageException;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 
 import java.io.File;

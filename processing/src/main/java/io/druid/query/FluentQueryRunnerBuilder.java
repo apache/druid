@@ -20,9 +20,9 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.guava.Sequence;
 
 import javax.annotation.Nullable;
 import java.util.Map;

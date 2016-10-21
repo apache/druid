@@ -39,7 +39,7 @@ public class CacheUtil
   )
   {
     final Interval segmentQueryInterval = descriptor.getInterval();
-    final byte[] versionBytes = com.metamx.common.StringUtils.toUtf8(descriptor.getVersion());
+    final byte[] versionBytes = io.druid.java.util.common.StringUtils.toUtf8(descriptor.getVersion());
 
     return new Cache.NamedKey(
         segmentIdentifier, ByteBuffer

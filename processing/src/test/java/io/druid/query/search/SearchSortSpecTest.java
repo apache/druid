@@ -22,8 +22,8 @@ package io.druid.query.search;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchHit;
+import io.druid.query.search.search.SearchSortSpec;
 import org.junit.Assert;
 import org.junit.Test;
 

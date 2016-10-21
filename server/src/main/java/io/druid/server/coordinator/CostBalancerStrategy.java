@@ -25,8 +25,9 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.Pair;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;

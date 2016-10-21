@@ -20,8 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
