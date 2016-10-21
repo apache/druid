@@ -149,7 +149,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         );
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
-      Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
@@ -191,7 +191,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             }
           }
 
-          shardSpecs.put(bucket, actualSpecs);
+          shardSpecs.put(bucket.getMillis(), actualSpecs);
 
         } else {
           log.info("Path[%s] didn't exist!?", partitionInfoPath);

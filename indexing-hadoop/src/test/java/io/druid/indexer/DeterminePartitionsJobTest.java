@@ -285,7 +285,7 @@ public class DeterminePartitionsJobTest
     int segmentNum = 0;
     Assert.assertEquals(expectedNumOfSegments, config.getSchema().getTuningConfig().getShardSpecs().size());
 
-    for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : config.getSchema()
+    for (Map.Entry<Long, List<HadoopyShardSpec>> entry : config.getSchema()
                                                                    .getTuningConfig()
                                                                    .getShardSpecs()
                                                                    .entrySet()) {

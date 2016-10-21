@@ -218,7 +218,7 @@ public class DeterminePartitionsJob implements Jobby
 
       log.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
       FileSystem fileSystem = null;
-      Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
@@ -238,7 +238,7 @@ public class DeterminePartitionsJob implements Jobby
             log.info("DateTime[%s], partition[%d], spec[%s]", segmentGranularity, i, actualSpecs.get(i));
           }
 
-          shardSpecs.put(segmentGranularity.getStart(), actualSpecs);
+          shardSpecs.put(segmentGranularity.getStartMillis(), actualSpecs);
         } else {
           log.info("Path[%s] didn't exist!?", partitionInfoPath);
         }
@@ -370,17 +370,17 @@ public class DeterminePartitionsJob implements Jobby
   {
     private final HadoopDruidIndexerConfig config;
     private final String partitionDimension;
-    private final Map<DateTime, Integer> intervalIndexes;
+    private final Map<Long, Integer> intervalIndexes;
 
     public DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config, String partitionDimension)
     {
       this.config = config;
       this.partitionDimension = partitionDimension;
 
-      final ImmutableMap.Builder<DateTime, Integer> timeIndexBuilder = ImmutableMap.builder();
+      final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
       for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals().get()) {
-        timeIndexBuilder.put(bucketInterval.getStart(), idx);
+        timeIndexBuilder.put(bucketInterval.getStartMillis(), idx);
         idx++;
       }
 
@@ -400,7 +400,7 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       final Interval interval = maybeInterval.get();
-      final int intervalIndex = intervalIndexes.get(interval.getStart());
+      final int intervalIndex = intervalIndexes.get(interval.getStartMillis());
 
       final ByteBuffer buf = ByteBuffer.allocate(4 + 8);
       buf.putInt(intervalIndex);
