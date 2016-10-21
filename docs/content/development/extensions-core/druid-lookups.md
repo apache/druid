@@ -160,3 +160,4 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
 
 With above spec, `PrefetchKeyRangeProvider` is used as its type is `keyRanges`. It partitions key space into four ranges, ~ "a", "a" ~ "e", "e" ~ "z", and "z" ~, and each range includes start while excludes end.
 `jdbcDataFetcher` will pre-fetch all the key-values whose keys are in the same range as the requested key. For example, it pre-fetches all key-value pairs for keys in "e" ~ "z" when key "foo" is requested. 
+if `prefetchKeyProvider` is not set, `jdbcDataFetcher` will fetch key-values one by one without prefetch.

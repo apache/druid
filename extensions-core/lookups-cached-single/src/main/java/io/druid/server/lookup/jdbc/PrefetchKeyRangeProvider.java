@@ -1,11 +1,8 @@
 package io.druid.server.lookup.jdbc;
 
-import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.common.Pair;
-import org.apache.commons.collections4.CollectionUtils;
 
 import java.util.List;
 import java.util.NavigableSet;
@@ -54,6 +51,6 @@ public class PrefetchKeyRangeProvider implements PrefetchKeyProvider
 
     PrefetchKeyRangeProvider that = (PrefetchKeyRangeProvider) o;
 
-    return CollectionUtils.isEqualCollection(sortedPartitionKeys, that.sortedPartitionKeys);
+    return sortedPartitionKeys.equals(that.sortedPartitionKeys);
   }
 }

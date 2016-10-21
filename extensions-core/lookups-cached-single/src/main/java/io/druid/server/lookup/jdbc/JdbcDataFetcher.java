@@ -27,11 +27,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
+import com.metamx.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.server.lookup.PrefetchableFetcher;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -44,8 +43,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeSet;
 
 public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
 {
@@ -291,10 +288,10 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
             StringUtils.join(keys, "', '")
             );
         return String.format(prefetchQueryForKeys, inList);
+      default:
+        // should not reach here
+        throw new ISE(String.format("Unknown type: %s", returnType.name()));
     }
-
-    // should not reach here
-    return null;
   }
 
   private DBI getDbi()
