@@ -39,6 +39,9 @@ shared:
     druid_code_build:
       description: create druid code jars
       command: mvn -B install
+    druid_code_build_publish:
+      description: create druid code jars and publish
+      command: mvn -B clover2:instrument deploy clover2:aggregate clover2:clover
     compute_druid_version:
       description: compute the hash for druid version
       command: >
@@ -170,7 +173,7 @@ jobs:
       - init
       - compute_druid_version
       - set_druid_version
-      - druid_code_build
+      - druid_code_build_publish
       - clone_druid_pkg
       - set_config_files
       - compute_druid_pkg_code_version
