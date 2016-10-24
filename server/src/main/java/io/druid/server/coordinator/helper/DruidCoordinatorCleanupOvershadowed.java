@@ -21,10 +21,9 @@ package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-
+import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -40,15 +39,28 @@ import java.util.Map;
 public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelper
 {
   private final DruidCoordinator coordinator;
+  private final int cleanupLazyTicks;
+  private int currentTick;
+
+  public DruidCoordinatorCleanupOvershadowed(DruidCoordinator coordinator, int cleanupLazyTicks)
+  {
+    this.coordinator = coordinator;
+    this.cleanupLazyTicks = cleanupLazyTicks;
+  }
 
   public DruidCoordinatorCleanupOvershadowed(DruidCoordinator coordinator)
   {
-    this.coordinator = coordinator;
+    this(coordinator, 1);
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    if (++currentTick < cleanupLazyTicks) {
+      return params;
+    }
+    currentTick = 0;
+
     CoordinatorStats stats = new CoordinatorStats();
 
     // Delete segments that are old
@@ -64,7 +76,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
           for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
             VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
             if (timeline == null) {
-              timeline = new VersionedIntervalTimeline<>(Comparators.comparable());
+              timeline = new VersionedIntervalTimeline<>(Ordering.natural());
               timelines.put(dataSource.getName(), timeline);
             }
 

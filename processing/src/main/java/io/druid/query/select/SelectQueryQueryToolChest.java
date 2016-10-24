@@ -31,9 +31,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.common.utils.JodaUtils;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
@@ -349,8 +349,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
-        intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()
-                                        : Comparators.intervalsByStartThenEnd()
+        intervals, query.isDescending() ? JodaUtils.intervalsByEndThenStart()
+                                        : JodaUtils.intervalsByStartThenEnd()
     );
 
     TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();

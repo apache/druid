@@ -39,6 +39,7 @@ import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.common.utils.JodaUtils;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
@@ -49,7 +50,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -94,7 +94,7 @@ public class DruidCoordinator
 {
   public static final String COORDINATOR_OWNER_NODE = "_COORDINATOR";
 
-  public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(Comparators.intervalsByEndThenStart())
+  public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(JodaUtils.intervalsByEndThenStart())
                                                                      .onResultOf(
                                                                          new Function<DataSegment, Interval>()
                                                                          {
@@ -430,9 +430,12 @@ public class DruidCoordinator
 
   public Set<DataSegment> getOrderedAvailableDataSegments()
   {
-    Set<DataSegment> availableSegments = Sets.newTreeSet(SEGMENT_COMPARATOR);
+    return makeOrdered(getAvailableDataSegments());
+  }
 
-    Iterable<DataSegment> dataSegments = getAvailableDataSegments();
+  public static Set<DataSegment> makeOrdered(Iterable<DataSegment> dataSegments)
+  {
+    Set<DataSegment> availableSegments = Sets.newTreeSet(SEGMENT_COMPARATOR);
 
     for (DataSegment dataSegment : dataSegments) {
       if (dataSegment.getSize() < 0) {
@@ -795,10 +798,10 @@ public class DruidCoordinator
                                .build();
                 }
               },
-              new DruidCoordinatorRuleRunner(DruidCoordinator.this),
-              new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
-              new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
-              new DruidCoordinatorBalancer(DruidCoordinator.this),
+              new DruidCoordinatorRuleRunner(DruidCoordinator.this, config.getCoordinatorLazyTicks()),
+              new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this, config.getCoordinatorLazyTicks()),
+              new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this, config.getCoordinatorLazyTicks()),
+              new DruidCoordinatorBalancer(DruidCoordinator.this, config.getCoordinatorLazyTicks()),
               new DruidCoordinatorLogger(DruidCoordinator.this)
           ),
           startingLeaderCounter

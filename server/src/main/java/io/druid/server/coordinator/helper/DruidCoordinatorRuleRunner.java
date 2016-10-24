@@ -19,6 +19,8 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.metadata.MetadataRuleManager;
@@ -27,11 +29,13 @@ import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.ReplicationThrottler;
+import io.druid.server.coordinator.SegmentReplicantLookup;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -43,22 +47,34 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   private final ReplicationThrottler replicatorThrottler;
 
   private final DruidCoordinator coordinator;
+  private final int ruleLazyTicks;
+  private int currentTick;
 
-  public DruidCoordinatorRuleRunner(DruidCoordinator coordinator)
+  public DruidCoordinatorRuleRunner(DruidCoordinator coordinator, int ruleLazyTicks)
   {
     this(
         new ReplicationThrottler(
             coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
             coordinator.getDynamicConfigs().getReplicantLifetime()
         ),
-        coordinator
+        coordinator,
+        ruleLazyTicks
     );
   }
 
-  public DruidCoordinatorRuleRunner(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator)
+  public DruidCoordinatorRuleRunner(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator) {
+    this(replicatorThrottler, coordinator, 1);
+  }
+
+  public DruidCoordinatorRuleRunner(
+      ReplicationThrottler replicatorThrottler,
+      DruidCoordinator coordinator,
+      int ruleLazyTicks
+  )
   {
     this.replicatorThrottler = replicatorThrottler;
     this.coordinator = coordinator;
+    this.ruleLazyTicks = ruleLazyTicks;
   }
 
   @Override
@@ -92,7 +108,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     final List<String> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
-    for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
+    for (DataSegment segment : getTargetSegments(paramsWithReplicationManager)) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
@@ -121,5 +137,26 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     return paramsWithReplicationManager.buildFromExisting()
                                        .withCoordinatorStats(stats)
                                        .build();
+  }
+
+  protected Set<DataSegment> getTargetSegments(DruidCoordinatorRuntimeParams coordinatorParam)
+  {
+    if (++currentTick < ruleLazyTicks) {
+      final SegmentReplicantLookup replicantLookup = coordinatorParam.getSegmentReplicantLookup();
+      return DruidCoordinator.makeOrdered(
+          Iterables.filter(
+              coordinator.getAvailableDataSegments(), new Predicate<DataSegment>()
+              {
+                @Override
+                public boolean apply(DataSegment input)
+                {
+                  return replicantLookup.getTotalReplicants(input.getIdentifier()) == 0;
+                }
+              }
+          )
+      );
+    }
+    currentTick = 0;
+    return coordinatorParam.getAvailableSegments();
   }
 }

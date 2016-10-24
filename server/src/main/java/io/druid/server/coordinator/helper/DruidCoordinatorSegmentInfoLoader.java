@@ -19,11 +19,13 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.base.Supplier;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 
+import java.util.Collections;
 import java.util.Set;
 
 public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
@@ -43,18 +45,26 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
     log.info("Starting coordination. Getting available segments.");
 
     // Display info about all available segments
-    final Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
-    if (log.isDebugEnabled()) {
-      log.debug("Available DataSegments");
-      for (DataSegment dataSegment : availableSegments) {
-        log.debug("  %s", dataSegment);
-      }
-    }
+    Supplier<Set<DataSegment>> supplier = new Supplier<Set<DataSegment>>()
+    {
+      @Override
+      public Set<DataSegment> get()
+      {
+        final Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
+        if (log.isDebugEnabled()) {
+          log.debug("Available DataSegments");
+          for (DataSegment dataSegment : availableSegments) {
+            log.debug("  %s", dataSegment);
+          }
+        }
 
-    log.info("Found [%,d] available segments.", availableSegments.size());
+        log.info("Found [%,d] available segments.", availableSegments.size());
+        return Collections.unmodifiableSet(availableSegments);
+      }
+    };
 
     return params.buildFromExisting()
-                 .withAvailableSegments(availableSegments)
+                 .withAvailableSegments(supplier)
                  .build();
   }
 }

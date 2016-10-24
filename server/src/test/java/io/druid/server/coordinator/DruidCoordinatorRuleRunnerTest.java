@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.client.DruidServer;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.segment.IndexIO;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.IntervalDropRule;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
@@ -46,6 +47,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -55,7 +57,7 @@ public class DruidCoordinatorRuleRunnerTest
   private DruidCoordinator coordinator;
   private LoadQueuePeon mockPeon;
   private List<DataSegment> availableSegments;
-  private DruidCoordinatorRuleRunner ruleRunner;
+  private List<DataSegment> availableSegmentsShuffled;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
 
@@ -86,8 +88,8 @@ public class DruidCoordinatorRuleRunnerTest
       );
       start = start.plusHours(1);
     }
-
-    ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator);
+    availableSegmentsShuffled = Lists.newArrayList(availableSegments);
+    Collections.shuffle(availableSegmentsShuffled);
   }
 
   @After
@@ -187,6 +189,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(5).build())
             .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -283,6 +286,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -374,6 +378,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -440,6 +445,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     ruleRunner.run(params);
 
     EasyMock.verify(emitter);
@@ -492,6 +498,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     ruleRunner.run(params);
 
     EasyMock.verify(emitter);
@@ -561,6 +568,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -640,6 +648,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -726,6 +735,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -808,6 +818,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -903,6 +914,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -978,6 +990,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
@@ -1200,10 +1213,89 @@ public class DruidCoordinatorRuleRunnerTest
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 1);
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
+    EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
+  }
+
+  @Test
+  public void testRunTwoTiersWithLazyTick() throws Exception
+  {
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
+        new CoordinatorDynamicConfig(0, 0, 0, 0, 1, 24, 0, false, null, false)
+    ).anyTimes();
+    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(coordinator.getAvailableDataSegments()).andReturn(availableSegmentsShuffled);
+    EasyMock.replay(coordinator);
+
+    DruidServer server1 = new DruidServer("serverHot", "hostHot", 1000, "historical", "hot", 0);
+    for (DataSegment segment : availableSegments.subList(0, 4)) {
+      server1.addDataSegment(segment.getIdentifier(), segment);
+    }
+    DruidServer server2 = new DruidServer("serverHot2", "hostHot2", 1000, "historical", "hot", 0);
+    for (DataSegment segment : availableSegments.subList(12, 18)) {
+      server2.addDataSegment(segment.getIdentifier(), segment);
+    }
+    DruidServer server3 = new DruidServer("serverCold", "hostCold", 1000, "historical", "cold", 0);
+    for (DataSegment segment : availableSegments.subList(20, 24)) {
+      server3.addDataSegment(segment.getIdentifier(), segment);
+    }
+
+    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.replay(mockPeon);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
+                    new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
+                )
+            ),
+            "cold",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(new ServerHolder(server3.toImmutableDruidServer(), mockPeon))
+            )
+        )
+    );
+
+    DruidCoordinatorRuntimeParams params =
+        new DruidCoordinatorRuntimeParams.Builder()
+            .withDruidCluster(druidCluster)
+            .withAvailableSegments(availableSegments)
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+            .build();
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), ImmutableMap.<String, Integer>of("hot", 2)),
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), ImmutableMap.<String, Integer>of("cold", 2))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCoordinatorHelper ruleRunner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(24, 1), coordinator, 2);
+    CoordinatorStats stats = ruleRunner.run(params).getCoordinatorStats();
+
+    // 4-5
+    Assert.assertEquals(2 * 2, stats.getPerTierStats().get("assignedCount").get("hot").get());
+    // 6-12, 19-20
+    Assert.assertEquals(8 * 2, stats.getPerTierStats().get("assignedCount").get("cold").get());
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
+
     EasyMock.verify(mockPeon);
     params.getBalancerStrategyFactory().close();
   }

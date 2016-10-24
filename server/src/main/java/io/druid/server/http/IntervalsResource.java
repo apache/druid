@@ -21,9 +21,9 @@ package io.druid.server.http;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.client.DruidDataSource;
 import io.druid.client.InventoryView;
+import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
@@ -66,7 +66,7 @@ public class IntervalsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getIntervals(@Context final HttpServletRequest req)
   {
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.inverse(JodaUtils.intervalsByStartThenEnd());
     final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
                                              InventoryViewUtils.getSecuredDataSources(
                                                  serverInventoryView,
@@ -107,7 +107,7 @@ public class IntervalsResource
                                              ) :
                                              InventoryViewUtils.getDataSources(serverInventoryView);
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.inverse(JodaUtils.intervalsByStartThenEnd());
 
     if (full != null) {
       final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);

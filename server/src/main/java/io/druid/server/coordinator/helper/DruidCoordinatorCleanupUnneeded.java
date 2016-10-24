@@ -41,18 +41,22 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 {
   private static final Logger log = new Logger(DruidCoordinatorCleanupUnneeded.class);
 
-  private final DruidCoordinator coordinator;
+  private final int cleanupLazyTicks;
+  private int currentTick;
 
-  public DruidCoordinatorCleanupUnneeded(
-      DruidCoordinator coordinator
-  )
+  public DruidCoordinatorCleanupUnneeded(DruidCoordinator coordinator, int cleanupLazyTicks)
   {
-    this.coordinator = coordinator;
+    this.cleanupLazyTicks = cleanupLazyTicks;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    if (++currentTick < cleanupLazyTicks) {
+      return params;
+    }
+    currentTick = 0;
+
     CoordinatorStats stats = new CoordinatorStats();
     Set<DataSegment> availableSegments = params.getAvailableSegments();
     DruidCluster cluster = params.getDruidCluster();

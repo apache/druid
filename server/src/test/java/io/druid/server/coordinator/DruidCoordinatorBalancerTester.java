@@ -27,7 +27,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 {
   public DruidCoordinatorBalancerTester(DruidCoordinator coordinator)
   {
-    super(coordinator);
+    super(coordinator, 1);
   }
 
   @Override
