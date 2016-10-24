@@ -17,27 +17,18 @@
  * under the License.
  */
 
-package io.druid.math.expr;
+package io.druid.common.guava;
 
-import io.druid.common.guava.GuavaUtils;
+import junit.framework.Assert;
+import org.junit.Test;
 
-/**
- */
-public class Evals
+import java.util.Objects;
+
+public class GuavaUtilsTest
 {
-  public static Number toNumber(Object value)
+  @Test
+  public void testParsLong()
   {
-    if (value == null) {
-      return 0L;
-    }
-    if (value instanceof Number) {
-      return (Number) value;
-    }
-    String stringValue = String.valueOf(value);
-    Long longValue = GuavaUtils.tryParseLong(stringValue);
-    if (longValue == null) {
-      return Double.valueOf(stringValue);
-    }
-    return longValue;
+    Assert.assertTrue(Objects.equals(Long.parseLong("+100"), GuavaUtils.tryParseLong("+100")));
   }
 }
