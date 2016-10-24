@@ -59,11 +59,15 @@ public class DruidCoordinatorCleanupOvershadowedTest
                                                            .interval(new Interval(start, start.plusHours(1)))
                                                            .version("1")
                                                            .build();
+  private DataSegment segmentV2 = new DataSegment.Builder().dataSource("test")
+                                                           .interval(new Interval(start, start.plusHours(1)))
+                                                           .version("2")
+                                                           .build();
   @Test
   public void testRun()
   {
     druidCoordinatorCleanupOvershadowed = new DruidCoordinatorCleanupOvershadowed(coordinator);
-    availableSegments = ImmutableList.of(segmentV1, segmentV0);
+    availableSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     druidCluster = new DruidCluster(
         ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(Arrays.asList(
@@ -73,14 +77,11 @@ public class DruidCoordinatorCleanupOvershadowedTest
     EasyMock.expect(druidServer.getDataSources())
             .andReturn(ImmutableList.of(druidDataSource))
             .anyTimes();
-    EasyMock.expect(druidDataSource.getSegments()).andReturn(ImmutableSet.<DataSegment>of(segmentV1)).anyTimes();
+    EasyMock.expect(druidDataSource.getSegments()).andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2)).anyTimes();
     EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
-    EasyMock.expect(coordinator.getLoadManagementPeons())
-            .andReturn(ImmutableMap.<String, LoadQueuePeon>of("testHost", mockPeon))
-            .anyTimes();
+    coordinator.removeSegment(segmentV1);
     coordinator.removeSegment(segmentV0);
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(ImmutableSet.<DataSegment>of(segmentV0)).anyTimes();
     EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
                                                                         .withAvailableSegments(availableSegments)

@@ -1567,6 +1567,156 @@ public class VersionedIntervalTimelineTest
     );
   }
 
+  @Test
+  public void testIsOvershadowedWithNonOverlappingSegmentsInTimeline()
+  {
+    timeline = makeStringIntegerTimeline();
+
+    add("2011-04-05/2011-04-07", "1", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-07/2011-04-09", "1", new SingleElementPartitionChunk<Integer>(1));
+
+    add("2011-04-15/2011-04-17", "1", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-17/2011-04-19", "1", new SingleElementPartitionChunk<Integer>(1));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-03"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-05"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-06"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-07"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-08"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-30"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "1"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "2"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "2"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "2"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "2"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-30"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-07/2011-04-30"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-08/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-08/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-08/2011-04-30"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-09/2011-04-30"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-16"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-17"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-18"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-30"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-19/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-21/2011-04-22"), "0"));
+  }
+
+  @Test
+  public void testIsOvershadowedWithOverlappingSegmentsInTimeline()
+  {
+    timeline = makeStringIntegerTimeline();
+
+    add("2011-04-05/2011-04-09", "11", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-07/2011-04-11", "12", new SingleElementPartitionChunk<Integer>(1));
+
+    add("2011-04-15/2011-04-19", "12", new SingleElementPartitionChunk<Integer>(1));
+    add("2011-04-17/2011-04-21", "11", new SingleElementPartitionChunk<Integer>(1));
+
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-03"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-05"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-06"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-07"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-08"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-09"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-10"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-11"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-01/2011-04-30"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-10"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-11"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-10"), "12"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-11"), "12"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-06"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-07"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-08"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-09"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-10"), "13"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-11"), "13"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-12"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-16"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-18"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-05/2011-04-22"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-07"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-08"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-09"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-10"), "0"));
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-11"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-12"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-16"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-18"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-06/2011-04-22"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-15"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-16"), "0"));
+
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-17"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-18"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-19"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-20"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-12/2011-04-22"), "0"));
+
+    Assert.assertTrue(timeline.isOvershadowed(new Interval("2011-04-15/2011-04-21"), "0"));
+    Assert.assertFalse(timeline.isOvershadowed(new Interval("2011-04-21/2011-04-22"), "0"));
+  }
+
   private Pair<Interval, Pair<String, PartitionHolder<Integer>>> createExpected(
       String intervalString,
       String version,
