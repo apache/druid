@@ -175,6 +175,25 @@ public class DruidCoordinatorRuntimeParams
     );
   }
 
+  public Builder buildFromExistingWithoutAvailableSegments()
+  {
+    return new Builder(
+        startTime,
+        druidCluster,
+        databaseRuleManager,
+        segmentReplicantLookup,
+        dataSources,
+        Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR),
+        loadManagementPeons,
+        replicationManager,
+        emitter,
+        coordinatorDynamicConfig,
+        stats,
+        balancerReferenceTimestamp,
+        strategyFactory
+    );
+  }
+
   public static class Builder
   {
     private long startTime;

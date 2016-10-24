@@ -29,10 +29,8 @@ import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Map;
@@ -77,41 +75,12 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
         }
       }
 
-      for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
-        for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
-          for (DataSegment dataSegment : holder.getObject().payloads()) {
-            coordinator.removeSegment(dataSegment);
-            stats.addToGlobalStat("overShadowedCount", 1);
-          }
-        }
-
-        for (LoadQueuePeon loadQueue : coordinator.getLoadManagementPeons().values()) {
-          for (DataSegment dataSegment : loadQueue.getSegmentsToLoad()) {
-            timeline = timelines.get(dataSegment.getDataSource());
-            if (timeline == null) {
-              continue;
-            }
-            // Temporarily add queued segments to the timeline to see if they still need to be loaded.
-            timeline.add(
-                dataSegment.getInterval(),
-                dataSegment.getVersion(),
-                dataSegment.getShardSpec().createChunk(dataSegment)
-            );
-            for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
-              for (DataSegment segmentToRemove : holder.getObject().payloads()) {
-                if (segmentToRemove == dataSegment) {
-                  coordinator.removeSegment(dataSegment);
-                  stats.addToGlobalStat("overShadowedCount", 1);
-                }
-              }
-            }
-            // Removing it to make sure that if two segment to load and they overshadow both get loaded.
-            timeline.remove(
-                dataSegment.getInterval(),
-                dataSegment.getVersion(),
-                dataSegment.getShardSpec().createChunk(dataSegment)
-            );
-          }
+      //Remove all segments in db that are overshadowed by served segments
+      for (DataSegment dataSegment : params.getAvailableSegments()) {
+        VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
+        if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+          coordinator.removeSegment(dataSegment);
+          stats.addToGlobalStat("overShadowedCount", 1);
         }
       }
     }
