@@ -92,10 +92,14 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @Override
   public boolean delete(final String namespaceKey)
   {
+    // `super.delete` has a synchronization in it, don't call it in the lock.
+    if (!super.delete(namespaceKey)) {
+      return false;
+    }
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      return super.delete(namespaceKey) && mapMap.remove(namespaceKey) != null;
+      return mapMap.remove(namespaceKey) != null;
     }
     finally {
       lock.unlock();
