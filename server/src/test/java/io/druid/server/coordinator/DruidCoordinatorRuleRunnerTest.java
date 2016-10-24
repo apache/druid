@@ -32,6 +32,7 @@ import io.druid.client.DruidServer;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.IntervalDropRule;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
@@ -46,7 +47,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -1204,6 +1207,96 @@ public class DruidCoordinatorRuleRunnerTest
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
+    EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
+  }
+
+  @Test
+  public void testRulesRunOnNonOvershadowedSegmentsOnly() throws Exception
+  {
+    Set<DataSegment> availableSegments = new HashSet<>();
+    DataSegment v1 = new DataSegment(
+        "test",
+        new Interval("2012-01-01/2012-01-02"),
+        "1",
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+    DataSegment v2 = new DataSegment(
+        "test",
+        new Interval("2012-01-01/2012-01-02"),
+        "2",
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        1
+    );
+    availableSegments.add(v1);
+    availableSegments.add(v2);
+
+    mockCoordinator();
+    mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.replay(mockPeon);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1))
+        )).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            DruidServer.DEFAULT_TIER,
+                            0
+                        ).toImmutableDruidServer(),
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    DruidCoordinatorRuntimeParams params =
+        new DruidCoordinatorRuntimeParams.Builder()
+            .withDruidCluster(druidCluster)
+            .withAvailableSegments(availableSegments)
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+            .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(5).build())
+            .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertEquals(1, stats.getPerTierStats().get("assignedCount").size());
+    Assert.assertEquals(1, stats.getPerTierStats().get("assignedCount").get("_default_tier").get());
+    Assert.assertNull(stats.getPerTierStats().get("unassignedCount"));
+    Assert.assertNull(stats.getPerTierStats().get("unassignedSize"));
+
+    Assert.assertEquals(2, availableSegments.size());
+    Assert.assertEquals(availableSegments, params.getAvailableSegments());
+    Assert.assertEquals(availableSegments, afterParams.getAvailableSegments());
+
     EasyMock.verify(mockPeon);
     params.getBalancerStrategyFactory().close();
   }
