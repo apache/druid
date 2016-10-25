@@ -289,10 +289,7 @@ public abstract class NamespaceExtractionCacheManager
           }
         }
     );
-    if (!future.isDone()
-        && !future.cancel(true)) { // Interrupt to make sure we don't pollute stuff after we've already cleaned up
-      throw new ISE("Future for namespace [%s] was not able to be canceled", implDatum.name);
-    }
+    future.cancel(true);
     try {
       latch.await();
     }
