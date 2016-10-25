@@ -371,26 +371,26 @@ public abstract class NamespaceExtractionCacheManager
 
             tasksStarted.incrementAndGet();
             final String newVersion = runnable.call();
-            if (preVersion != null && preVersion.equals(newVersion)) {
-              throw new CancellationException(String.format("Version `%s` already exists", preVersion));
-            }
-            if (newVersion != null) {
+            if (newVersion.equals(preVersion)) {
+              log.debug("Version `%s` already exists, skipping updating cache", preVersion);
+            } else {
               if (!implData.latestVersion.compareAndSet(preVersion, newVersion)) {
                 log.wtf("Somehow multiple threads are updating the same implData for [%s]", id);
               }
+              postRunnable.run();
+              log.debug("Namespace [%s] successfully updated", id);
             }
-            postRunnable.run();
-            log.debug("Namespace [%s] successfully updated", id);
           }
         }
         catch (Throwable t) {
-          delete(cacheId);
-          if (t instanceof CancellationException) {
-            log.debug(t, "Namespace [%s] cancelled", id);
-          } else {
+          try {
+            delete(cacheId);
             log.error(t, "Failed update namespace [%s]", namespace);
           }
-          if (Thread.currentThread().isInterrupted()) {
+          catch (Exception e) {
+            t.addSuppressed(e);
+          }
+          if (Thread.currentThread().isInterrupted() || (t instanceof Error)) {
             throw Throwables.propagate(t);
           }
         }

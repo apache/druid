@@ -44,8 +44,12 @@ public class StaticMapExtractionNamespaceCacheFactory
       @Override
       public String call() throws Exception
       {
-        if (version.equals(lastVersion)) {
-          return null;
+        if (lastVersion != null) {
+          // Throwing AssertionError, because NamespaceExtractionCacheManager doesn't suppress Errors and will stop
+          // trying to update the cache periodically.
+          throw new AssertionError(
+              "StaticMapExtractionNamespaceCacheFactory could only be configured for a namespace which is scheduled " +
+              "to be updated once, not periodically. Last version: `" + lastVersion + "`");
         } else {
           swap.putAll(extractionNamespace.getMap());
           return version;
