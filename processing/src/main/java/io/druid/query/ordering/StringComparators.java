@@ -21,8 +21,8 @@ package io.druid.query.ordering;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 
 import java.math.BigDecimal;
@@ -387,8 +387,8 @@ public class StringComparators
       // Creating a BigDecimal from a String is expensive (involves copying the String into a char[])
       // Converting the String to a Long first is faster.
       // We optimize here with the assumption that integer values are more common than floating point.
-      Long long1 = Longs.tryParse(o1);
-      Long long2 = Longs.tryParse(o2);
+      Long long1 = GuavaUtils.tryParseLong(o1);
+      Long long2 = GuavaUtils.tryParseLong(o2);
 
       if (long1 != null && long2 != null) {
         return Long.compare(long1, long2);
