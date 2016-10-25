@@ -144,7 +144,7 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
                           fmt.print(lastModified),
                           fmt.print(lastCached)
                       );
-                      return version;
+                      return lastVersion;
                     }
                   }
                   catch (NumberFormatException ex) {
