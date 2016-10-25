@@ -52,8 +52,9 @@ public class ApproximateHistogramGroupByQueryTest
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
   private String testName;
+  private int initialSize;
 
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name="{0}, initialSize={3}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     final GroupByQueryConfig defaultConfig = new GroupByQueryConfig()
@@ -111,18 +112,26 @@ public class ApproximateHistogramGroupByQueryTest
             config.toString(),
             runner.toString()
         );
-        constructors.add(new Object[]{testName, factory, runner});
+        for (int initialSize : new int[] {-1, 1}) {
+          constructors.add(new Object[]{testName, factory, runner, initialSize});
+        }
       }
     }
 
     return constructors;
   }
 
-  public ApproximateHistogramGroupByQueryTest(String testName, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public ApproximateHistogramGroupByQueryTest(
+      String testName,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner,
+      int initialSize
+  )
   {
     this.testName = testName;
     this.factory = factory;
     this.runner = runner;
+    this.initialSize = initialSize;
 
     //Note: this is needed in order to properly register the serde for Histogram.
     new ApproximateHistogramDruidModule().configure(null);
@@ -135,6 +144,7 @@ public class ApproximateHistogramGroupByQueryTest
         "apphisto",
         "index",
         10,
+        initialSize,
         5,
         Float.NEGATIVE_INFINITY,
         Float.POSITIVE_INFINITY
@@ -209,6 +219,7 @@ public class ApproximateHistogramGroupByQueryTest
         "quantile",
         "index",
         10,
+        initialSize,
         5,
         Float.NEGATIVE_INFINITY,
         Float.POSITIVE_INFINITY
