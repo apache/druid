@@ -98,7 +98,11 @@ public class GuavaUtils
     };
   }
 
-  public static Long tryParseLong(String string)
+  /**
+   * To fix semantic difference of Longs.tryParse() from Long.parseLong (Longs.tryParse() returns null for '+' started value)
+   */
+  @Nullable
+  public static Long tryParseLong(@Nullable String string)
   {
     return Strings.isNullOrEmpty(string)
            ? null

@@ -19,16 +19,22 @@
 
 package io.druid.common.guava;
 
-import junit.framework.Assert;
+import com.google.common.primitives.Longs;
+import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Objects;
 
 public class GuavaUtilsTest
 {
   @Test
   public void testParsLong()
   {
-    Assert.assertTrue(Objects.equals(Long.parseLong("+100"), GuavaUtils.tryParseLong("+100")));
+    Assert.assertNull(Longs.tryParse("+100"));
+    Assert.assertNull(GuavaUtils.tryParseLong(""));
+    Assert.assertNull(GuavaUtils.tryParseLong(null));
+    Assert.assertNull(GuavaUtils.tryParseLong("+"));
+    Assert.assertNull(GuavaUtils.tryParseLong("++100"));
+    Assert.assertEquals((Object) Long.parseLong("+100"), GuavaUtils.tryParseLong("+100"));
+    Assert.assertEquals((Object) Long.parseLong("-100"), GuavaUtils.tryParseLong("-100"));
+    Assert.assertNotEquals(new Long(100), GuavaUtils.tryParseLong("+101"));
   }
 }
