@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
@@ -35,15 +36,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A manager of object Lifecycles.
- *
+ * <p/>
  * This object has methods for registering objects that should be started and stopped.  The Lifecycle allows for
  * two stages: Stage.NORMAL and Stage.LAST.
- *
+ * <p/>
  * Things added at Stage.NORMAL will be started first (in the order that they are added to the Lifecycle instance) and
  * then things added at Stage.LAST will be started.
- *
+ * <p/>
  * The close operation goes in reverse order, starting with the last thing added at Stage.LAST and working backwards.
- *
+ * <p/>
  * There are two sets of methods to add things to the Lifecycle.  One set that will just add instances and enforce that
  * start() has not been called yet.  The other set will add instances and, if the lifecycle is already started, start
  * them.
@@ -348,7 +349,17 @@ public class Lifecycle
     public void start() throws Exception
     {
       for (Method method : o.getClass().getMethods()) {
-        if (method.getAnnotation(LifecycleStart.class) != null) {
+        boolean doStart = false;
+        for (Annotation annotation : method.getAnnotations()) {
+          if (annotation.annotationType()
+                        .getCanonicalName()
+                        .equals("io.druid.java.util.common.lifecycle.LifecycleStart") ||
+              annotation.annotationType().getCanonicalName().equals("com.metamx.common.lifecycle.LifecycleStart")) {
+            doStart = true;
+            break;
+          }
+        }
+        if (doStart) {
           log.info("Invoking start method[%s] on object[%s].", method, o);
           method.invoke(o);
         }
@@ -359,7 +370,17 @@ public class Lifecycle
     public void stop()
     {
       for (Method method : o.getClass().getMethods()) {
-        if (method.getAnnotation(LifecycleStop.class) != null) {
+        boolean doStop = false;
+        for (Annotation annotation : method.getAnnotations()) {
+          if (annotation.annotationType()
+                        .getCanonicalName()
+                        .equals("io.druid.java.util.common.lifecycle.LifecycleStop") ||
+              annotation.annotationType().getCanonicalName().equals("com.metamx.common.lifecycle.LifecycleStop")) {
+            doStop = true;
+            break;
+          }
+        }
+        if (doStop) {
           log.info("Invoking stop method[%s] on object[%s].", method, o);
           try {
             method.invoke(o);
