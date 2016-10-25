@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.query.Query;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -171,7 +171,7 @@ public class Filters
       return new BooleanValueMatcher(false);
     }
 
-    final Long longValue = Longs.tryParse(value.toString());
+    final Long longValue = GuavaUtils.tryParseLong(value.toString());
     if (longValue == null) {
       return new BooleanValueMatcher(false);
     }

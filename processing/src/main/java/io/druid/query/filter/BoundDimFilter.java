@@ -28,7 +28,7 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.google.common.primitives.Longs;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.ordering.StringComparator;
@@ -334,7 +334,7 @@ public class BoundDimFilter implements DimFilter
             return;
           }
 
-          Long lowerLong = Longs.tryParse(Strings.nullToEmpty(lower));
+          Long lowerLong = GuavaUtils.tryParseLong(lower);
           if (hasLowerBound() && lowerLong != null) {
             hasLowerLongBoundVolatile = true;
             lowerLongBoundVolatile = lowerLong;
@@ -342,7 +342,7 @@ public class BoundDimFilter implements DimFilter
             hasLowerLongBoundVolatile = false;
           }
 
-          Long upperLong = Longs.tryParse(Strings.nullToEmpty(upper));
+          Long upperLong = GuavaUtils.tryParseLong(upper);
           if (hasUpperBound() && upperLong != null) {
             hasUpperLongBoundVolatile = true;
             upperLongBoundVolatile = upperLong;

@@ -21,9 +21,11 @@ package io.druid.common.guava;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
+import com.google.common.primitives.Longs;
 
 import javax.annotation.Nullable;
 import java.io.BufferedReader;
@@ -94,5 +96,16 @@ public class GuavaUtils
         );
       }
     };
+  }
+
+  /**
+   * To fix semantic difference of Longs.tryParse() from Long.parseLong (Longs.tryParse() returns null for '+' started value)
+   */
+  @Nullable
+  public static Long tryParseLong(@Nullable String string)
+  {
+    return Strings.isNullOrEmpty(string)
+           ? null
+           : Longs.tryParse(string.charAt(0) == '+' ? string.substring(1) : string);
   }
 }
