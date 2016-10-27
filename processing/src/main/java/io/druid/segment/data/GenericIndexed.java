@@ -43,12 +43,27 @@ import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
  *
  * V1 Storage Format:
  *
- * byte 1: version_one (0x1)
+ * byte 1: version (0x1)
  * byte 2 == 0x1 =&gt; allowReverseLookup
  * bytes 3-6 =&gt; numBytesUsed
  * bytes 7-10 =&gt; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
+ *
+ * V3 Storage Format
+ * Meta, header and value files are separate.
+ * Meta File:
+ * byte 1: version (0x3)
+ * byte 2 == 0x1 =&gt; allowReverseLookup
+ * bytes 3-6: numberOfElementsPerValueFile expressed as power of 2.
+ * bytes 7-10 =&gt; numBytesUsed
+ * bytes 11-14 =&gt; numElements
+ * bytes 15-18 =&gt; columnNameLength.
+ * bytes 19-columnNameLength =&gt; columnName
+ *
+ * Header file name is identified as:  String.format("%s_header", columnName)
+ * value files are identified as: String.format("%s_value_%d", columnName, fileNumber)
+ * number of value files == numElements/numberOfElementsPerValueFile
  */
 public class GenericIndexed<T> implements Indexed<T>
 {
@@ -436,7 +451,7 @@ public class GenericIndexed<T> implements Indexed<T>
           throw new IAE("SmooshedFileMapper can not be null for version_one 2.");
         }
         boolean allowReverseLookup = buffer.get() == 0x1;
-        int numberOfValueFiles = buffer.getInt();
+        int numberOfElementsPerValueFile = buffer.getInt();
         buffer.getLong();// numBytesWritten not used
         int numWritten = buffer.getInt();
         int columnNameLength = buffer.getInt();
@@ -448,7 +463,7 @@ public class GenericIndexed<T> implements Indexed<T>
         List<ByteBuffer> valueBuffersToUse;
         ByteBuffer headerBuffer;
         try {
-          valueBuffersToUse = getBuffers((int) (numWritten / (1L << numberOfValueFiles)), fileMapper, columnName);
+          valueBuffersToUse = getBuffers((int) (numWritten / (1L << numberOfElementsPerValueFile)), fileMapper, columnName);
           headerBuffer = fileMapper.mapFile(String.format("%s_header", columnName));
         }
         catch (IOException e) {
@@ -460,7 +475,7 @@ public class GenericIndexed<T> implements Indexed<T>
             headerBuffer,
             strategy,
             allowReverseLookup,
-            1 << numberOfValueFiles,
+            1 << numberOfElementsPerValueFile,
             numWritten
         );
       }

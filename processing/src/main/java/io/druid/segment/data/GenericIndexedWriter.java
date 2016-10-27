@@ -186,7 +186,7 @@ public class GenericIndexedWriter<T> implements Closeable
       metaOut.write(0x3);// new meta version.
       metaOut.write(objectsSorted ? 0x1 : 0x0);
       metaOut.write(Ints.toByteArray(bagSizePower));
-      metaOut.write(Longs.toByteArray(numBytesWritten + Ints.BYTES + Ints.BYTES + fileNameByteArray.length));
+      metaOut.write(Longs.toByteArray(numBytesWritten + Ints.BYTES + Ints.BYTES + fileNameByteArray.length));//number of bytes
       metaOut.write(Ints.toByteArray((int) numWritten));
       metaOut.write(Ints.toByteArray(fileNameByteArray.length));
       metaOut.write(fileNameByteArray);
@@ -194,7 +194,7 @@ public class GenericIndexedWriter<T> implements Closeable
   }
 
   /**
-   * Tries to get best value split which can be expressed as power of 2.
+   * Tries to get best value split(number of elements in each value file) which can be expressed as power of 2.
    * @return Returns the size of value file splits as power of 2.
    * @throws IOException
    */
@@ -218,7 +218,7 @@ public class GenericIndexedWriter<T> implements Closeable
   }
 
   /**
-   * Checks if candidate value splits can divide value file in such a way no object entry bytes crosses the value splits.
+   * Checks if candidate value splits can divide value file in such a way no object/element crosses the value splits.
    *
    * @param powerTwo candidate value split expressed as power of 2.
    * @param headerFile header file.
