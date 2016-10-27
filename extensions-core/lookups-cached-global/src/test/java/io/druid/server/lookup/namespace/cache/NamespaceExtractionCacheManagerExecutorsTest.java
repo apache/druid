@@ -122,14 +122,12 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     )
     {
       @Override
-      protected <T extends ExtractionNamespace> Runnable getPostRunnable(
+      protected Runnable getPostRunnable(
           final String id,
-          final T namespace,
-          final ExtractionNamespaceCacheFactory<T> factory,
           final String cacheId
       )
       {
-        final Runnable runnable = super.getPostRunnable(id, namespace, factory, cacheId);
+        final Runnable runnable = super.getPostRunnable(id, cacheId);
         cacheUpdateAlerts.putIfAbsent(id, new Object());
         final Object cacheUpdateAlerter = cacheUpdateAlerts.get(id);
         return new Runnable()

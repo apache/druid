@@ -36,6 +36,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -48,6 +49,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -70,8 +72,10 @@ public abstract class NamespaceExtractionCacheManager
     final ListenableFuture<?> future;
     final ExtractionNamespace namespace;
     final String name;
+    final Object changeLock = new Object();
     final AtomicBoolean enabled = new AtomicBoolean(false);
     final CountDownLatch firstRun = new CountDownLatch(1);
+    final AtomicReference<String> latestVersion = new AtomicReference<>(null);
   }
 
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
@@ -79,7 +83,6 @@ public abstract class NamespaceExtractionCacheManager
   protected final ConcurrentMap<String, NamespaceImplData> implData = new ConcurrentHashMap<>();
   protected final AtomicLong tasksStarted = new AtomicLong(0);
   protected final ServiceEmitter serviceEmitter;
-  private final ConcurrentHashMap<String, String> lastVersion = new ConcurrentHashMap<>();
   private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap;
 
   public NamespaceExtractionCacheManager(
@@ -147,10 +150,8 @@ public abstract class NamespaceExtractionCacheManager
   }
 
 
-  protected <T extends ExtractionNamespace> Runnable getPostRunnable(
+  protected Runnable getPostRunnable(
       final String id,
-      final T namespace,
-      final ExtractionNamespaceCacheFactory<T> factory,
       final String cacheId
   )
   {
@@ -164,17 +165,20 @@ public abstract class NamespaceExtractionCacheManager
           // was removed
           return;
         }
-        synchronized (namespaceDatum.enabled) {
-          try {
+        try {
+          if (!namespaceDatum.enabled.get()) {
+            // skip because it was disabled
+            return;
+          }
+          synchronized (namespaceDatum.enabled) {
             if (!namespaceDatum.enabled.get()) {
-              // skip because it was disabled
               return;
             }
             swapAndClearCache(id, cacheId);
           }
-          finally {
-            namespaceDatum.firstRun.countDown();
-          }
+        }
+        finally {
+          namespaceDatum.firstRun.countDown();
         }
       }
     };
@@ -220,7 +224,10 @@ public abstract class NamespaceExtractionCacheManager
     if (log.isDebugEnabled()) {
       log.debug("Namespace [%s] needs updated to [%s]", implDatum.namespace, namespace);
     }
-    removeNamespaceLocalMetadata(implDatum);
+    // Ensure it is not changing state right now.
+    synchronized (implDatum.changeLock) {
+      removeNamespaceLocalMetadata(implDatum);
+    }
     schedule(id, namespace);
     return true;
   }
@@ -256,59 +263,59 @@ public abstract class NamespaceExtractionCacheManager
     return success;
   }
 
+  @GuardedBy("implDatum.changeLock")
   private void cancelFuture(final NamespaceImplData implDatum)
   {
-    synchronized (implDatum.enabled) {
-      final CountDownLatch latch = new CountDownLatch(1);
-      final ListenableFuture<?> future = implDatum.future;
-      Futures.addCallback(
-          future, new FutureCallback<Object>()
+    final CountDownLatch latch = new CountDownLatch(1);
+    final ListenableFuture<?> future = implDatum.future;
+    Futures.addCallback(
+        future, new FutureCallback<Object>()
+        {
+          @Override
+          public void onSuccess(Object result)
           {
-            @Override
-            public void onSuccess(Object result)
-            {
-              latch.countDown();
-            }
+            latch.countDown();
+          }
 
-            @Override
-            public void onFailure(Throwable t)
-            {
-              // Expect CancellationException
-              latch.countDown();
-              if (!(t instanceof CancellationException)) {
-                log.error(t, "Error in namespace [%s]", implDatum.name);
-              }
+          @Override
+          public void onFailure(Throwable t)
+          {
+            // Expect CancellationException
+            latch.countDown();
+            if (!(t instanceof CancellationException)) {
+              log.error(t, "Error in namespace [%s]", implDatum.name);
             }
           }
-      );
-      if (!future.isDone()
-          && !future.cancel(true)) { // Interrupt to make sure we don't pollute stuff after we've already cleaned up
-        throw new ISE("Future for namespace [%s] was not able to be canceled", implDatum.name);
-      }
-      try {
-        latch.await();
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
-      }
+        }
+    );
+    if (!future.isDone()
+        && !future.cancel(true)) { // Interrupt to make sure we don't pollute stuff after we've already cleaned up
+      throw new ISE("Future for namespace [%s] was not able to be canceled", implDatum.name);
+    }
+    try {
+      latch.await();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
     }
   }
 
+  // Not thread safe
+  @GuardedBy("implDatum.changeLock")
   private boolean removeNamespaceLocalMetadata(final NamespaceImplData implDatum)
   {
     if (implDatum == null) {
       return false;
     }
-    synchronized (implDatum.enabled) {
-      if (!implDatum.enabled.compareAndSet(true, false)) {
-        return false;
-      }
-      if (!implDatum.future.isDone()) {
-        cancelFuture(implDatum);
-      }
-      return implData.remove(implDatum.name, implDatum);
+    // "Leader" election for doing the deletion
+    if (!implDatum.enabled.compareAndSet(true, false)) {
+      return false;
     }
+    if (!implDatum.future.isDone()) {
+      cancelFuture(implDatum);
+    }
+    return implData.remove(implDatum.name, implDatum);
   }
 
   // Optimistic scheduling of updates to a namespace.
@@ -320,7 +327,7 @@ public abstract class NamespaceExtractionCacheManager
       throw new ISE("Cannot find factory for namespace [%s]", namespace);
     }
     final String cacheId = String.format("namespace-cache-%s-%s", id, UUID.randomUUID().toString());
-    return schedule(id, namespace, factory, getPostRunnable(id, namespace, factory, cacheId), cacheId);
+    return schedule(id, namespace, factory, getPostRunnable(id, cacheId), cacheId);
   }
 
   // For testing purposes this is protected
@@ -335,7 +342,7 @@ public abstract class NamespaceExtractionCacheManager
     log.debug("Trying to update namespace [%s]", id);
     final NamespaceImplData implDatum = implData.get(id);
     if (implDatum != null) {
-      synchronized (implDatum.enabled) {
+      synchronized (implDatum.changeLock) {
         if (implDatum.enabled.get()) {
           // We also check at the end of the function, but fail fast here
           throw new IAE("Namespace [%s] already exists! Leaving prior running", namespace.toString());
@@ -344,6 +351,8 @@ public abstract class NamespaceExtractionCacheManager
     }
     final long updateMs = namespace.getPollMs();
     final CountDownLatch startLatch = new CountDownLatch(1);
+    // Must be set before leader election occurs or else runnable will fail
+    final AtomicReference<NamespaceImplData> implDataAtomicReference = new AtomicReference<>(null);
 
     final Runnable command = new Runnable()
     {
@@ -353,8 +362,13 @@ public abstract class NamespaceExtractionCacheManager
         try {
           startLatch.await(); // wait for "election" to leadership or cancellation
           if (!Thread.currentThread().isInterrupted()) {
+            final NamespaceImplData implData = implDataAtomicReference.get();
+            if (implData == null) {
+              // should never happen
+              throw new NullPointerException(String.format("No data for namespace [%s]", id));
+            }
             final Map<String, String> cache = getCacheMap(cacheId);
-            final String preVersion = lastVersion.get(id);
+            final String preVersion = implData.latestVersion.get();
             final Callable<String> runnable = factory.getCachePopulator(id, namespace, preVersion, cache);
 
             tasksStarted.incrementAndGet();
@@ -363,7 +377,9 @@ public abstract class NamespaceExtractionCacheManager
               throw new CancellationException(String.format("Version `%s` already exists", preVersion));
             }
             if (newVersion != null) {
-              lastVersion.put(id, newVersion);
+              if (!implData.latestVersion.compareAndSet(preVersion, newVersion)) {
+                log.wtf("Somehow multiple threads are updating the same implData for [%s]", id);
+              }
             }
             postRunnable.run();
             log.debug("Namespace [%s] successfully updated", id);
@@ -391,7 +407,9 @@ public abstract class NamespaceExtractionCacheManager
         future = listeningScheduledExecutorService.schedule(command, 0, TimeUnit.MILLISECONDS);
       }
 
+      // Do not need to synchronize here as we haven't set enabled to true yet, and haven't released startLatch
       final NamespaceImplData me = new NamespaceImplData(future, namespace, id);
+      implDataAtomicReference.set(me);
       final NamespaceImplData other = implData.putIfAbsent(id, me);
       if (other != null) {
         if (!future.isDone() && !future.cancel(true)) {
@@ -432,8 +450,6 @@ public abstract class NamespaceExtractionCacheManager
 
   /**
    * Clears out resources used by the namespace such as threads. Implementations may override this and call super.delete(...) if they have resources of their own which need cleared.
-   * <p/>
-   * This particular method is NOT thread safe, and any impl which is intended to be thread safe should safe-guard calls to this method.
    *
    * @param ns The namespace to be deleted
    *
@@ -444,15 +460,18 @@ public abstract class NamespaceExtractionCacheManager
   public boolean delete(final String ns)
   {
     final NamespaceImplData implDatum = implData.get(ns);
-    final boolean deleted = removeNamespaceLocalMetadata(implDatum);
-    // At this point we have won leader election on canceling this implDatum
-    if (deleted) {
-      log.info("Deleting namespace [%s]", ns);
-      lastVersion.remove(implDatum.name);
-      return true;
-    } else {
-      log.debug("Did not delete namespace [%s]", ns);
+    if (implDatum == null) {
+      log.debug("Found no running cache for [%s]", ns);
       return false;
+    }
+    synchronized (implDatum.changeLock) {
+      if (removeNamespaceLocalMetadata(implDatum)) {
+        log.info("Deleted namespace [%s]", ns);
+        return true;
+      } else {
+        log.debug("Did not delete namespace [%s]", ns);
+        return false;
+      }
     }
   }
 
@@ -460,9 +479,12 @@ public abstract class NamespaceExtractionCacheManager
   {
     if (namespace == null) {
       return null;
-    } else {
-      return lastVersion.get(namespace);
     }
+    final NamespaceImplData implDatum = implData.get(namespace);
+    if (implDatum == null) {
+      return null;
+    }
+    return implDatum.latestVersion.get();
   }
 
   public Collection<String> getKnownIDs()
