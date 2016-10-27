@@ -85,7 +85,7 @@ public abstract class ComplexMetricSerde
   /**
    * Converts byte[] to intermediate representation of the aggregate.
    *
-   * @param byte array
+   * @param data array
    * @param start offset in the byte array where to start reading
    * @param numBytes number of bytes to read in given array
    * @return intermediate representation of the aggregate

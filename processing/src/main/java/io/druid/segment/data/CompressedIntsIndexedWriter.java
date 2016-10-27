@@ -19,18 +19,17 @@
 
 package io.druid.segment.data;
 
+import com.google.common.primitives.Ints;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.IndexIO;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.channels.WritableByteChannel;
-
-import com.google.common.primitives.Ints;
-
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidResourceHolder;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.IndexIO;
 
 /**
  * Streams array of integers out in the binary format described by CompressedIntsIndexedSupplier

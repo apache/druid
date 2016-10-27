@@ -43,7 +43,7 @@ import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
  *
  * V1 Storage Format:
  *
- * byte 1: version (0x1)
+ * byte 1: version_one (0x1)
  * byte 2 == 0x1 =&gt; allowReverseLookup
  * bytes 3-6 =&gt; numBytesUsed
  * bytes 7-10 =&gt; numElements
@@ -52,7 +52,7 @@ import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
  */
 public class GenericIndexed<T> implements Indexed<T>
 {
-  private static final byte version = 0x1;
+  private static final byte version_one = 0x1;
   private static final byte version_three = 0X3;
 
   private int indexOffset;
@@ -164,8 +164,7 @@ public class GenericIndexed<T> implements Indexed<T>
 
   private List<ByteBuffer> valueBuffers;
   private ByteBuffer headerBuffer;
-  private int numElementsPerValueFile; // only last file will have fewer
-                                       // elements.
+  private int numElementsPerValueFile; // only last file will have fewer elements.
   private final byte versionToUse;
 
   GenericIndexed(
@@ -177,7 +176,7 @@ public class GenericIndexed<T> implements Indexed<T>
     this.theBuffer = buffer;
     this.strategy = strategy;
     this.allowReverseLookup = allowReverseLookup;
-    this.versionToUse = version;
+    this.versionToUse = version_one;
 
     size = theBuffer.getInt();
     indexOffset = theBuffer.position();
@@ -358,14 +357,14 @@ public class GenericIndexed<T> implements Indexed<T>
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    if (versionToUse == version) {
-      channel.write(ByteBuffer.wrap(new byte[] { version, allowReverseLookup ? (byte) 0x1 : (byte) 0x0 }));
+    if (versionToUse == version_one) {
+      channel.write(ByteBuffer.wrap(new byte[] {version_one, allowReverseLookup ? (byte) 0x1 : (byte) 0x0 }));
       channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
       channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
       channel.write(theBuffer.asReadOnlyBuffer());
     } else if (versionToUse == version_three) {
       throw new UnsupportedOperationException(
-          "GericIndexed serilization for V2 is unsupported. Use GenericIndexedWriter instead.");
+          "GericIndexed serilization for V3 is unsupported. Use GenericIndexedWriter instead.");
     }
   }
 
@@ -376,7 +375,7 @@ public class GenericIndexed<T> implements Indexed<T>
    */
   public GenericIndexed<T>.BufferIndexed singleThreaded()
   {
-    if (versionToUse == version) {
+    if (versionToUse == version_one) {
       final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
       return new BufferIndexed()
       {
@@ -399,7 +398,7 @@ public class GenericIndexed<T> implements Indexed<T>
         }
       };
     } else {
-      throw new IAE("Unknown version[%s]", versionToUse);
+      throw new IAE("Unknown version_one[%s]", versionToUse);
     }
   }
 
@@ -407,39 +406,34 @@ public class GenericIndexed<T> implements Indexed<T>
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version == versionFromBuffer) {
-      return createVerionOneGenericIndexed(buffer, strategy);
+    if (version_one == versionFromBuffer) {
+      boolean allowReverseLookup = buffer.get() == 0x1;
+      int size = buffer.getInt();
+      ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
+      bufferToUse.limit(bufferToUse.position() + size);
+      buffer.position(bufferToUse.limit());
+
+      return new GenericIndexed<T>(
+          bufferToUse,
+          strategy,
+          allowReverseLookup);
     }
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  private static <T> GenericIndexed<T> createVerionOneGenericIndexed(ByteBuffer buffer, ObjectStrategy<T> strategy)
-  {
-    boolean allowReverseLookup = buffer.get() == 0x1;
-    int size = buffer.getInt();
-    ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
-    bufferToUse.limit(bufferToUse.position() + size);
-    buffer.position(bufferToUse.limit());
-
-    return new GenericIndexed<T>(
-        bufferToUse,
-        strategy,
-        allowReverseLookup);
+    throw new IAE("Unknown version_one[%s]", versionFromBuffer);
   }
 
   public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version == versionFromBuffer) {
-      return createVerionOneGenericIndexed(buffer, strategy);
+    if (version_one == versionFromBuffer) {
+      return read(buffer, strategy);
     }
     else
     {
       if (version_three == versionFromBuffer) {
 
         if (fileMapper == null) {
-          throw new IAE("SmooshedFileMapper can not be null for version 2.");
+          throw new IAE("SmooshedFileMapper can not be null for version_one 2.");
         }
         boolean allowReverseLookup = buffer.get() == 0x1;
         int numberOfValueFiles = buffer.getInt();
@@ -472,10 +466,10 @@ public class GenericIndexed<T> implements Indexed<T>
       }
     }
 
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
+    throw new IAE("Unknown version_one[%s]", versionFromBuffer);
   }
 
-  public static List<ByteBuffer> getBuffers(int numberOfValueFiles, SmooshedFileMapper fileMapper, String columnName)
+  private static List<ByteBuffer> getBuffers(int numberOfValueFiles, SmooshedFileMapper fileMapper, String columnName)
       throws IOException
   {
     List<ByteBuffer> valueBuffers = Lists.newArrayList();

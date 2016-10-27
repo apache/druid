@@ -74,12 +74,12 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   )
   {
     this(ioPeon, filenameBase, maxValue, chunkFactor, byteOrder, compression,
-        new GenericIndexedWriter<>(
-            ioPeon, filenameBase, CompressedByteBufferObjectStrategy.getBufferForOrder(
-                byteOrder,
-                compression,
-                chunkFactor * VSizeIndexedInts.getNumBytesForMax(maxValue)
-                    + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue)))));
+         new GenericIndexedWriter<>(
+             ioPeon, filenameBase, CompressedByteBufferObjectStrategy.getBufferForOrder(
+             byteOrder,
+             compression,
+             chunkFactor * VSizeIndexedInts.getNumBytesForMax(maxValue)
+             + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue)))));
   }
 
   public CompressedVSizeIntsIndexedWriter(

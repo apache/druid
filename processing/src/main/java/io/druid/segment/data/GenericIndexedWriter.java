@@ -196,7 +196,7 @@ public class GenericIndexedWriter<T> implements Closeable
   /**
    * Tries to get best value split which can be expressed as power of 2.
    * @return Returns the size of value file splits as power of 2.
-   * @throws IOException if no value split found.
+   * @throws IOException
    */
   private int bagSizePower() throws IOException
   {
@@ -218,7 +218,7 @@ public class GenericIndexedWriter<T> implements Closeable
   }
 
   /**
-   * Checks if candidate value splits can divide value file in such a way no object entry bytes crosses the value split.
+   * Checks if candidate value splits can divide value file in such a way no object entry bytes crosses the value splits.
    *
    * @param powerTwo candidate value split expressed as power of 2.
    * @param headerFile header file.
@@ -276,7 +276,7 @@ public class GenericIndexedWriter<T> implements Closeable
     // This is guava 14 compatible
     if(useVersionThree)
     {
-      throw new ISE("Wrote too many bytes"); //fallback to old behaviour.
+      throw new ISE("Can not combine streams for version 3."); //fallback to old behaviour.
     }
     return ByteStreams.join(
         Iterables.transform(

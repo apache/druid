@@ -94,7 +94,6 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writer.writeToChannel(channel, smoosher);
-    
   }
 
 }
