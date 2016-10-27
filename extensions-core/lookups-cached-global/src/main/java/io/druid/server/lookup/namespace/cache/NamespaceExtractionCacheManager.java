@@ -76,7 +76,7 @@ public abstract class NamespaceExtractionCacheManager
     final Object changeLock = new Object();
     final AtomicBoolean enabled = new AtomicBoolean(false);
     final CountDownLatch firstRun = new CountDownLatch(1);
-    final AtomicReference<String> latestVersion = new AtomicReference<>(null);
+    volatile String latestVersion = null;
   }
 
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
@@ -151,38 +151,29 @@ public abstract class NamespaceExtractionCacheManager
   }
 
 
-  protected Runnable getPostRunnable(
-      final String id,
-      final String cacheId
-  )
+  protected void updateNamespace(final String id, final String cacheId, final String newVersion)
   {
-    return new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        final NamespaceImplData namespaceDatum = implData.get(id);
-        if (namespaceDatum == null) {
-          // was removed
+    final NamespaceImplData namespaceDatum = implData.get(id);
+    if (namespaceDatum == null) {
+      // was removed
+      return;
+    }
+    try {
+      if (!namespaceDatum.enabled.get()) {
+        // skip because it was disabled
+        return;
+      }
+      synchronized (namespaceDatum.enabled) {
+        if (!namespaceDatum.enabled.get()) {
           return;
         }
-        try {
-          if (!namespaceDatum.enabled.get()) {
-            // skip because it was disabled
-            return;
-          }
-          synchronized (namespaceDatum.enabled) {
-            if (!namespaceDatum.enabled.get()) {
-              return;
-            }
-            swapAndClearCache(id, cacheId);
-          }
-        }
-        finally {
-          namespaceDatum.firstRun.countDown();
-        }
+        swapAndClearCache(id, cacheId);
+        namespaceDatum.latestVersion = newVersion;
       }
-    };
+    }
+    finally {
+      namespaceDatum.firstRun.countDown();
+    }
   }
 
   // return value means actually delete or not
@@ -325,7 +316,7 @@ public abstract class NamespaceExtractionCacheManager
       throw new ISE("Cannot find factory for namespace [%s]", namespace);
     }
     final String cacheId = String.format("namespace-cache-%s-%s", id, UUID.randomUUID().toString());
-    return schedule(id, namespace, factory, getPostRunnable(id, cacheId), cacheId);
+    return schedule(id, namespace, factory, cacheId);
   }
 
   // For testing purposes this is protected
@@ -333,7 +324,6 @@ public abstract class NamespaceExtractionCacheManager
       final String id,
       final T namespace,
       final ExtractionNamespaceCacheFactory<T> factory,
-      final Runnable postRunnable,
       final String cacheId
   )
   {
@@ -366,7 +356,7 @@ public abstract class NamespaceExtractionCacheManager
               throw new NullPointerException(String.format("No data for namespace [%s]", id));
             }
             final Map<String, String> cache = getCacheMap(cacheId);
-            final String preVersion = implData.latestVersion.get();
+            final String preVersion = implData.latestVersion;
             final Callable<String> runnable = factory.getCachePopulator(id, namespace, preVersion, cache);
 
             tasksStarted.incrementAndGet();
@@ -374,10 +364,7 @@ public abstract class NamespaceExtractionCacheManager
             if (newVersion.equals(preVersion)) {
               log.debug("Version `%s` already exists, skipping updating cache", preVersion);
             } else {
-              if (!implData.latestVersion.compareAndSet(preVersion, newVersion)) {
-                log.wtf("Somehow multiple threads are updating the same implData for [%s]", id);
-              }
-              postRunnable.run();
+              updateNamespace(id, cacheId, newVersion);
               log.debug("Namespace [%s] successfully updated", id);
             }
           }
@@ -482,7 +469,7 @@ public abstract class NamespaceExtractionCacheManager
     if (implDatum == null) {
       return null;
     }
-    return implDatum.latestVersion.get();
+    return implDatum.latestVersion;
   }
 
   public Collection<String> getKnownIDs()
