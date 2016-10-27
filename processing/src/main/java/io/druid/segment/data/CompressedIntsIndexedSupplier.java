@@ -26,6 +26,7 @@ import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -129,7 +130,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return baseIntBuffers;
   }
 
-  public static CompressedIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper fileMapper)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -140,7 +141,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
       return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,
-          GenericIndexed.read(buffer, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          GenericIndexed.read(buffer, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer), fileMapper),
           compression
       );
     }

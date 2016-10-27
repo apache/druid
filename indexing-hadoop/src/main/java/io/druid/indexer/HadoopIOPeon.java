@@ -19,13 +19,15 @@
 
 package io.druid.indexer;
 
-import io.druid.segment.data.IOPeon;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.JobContext;
-
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.JobContext;
+
+import io.druid.segment.data.IOPeon;
 
 /**
  */
@@ -56,6 +58,12 @@ class HadoopIOPeon implements IOPeon
 
   @Override
   public void cleanup() throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public File getFile(String filename)
   {
     throw new UnsupportedOperationException();
   }

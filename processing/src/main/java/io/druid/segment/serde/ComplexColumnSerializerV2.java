@@ -17,70 +17,77 @@
  * under the License.
  */
 
-package io.druid.segment;
-
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.IOPeon;
-import io.druid.segment.data.LongSupplierSerializer;
+package io.druid.segment.serde;
 
 import java.io.IOException;
-import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class LongColumnSerializer implements GenericColumnSerializer
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.ObjectStrategy;
+
+public class ComplexColumnSerializerV2 implements GenericColumnSerializer
 {
-  public static LongColumnSerializer create(
+
+  public static ComplexColumnSerializerV2 create(
       IOPeon ioPeon,
       String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression,
-      CompressionFactory.LongEncodingStrategy encoding
-  )
+      ObjectStrategy strategy)
   {
-    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
+    return new ComplexColumnSerializerV2(ioPeon, filenameBase, strategy);
+  }
+
+  public static ComplexColumnSerializerV2 createWithColumnSize(
+      IOPeon ioPeon,
+      String filenameBase,
+      ObjectStrategy strategy,
+      int columnSize)
+  {
+    return new ComplexColumnSerializerV2(ioPeon, filenameBase, strategy, columnSize);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
-  private final ByteOrder byteOrder;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
-  private final CompressionFactory.LongEncodingStrategy encoding;
-  private LongSupplierSerializer writer;
+  private final ObjectStrategy strategy;
+  private GenericIndexedWriter writer;
+  private final int columnSize;
 
-  public LongColumnSerializer(
+  public ComplexColumnSerializerV2(
       IOPeon ioPeon,
       String filenameBase,
-      ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression,
-      CompressionFactory.LongEncodingStrategy encoding
-  )
+      ObjectStrategy strategy)
+  {
+    this(ioPeon, filenameBase, strategy, Integer.MAX_VALUE);
+  }
+
+  public ComplexColumnSerializerV2(
+      IOPeon ioPeon,
+      String filenameBase,
+      ObjectStrategy strategy,
+      int columnSize)
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
-    this.byteOrder = byteOrder;
-    this.compression = compression;
-    this.encoding = encoding;
+    this.strategy = strategy;
+    this.columnSize = columnSize;
   }
 
+  @SuppressWarnings(value = "unchecked")
   @Override
   public void open() throws IOException
   {
-    writer = CompressionFactory.getLongSerializer(
-        ioPeon,
-        String.format("%s.long_column", filenameBase),
-        byteOrder,
-        encoding,
-        compression
-    );
+    writer = new GenericIndexedWriter(
+        ioPeon, String.format("%s.complex_column", filenameBase), strategy, columnSize);
     writer.open();
   }
 
+  @SuppressWarnings(value = "unchecked")
   @Override
   public void serialize(Object obj) throws IOException
   {
-    long val = (obj == null) ? 0 : ((Number) obj).longValue();
-    writer.add(val);
+    writer.write(obj);
   }
 
   @Override

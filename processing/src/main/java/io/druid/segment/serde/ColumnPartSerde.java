@@ -19,14 +19,16 @@
 
 package io.druid.segment.serde;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.segment.column.ColumnBuilder;
-import io.druid.segment.column.ColumnConfig;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.column.ColumnConfig;
 
 /**
  */
@@ -47,7 +49,7 @@ public interface ColumnPartSerde
   {
     public long numBytes();
 
-    public void write(WritableByteChannel channel) throws IOException;
+    public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
   }
 
   public interface Deserializer

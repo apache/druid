@@ -22,8 +22,10 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
+
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,12 +40,13 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
 
   public BlockLayoutIndexedFloatSupplier(
       int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy strategy
+      CompressedObjectStrategy.CompressionStrategy strategy,
+      SmooshedFileMapper mapper
   )
   {
     baseFloatBuffers = GenericIndexed.read(fromBuffer, VSizeCompressedObjectStrategy.getBufferForOrder(
         order, strategy, sizePer * Floats.BYTES
-    ));
+    ), mapper);
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }

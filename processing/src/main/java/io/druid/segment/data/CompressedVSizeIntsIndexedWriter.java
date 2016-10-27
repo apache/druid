@@ -19,10 +19,11 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
+
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.IndexIO;
 
 import java.io.IOException;
@@ -72,14 +73,31 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
       final CompressedObjectStrategy.CompressionStrategy compression
   )
   {
+    this(ioPeon, filenameBase, maxValue, chunkFactor, byteOrder, compression,
+         new GenericIndexedWriter<>(
+             ioPeon, filenameBase, CompressedByteBufferObjectStrategy.getBufferForOrder(
+             byteOrder,
+             compression,
+             chunkFactor * VSizeIndexedInts.getNumBytesForMax(maxValue)
+             + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue)))));
+  }
+
+  public CompressedVSizeIntsIndexedWriter(
+      final IOPeon ioPeon,
+      final String filenameBase,
+      final int maxValue,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriter writer
+  )
+  {
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
     this.chunkFactor = chunkFactor;
     this.chunkBytes = chunkFactor * numBytes + CompressedVSizeIntsIndexedSupplier.bufferPadding(numBytes);
     this.byteOrder = byteOrder;
     this.compression = compression;
-    this.flattener = new GenericIndexedWriter<>(
-        ioPeon, filenameBase, CompressedByteBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkBytes)
-    );
+    this.flattener = writer;
     this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
     this.endBuffer = ByteBuffer.allocate(chunkBytes).order(byteOrder);
     this.endBuffer.limit(numBytes * chunkFactor);
@@ -138,13 +156,12 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput());
-    ByteStreams.copy(from, channel);
+    flattener.writeToChannel(channel, smoosher);
   }
 }
