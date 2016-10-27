@@ -87,6 +87,11 @@ public class SegmentInputRow implements InputRow
     return delegate.compareTo(row);
   }
 
+  public InputRow getDelegate()
+  {
+    return delegate;
+  }
+
   @Override
   public String toString()
   {
