@@ -19,8 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Maps;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,6 +27,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
+
+import com.google.common.collect.Maps;
 
 /**
 */
@@ -84,4 +84,11 @@ public class TmpFileIOPeon implements IOPeon
   {
     return allowOverwrite;
   }
+
+  @Override
+  public File getFile(String filename)
+  {
+    return createdFiles.get(filename);
+  }
+
 }

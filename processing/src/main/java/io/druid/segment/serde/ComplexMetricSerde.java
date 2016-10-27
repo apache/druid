@@ -19,11 +19,14 @@
 
 package io.druid.segment.serde;
 
-import com.google.common.base.Function;
-import io.druid.segment.column.ColumnBuilder;
-import io.druid.segment.data.ObjectStrategy;
-
 import java.nio.ByteBuffer;
+
+import com.google.common.base.Function;
+
+import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.ObjectStrategy;
 
 /**
  */
@@ -94,5 +97,10 @@ public abstract class ComplexMetricSerde
       bb.position(start);
     }
     return getObjectStrategy().fromByteBuffer(bb, numBytes);
+  }
+
+  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  {
+    return ComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
   }
 }

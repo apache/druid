@@ -19,15 +19,17 @@
 
 package io.druid.segment.serde;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.segment.column.ColumnBuilder;
-import io.druid.segment.column.ColumnConfig;
-import io.druid.segment.data.GenericIndexed;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.data.GenericIndexed;
 
 /**
  */
@@ -47,8 +49,13 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
 
   private ComplexColumnPartSerde(String typeName, Serializer serializer)
   {
+    this(typeName, ComplexMetrics.getSerdeForType(typeName), serializer);
+  }
+
+  private ComplexColumnPartSerde(String typeName, ComplexMetricSerde serde, Serializer serializer)
+  {
     this.typeName = typeName;
-    this.serde = ComplexMetrics.getSerdeForType(typeName);
+    this.serde = serde;
     this.serializer = serializer;
   }
 
@@ -92,9 +99,9 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         }
 
         @Override
-        public void write(WritableByteChannel channel) throws IOException
+        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
-          delegate.writeToChannel(channel);
+          delegate.writeToChannel(channel, smoosher);
         }
       }
       );
@@ -135,7 +142,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         }
 
         @Override
-        public void write(WritableByteChannel channel) throws IOException
+            public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
           delegate.writeToChannel(channel);
         }

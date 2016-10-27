@@ -21,6 +21,8 @@ package io.druid.java.util.common.io.smoosh;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+
+
 import io.druid.java.util.common.BufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -79,7 +81,7 @@ public class SmooshedFileMapperTest
           CloseQuietly.close(writer);
         }
         tmpFile.delete();
-      }    
+      }
     }
     validateOutput(baseDir);
   }
@@ -96,7 +98,7 @@ public class SmooshedFileMapperTest
         writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
       }
       smoosher.close();
-    }   
+    }
   }
 
   @Test

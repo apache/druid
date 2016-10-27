@@ -23,6 +23,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+
 public interface IndexedIntsWriter extends Closeable
 {
   public void open() throws IOException;
@@ -31,5 +33,5 @@ public interface IndexedIntsWriter extends Closeable
 
   public long getSerializedSize();
 
-  public void writeToChannel(WritableByteChannel channel) throws IOException;
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

@@ -19,38 +19,40 @@
 
 package io.druid.segment.serde;
 
+import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
+
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
-
-import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
+import io.druid.segment.data.ObjectStrategy;
 
 public class ComplexColumnSerializer implements GenericColumnSerializer
 {
   public static ComplexColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      ComplexMetricSerde serde
+      ObjectStrategy strategy
   )
   {
-    return new ComplexColumnSerializer(ioPeon, filenameBase, serde);
+    return new ComplexColumnSerializer(ioPeon, filenameBase, strategy);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
-  private final ComplexMetricSerde serde;
+  private final ObjectStrategy strategy;
   private GenericIndexedWriter writer;
 
   public ComplexColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
-      ComplexMetricSerde serde
+      ObjectStrategy strategy
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
-    this.serde = serde;
+    this.strategy = strategy;
   }
 
   @SuppressWarnings(value = "unchecked")
@@ -58,7 +60,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, String.format("%s.complex_column", filenameBase), serde.getObjectStrategy()
+        ioPeon, String.format("%s.complex_column", filenameBase), strategy
     );
     writer.open();
   }
@@ -83,8 +85,8 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    writer.writeToChannel(channel);
+    writer.writeToChannel(channel, null);//defaults to use GenericIndexed version 1.
   }
 }

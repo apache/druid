@@ -24,6 +24,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.Smoosh;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.SmooshedWriter;
+
+import com.google.common.primitives.Longs;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -31,6 +39,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -72,6 +81,8 @@ public class CompressedVSizeIntsIndexedWriterTest
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
+  File tmpDirectory = FileUtils.getTempDirectory();
+  FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
   public CompressedVSizeIntsIndexedWriterTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
@@ -117,14 +128,16 @@ public class CompressedVSizeIntsIndexedWriterTest
     writer.close();
     long writtenLength = writer.getSerializedSize();
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-    writer.writeToChannel(outputChannel);
+    writer.writeToChannel(outputChannel, smoosher);
     outputChannel.close();
 
     assertEquals(writtenLength, supplierFromList.getSerializedSize());
 
     // read from ByteBuffer and check values
     CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))), byteOrder
+        ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
+        byteOrder,
+        null
     );
     IndexedInts indexedInts = supplierFromByteBuffer.get();
     for (int i = 0; i < vals.length; ++i) {
@@ -161,4 +174,61 @@ public class CompressedVSizeIntsIndexedWriterTest
     vals = new int[0];
     checkSerializedSizeAndData(2);
   }
+
+  private void checkV3SerializedSizeAndData(int chunkSize) throws Exception
+  {
+    smoosher = new FileSmoosher(tmpDirectory);
+    int maxValue = vals.length > 0 ? Ints.max(vals) : 0;
+    GenericIndexedWriter genericIndexed = new GenericIndexedWriter<>(
+        ioPeon,
+        "test",
+        CompressedByteBufferObjectStrategy.getBufferForOrder(
+            byteOrder,
+            compressionStrategy,
+            chunkSize * VSizeIndexedInts.getNumBytesForMax(maxValue)
+                + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue))
+        ),
+        Longs.BYTES * 10000
+    );
+    CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
+        ioPeon, "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy,
+        genericIndexed);
+    writer.open();
+    for (int val : vals) {
+      writer.add(val);
+    }
+
+    writer.close();
+    final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
+        "test",
+        writer.getSerializedSize());
+    writer.writeToChannel(channel, smoosher);
+    channel.close();
+    smoosher.close();
+
+    SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
+
+    CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
+        mapper.mapFile("test"),
+        byteOrder,
+        mapper
+    );
+
+    IndexedInts indexedInts = supplierFromByteBuffer.get();
+    for (int i = 0; i < vals.length; ++i) {
+      assertEquals(vals[i], indexedInts.get(i));
+    }
+    CloseQuietly.close(indexedInts);
+  }
+
+  @Test
+  public void testMultiValueFileLargeData() throws Exception
+  {
+    for (int maxValue : MAX_VALUES) {
+      final int maxChunkSize = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
+      generateVals((rand.nextInt(5) + 5) * maxChunkSize + rand.nextInt(maxChunkSize), maxValue);
+      checkV3SerializedSizeAndData(maxChunkSize);
+    }
+  }
+
 }

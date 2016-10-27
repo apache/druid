@@ -19,15 +19,16 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Maps;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
+
+import com.google.common.collect.Maps;
 
 /**
 */
@@ -64,5 +65,11 @@ class IOPeonForTesting implements IOPeon
   public void cleanup() throws IOException
   {
     outStreams.clear();
+  }
+
+  @Override
+  public File getFile(String filename)
+  {
+    return null;
   }
 }

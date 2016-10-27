@@ -21,7 +21,9 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
+
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -90,7 +92,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     channel.write(buffer.asReadOnlyBuffer());
   }
 
-  public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper fileMapper)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -113,7 +115,8 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
           buffer.asReadOnlyBuffer(),
           order,
           encoding,
-          compression
+          compression,
+          fileMapper
       );
       return new CompressedLongsIndexedSupplier(
           totalSize,

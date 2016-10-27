@@ -103,7 +103,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
 
-    supplier = CompressedIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder());
+    supplier = CompressedIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder(), null);
     indexed = supplier.get();
   }
 
