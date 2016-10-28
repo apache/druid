@@ -56,6 +56,8 @@ public class SketchOperations
       return deserializeFromByteArray((byte[]) serializedSketch);
     } else if (serializedSketch instanceof Sketch) {
       return (Sketch) serializedSketch;
+    } else if (serializedSketch instanceof Union) {
+      return ((Union) serializedSketch).getResult(true, null);
     }
 
     throw new IllegalStateException(

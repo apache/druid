@@ -21,6 +21,7 @@ package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.yahoo.sketches.Family;
@@ -30,7 +31,6 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
-
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -52,14 +52,18 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   protected final int size;
   private final byte cacheId;
 
-  public static final Comparator<Sketch> COMPARATOR = new Comparator<Sketch>()
-  {
-    @Override
-    public int compare(Sketch o, Sketch o1)
-    {
-      return Doubles.compare(o.getEstimate(), o1.getEstimate());
-    }
-  };
+  public static final Comparator<Object> COMPARATOR = Ordering.from(
+      new Comparator()
+      {
+        @Override
+        public int compare(Object o1, Object o2)
+        {
+          Sketch s1 = SketchAggregatorFactory.toSketch(o1);
+          Sketch s2 = SketchAggregatorFactory.toSketch(o2);
+          return Doubles.compare(s1.getEstimate(), s2.getEstimate());
+        }
+      }
+  ).nullsFirst();
 
   public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
   {
@@ -103,7 +107,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Comparator<Sketch> getComparator()
+  public Comparator<Object> getComparator()
   {
     return COMPARATOR;
   }
@@ -189,6 +193,17 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
                      .putInt(size)
                      .put(fieldNameBytes)
                      .array();
+  }
+
+  public final static Sketch toSketch(Object obj)
+  {
+    if (obj instanceof Sketch) {
+      return (Sketch) obj;
+    } else if (obj instanceof Union) {
+      return ((Union) obj).getResult(true, null);
+    } else {
+      throw new IAE("Can't convert to Sketch object [%s]", obj.getClass());
+    }
   }
 
   @Override

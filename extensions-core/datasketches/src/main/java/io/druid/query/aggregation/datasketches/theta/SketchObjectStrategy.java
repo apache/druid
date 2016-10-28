@@ -26,7 +26,6 @@ import com.yahoo.sketches.memory.NativeMemory;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
-
 import io.druid.java.util.common.IAE;
 import io.druid.segment.data.ObjectStrategy;
 
@@ -41,13 +40,14 @@ public class SketchObjectStrategy implements ObjectStrategy
   @Override
   public int compare(Object s1, Object s2)
   {
-    if (s1 instanceof Sketch) {
-      if (s2 instanceof Sketch) {
-        return SketchAggregatorFactory.COMPARATOR.compare((Sketch) s1, (Sketch) s2);
+    if (s1 instanceof Sketch || s1 instanceof Union) {
+      if (s2 instanceof Sketch || s2 instanceof Union) {
+        return SketchAggregatorFactory.COMPARATOR.compare(s1, s2);
       } else {
         return -1;
       }
     }
+
     if (s1 instanceof Memory) {
       if (s2 instanceof Memory) {
         Memory s1Mem = (Memory) s1;
@@ -66,6 +66,7 @@ public class SketchObjectStrategy implements ObjectStrategy
         return 1;
       }
     }
+
     throw new IAE("Unknwon class[%s], toString[%s]", s1.getClass(), s1);
 
   }

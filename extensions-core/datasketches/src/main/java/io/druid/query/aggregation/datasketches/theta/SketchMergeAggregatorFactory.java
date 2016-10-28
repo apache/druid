@@ -123,7 +123,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   public Object finalizeComputation(Object object)
   {
     if (shouldFinalize) {
-      Sketch sketch = (Sketch) object;
+      Sketch sketch = SketchAggregatorFactory.toSketch(object);
       if (errorBoundsStdDev != null) {
         SketchEstimateWithErrorBounds result = new SketchEstimateWithErrorBounds(
             sketch.getEstimate(),
