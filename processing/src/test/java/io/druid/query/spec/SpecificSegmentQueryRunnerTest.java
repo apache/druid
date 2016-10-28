@@ -83,7 +83,7 @@ public class SpecificSegmentQueryRunnerTest
                   Object initValue, YieldingAccumulator accumulator
               )
               {
-                return null;
+                throw new SegmentMissingException("FAILSAUCE");
               }
             };
 
@@ -94,7 +94,8 @@ public class SpecificSegmentQueryRunnerTest
         )
     );
 
-    final Map<String, Object> responseContext = Maps.newHashMap();
+    // from accumulate
+    Map<String, Object> responseContext = Maps.newHashMap();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(QueryGranularities.ALL)
@@ -105,24 +106,26 @@ public class SpecificSegmentQueryRunnerTest
                                       )
                                   )
                                   .build();
-    Sequence results = queryRunner.run(
-        query,
-        responseContext
-    );
+    Sequence results = queryRunner.run(query, responseContext);
     Sequences.toList(results, Lists.newArrayList());
+    validate(mapper, descriptor, responseContext);
 
-    Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
-
-    Assert.assertTrue(missingSegments != null);
-    Assert.assertTrue(missingSegments instanceof List);
-
-    Object segmentDesc = ((List) missingSegments).get(0);
-
-    Assert.assertTrue(segmentDesc instanceof SegmentDescriptor);
-
-    SegmentDescriptor newDesc = mapper.readValue(mapper.writeValueAsString(segmentDesc), SegmentDescriptor.class);
-
-    Assert.assertEquals(descriptor, newDesc);
+    // from toYielder
+    responseContext = Maps.newHashMap();
+    results = queryRunner.run(query, responseContext);
+    results.toYielder(
+        null, new YieldingAccumulator()
+        {
+          final List lists = Lists.newArrayList();
+          @Override
+          public Object accumulate(Object accumulated, Object in)
+          {
+            lists.add(in);
+            return in;
+          }
+        }
+    );
+    validate(mapper, descriptor, responseContext);
   }
 
   @SuppressWarnings("unchecked")
@@ -195,6 +198,12 @@ public class SpecificSegmentQueryRunnerTest
 
     Assert.assertTrue(1L == theVal.getValue().getLongMetric("rows"));
 
+    validate(mapper, descriptor, responseContext);
+  }
+
+  private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, Map<String, Object> responseContext)
+      throws java.io.IOException
+  {
     Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
 
     Assert.assertTrue(missingSegments != null);
