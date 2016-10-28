@@ -372,7 +372,11 @@ public abstract class NamespaceExtractionCacheManager
         catch (Throwable t) {
           try {
             delete(cacheId);
-            log.error(t, "Failed update namespace [%s]", namespace);
+            if (t instanceof InterruptedException) {
+              log.debug(t, "Namespace [%s] cancelled", id);
+            } else {
+              log.error(t, "Failed update namespace [%s]", namespace);
+            }
           }
           catch (Exception e) {
             t.addSuppressed(e);
