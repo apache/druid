@@ -133,22 +133,21 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   @Override
   public boolean delete(final String namespaceKey)
   {
+    // `super.delete` has a synchronization in it, don't call it in the lock.
+    if (!super.delete(namespaceKey)) {
+      return false;
+    }
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      if (super.delete(namespaceKey)) {
-        final String mmapDBkey = currentNamespaceCache.remove(namespaceKey);
-        if (mmapDBkey != null) {
-          final long pre = tmpFile.length();
-          mmapDB.delete(mmapDBkey);
-          log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
-          return true;
-        } else {
-          return false;
-        }
-      } else {
+      final String mmapDBkey = currentNamespaceCache.remove(namespaceKey);
+      if (mmapDBkey == null) {
         return false;
       }
+      final long pre = tmpFile.length();
+      mmapDB.delete(mmapDBkey);
+      log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
+      return true;
     }
     finally {
       lock.unlock();
