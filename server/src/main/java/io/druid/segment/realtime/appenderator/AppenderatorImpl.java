@@ -143,7 +143,7 @@ public class AppenderatorImpl implements Appenderator
     this.segmentAnnouncer = Preconditions.checkNotNull(segmentAnnouncer, "segmentAnnouncer");
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
-    this.cache = Preconditions.checkNotNull(cache, "cache");
+    this.cache = cache;
     this.texasRanger = conglomerate == null ? null : new SinkQuerySegmentWalker(
         schema.getDataSource(),
         sinkTimeline,
@@ -151,7 +151,7 @@ public class AppenderatorImpl implements Appenderator
         emitter,
         conglomerate,
         queryExecutorService,
-        cache,
+        Preconditions.checkNotNull(cache, "cache"),
         cacheConfig
     );
 
@@ -912,7 +912,9 @@ public class AppenderatorImpl implements Appenderator
                 identifier.getShardSpec().createChunk(sink)
             );
             for (FireHydrant hydrant : sink) {
-              cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+              if (cache != null) {
+                cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+              }
             }
 
             if (removeOnDiskData) {

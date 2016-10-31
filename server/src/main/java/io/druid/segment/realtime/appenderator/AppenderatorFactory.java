@@ -28,7 +28,8 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultAppenderatorFactory.class)
+    @JsonSubTypes.Type(name = "default", value = DefaultRealtimeAppenderatorFactory.class),
+    @JsonSubTypes.Type(name = "offline", value = DefaultOfflineAppenderatorFactory.class)
 })
 public interface AppenderatorFactory
 {
