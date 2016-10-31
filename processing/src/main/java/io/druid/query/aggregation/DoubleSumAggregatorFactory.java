@@ -70,7 +70,7 @@ public class DoubleSumAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleSumAggregator(name, getFloatColumnSelector(metricFactory));
+    return new DoubleSumAggregator(getFloatColumnSelector(metricFactory));
   }
 
   @Override
@@ -183,12 +183,6 @@ public class DoubleSumAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Doubles.BYTES;
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return 0;
   }
 
   @Override

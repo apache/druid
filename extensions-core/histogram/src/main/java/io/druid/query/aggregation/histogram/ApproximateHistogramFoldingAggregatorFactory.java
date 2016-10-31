@@ -80,7 +80,6 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
     final Class cls = selector.classOfObject();
     if (cls.equals(Object.class) || ApproximateHistogram.class.isAssignableFrom(cls)) {
       return new ApproximateHistogramFoldingAggregator(
-          name,
           selector,
           resolution,
           lowerLimit,

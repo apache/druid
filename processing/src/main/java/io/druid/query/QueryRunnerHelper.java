@@ -44,17 +44,6 @@ public class QueryRunnerHelper
 {
   private static final Logger log = new Logger(QueryRunnerHelper.class);
 
-  public static Aggregator[] makeAggregators(Cursor cursor, List<AggregatorFactory> aggregatorSpecs)
-  {
-    Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
-    int aggregatorIndex = 0;
-    for (AggregatorFactory spec : aggregatorSpecs) {
-      aggregators[aggregatorIndex] = spec.factorize(cursor);
-      ++aggregatorIndex;
-    }
-    return aggregators;
-  }
-
   public static <T> Sequence<Result<T>> makeCursorBasedQuery(
       final StorageAdapter adapter,
       List<Interval> queryIntervals,

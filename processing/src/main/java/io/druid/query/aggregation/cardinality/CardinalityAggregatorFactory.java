@@ -139,7 +139,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       return Aggregators.noopAggregator();
     }
 
-    return new CardinalityAggregator(name, selectors, byRow);
+    return new CardinalityAggregator(selectors, byRow);
   }
 
 
@@ -308,12 +308,6 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return HyperLogLogCollector.getLatestNumBytesForDenseStorage();
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return HyperLogLogCollector.makeLatestCollector();
   }
 
   @Override
