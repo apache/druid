@@ -59,8 +59,6 @@ public class LongMinAggregationTest
   {
     LongMinAggregator agg = (LongMinAggregator)longMinAggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     aggregate(selector, agg);
     aggregate(selector, agg);
     aggregate(selector, agg);

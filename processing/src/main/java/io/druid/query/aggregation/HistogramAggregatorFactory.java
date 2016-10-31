@@ -66,11 +66,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new HistogramAggregator(
-        name,
-        metricFactory.makeFloatColumnSelector(fieldName),
-        breaks
-    );
+    return new HistogramAggregator(metricFactory.makeFloatColumnSelector(fieldName), breaks);
   }
 
   @Override
@@ -159,7 +155,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
         .allocate(1 + fieldNameBytes.length + Floats.BYTES * breaks.length)
         .put(CACHE_TYPE_ID)
         .put(fieldNameBytes)
-        .put((byte)0xFF);
+        .put((byte) 0xFF);
     buf.asFloatBuffer().put(breaks);
 
     return buf.array();
@@ -175,12 +171,6 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Longs.BYTES * (breaks.length + 1) + Floats.BYTES * 2;
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return new Histogram(breaks);
   }
 
   @Override

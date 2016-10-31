@@ -34,7 +34,6 @@ public class CardinalityAggregator implements Aggregator
 {
   private static final String NULL_STRING = "\u0000";
 
-  private final String name;
   private final List<DimensionSelector> selectorList;
   private final boolean byRow;
 
@@ -87,12 +86,10 @@ public class CardinalityAggregator implements Aggregator
   private HyperLogLogCollector collector;
 
   public CardinalityAggregator(
-      String name,
       List<DimensionSelector> selectorList,
       boolean byRow
   )
   {
-    this.name = name;
     this.selectorList = selectorList;
     this.collector = HyperLogLogCollector.makeLatestCollector();
     this.byRow = byRow;
@@ -135,13 +132,13 @@ public class CardinalityAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return name;
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override
   public Aggregator clone()
   {
-    return new CardinalityAggregator(name, selectorList, byRow);
+    return new CardinalityAggregator(selectorList, byRow);
   }
 
   @Override

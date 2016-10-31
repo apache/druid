@@ -67,7 +67,7 @@ public class FilteredAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return delegate.getName();
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override

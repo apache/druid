@@ -142,9 +142,9 @@ public class SpecificSegmentQueryRunnerTest
     TimeseriesResultBuilder builder = new TimeseriesResultBuilder(
         new DateTime("2012-01-01T00:00:00Z")
     );
-    CountAggregator rows = new CountAggregator("rows");
+    CountAggregator rows = new CountAggregator();
     rows.aggregate();
-    builder.addMetric(rows);
+    builder.addMetric("rows", rows);
     final Result<TimeseriesResultValue> value = builder.build();
 
     final SpecificSegmentQueryRunner queryRunner = new SpecificSegmentQueryRunner(

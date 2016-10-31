@@ -39,14 +39,15 @@ public class ArithmeticPostAggregatorTest
   @Test
   public void testCompute()
   {
+    final String aggName = "rows";
     ArithmeticPostAggregator arithmeticPostAggregator;
     ExpressionPostAggregator expressionPostAggregator;
-    CountAggregator agg = new CountAggregator("rows");
+    CountAggregator agg = new CountAggregator();
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
     Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
@@ -86,10 +87,11 @@ public class ArithmeticPostAggregatorTest
   @Test
   public void testComparator()
   {
+    final String aggName = "rows";
     ArithmeticPostAggregator arithmeticPostAggregator;
-    CountAggregator agg = new CountAggregator("rows");
+    CountAggregator agg = new CountAggregator();
     Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
@@ -107,7 +109,7 @@ public class ArithmeticPostAggregatorTest
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
     Object after = arithmeticPostAggregator.compute(metricValues);
 
     Assert.assertEquals(-1, comp.compare(before, after));

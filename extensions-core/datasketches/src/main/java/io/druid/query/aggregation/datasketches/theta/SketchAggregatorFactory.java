@@ -29,7 +29,6 @@ import com.yahoo.sketches.Util;
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
-import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.Aggregator;
@@ -82,9 +81,9 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
     if (selector == null) {
-      return new EmptySketchAggregator(name);
+      return new EmptySketchAggregator();
     } else {
-      return new SketchAggregator(name, selector, size);
+      return new SketchAggregator(selector, size);
     }
   }
 
@@ -170,12 +169,6 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return SetOperation.getMaxUnionBytes(size);
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return Sketches.updateSketchBuilder().build(size);
   }
 
   @Override

@@ -69,10 +69,9 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return new EmptyDistinctCountAggregator(name);
+      return new EmptyDistinctCountAggregator();
     } else {
       return new DistinctCountAggregator(
-          name,
           selector,
           bitMapFactory.makeEmptyMutableBitmap()
       );
@@ -195,12 +194,6 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Longs.BYTES;
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return 0;
   }
 
   @Override

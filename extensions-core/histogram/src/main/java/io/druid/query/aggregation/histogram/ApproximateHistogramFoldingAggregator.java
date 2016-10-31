@@ -25,7 +25,6 @@ import io.druid.segment.ObjectColumnSelector;
 
 public class ApproximateHistogramFoldingAggregator implements Aggregator
 {
-  private final String name;
   private final ObjectColumnSelector<ApproximateHistogram> selector;
   private final int resolution;
   private final float lowerLimit;
@@ -36,14 +35,12 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   private long[] tmpBufferB;
 
   public ApproximateHistogramFoldingAggregator(
-      String name,
       ObjectColumnSelector<ApproximateHistogram> selector,
       int resolution,
       float lowerLimit,
       float upperLimit
   )
   {
-    this.name = name;
     this.selector = selector;
     this.resolution = resolution;
     this.lowerLimit = lowerLimit;
@@ -96,7 +93,7 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return name;
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override

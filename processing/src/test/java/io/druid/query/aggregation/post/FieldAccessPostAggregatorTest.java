@@ -33,18 +33,19 @@ public class FieldAccessPostAggregatorTest
   @Test
   public void testCompute()
   {
+    final String aggName = "rows";
     FieldAccessPostAggregator fieldAccessPostAggregator;
 
     fieldAccessPostAggregator = new FieldAccessPostAggregator("To be, or not to be, that is the question:", "rows");
-    CountAggregator agg = new CountAggregator("rows");
+    CountAggregator agg = new CountAggregator();
     Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
     Assert.assertEquals(new Long(0L), fieldAccessPostAggregator.compute(metricValues));
 
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
     Assert.assertEquals(new Long(3L), fieldAccessPostAggregator.compute(metricValues));
   }
 }

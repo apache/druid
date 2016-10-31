@@ -76,8 +76,6 @@ public class VarianceAggregatorTest
   {
     VarianceAggregator agg = (VarianceAggregator) aggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     assertValues((VarianceAggregatorCollector) agg.get(), 0, 0d, 0d);
     aggregate(selector, agg);
     assertValues((VarianceAggregatorCollector) agg.get(), 1, 1.1d, 0d);

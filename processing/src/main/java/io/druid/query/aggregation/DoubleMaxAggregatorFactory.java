@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
-
 import io.druid.common.utils.StringUtils;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
@@ -71,7 +70,7 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(name, getFloatColumnSelector(metricFactory));
+    return new DoubleMaxAggregator(getFloatColumnSelector(metricFactory));
   }
 
   @Override
@@ -184,12 +183,6 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Doubles.BYTES;
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return Double.NEGATIVE_INFINITY;
   }
 
   @Override

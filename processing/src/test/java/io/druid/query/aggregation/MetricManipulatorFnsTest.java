@@ -42,14 +42,14 @@ public class MetricManipulatorFnsTest
     final ArrayList<Object[]> constructorArrays = new ArrayList<>();
     final long longVal = 13789;
     LongMinAggregator longMinAggregator = new LongMinAggregator(
-        NAME, new LongColumnSelector()
-    {
-      @Override
-      public long get()
-      {
-        return longVal;
-      }
-    }
+        new LongColumnSelector()
+        {
+          @Override
+          public long get()
+          {
+            return longVal;
+          }
+        }
     );
     LongMinAggregatorFactory longMinAggregatorFactory = new LongMinAggregatorFactory(NAME, FIELD);
     constructorArrays.add(
@@ -81,14 +81,14 @@ public class MetricManipulatorFnsTest
 
     LongSumAggregatorFactory longSumAggregatorFactory = new LongSumAggregatorFactory(NAME, FIELD);
     LongSumAggregator longSumAggregator = new LongSumAggregator(
-        NAME, new LongColumnSelector()
-    {
-      @Override
-      public long get()
-      {
-        return longVal;
-      }
-    }
+        new LongColumnSelector()
+        {
+          @Override
+          public long get()
+          {
+            return longVal;
+          }
+        }
     );
     constructorArrays.add(
         new Object[]{

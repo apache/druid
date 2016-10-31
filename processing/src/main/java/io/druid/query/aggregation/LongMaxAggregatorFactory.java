@@ -54,7 +54,8 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression");
+        "Must have a valid, non-null fieldName or expression"
+    );
 
     this.name = name;
     this.fieldName = fieldName;
@@ -69,7 +70,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxAggregator(name, getLongColumnSelector(metricFactory));
+    return new LongMaxAggregator(getLongColumnSelector(metricFactory));
   }
 
   @Override
@@ -178,12 +179,6 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Longs.BYTES;
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return Long.MIN_VALUE;
   }
 
   @Override

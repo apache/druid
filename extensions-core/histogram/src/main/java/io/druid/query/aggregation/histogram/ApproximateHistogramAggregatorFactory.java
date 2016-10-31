@@ -81,7 +81,6 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramAggregator(
-        name,
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
         lowerLimit,
@@ -252,12 +251,6 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return new ApproximateHistogram(resolution).getMaxStorageSize();
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return new ApproximateHistogram(resolution);
   }
 
   @Override

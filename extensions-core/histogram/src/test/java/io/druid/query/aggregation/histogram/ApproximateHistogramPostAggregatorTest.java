@@ -45,14 +45,14 @@ public class ApproximateHistogramPostAggregatorTest
     ApproximateHistogram ah = buildHistogram(10, VALUES);
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(VALUES);
 
-    ApproximateHistogramAggregator agg = new ApproximateHistogramAggregator("price", selector, 10, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+    ApproximateHistogramAggregator agg = new ApproximateHistogramAggregator(selector, 10, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
     for (int i = 0; i < VALUES.length; i++) {
       agg.aggregate();
       selector.increment();
     }
 
     Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put("price", agg.get());
 
     ApproximateHistogramPostAggregator approximateHistogramPostAggregator = new EqualBucketsPostAggregator(
         "approxHist",

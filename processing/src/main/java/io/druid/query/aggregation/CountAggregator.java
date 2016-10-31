@@ -32,12 +32,10 @@ public class CountAggregator implements Aggregator
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 
-  long count = 0;
-  private final String name;
+  private long count = 0;
 
-  public CountAggregator(String name)
+  public CountAggregator()
   {
-    this.name = name;
   }
 
   @Override
@@ -73,13 +71,13 @@ public class CountAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return this.name;
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override
   public Aggregator clone()
   {
-    return new CountAggregator(name);
+    return new CountAggregator();
   }
 
   @Override

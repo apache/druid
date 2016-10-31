@@ -29,9 +29,9 @@ import java.util.Map;
 
 /**
  * Processing related interface
- * 
+ *
  * An AggregatorFactory is an object that knows how to generate an Aggregator using a ColumnSelectorFactory.
- * 
+ *
  * This is useful as an abstraction to allow Aggregator classes to be written in terms of MetricSelector objects
  * without making any assumptions about how they are pulling values out of the base data.  That is, the data is
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
@@ -78,7 +78,10 @@ public abstract class AggregatorFactory
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    throw new UnsupportedOperationException(String.format("[%s] does not implement getMergingFactory(..)", this.getClass().getName()));
+    throw new UnsupportedOperationException(String.format(
+        "[%s] does not implement getMergingFactory(..)",
+        this.getClass().getName()
+    ));
   }
 
   /**
@@ -124,11 +127,13 @@ public abstract class AggregatorFactory
   public abstract int getMaxIntermediateSize();
 
   /**
-   * Returns the starting value for a corresponding aggregator. For example, 0 for sums, - Infinity for max, an empty mogrifier
-   *
-   * @return the starting value for a corresponding aggregator.
+   * Deprecated, to be removed in 0.10.0. See https://github.com/druid-io/druid/issues/3588.
    */
-  public abstract Object getAggregatorStartValue();
+  @Deprecated
+  public Object getAggregatorStartValue()
+  {
+    throw new UnsupportedOperationException("getAggregatorStartValue is deprecated");
+  }
 
   /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and

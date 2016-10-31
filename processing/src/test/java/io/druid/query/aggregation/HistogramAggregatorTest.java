@@ -59,9 +59,7 @@ public class HistogramAggregatorTest
 
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
-    HistogramAggregator agg = new HistogramAggregator("billy", selector, breaks);
-
-    Assert.assertEquals("billy", agg.getName());
+    HistogramAggregator agg = new HistogramAggregator(selector, breaks);
 
     Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
     Assert.assertArrayEquals(new long[]{0,0,0,0,0,0}, ((Histogram)agg.get()).bins);
