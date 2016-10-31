@@ -309,6 +309,7 @@ public class GroupByBenchmark
 
     StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
         new OffheapBufferGenerator("compute", 250_000_000),
+        0,
         Integer.MAX_VALUE
     );
 

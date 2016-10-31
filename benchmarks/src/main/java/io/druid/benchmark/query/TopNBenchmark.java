@@ -272,7 +272,7 @@ public class TopNBenchmark
     }
 
     factory = new TopNQueryRunnerFactory(
-        new StupidPool<>(new OffheapBufferGenerator("compute", 250000000), Integer.MAX_VALUE),
+        new StupidPool<>(new OffheapBufferGenerator("compute", 250000000), 0, Integer.MAX_VALUE),
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
