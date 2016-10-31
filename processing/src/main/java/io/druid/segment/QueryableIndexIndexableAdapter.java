@@ -315,8 +315,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         return "float";
       case LONG:
         return "long";
-      case COMPLEX:
-        return column.getComplexColumn().getTypeName();
+      case COMPLEX: {
+        try (ComplexColumn complexColumn = column.getComplexColumn() ) {
+          return complexColumn.getTypeName();
+        }
+      }
       default:
         throw new ISE("Unknown type[%s]", type);
     }
