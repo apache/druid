@@ -59,8 +59,6 @@ public class DoubleMaxAggregationTest
   {
     DoubleMaxAggregator agg = (DoubleMaxAggregator) doubleMaxAggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     aggregate(selector, agg);
     aggregate(selector, agg);
     aggregate(selector, agg);

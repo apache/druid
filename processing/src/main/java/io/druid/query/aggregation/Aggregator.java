@@ -37,7 +37,11 @@ public interface Aggregator {
   void reset();
   Object get();
   float getFloat();
-  String getName();
+
+  /**
+   * Deprecated, to be removed in 0.10.0. See https://github.com/druid-io/druid/issues/3588.
+   */
+  @Deprecated String getName();
   void close();
 
   long getLong();

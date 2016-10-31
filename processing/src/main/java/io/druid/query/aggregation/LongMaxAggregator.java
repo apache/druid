@@ -35,13 +35,11 @@ public class LongMaxAggregator implements Aggregator
   }
 
   private final LongColumnSelector selector;
-  private final String name;
 
   private long max;
 
-  public LongMaxAggregator(String name, LongColumnSelector selector)
+  public LongMaxAggregator(LongColumnSelector selector)
   {
-    this.name = name;
     this.selector = selector;
 
     reset();
@@ -80,13 +78,13 @@ public class LongMaxAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return this.name;
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override
   public Aggregator clone()
   {
-    return new LongMaxAggregator(name, selector);
+    return new LongMaxAggregator(selector);
   }
 
   @Override

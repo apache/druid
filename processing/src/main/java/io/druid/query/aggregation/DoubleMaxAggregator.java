@@ -35,13 +35,11 @@ public class DoubleMaxAggregator implements Aggregator
   }
 
   private final FloatColumnSelector selector;
-  private final String name;
 
   private double max;
 
-  public DoubleMaxAggregator(String name, FloatColumnSelector selector)
+  public DoubleMaxAggregator(FloatColumnSelector selector)
   {
-    this.name = name;
     this.selector = selector;
 
     reset();
@@ -80,13 +78,13 @@ public class DoubleMaxAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return this.name;
+    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override
   public Aggregator clone()
   {
-    return new DoubleMaxAggregator(name, selector);
+    return new DoubleMaxAggregator(selector);
   }
 
   @Override
