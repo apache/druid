@@ -229,7 +229,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           {
             final boolean hasNext = currRow < numRows;
             if (!hasNext && !done) {
-              CloseQuietly.close(timestamps);
+              timestamps.close();
               for (Object metric : metrics) {
                 if (metric instanceof Closeable) {
                   CloseQuietly.close((Closeable) metric);
