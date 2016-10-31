@@ -77,7 +77,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 
     final Class classOfObject = selector.classOfObject();
     if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
-      return new HyperUniquesAggregator(name, selector);
+      return new HyperUniquesAggregator(selector);
     }
 
     throw new IAE(
@@ -207,12 +207,6 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return HyperLogLogCollector.getLatestNumBytesForDenseStorage();
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return HyperLogLogCollector.makeLatestCollector();
   }
 
   @Override
