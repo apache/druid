@@ -90,9 +90,10 @@ public class AggregatorUtil
   }
 
   public static FloatColumnSelector getFloatColumnSelector(
-      ColumnSelectorFactory metricFactory,
-      String fieldName,
-      String fieldExpression
+      final ColumnSelectorFactory metricFactory,
+      final String fieldName,
+      final String fieldExpression,
+      final float nullValue
   )
   {
     if (fieldName != null && fieldExpression == null) {
@@ -105,7 +106,8 @@ public class AggregatorUtil
         @Override
         public float get()
         {
-          return numeric.get().floatValue();
+          final Number number = numeric.get();
+          return number == null ? nullValue : number.floatValue();
         }
       };
     }
@@ -113,9 +115,10 @@ public class AggregatorUtil
   }
 
   public static LongColumnSelector getLongColumnSelector(
-      ColumnSelectorFactory metricFactory,
-      String fieldName,
-      String fieldExpression
+      final ColumnSelectorFactory metricFactory,
+      final String fieldName,
+      final String fieldExpression,
+      final long nullValue
   )
   {
     if (fieldName != null && fieldExpression == null) {
@@ -128,7 +131,8 @@ public class AggregatorUtil
         @Override
         public long get()
         {
-          return numeric.get().longValue();
+          final Number number = numeric.get();
+          return number == null ? nullValue : number.longValue();
         }
       };
     }

@@ -81,7 +81,7 @@ public class DoubleMinAggregatorFactory extends AggregatorFactory
 
   private FloatColumnSelector getFloatColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getFloatColumnSelector(metricFactory, fieldName, expression);
+    return AggregatorUtil.getFloatColumnSelector(metricFactory, fieldName, expression, Float.MAX_VALUE);
   }
 
   @Override

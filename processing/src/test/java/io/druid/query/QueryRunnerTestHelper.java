@@ -48,6 +48,10 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentSpec;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryEngine;
+import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
@@ -185,7 +189,10 @@ public class QueryRunnerTestHelper
   public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
       hyperUniqueFinalizingPostAggMetric,
       "+",
-      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric, uniqueMetric), new ConstantPostAggregator(null, 1))
+      Lists.newArrayList(
+          new HyperUniqueFinalizingPostAggregator(uniqueMetric, uniqueMetric),
+          new ConstantPostAggregator(null, 1)
+      )
   );
 
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
@@ -335,7 +342,11 @@ public class QueryRunnerTestHelper
         makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
         makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId), "noRollupRtIndex"),
         makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex), "noRollupMMappedTestIndex"),
+        makeQueryRunner(
+            factory,
+            new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex),
+            "noRollupMMappedTestIndex"
+        ),
         makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex), "mergedRealtimeIndex")
     );
   }
@@ -361,9 +372,12 @@ public class QueryRunnerTestHelper
         )
     );
   }
+
   /**
    * Iterate through the iterables in a synchronous manner and return each step as an Object[]
+   *
    * @param in The iterables to step through. (effectively columns)
+   *
    * @return An iterable of Object[] containing the "rows" of the input (effectively rows)
    */
   public static Iterable<Object[]> transformToConstructionFeeder(Iterable<?>... in)
@@ -498,7 +512,9 @@ public class QueryRunnerTestHelper
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
       final VersionedIntervalTimeline<String, Segment> timeline,
-      final QueryRunnerFactory<T, Query<T>> factory) {
+      final QueryRunnerFactory<T, Query<T>> factory
+  )
+  {
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     return new FluentQueryRunnerBuilder<T>(toolChest)
@@ -537,11 +553,16 @@ public class QueryRunnerTestHelper
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
   {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
+    return new IntervalChunkingQueryRunnerDecorator(null, null, null)
+    {
       @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate,
-          QueryToolChest<T, ? extends Query<T>> toolChest) {
-        return new QueryRunner<T>() {
+      public <T> QueryRunner<T> decorate(
+          final QueryRunner<T> delegate,
+          QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return new QueryRunner<T>()
+        {
           @Override
           public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
           {
@@ -559,5 +580,23 @@ public class QueryRunnerTestHelper
       builder.put(String.valueOf(keyvalues[i]), keyvalues[i + 1]);
     }
     return builder.build();
+  }
+
+  public static QueryRunnerFactoryConglomerate newConglomerate()
+  {
+    return new DefaultQueryRunnerFactoryConglomerate(
+        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+            .put(TimeseriesQuery.class, newTimeseriesQueryRunnerFactory())
+            .build()
+    );
+  }
+
+  public static TimeseriesQueryRunnerFactory newTimeseriesQueryRunnerFactory()
+  {
+    return new TimeseriesQueryRunnerFactory(
+        new TimeseriesQueryQueryToolChest(NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryEngine(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
   }
 }
