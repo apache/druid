@@ -56,7 +56,7 @@ public class IndexedComplexColumn implements ComplexColumn
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
   }
 }
