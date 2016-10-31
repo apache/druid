@@ -19,8 +19,8 @@
 
 package io.druid.collections;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
@@ -45,17 +45,27 @@ public class StupidPool<T>
       Supplier<T> generator
   )
   {
-    this.generator = generator;
-    this.objectsCacheMaxCount = Integer.MAX_VALUE;
+    this(generator, 0, Integer.MAX_VALUE);
   }
 
   public StupidPool(
       Supplier<T> generator,
+      int initCount,
       int objectsCacheMaxCount
   )
   {
+    Preconditions.checkArgument(
+        initCount <= objectsCacheMaxCount,
+        "initCount[%s] must be less/equal to objectsCacheMaxCount[%s]",
+        initCount,
+        objectsCacheMaxCount
+    );
     this.generator = generator;
     this.objectsCacheMaxCount = objectsCacheMaxCount;
+
+    for (int i = 0; i < initCount; i++) {
+      objects.add(generator.get());
+    }
   }
 
   public ResourceHolder<T> take()
