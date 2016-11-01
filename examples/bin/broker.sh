@@ -7,4 +7,5 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
+cd $(dirname $0)/../
 sh ./bin/node.sh broker $1
