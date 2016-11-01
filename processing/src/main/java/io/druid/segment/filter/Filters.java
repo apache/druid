@@ -87,6 +87,17 @@ public class Filters
     return dimFilter == null ? null : dimFilter.toFilter();
   }
 
+  public static ImmutableBitmap allFalse(final BitmapIndexSelector selector)
+  {
+    return selector.getBitmapFactory().makeEmptyImmutableBitmap();
+  }
+
+  public static ImmutableBitmap allTrue(final BitmapIndexSelector selector)
+  {
+    return selector.getBitmapFactory()
+                   .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
+  }
+
   /**
    * Return the union of bitmaps for all values matching a particular predicate.
    *
