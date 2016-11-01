@@ -559,6 +559,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())
+                .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())
