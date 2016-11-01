@@ -20,11 +20,11 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ConciseBitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.WrappedImmutableConciseBitmap;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 
 import java.nio.ByteBuffer;
 
