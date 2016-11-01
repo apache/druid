@@ -37,9 +37,6 @@ public final class ThriftUtils
 
   private static final Logger log = new Logger(ThriftUtils.class);
 
-  private static final java.util.Base64.Encoder B64_ENCODER = java.util.Base64.getEncoder().withoutPadding();
-  private static final java.util.Base64.Decoder B64_DECODER = java.util.Base64.getMimeDecoder();
-
   private static final ThreadLocal<TSerializer> SERIALIZER = new ThreadLocal<TSerializer>()
   {
     @Override
@@ -86,7 +83,7 @@ public final class ThriftUtils
       return EMPTY_BYTES;
     }
     final byte last = src[src.length - 1];
-    return (0 == last || '}' == last) ? src : B64_DECODER.decode(src);
+    return (0 == last || '}' == last) ? src : Base64.decodeBase64(src);
   }
 
   /**
@@ -169,7 +166,7 @@ public final class ThriftUtils
   {
     try {
       byte[] binaryData = SERIALIZER.get().serialize(thriftObj);
-      return new String(B64_ENCODER.encode(binaryData), StandardCharsets.ISO_8859_1);
+      return new String(Base64.encodeBase64(binaryData), StandardCharsets.UTF_8);
     }
     catch (TException e) {
       log.warn("Error occurs when encoding thrift object, %s" + e.getMessage());

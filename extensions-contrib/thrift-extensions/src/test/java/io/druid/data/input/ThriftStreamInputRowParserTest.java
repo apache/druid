@@ -19,6 +19,7 @@
 
 package io.druid.data.input;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -32,6 +33,7 @@ import io.druid.data.input.thrift.util.ThriftUtils;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +46,16 @@ import static org.junit.Assert.assertEquals;
 
 public class ThriftStreamInputRowParserTest
 {
+
+  private static final Function<Integer, String> intToString = new Function<Integer, String>()
+  {
+    @Nullable
+    @Override
+    public String apply(@Nullable Integer integer)
+    {
+      return integer.toString();
+    }
+  };
 
   public static final DateTime DATE_TIME = new DateTime(2016, 10, 19, 10, 30);
   public static final short SHORT_DIMENSION_VALUE = 2;
@@ -109,7 +121,7 @@ public class ThriftStreamInputRowParserTest
   public static final TimestampSpec TIMESTAMP_SPEC =
       new TimestampSpec(TIMESTAMP, "millis", null);
   public static final DimensionsSpec DIMENSIONS_SPEC =
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), new ArrayList<>(), null);
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), new ArrayList<String>(), null);
   public static final TimeAndDimsParseSpec PARSE_SPEC = new TimeAndDimsParseSpec(TIMESTAMP_SPEC, DIMENSIONS_SPEC);
 
   public static final String tClasName = "io.druid.data.input.test.TestData";
@@ -131,7 +143,7 @@ public class ThriftStreamInputRowParserTest
     assertEquals(buildStringList(Arrays.toString(BINARY_DIMENSION_VALUE)), inputRow.getDimension(BINARY_DIMENSION));
     assertEquals(buildStringList(ENUM_DIMENSION_VALUE), inputRow.getDimension(ENUM_DIMENSION));
     assertEquals(
-        Lists.transform(INT_LIST_DIMENSION_VALUE, Object::toString),
+        Lists.transform(INT_LIST_DIMENSION_VALUE, intToString),
         inputRow.getDimension(INT_LIST_DIMENSION)
     );
     assertEquals(buildStringList(INT_INT_MAP_DIMENSION_VALUE), inputRow.getDimension(INT_INT_MAP_DIMENSION));

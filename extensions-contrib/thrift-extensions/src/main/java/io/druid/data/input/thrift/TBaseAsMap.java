@@ -27,7 +27,6 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 public class TBaseAsMap<T extends TBase> implements Map<String, Object>
@@ -102,15 +101,15 @@ public class TBaseAsMap<T extends TBase> implements Map<String, Object>
       if (ret instanceof TBase) {
         TBase tempTBase = (TBase) ret;
         Map<? extends TFieldIdEnum, FieldMetaData> structMetaDataMap = FieldMetaData.getStructMetaDataMap(tempTBase.getClass());
-        Optional<TFieldIdEnum> fieldIdEnum = Optional.empty();
+        TFieldIdEnum fieldIdEnum = null;
         for (TFieldIdEnum tFieldIdEnum : structMetaDataMap.keySet()) {
           if (tFieldIdEnum.getFieldName().equals(fieldNames[index])) {
-            fieldIdEnum = Optional.of(tFieldIdEnum);
+            fieldIdEnum = tFieldIdEnum;
             break;
           }
         }
-        if (fieldIdEnum.isPresent()) {
-          ret = tempTBase.getFieldValue(fieldIdEnum.get());
+        if (fieldIdEnum != null) {
+          ret = tempTBase.getFieldValue(fieldIdEnum);
           index++;
         } else {
           fieldNotFound = true;
