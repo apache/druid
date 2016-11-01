@@ -91,12 +91,6 @@ public class IndexBuilder
     return this;
   }
 
-  public IndexBuilder maxRows(int maxRows)
-  {
-    this.maxRows = maxRows;
-    return this;
-  }
-
   public IndexBuilder add(InputRow... rows)
   {
     return add(Arrays.asList(rows));

@@ -81,7 +81,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
 
   private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression);
+    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression, 0L);
   }
 
   @Override

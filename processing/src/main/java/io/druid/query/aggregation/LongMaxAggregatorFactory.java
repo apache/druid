@@ -81,7 +81,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
 
   private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression);
+    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression, Long.MIN_VALUE);
   }
 
   @Override
