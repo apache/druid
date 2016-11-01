@@ -63,4 +63,22 @@ public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   {
     return "";
   }
+
+  @Override
+  public int getMaxRetriesBeforeBlacklist()
+  {
+    return 1;
+  }
+
+  @Override
+  public long getTaskBlackListBackoffTimeMillis()
+  {
+    return timeout.getMillis();
+  }
+
+  @Override
+  public Period getTaskBlackListCleanupPeriod()
+  {
+    return timeout;
+  }
 }

@@ -49,6 +49,18 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   @Min(1)
   private int pendingTasksRunnerNumThreads = 1;
 
+  @JsonProperty
+  @Min(1)
+  private int maxRetriesBeforeBlacklist = 5;
+
+  @JsonProperty
+  @Min(60000)
+  private long taskBlackListBackoffTimeMillis = 900000;
+
+  @JsonProperty
+  @NotNull
+  private Period taskBlackListCleanupPeriod = new Period("PT5M");
+
   public Period getTaskAssignmentTimeout()
   {
     return taskAssignmentTimeout;
@@ -73,6 +85,30 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   public int getPendingTasksRunnerNumThreads()
   {
     return pendingTasksRunnerNumThreads;
+  }
+
+  public int getMaxRetriesBeforeBlacklist() {
+    return maxRetriesBeforeBlacklist;
+  }
+
+  public void setMaxRetriesBeforeBlacklist(int maxRetriesBeforeBlacklist) {
+    this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
+  }
+
+  public long getTaskBlackListBackoffTimeMillis() {
+    return taskBlackListBackoffTimeMillis;
+  }
+
+  public void setTaskBlackListBackoffTimeMillis(long taskBlackListBackoffTimeMillis) {
+    this.taskBlackListBackoffTimeMillis = taskBlackListBackoffTimeMillis;
+  }
+
+  public Period getTaskBlackListCleanupPeriod() {
+    return taskBlackListCleanupPeriod;
+  }
+
+  public void setTaskBlackListCleanupPeriod(Period taskBlackListCleanupPeriod) {
+    this.taskBlackListCleanupPeriod = taskBlackListCleanupPeriod;
   }
 
   @Override
@@ -102,7 +138,16 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     if (!getMinWorkerVersion().equals(that.getMinWorkerVersion())) {
       return false;
     }
-    return taskShutdownLinkTimeout.equals(that.taskShutdownLinkTimeout);
+    if (!taskShutdownLinkTimeout.equals(that.taskShutdownLinkTimeout)) {
+      return false;
+    }
+    if (maxRetriesBeforeBlacklist != that.maxRetriesBeforeBlacklist) {
+      return false;
+    }
+    if (taskBlackListBackoffTimeMillis != that.taskBlackListBackoffTimeMillis) {
+      return false;
+    }
+    return taskBlackListCleanupPeriod.equals(that.taskBlackListCleanupPeriod);
 
   }
 
@@ -115,6 +160,9 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     result = 31 * result + maxZnodeBytes;
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
+    result = 31 * result + maxRetriesBeforeBlacklist;
+    result = 31 * result + (int)taskBlackListBackoffTimeMillis;
+    result = 31 * result + taskBlackListCleanupPeriod.hashCode();
     return result;
   }
 
@@ -128,6 +176,9 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
            ", maxZnodeBytes=" + maxZnodeBytes +
            ", taskShutdownLinkTimeout=" + taskShutdownLinkTimeout +
            ", pendingTasksRunnerNumThreads=" + pendingTasksRunnerNumThreads +
+           ", maxRetriesBeforeBlacklist=" + maxRetriesBeforeBlacklist +
+           ", taskBlackListBackoffTimeMillis=" + taskBlackListBackoffTimeMillis +
+           ", taskBlackListCleanupPeriod=" + taskBlackListCleanupPeriod +
            '}';
   }
 }
