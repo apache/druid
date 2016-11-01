@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
+import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -33,29 +34,32 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 @Ignore
 @RunWith(Parameterized.class)
 public class CostBalancerStrategyBenchmark extends AbstractBenchmark
 {
   @Parameterized.Parameters
-  public static List<CostBalancerStrategyFactory[]> factoryClasses()
+  public static List<CostBalancerStrategy[]> factoryClasses()
   {
     return Arrays.asList(
-        (CostBalancerStrategyFactory[]) Arrays.asList(
-            new CostBalancerStrategyFactory(1)
+        (CostBalancerStrategy[]) Arrays.asList(
+            new CostBalancerStrategy(MoreExecutors.listeningDecorator(
+                    Executors.newFixedThreadPool(1)))
         ).toArray(),
-        (CostBalancerStrategyFactory[]) Arrays.asList(
-            new CostBalancerStrategyFactory(4)
+        (CostBalancerStrategy[]) Arrays.asList(
+            new CostBalancerStrategy(MoreExecutors.listeningDecorator(
+                    Executors.newFixedThreadPool(4)))
         ).toArray()
     );
   }
 
   private final CostBalancerStrategy strategy;
 
-  public CostBalancerStrategyBenchmark(CostBalancerStrategyFactory factory)
+  public CostBalancerStrategyBenchmark(CostBalancerStrategy costBalancerStrategy)
   {
-    this.strategy = factory.createBalancerStrategy(DateTime.now());
+    this.strategy = costBalancerStrategy;
   }
 
   private static List<ServerHolder> serverHolderList;

@@ -20,11 +20,11 @@ package io.druid.server.coordinator;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 
-public class CostBalancerStrategyFactory implements BalancerStrategyFactory
+public class DiskNormalizedCostBalancerStrategyFactory implements BalancerStrategyFactory
 {
   @Override
-  public CostBalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
   {
-    return new CostBalancerStrategy(exec);
+    return new DiskNormalizedCostBalancerStrategy(exec);
   }
 }

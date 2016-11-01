@@ -72,8 +72,7 @@ public abstract class LoadRule implements Rule
       }
 
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
-      final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-      final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
+      final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
         CoordinatorStats assignStats = assign(
             params.getReplicationManager(),
