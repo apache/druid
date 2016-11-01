@@ -116,11 +116,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outDir.getParent());
-
       if (!fs.rename(tmpFile.getParent(), outDir)) {
-        if (!fs.delete(tmpFile.getParent(), true)) {
-          log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
-        }
         if (fs.exists(outDir)) {
           log.info(
               "Unable to rename temp directory[%s] to segment directory[%s]. It is already pushed by a replica task.",
@@ -134,6 +130,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
               outDir
           ));
         }
+      }
+    } finally {
+      try {
+        if (fs.exists(tmpFile.getParent()) && !fs.delete(tmpFile.getParent(), true)) {
+          log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
+        }
+      } catch(IOException ex) {
+        log.error(ex, "Failed to delete temp directory[%s]", tmpFile.getParent());
       }
     }
 
