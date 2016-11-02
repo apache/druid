@@ -41,7 +41,7 @@ public class ClientInfoResourceTestClient
 {
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final String broker;
+  private final String brokerUrl;
   private final StatusResponseHandler responseHandler;
 
   @Inject
@@ -53,7 +53,7 @@ public class ClientInfoResourceTestClient
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.broker = config.getBrokerUrl();
+    this.brokerUrl = config.getBrokerUrl();
     this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
   }
 
@@ -61,7 +61,7 @@ public class ClientInfoResourceTestClient
   {
     return String.format(
         "%s/druid/v2/datasources",
-        broker
+        brokerUrl
     );
   }
 

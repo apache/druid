@@ -107,7 +107,6 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     LOG.info("zookeepers: [%s]", zookeeperHosts);
     LOG.info("kafka: [%s]", kafkaHost);
     LOG.info("Username: [%s]", username);
-    LOG.info("Password: [%s]", password);
   }
 
   @Override
