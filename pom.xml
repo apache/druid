@@ -85,7 +85,6 @@
         <module>aws-common</module>
         <module>java-util</module>
         <module>bytebuffer-collections</module>
-        <module>extendedset</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>

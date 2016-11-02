@@ -20,11 +20,12 @@
 package io.druid.collections.bitmap;
 
 
-import io.druid.extendedset.intset.ImmutableConciseSet;
-import io.druid.extendedset.intset.IntSet;
+import java.nio.ByteBuffer;
+
 import org.roaringbitmap.IntIterator;
 
-import java.nio.ByteBuffer;
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import it.uniroma3.mat.extendedset.intset.IntSet;
 
 public class WrappedImmutableConciseBitmap implements ImmutableBitmap
 {

@@ -19,8 +19,9 @@
 
 package io.druid.collections.bitmap;
 
-import io.druid.extendedset.intset.IntSet;
 import org.roaringbitmap.IntIterator;
+
+import it.uniroma3.mat.extendedset.intset.IntSet;
 
 /**
  */

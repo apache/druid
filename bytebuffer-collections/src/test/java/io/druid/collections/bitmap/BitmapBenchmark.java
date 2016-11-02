@@ -19,11 +19,12 @@
 
 package io.druid.collections.bitmap;
 
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.carrotsearch.junitbenchmarks.BenchmarkRule;
-import com.carrotsearch.junitbenchmarks.Clock;
-import com.google.common.collect.Lists;
-import io.druid.extendedset.intset.ImmutableConciseSet;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Random;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,11 +33,12 @@ import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Random;
+import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
+import com.carrotsearch.junitbenchmarks.BenchmarkRule;
+import com.carrotsearch.junitbenchmarks.Clock;
+import com.google.common.collect.Lists;
+
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 
 @BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
