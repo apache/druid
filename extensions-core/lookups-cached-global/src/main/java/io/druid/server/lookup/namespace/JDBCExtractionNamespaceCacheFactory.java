@@ -74,6 +74,7 @@ public class JDBCExtractionNamespaceCacheFactory
       @Override
       public String call()
       {
+        final long dbQueryStart = System.currentTimeMillis();
         final DBI dbi = ensureDBI(id, namespace);
         final String table = namespace.getTable();
         final String valueColumn = namespace.getValueColumn();
@@ -118,7 +119,11 @@ public class JDBCExtractionNamespaceCacheFactory
           cache.put(pair.lhs, pair.rhs);
         }
         LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
-        return String.format("%d", System.currentTimeMillis());
+        if (lastDBUpdate != null) {
+          return lastDBUpdate.toString();
+        } else {
+          return String.format("%d", dbQueryStart);
+        }
       }
     };
   }
