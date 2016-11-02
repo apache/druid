@@ -22,8 +22,6 @@ package io.druid.server.lookup.namespace;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.data.input.MapPopulator;
 import io.druid.java.util.common.CompressionUtils;
@@ -33,9 +31,8 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,11 +62,10 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
   public Callable<String> getCachePopulator(
       final String id,
       final URIExtractionNamespace extractionNamespace,
-      final String lastVersion,
+      @Nullable final String lastVersion,
       final Map<String, String> cache
   )
   {
-    final long lastCached = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
     return new Callable<String>()
     {
       @Override
@@ -134,17 +130,16 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
                 {
                   final String version = puller.getVersion(uri);
                   try {
-                    long lastModified = Long.parseLong(version);
-                    if (lastModified <= lastCached) {
-                      final DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
+                    // Important to call equals() against version because lastVersion could be null
+                    if (version.equals(lastVersion)) {
                       log.debug(
-                          "URI [%s] for namespace [%s] was las modified [%s] but was last cached [%s]. Skipping ",
+                          "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
+                          "Skipping ",
                           uri.toString(),
                           id,
-                          fmt.print(lastModified),
-                          fmt.print(lastCached)
+                          version
                       );
-                      return version;
+                      return lastVersion;
                     }
                   }
                   catch (NumberFormatException ex) {
