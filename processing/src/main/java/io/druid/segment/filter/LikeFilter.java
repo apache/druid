@@ -52,7 +52,7 @@ public class LikeFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    if (extractionFn == null && likeMatcher.getSuffixStyle() == LikeDimFilter.LikeMatcher.SuffixStyle.MATCH_EMPTY) {
+    if (extractionFn == null && likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_EMPTY) {
       // dimension equals prefix
       return selector.getBitmapIndex(dimension, likeMatcher.getPrefix());
     } else if (extractionFn == null) {
