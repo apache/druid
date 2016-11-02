@@ -41,33 +41,33 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
     return new IntegrationTestingConfig()
     {
       @Override
-      public String getCoordinatorHost()
+      public String getCoordinatorUrl()
       {
-        return dockerIp+":8081";
+        return "http://" + dockerIp + ":8081";
       }
 
       @Override
-      public String getIndexerHost()
+      public String getIndexerUrl()
       {
-        return dockerIp+":8090";
+        return "http://" + dockerIp + ":8090";
       }
 
       @Override
-      public String getRouterHost()
+      public String getRouterUrl()
       {
-        return dockerIp+ ":8888";
+        return "http://" + dockerIp + ":8888";
       }
 
       @Override
-      public String getBrokerHost()
+      public String getBrokerUrl()
       {
-        return dockerIp + ":8082";
+        return "http://" + dockerIp + ":8082";
       }
 
       @Override
-      public String getHistoricalHost()
+      public String getHistoricalUrl()
       {
-        return dockerIp + ":8083";
+        return "http://" + dockerIp + ":8083";
       }
 
       @Override
@@ -79,22 +79,35 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getZookeeperHosts()
       {
-        return dockerIp + ":2181";
+        return "http://" + dockerIp + ":2181";
       }
 
       @Override
       public String getKafkaHost()
       {
-        return dockerIp + ":9092";
+        return "http://" + dockerIp + ":9092";
       }
+
 
       @Override
       public String getProperty(String prop)
       {
         if (prop.equals("hadoopTestDir")) {
-	   return hadoopDir;
-	}
+          return hadoopDir;
+        }
         throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);
+      }
+
+      @Override
+      public String getUsername()
+      {
+        return null;
+      }
+
+      @Override
+      public String getPassword()
+      {
+        return null;
       }
     };
   }
