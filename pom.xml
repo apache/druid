@@ -109,8 +109,8 @@
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
-        <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/thrift-extensions</module>
+        <module>extensions-contrib/orc-extensions</module>
     </modules>
 
     <dependencyManagement>
