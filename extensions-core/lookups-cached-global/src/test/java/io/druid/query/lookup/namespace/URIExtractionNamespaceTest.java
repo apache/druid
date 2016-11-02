@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -63,6 +64,7 @@ public class URIExtractionNamespaceTest
             )
         )
     ).registerSubtypes(URIExtractionNamespace.class, URIExtractionNamespace.FlatDataParser.class);
+    mapper.registerSubtypes(URIExtractionNamespace.class, URIExtractionNamespace.CSVFlatDataParser.class);
 
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     mapper.setAnnotationIntrospectors(
@@ -84,25 +86,12 @@ public class URIExtractionNamespaceTest
             "col1",
             "col2",
             "col3"
-        ), "col2", "col3"
+        )
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
+    Assert.assertEquals(ImmutableMap.of("col1", "A", "col2", "B", "col3", "C"), parser.getParser().parse("A,B,C"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testBadCSV()
-  {
-    URIExtractionNamespace.CSVFlatDataParser parser = new URIExtractionNamespace.CSVFlatDataParser(
-        ImmutableList.of(
-            "col1",
-            "col2",
-            "col3"
-        ), "col2", "col3ADFSDF"
-    );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
-  }
-
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testBadCSV2()
   {
     URIExtractionNamespace.CSVFlatDataParser parser = new URIExtractionNamespace.CSVFlatDataParser(
@@ -110,9 +99,10 @@ public class URIExtractionNamespaceTest
             "col1",
             "col2",
             "col3"
-        ), "col2", "col3"
+        )
     );
-    Map<String, String> map = parser.getParser().parse("A");
+    Map<String, Object> map = parser.getParser().parse("A");
+    Assert.assertNotNull(map);
   }
 
   @Test
@@ -121,10 +111,9 @@ public class URIExtractionNamespaceTest
     URIExtractionNamespace.TSVFlatDataParser parser = new URIExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "|",
-        null, "col2",
-        "col3"
+        null
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A|B|C"));
+    Assert.assertEquals(ImmutableMap.of("col1", "A", "col2", "B", "col3", "C"), parser.getParser().parse("A|B|C"));
   }
 
   @Test
@@ -133,37 +122,21 @@ public class URIExtractionNamespaceTest
     URIExtractionNamespace.TSVFlatDataParser parser = new URIExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         "\\u0001",
-        "\\u0002", "col2",
-        "col3"
+        "\\u0002"
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A\\u0001B\\u0001C"));
+    Assert.assertEquals(ImmutableMap.of("col1", "A", "col2", "B", "col3", "C"), parser.getParser().parse("A\\u0001B\\u0001C"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testBadTSV()
-  {
-    URIExtractionNamespace.TSVFlatDataParser parser = new URIExtractionNamespace.TSVFlatDataParser(
-        ImmutableList.of("col1", "col2", "col3fdsfds"),
-        ",",
-        null, "col2",
-        "col3"
-    );
-    Map<String, String> map = parser.getParser().parse("A,B,C");
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
-  }
-
-
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testBadTSV2()
   {
     URIExtractionNamespace.TSVFlatDataParser parser = new URIExtractionNamespace.TSVFlatDataParser(
         ImmutableList.of("col1", "col2", "col3"),
         ",",
-        null, "col2",
-        "col3"
+        null
     );
-    Map<String, String> map = parser.getParser().parse("A");
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("A,B,C"));
+    Map<String, Object> map = parser.getParser().parse("A");
+    Assert.assertNotNull(map);
   }
 
   @Test
@@ -172,12 +145,10 @@ public class URIExtractionNamespaceTest
     final String keyField = "keyField";
     final String valueField = "valueField";
     URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        new ObjectMapper(),
-        keyField,
-        valueField
+        new ObjectMapper()
     );
     Assert.assertEquals(
-        ImmutableMap.of("B", "C"),
+        ImmutableMap.of(keyField, "B", valueField, "C", "FOO", "BAR"),
         parser.getParser()
               .parse(
                   String.format(
@@ -189,19 +160,15 @@ public class URIExtractionNamespaceTest
     );
   }
 
-
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testJSONFlatDataParserBad()
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
     URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        new ObjectMapper(),
-        keyField,
-        valueField
+        new ObjectMapper()
     );
-    Assert.assertEquals(
-        ImmutableMap.of("B", "C"),
+    Assert.assertNull(
         parser.getParser()
               .parse(
                   String.format(
@@ -210,21 +177,19 @@ public class URIExtractionNamespaceTest
                       valueField
                   )
               )
+              .get(keyField)
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testJSONFlatDataParserBad2()
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
     URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        registerTypes(new ObjectMapper()),
-        null,
-        valueField
+        registerTypes(new ObjectMapper())
     );
-    Assert.assertEquals(
-        ImmutableMap.of("B", "C"),
+    Assert.assertNull(
         parser.getParser()
               .parse(
                   String.format(
@@ -233,44 +198,19 @@ public class URIExtractionNamespaceTest
                       valueField
                   )
               )
+              .get(null)
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testJSONFlatDataParserBad3()
-  {
-    final String keyField = "keyField";
-    final String valueField = "valueField";
-    URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        registerTypes(new ObjectMapper()),
-        keyField,
-        null
-    );
-    Assert.assertEquals(
-        ImmutableMap.of("B", "C"),
-        parser.getParser()
-              .parse(
-                  String.format(
-                      "{\"%sDFSDFDS\":\"B\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
-                      keyField,
-                      valueField
-                  )
-              )
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testJSONFlatDataParserBad4()
   {
     final String keyField = "keyField";
     final String valueField = "valueField";
     URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        registerTypes(new ObjectMapper()),
-        "",
-        ""
+        registerTypes(new ObjectMapper())
     );
-    Assert.assertEquals(
-        ImmutableMap.of("B", "C"),
+    Assert.assertNull(
         parser.getParser()
               .parse(
                   String.format(
@@ -279,6 +219,7 @@ public class URIExtractionNamespaceTest
                       valueField
                   )
               )
+              .get("")
     );
   }
 
@@ -288,7 +229,7 @@ public class URIExtractionNamespaceTest
     URIExtractionNamespace.ObjectMapperFlatDataParser parser = new URIExtractionNamespace.ObjectMapperFlatDataParser(
         registerTypes(new ObjectMapper())
     );
-    Assert.assertEquals(ImmutableMap.of("B", "C"), parser.getParser().parse("{\"B\":\"C\"}"));
+    Assert.assertEquals(ImmutableMap.of(KeyValueMap.DEFAULT_MAPNAME, ImmutableMap.of("B", "C")), parser.getParser().parse("{\"B\":\"C\"}"));
   }
 
   @Test
@@ -301,11 +242,11 @@ public class URIExtractionNamespaceTest
                 "col1",
                 "col2",
                 "col3"
-            ), "col2", "col3"
+            )
         ),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
-        new URIExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+        new URIExtractionNamespace.JSONFlatDataParser(mapper),
+        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null)
     )) {
       final String str = mapper.writeValueAsString(parser);
       final URIExtractionNamespace.FlatDataParser parser2 = mapper.readValue(
@@ -326,11 +267,11 @@ public class URIExtractionNamespaceTest
                 "col1",
                 "col2",
                 "col3"
-            ), "col2", "col3"
+            )
         ),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
-        new URIExtractionNamespace.JSONFlatDataParser(mapper, "keyField", "valueField"),
-        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null, "A", "B")
+        new URIExtractionNamespace.JSONFlatDataParser(mapper),
+        new URIExtractionNamespace.TSVFlatDataParser(ImmutableList.of("A", "B"), ",", null)
     )) {
       Assert.assertFalse(parser.toString().contains("@"));
     }
@@ -382,6 +323,31 @@ public class URIExtractionNamespaceTest
   }
 
   @Test
+  public void testExplicitJsonWithMultipleMaps() throws IOException
+  {
+    final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
+    URIExtractionNamespace namespace = mapper.readValue(
+        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"csv\", \"columns\":[\"key\", \"value1\", \"value2\"]}, \"maps\":[{\"mapName\":\"map1\",\"keyColumn\":\"key\", \"valueColumn\":\"value1\"}, {\"mapName\":\"map2\",\"keyColumn\":\"key\", \"valueColumn\":\"value2\"}], \"pollPeriod\":\"PT5M\"}",
+        URIExtractionNamespace.class
+    );
+
+    Assert.assertEquals(
+        URIExtractionNamespace.CSVFlatDataParser.class.getCanonicalName(),
+        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+    );
+    Assert.assertEquals("file:/foo", namespace.getUri().toString());
+    List<KeyValueMap> keyValueMaps = namespace.getMaps();
+    Assert.assertEquals(2, keyValueMaps.size());
+    Assert.assertEquals("map1", keyValueMaps.get(0).getMapName());
+    Assert.assertEquals("key", keyValueMaps.get(0).getKeyColumn());
+    Assert.assertEquals("value1", keyValueMaps.get(0).getValueColumn());
+    Assert.assertEquals("map2", keyValueMaps.get(1).getMapName());
+    Assert.assertEquals("key", keyValueMaps.get(1).getKeyColumn());
+    Assert.assertEquals("value2", keyValueMaps.get(1).getValueColumn());
+    Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
+  }
+
+  @Test
   public void testFlatDataNumeric()
   {
     final String keyField = "keyField";
@@ -389,13 +355,11 @@ public class URIExtractionNamespaceTest
     final int n = 341879;
     final String nString = String.format("%d", n);
     URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        new ObjectMapper(),
-        keyField,
-        valueField
+        new ObjectMapper()
     );
     Assert.assertEquals(
         "num string value",
-        ImmutableMap.of("B", nString),
+        ImmutableMap.of(keyField, "B", valueField, nString, "FOO", "BAR"),
         parser.getParser()
               .parse(
                   String.format(
@@ -408,7 +372,7 @@ public class URIExtractionNamespaceTest
     );
     Assert.assertEquals(
         "num string key",
-        ImmutableMap.of(nString, "C"),
+        ImmutableMap.of(keyField, nString, valueField, "C", "FOO", "BAR"),
         parser.getParser()
               .parse(
                   String.format(
@@ -421,7 +385,7 @@ public class URIExtractionNamespaceTest
     );
     Assert.assertEquals(
         "num value",
-        ImmutableMap.of("B", nString),
+        ImmutableMap.<String, Object>of(keyField, "B", valueField, (long)n, "FOO", "BAR"),
         parser.getParser()
               .parse(
                   String.format(
@@ -434,7 +398,7 @@ public class URIExtractionNamespaceTest
     );
     Assert.assertEquals(
         "num key",
-        ImmutableMap.of(nString, "C"),
+        ImmutableMap.<String, Object>of(keyField, (long)n, valueField, "C", "FOO", "BAR"),
         parser.getParser()
               .parse(
                   String.format(
@@ -456,7 +420,7 @@ public class URIExtractionNamespaceTest
     final int n = 341879;
     final String nString = String.format("%d", n);
     Assert.assertEquals(
-        ImmutableMap.of("key", nString),
+        ImmutableMap.of(KeyValueMap.DEFAULT_MAPNAME, ImmutableMap.of("key", nString)),
         parser.getParser().parse(String.format("{\"key\":%d}", n))
     );
   }

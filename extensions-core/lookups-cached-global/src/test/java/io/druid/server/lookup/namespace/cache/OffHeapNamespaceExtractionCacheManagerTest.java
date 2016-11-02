@@ -39,6 +39,7 @@ import io.druid.initialization.Initialization;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.NamespaceExtractionModule;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -101,7 +102,7 @@ public class OffHeapNamespaceExtractionCacheManagerTest
       final String namespace = "namespace-" + UUID.randomUUID().toString();
       final String cacheKey = "initial-cache-" + namespace;
       namespaceIds.add(namespace);
-      manager.getCacheMap(cacheKey).put("foo", "bar");
+      manager.getInnerCacheMap(cacheKey, KeyValueMap.DEFAULT_MAPNAME).put("foo", "bar");
       Assert.assertFalse(manager.swapAndClearCache(namespace, cacheKey));
     }
     final Random random = new Random(3748218904L);
@@ -123,7 +124,7 @@ public class OffHeapNamespaceExtractionCacheManagerTest
                 }
                 for (int i = 0; i < 1000; ++i) {
                   final String cacheKey = String.format("%s-%d-key-%d", namespace, j, i);
-                  manager.getCacheMap(cacheKey).put("foo", "bar" + Integer.toString(i));
+                  manager.getInnerCacheMap(cacheKey, KeyValueMap.DEFAULT_MAPNAME).put("foo", "bar" + Integer.toString(i));
                   Assert.assertTrue(manager.swapAndClearCache(namespace, cacheKey));
                 }
               }
@@ -138,7 +139,7 @@ public class OffHeapNamespaceExtractionCacheManagerTest
     }
 
     for (final String namespace : namespaceIds) {
-      Assert.assertEquals(ImmutableMap.of("foo", "bar999"), manager.getCacheMap(namespace));
+      Assert.assertEquals(ImmutableMap.of("foo", "bar999"), manager.getCacheMap(namespace).values().iterator().next());
     }
   }
 }

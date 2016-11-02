@@ -20,6 +20,7 @@
 package io.druid.server.lookup.namespace.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -32,11 +33,13 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
+import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -96,11 +99,14 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           final String id,
           final URIExtractionNamespace extractionNamespace,
           final String lastVersion,
-          final Map<String, String> cache
+          final ConcurrentMap<MultiKey, Map<String, String>> cache,
+          final Function<MultiKey, Map<String, String>> mapAllocator
       ) throws Exception
       {
+        Map<String, String> keyValue = new ConcurrentHashMap<>();
+        keyValue.put(KEY, VALUE);
         // Don't actually read off disk because TravisCI doesn't like that
-        cache.put(KEY,VALUE);
+        cache.put(new MultiKey(id, KeyValueMap.DEFAULT_MAPNAME), keyValue);
         Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
         return Long.toString(System.currentTimeMillis());
       }
@@ -156,6 +162,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
+        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -181,6 +188,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
+        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -202,6 +210,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
+          KeyValueMap.DEFAULT_MAPS,
           new Period(delay),
           null
       );
@@ -334,6 +343,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
+        KeyValueMap.DEFAULT_MAPS,
         new Period(period),
         null
     );
@@ -373,7 +383,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       }
     } while (!manager.implData.containsKey(ns) || !manager.implData.get(ns).enabled.get());
 
-    Assert.assertEquals(VALUE, manager.getCacheMap(ns).get(KEY));
+    Assert.assertEquals(VALUE, manager.getInnerCacheMap(ns, KeyValueMap.DEFAULT_MAPNAME).get(KEY));
 
     Assert.assertTrue(manager.implData.containsKey(ns));
 
@@ -412,6 +422,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
+          KeyValueMap.DEFAULT_MAPS,
           new Period(period),
           null
       );
@@ -461,6 +472,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
+          KeyValueMap.DEFAULT_MAPS,
           new Period(5L),
           null
       );

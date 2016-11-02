@@ -19,19 +19,24 @@
 
 package io.druid.query.lookup;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.java.util.common.ISE;
-import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
 {
@@ -53,7 +58,17 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getKeys()
   {
     try {
-      return Response.ok(getLatest().keySet()).build();
+      Set<MultiKey> keySet = getLatest().keySet();
+      List<String> cleanedKeyList = Lists.transform(
+          Lists.newArrayList(keySet),
+          new Function<MultiKey, String>() {
+            @Override
+            public String apply(MultiKey key) {
+              return (String) key.getKey(1);
+            }
+          }
+      );
+      return Response.ok(Sets.newHashSet(cleanedKeyList)).build();
     }
     catch (ISE e) {
       return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
@@ -92,15 +107,21 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   public Response getMap()
   {
     try {
-      return Response.ok(getLatest()).build();
+      Map<MultiKey, Map<String, String>> mapMap = getLatest();
+      Map<String, Map<String, String>> retMap = Maps.newHashMap();
+      for (MultiKey key :mapMap.keySet()) {
+        String mapName = (String) key.getKey(1);
+        retMap.put(mapName, mapMap.get(key));
+      }
+      return Response.ok(retMap).build();
     }
     catch (ISE e) {
       return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
     }
   }
 
-  private Map<String, String> getLatest()
+  private Map<MultiKey, Map<String, String>> getLatest()
   {
-    return ((MapLookupExtractor) factory.get()).getMap();
+    return factory.getAllMaps();
   }
 }

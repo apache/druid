@@ -19,7 +19,6 @@
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
@@ -30,14 +29,13 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import org.apache.commons.collections.keyvalue.MultiKey;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 
@@ -48,7 +46,6 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
 {
   private static final Logger log = new Logger(OffHeapNamespaceExtractionCacheManager.class);
   private final DB mmapDB;
-  private ConcurrentMap<String, String> currentNamespaceCache = new ConcurrentHashMap<>();
   private Striped<Lock> nsLocks = Striped.lazyWeakLock(1024); // Needed to make sure delete() doesn't do weird things
   private final File tmpFile;
 
@@ -107,20 +104,28 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
-  protected boolean swapAndClearCache(String namespaceKey, String cacheKey)
+  protected boolean deleteInnerCacheMaps(final ConcurrentMap<MultiKey, Map<String, String>> map)
   {
-    final Lock lock = nsLocks.get(namespaceKey);
+    if (map != null) {
+      for (MultiKey key: map.keySet()) {
+        log.debug("deleting map[%s] of namespace[%s]", key.getKey(1), key.getKey(0));
+        deleteSingleMap(key.toString());
+      }
+      return true;
+    } else  {
+      return false;
+    }
+  }
+
+  private boolean deleteSingleMap(final String mapKey)
+  {
+    final Lock lock = nsLocks.get(mapKey);
     lock.lock();
     try {
-      Preconditions.checkArgument(mmapDB.exists(cacheKey), "Namespace [%s] does not exist", cacheKey);
-
-      final String swapCacheKey = UUID.randomUUID().toString();
-      mmapDB.rename(cacheKey, swapCacheKey);
-
-      final String priorCache = currentNamespaceCache.put(namespaceKey, swapCacheKey);
-      if (priorCache != null) {
-        // TODO: resolve what happens here if query is actively going on
-        mmapDB.delete(priorCache);
+      if (mapKey != null) {
+        final long pre = tmpFile.length();
+        mmapDB.delete(mapKey);
+        log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
         return true;
       } else {
         return false;
@@ -132,41 +137,12 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
-  public boolean delete(final String namespaceKey)
+  public ConcurrentMap<String, String> getOrAllocateInnerCacheMap(MultiKey key)
   {
-    // `super.delete` has a synchronization in it, don't call it in the lock.
-    if (!super.delete(namespaceKey)) {
-      return false;
-    }
-    final Lock lock = nsLocks.get(namespaceKey);
+    final Lock lock = nsLocks.get(key);
     lock.lock();
     try {
-      final String mmapDBkey = currentNamespaceCache.remove(namespaceKey);
-      if (mmapDBkey == null) {
-        return false;
-      }
-      final long pre = tmpFile.length();
-      mmapDB.delete(mmapDBkey);
-      log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
-      return true;
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
-  @Override
-  public ConcurrentMap<String, String> getCacheMap(String namespaceKey)
-  {
-    final Lock lock = nsLocks.get(namespaceKey);
-    lock.lock();
-    try {
-      String mapDBKey = currentNamespaceCache.get(namespaceKey);
-      if (mapDBKey == null) {
-        // Not something created by swapAndClearCache
-        mapDBKey = namespaceKey;
-      }
-      return mmapDB.createHashMap(mapDBKey).makeOrGet();
+      return mmapDB.createHashMap(key.toString()).makeOrGet();
     }
     finally {
       lock.unlock();

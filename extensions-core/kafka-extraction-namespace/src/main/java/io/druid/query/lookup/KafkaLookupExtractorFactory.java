@@ -38,6 +38,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -64,7 +65,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 @JsonTypeName("kafka")
-public class KafkaLookupExtractorFactory implements LookupExtractorFactory
+public class KafkaLookupExtractorFactory extends LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(KafkaLookupExtractorFactory.class);
   static final Decoder<String> DEFAULT_STRING_DECODER = new Decoder<String>()
@@ -182,7 +183,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       kafkaProperties.setProperty("group.id", factoryId);
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
-      final Map<String, String> map = cacheManager.getCacheMap(factoryId);
+      final Map<String, String> map = cacheManager.getInnerCacheMap(factoryId, KeyValueMap.DEFAULT_MAPNAME);
       mapRef.set(map);
       // Enable publish-subscribe
       kafkaProperties.setProperty("auto.offset.reset", "smallest");

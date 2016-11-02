@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @JsonTypeName("loadingLookup")
-public class LoadingLookupFactory implements LookupExtractorFactory
+public class LoadingLookupFactory extends LookupExtractorFactory
 {
   private final static Logger LOGGER = new Logger(LoadingLookupFactory.class);
 

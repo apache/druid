@@ -34,9 +34,22 @@ Globally cached lookups can be specified as part of the [cluster wide config for
          "format": "csv",
          "columns": [
            "key",
-           "value"
+           "val1",
+           "val2"
          ]
        },
+       "maps":[
+         {
+           "mapName":"default",
+           "keyColumn":"key",
+           "valueColumn":"val1"
+         },
+         {
+           "mapName":"another",
+           "keyColumn":"key",
+           "valueColumn":"val2"
+         }
+       ],
        "pollPeriod": "PT5M"
      },
      "firstCacheTimeout": 0
@@ -55,8 +68,18 @@ Globally cached lookups can be specified as part of the [cluster wide config for
          "password": "diurd"
        },
        "table": "lookupTable",
-       "keyColumn": "mykeyColumn",
-       "valueColumn": "MyValueColumn",
+       "maps":[
+         {
+           "mapName":"default",
+           "keyColumn":"lookupKey",
+           "valueColumn":"val1"
+         },
+         {
+           "mapName":"another",
+           "keyColumn":"lookupKey2",
+           "valueColumn":"val2"
+         }
+       ],
        "tsColumn": "timeColumn"
     },
     "firstCacheTimeout": 120000,
@@ -95,8 +118,18 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
            "password": "diurd"
          },
          "table": "lookupTable",
-         "keyColumn": "country_id",
-         "valueColumn": "country_name",
+         "maps":[
+           {
+             "mapName":"name",
+             "keyColumn":"country_id",
+             "valueColumn":"coutry_name"
+           },
+           {
+             "mapName":"capital",
+             "keyColumn":"country_id",
+             "valueColumn":"capital_city"
+           }
+         ],
          "tsColumn": "timeColumn"
       },
       "firstCacheTimeout": 120000,
@@ -120,8 +153,18 @@ Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
       "password": "diurd"
     },
     "table": "lookupTable",
-    "keyColumn": "country_id",
-    "valueColumn": "country_name",
+    "maps":[
+      {
+        "mapName":"name",
+        "keyColumn":"country_id",
+        "valueColumn":"coutry_name"
+      },
+      {
+        "mapName":"capital",
+        "keyColumn":"country_id",
+        "valueColumn":"capital_city"
+      }
+    ],
     "tsColumn": "timeColumn"
   },
   "firstCacheTimeout": 120000,
@@ -159,8 +202,20 @@ The remapping values for each globally cached lookup can be specified by a json 
   "uri": "s3://bucket/some/key/prefix/renames-0003.gz",
   "namespaceParseSpec":{
     "format":"csv",
-    "columns":["key","value"]
+    "columns":["key","val1","val2]
   },
+  "maps":[
+    {
+      "mapName":"default",
+      "keyColumn":"key",
+      "valueColumn":"val1"
+    },
+    {
+      "mapName":"another",
+      "keyColumn":"key",
+      "valueColumn":"val2"
+    }
+  ],
   "pollPeriod":"PT5M"
 }
 ```
@@ -172,8 +227,20 @@ The remapping values for each globally cached lookup can be specified by a json 
   "fileRegex":"renames-[0-9]*\\.gz",
   "namespaceParseSpec":{
     "format":"csv",
-    "columns":["key","value"]
+    "columns":["key","val1","val2"]
   },
+  "maps":[
+    {
+      "mapName":"default",
+      "keyColumn":"key",
+      "valueColumn":"val1"
+    },
+    {
+      "mapName":"another",
+      "keyColumn":"key",
+      "valueColumn":"val2"
+    }
+  ],
   "pollPeriod":"PT5M"
 }
 ```
@@ -185,12 +252,15 @@ The remapping values for each globally cached lookup can be specified by a json 
 |`uriPrefix`|A URI which specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
 |`fileRegex`|Optional regex for matching the file name under `uriPrefix`. Only used if `uriPrefix` is used|No|`".*"`|
 |`namespaceParseSpec`|How to interpret the data at the URI|Yes||
+|`maps`|Map name and key/value columns or fields within data source used in constructing lookup maps|No|`{"mapName":"default","keyColumn":"key","valueColumn":"value"}`|
 
 One of either `uri` xor `uriPrefix` must be specified.
 
 The `pollPeriod` value specifies the period in ISO 8601 format between checks for replacement data for the lookup. If the source of the lookup is capable of providing a timestamp, the lookup will only be updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all mean populate once and do not attempt to look for new data later. Whenever an poll occurs, the updating system will look for a file with the most recent timestamp and assume that one with the most recent data set, replacing the local cache of the lookup data.
 
 The `namespaceParseSpec` can be one of a number of values. Each of the examples below would rename foo to bar, baz to bat, and buck to truck. All parseSpec types assumes each input is delimited by a new line. See below for the types of parseSpec supported.
+
+The `maps` specifies lookup maps under one lookup name. One lookup can have multiple maps that share the source of lookup. It is a list of map specs called `keyValueMap` that has three entries, `mapName`, `keyColumn`, and `valueColumn`. `mapName` is the name of map inside the lookup and `keyColumn` is key column or field name within the lookup source and `valueColumn` is value column or field name within the lookup source.
 
 Only ONE file which matches the search will be used. For most implementations, the discriminator for choosing the URIs is by whichever one reports the most recent timestamp for its modification time.
 
@@ -199,8 +269,8 @@ Only ONE file which matches the search will be used. For most implementations, t
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`columns`|The list of columns in the csv file|yes|`null`|
-|`keyColumn`|The name of the column containing the key|no|The first column|
-|`valueColumn`|The name of the column containing the value|no|The second column|
+
+`columns` should contain all the columns specified in `maps` of uri lookup spec.
 
 *example input*
 
@@ -215,9 +285,7 @@ truck,something3,buck
 ```json
 "namespaceParseSpec": {
   "format": "csv",
-  "columns": ["value","somethingElse","key"],
-  "keyColumn": "key",
-  "valueColumn": "value"
+  "columns": ["val1","val2","key"],
 }
 ```
 
@@ -226,11 +294,10 @@ truck,something3,buck
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`columns`|The list of columns in the csv file|yes|`null`|
-|`keyColumn`|The name of the column containing the key|no|The first column|
-|`valueColumn`|The name of the column containing the value|no|The second column|
 |`delimiter`|The delimiter in the file|no|tab (`\t`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
 
+`columns` should contain all the columns specified in `maps` of uri lookup spec.
 
 *example input*
 
@@ -245,26 +312,20 @@ truck|something,3|buck
 ```json
 "namespaceParseSpec": {
   "format": "tsv",
-  "columns": ["value","somethingElse","key"],
-  "keyColumn": "key",
-  "valueColumn": "value",
+  "columns": ["val1","val2","key"],
   "delimiter": "|"
 }
 ```
 
 ### customJson lookupParseSpec
-
-|Parameter|Description|Required|Default|
-|---------|-----------|--------|-------|
-|`keyFieldName`|The field name of the key|yes|null|
-|`valueFieldName`|The field name of the value|yes|null|
+The `customJson` lookupParseSpec does not take any parameters. However, inputs should have all the fields used in `maps`.
 
 *example input*
 
 ```json
-{"key": "foo", "value": "bar", "somethingElse" : "something"}
-{"key": "baz", "value": "bat", "somethingElse" : "something"}
-{"key": "buck", "somethingElse": "something", "value": "truck"}
+{"key": "foo", "val1": "bar", "val2" : "something"}
+{"key": "baz", "val1": "bat", "val2" : "something"}
+{"key": "buck", "val2": "value2", "val1": "truck"}
 ```
 
 *example namespaceParseSpec*
@@ -272,8 +333,6 @@ truck|something,3|buck
 ```json
 "namespaceParseSpec": {
   "format": "customJson",
-  "keyFieldName": "key",
-  "valueFieldName": "value"
 }
 ```
 
@@ -281,7 +340,7 @@ With customJson parsing, if the value field for a particular row is missing or n
 will not be included in the lookup.
 
 ### simpleJson lookupParseSpec
-The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value.
+The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value. `maps` is ignored and input data is inserted to default map.
 
 *example input*
  
@@ -308,8 +367,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`namespace`|The namespace to define|Yes||
 |`connectorConfig`|The connector config to use|Yes||
 |`table`|The table which contains the key value pairs|Yes||
-|`keyColumn`|The column in `table` which contains the keys|Yes||
-|`valueColumn`|The column in `table` which contains the values|Yes||
+|`maps`|Map name and key/value columns of `table` used in constructing lookup maps|No|`{"mapName":"default","keyColumn":"key","valueColumn":"value"}`|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
 
@@ -324,8 +382,18 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
     "password":"diurd"
   },
   "table":"some_lookup_table",
-  "keyColumn":"the_old_dim_value",
-  "valueColumn":"the_new_dim_value",
+  "maps":[
+    {
+      "mapName":"default",
+      "keyColumn":"lookupKey",
+      "valueColumn":"val1"
+    },
+    {
+      "mapName":"another",
+      "keyColumn":"lookupKey2",
+      "valueColumn":"val2"
+    }
+  ],
   "tsColumn":"timestamp_column",
   "pollPeriod":600000
 }
@@ -333,4 +401,4 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 # Introspection
 
-Globally cached lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.
+Globally cached lookups have introspection points at `/keys` and `/values` which return a complete set of the map names and key/value maps(respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.

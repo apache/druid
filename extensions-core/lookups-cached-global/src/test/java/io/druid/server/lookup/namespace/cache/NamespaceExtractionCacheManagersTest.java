@@ -31,10 +31,12 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
+import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +51,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -105,13 +108,17 @@ public class NamespaceExtractionCacheManagersTest
 
   private static final List<String> nsList = ImmutableList.<String>of("testNs", "test.ns", "//tes-tn!s");
 
+  private final String TEST_MAP_NAME = "nsTest";
+
   @Before
   public void setup()
   {
     // prepopulate caches
     for (String ns : nsList) {
-      final ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
-      map.put("oldNameSeed1", "oldNameSeed2");
+      final ConcurrentMap<MultiKey, Map<String, String>> map = extractionCacheManager.getCacheMap(ns);
+      ConcurrentMap<String, String> mapEntry = new ConcurrentHashMap<>();
+      mapEntry.put("oldNameSeed1", "oldNameSeed2");
+      map.put(new MultiKey(ns, TEST_MAP_NAME), mapEntry);
     }
   }
 
@@ -119,28 +126,37 @@ public class NamespaceExtractionCacheManagersTest
   public void testSimpleCacheCreate()
   {
     for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      Map<String, String> map = extractionCacheManager.getInnerCacheMap(ns, TEST_MAP_NAME);
       map.put("key", "val");
       Assert.assertEquals("val", map.get("key"));
-      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+      MultiKey mapKey = new MultiKey(ns, TEST_MAP_NAME);
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
     }
   }
 
+  // following looks weird because of following new restriction:
+  //  swapAndClearCache() is called only once and called before the actual usage
+  // New implementation of cacheMap needs namespace embedded in itself
+  // and upon the above assumption, cacheMap is constructed with new namespace (not cacheKey)
+  //
+  // Original test violates the restriction so that is changed to work
   @Test
   public void testSimpleCacheSwap()
   {
     for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns + "old_cache");
+      Map<String, String> map = extractionCacheManager.getInnerCacheMap(ns + "old_cache", TEST_MAP_NAME);
       map.put("key", "val");
       extractionCacheManager.swapAndClearCache(ns, ns + "old_cache");
       Assert.assertEquals("val", map.get("key"));
-      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+      MultiKey mapKey = new MultiKey(ns + "old_cache", TEST_MAP_NAME);
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
 
-      ConcurrentMap<String, String> map2 = extractionCacheManager.getCacheMap(ns + "cache");
+      Map<String, String> map2 = extractionCacheManager.getInnerCacheMap(ns + "cache", TEST_MAP_NAME);
       map2.put("key", "val2");
       Assert.assertTrue(extractionCacheManager.swapAndClearCache(ns, ns + "cache"));
       Assert.assertEquals("val2", map2.get("key"));
-      Assert.assertEquals("val2", extractionCacheManager.getCacheMap(ns).get("key"));
+      mapKey = new MultiKey(ns + "cache", TEST_MAP_NAME);
+      Assert.assertEquals("val2", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
     }
   }
 
@@ -148,10 +164,11 @@ public class NamespaceExtractionCacheManagersTest
   public void testMissingCacheThrowsIAE()
   {
     for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      Map<String, String> map = extractionCacheManager.getInnerCacheMap(ns, TEST_MAP_NAME);
       map.put("key", "val");
       Assert.assertEquals("val", map.get("key"));
-      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+      MultiKey mapKey = new MultiKey(ns, TEST_MAP_NAME);
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
       Assert.assertFalse(extractionCacheManager.swapAndClearCache(ns, "I don't exist"));
     }
   }
@@ -187,10 +204,9 @@ public class NamespaceExtractionCacheManagersTest
             null,
             null,
             new URIExtractionNamespace.JSONFlatDataParser(
-                new DefaultObjectMapper(),
-                "key",
-                "val"
+                new DefaultObjectMapper()
             ),
+            ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val")),
             Period.millis(10000),
             null
         ),

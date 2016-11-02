@@ -24,11 +24,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Bytes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.segment.DimensionSelector;
 
@@ -58,6 +60,9 @@ public class LookupDimensionSpec implements DimensionSpec
   private final String name;
 
   @JsonProperty
+  private final String mapName;
+
+  @JsonProperty
   private final boolean optimize;
 
   private final LookupReferencesManager lookupReferencesManager;
@@ -70,6 +75,7 @@ public class LookupDimensionSpec implements DimensionSpec
       @JsonProperty("retainMissingValue") boolean retainMissingValue,
       @JsonProperty("replaceMissingValueWith") String replaceMissingValueWith,
       @JsonProperty("name") String name,
+      @JsonProperty("mapName") String mapName,
       @JacksonInject LookupReferencesManager lookupReferencesManager,
       @JsonProperty("optimize") Boolean optimize
   )
@@ -81,6 +87,7 @@ public class LookupDimensionSpec implements DimensionSpec
     this.outputName = Preconditions.checkNotNull(outputName, "outputName can not be Null");
     this.lookupReferencesManager = lookupReferencesManager;
     this.name = name;
+    this.mapName = mapName;
     this.lookup = lookup;
     Preconditions.checkArgument(
         Strings.isNullOrEmpty(name) ^ (lookup == null),
@@ -123,16 +130,27 @@ public class LookupDimensionSpec implements DimensionSpec
     return name;
   }
 
+  @JsonProperty
+  @Nullable
+  public String getMapName()
+  {
+    return mapName;
+  }
+
   @Override
   public ExtractionFn getExtractionFn()
   {
-    final LookupExtractor lookupExtractor = Strings.isNullOrEmpty(name)
-                                            ? this.lookup
-                                            : Preconditions.checkNotNull(
-                                                lookupReferencesManager.get(name),
-                                                "Lookup [%s] not found",
-                                                name
-                                            ).get();
+    LookupExtractor lookupExtractor = null;
+    if (Strings.isNullOrEmpty(name)) {
+      lookupExtractor = this.lookup;
+    } else {
+      LookupExtractorFactory factory = Preconditions.checkNotNull(
+          lookupReferencesManager.get(name),
+          "Lookup [%s] not found",
+          name
+      );
+      lookupExtractor = Strings.isNullOrEmpty(mapName) ? factory.get() : factory.get(mapName);
+    }
 
     return new LookupExtractionFn(
         lookupExtractor,
@@ -155,7 +173,9 @@ public class LookupDimensionSpec implements DimensionSpec
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     byte[] dimExtractionFnBytes = Strings.isNullOrEmpty(name)
                                   ? getLookup().getCacheKey()
-                                  : StringUtils.toUtf8(name);
+                                  : Strings.isNullOrEmpty(mapName)
+                                    ? StringUtils.toUtf8(name)
+                                    : Bytes.concat(StringUtils.toUtf8(name), StringUtils.toUtf8(mapName));
     byte[] outputNameBytes = StringUtils.toUtf8(outputName);
     byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
 
@@ -216,7 +236,22 @@ public class LookupDimensionSpec implements DimensionSpec
         : that.replaceMissingValueWith != null) {
       return false;
     }
-    return getName() != null ? getName().equals(that.getName()) : that.getName() == null;
+
+    if (getName() != null) {
+      if (!getName().equals(that.getName())) {
+        return false;
+      }
+      if (getMapName() != null) {
+        if (!getMapName().equals(that.getMapName())) {
+          return false;
+        }
+      } else if(that.getMapName() != null) {
+        return false;
+      }
+    } else if (that.getName() != null) {
+      return false;
+    }
+    return true;
 
   }
 
@@ -229,6 +264,7 @@ public class LookupDimensionSpec implements DimensionSpec
     result = 31 * result + (retainMissingValue ? 1 : 0);
     result = 31 * result + (replaceMissingValueWith != null ? replaceMissingValueWith.hashCode() : 0);
     result = 31 * result + (getName() != null ? getName().hashCode() : 0);
+    result = 31 * result + (getMapName() != null ? getMapName().hashCode() : 0);
     result = 31 * result + (optimize ? 1 : 0);
     return result;
   }

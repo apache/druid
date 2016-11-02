@@ -33,7 +33,7 @@ import java.util.Map;
  * Any desire to test the *caching mechanisms in this extension* can use this class.
  */
 @JsonTypeName(StaticMapExtractionNamespace.TYPE_NAME)
-public class StaticMapExtractionNamespace implements ExtractionNamespace
+public class StaticMapExtractionNamespace extends ExtractionNamespace
 {
   static final String TYPE_NAME = "staticMap";
   private final Map<String, String> map;

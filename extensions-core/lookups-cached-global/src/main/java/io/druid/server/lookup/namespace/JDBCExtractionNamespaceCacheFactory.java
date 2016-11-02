@@ -19,11 +19,14 @@
 
 package io.druid.server.lookup.namespace;
 
+import com.google.common.base.Function;
 import io.druid.common.utils.JodaUtils;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.KeyValueMap;
+import org.apache.commons.collections.keyvalue.MultiKey;
+import org.apache.commons.lang.StringUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
@@ -34,6 +37,7 @@ import org.skife.jdbi.v2.util.TimestampMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +47,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  */
 public class JDBCExtractionNamespaceCacheFactory
-    implements ExtractionNamespaceCacheFactory<JDBCExtractionNamespace>
+    extends ExtractionNamespaceCacheFactory<JDBCExtractionNamespace>
 {
   private static final Logger LOG = new Logger(JDBCExtractionNamespaceCacheFactory.class);
   private final ConcurrentMap<String, DBI> dbiCache = new ConcurrentHashMap<>();
@@ -53,7 +57,8 @@ public class JDBCExtractionNamespaceCacheFactory
       final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
-      final Map<String, String> cache
+      final ConcurrentMap<MultiKey, Map<String, String>> cache,
+      final Function<MultiKey, Map<String, String>> mapAllocator
   ) throws Exception
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
@@ -64,46 +69,68 @@ public class JDBCExtractionNamespaceCacheFactory
     final long dbQueryStart = System.currentTimeMillis();
     final DBI dbi = ensureDBI(id, namespace);
     final String table = namespace.getTable();
-    final String valueColumn = namespace.getValueColumn();
-    final String keyColumn = namespace.getKeyColumn();
 
-    LOG.debug("Updating [%s]", id);
-    final List<Pair<String, String>> pairs = dbi.withHandle(
-        new HandleCallback<List<Pair<String, String>>>()
+    final List<String> requiredFields = KeyValueMap.getRequiredFields(namespace.getMaps());
+    final Map<String, Integer> fieldMap = new HashMap<>();
+    final int numFields = requiredFields.size();
+    for (int idx = 0; idx < numFields; idx++)
+    {
+      fieldMap.put(requiredFields.get(idx), idx);
+    }
+
+    LOG.debug("Updating [%s]", namespace.toString());
+    final List<String[]> columns = dbi.withHandle(
+        new HandleCallback<List<String[]>>()
         {
           @Override
-          public List<Pair<String, String>> withHandle(Handle handle) throws Exception
+          public List<String[]> withHandle(Handle handle) throws Exception
           {
             final String query;
             query = String.format(
-                "SELECT %s, %s FROM %s",
-                keyColumn,
-                valueColumn,
+                makeQueryString(requiredFields),
                 table
             );
             return handle
                 .createQuery(
                     query
                 ).map(
-                    new ResultSetMapper<Pair<String, String>>()
+                    new ResultSetMapper<String[]>()
                     {
 
                       @Override
-                      public Pair<String, String> map(
+                      public String[] map(
                           final int index,
                           final ResultSet r,
                           final StatementContext ctx
                       ) throws SQLException
                       {
-                        return new Pair<>(r.getString(keyColumn), r.getString(valueColumn));
+                        String[] values = new String[numFields];
+                        int idx = 0;
+
+                        for (String field: requiredFields)
+                        {
+                          values[idx++] = r.getString(field);
+                        }
+                        return values;
                       }
                     }
                 ).list();
           }
         }
     );
-    for (Pair<String, String> pair : pairs) {
-      cache.put(pair.lhs, pair.rhs);
+    for (String[] values : columns) {
+      for (KeyValueMap keyValueMap: namespace.getMaps())
+      {
+        String mapName = keyValueMap.getMapName();
+        MultiKey key = new MultiKey(id, mapName);
+        Map<String, String> innerMap = cache.get(key);
+        if (innerMap == null)
+        {
+          innerMap = mapAllocator.apply(key);
+          cache.put(key, innerMap);
+        }
+        innerMap.put(values[fieldMap.get(keyValueMap.getKeyColumn())], values[fieldMap.get(keyValueMap.getValueColumn())]);
+      }
     }
     LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
     if (lastDBUpdate != null) {
@@ -111,6 +138,15 @@ public class JDBCExtractionNamespaceCacheFactory
     } else {
       return String.format("%d", dbQueryStart);
     }
+  }
+
+  private String makeQueryString(List<String> requiredFields)
+  {
+    String query = "SELECT \"";
+    query += StringUtils.join(requiredFields, "\", \"");
+    query += "\" from %s";
+
+    return query;
   }
 
   private DBI ensureDBI(String id, JDBCExtractionNamespace namespace)
@@ -148,7 +184,7 @@ public class JDBCExtractionNamespaceCacheFactory
           public Timestamp withHandle(Handle handle) throws Exception
           {
             final String query = String.format(
-                "SELECT MAX(%s) FROM %s",
+                "SELECT MAX(\"%s\") FROM %s",
                 tsColumn, table
             );
             return handle

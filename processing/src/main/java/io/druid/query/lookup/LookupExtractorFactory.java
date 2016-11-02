@@ -20,7 +20,7 @@
 package io.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Supplier;
+import com.metamx.common.ISE;
 
 import javax.annotation.Nullable;
 
@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  * If a LookupExtractorFactory wishes to support idempotent updates, it needs to implement the  `replaces` method
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface LookupExtractorFactory extends Supplier<LookupExtractor>
+public abstract class LookupExtractorFactory
 {
   /**
    * <p>
@@ -40,7 +40,7 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    *
    * @return Returns false if is not successfully started the {@link LookupExtractor} otherwise returns true.
    */
-  public boolean start();
+  public abstract boolean start();
 
   /**
    * <p>
@@ -49,19 +49,35 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * </p>
    * @return Returns false if not successfully closed the {@link LookupExtractor} otherwise returns true
    */
-  public boolean close();
+  public abstract boolean close();
   /**
    * Determine if this LookupExtractorFactory should replace some other LookupExtractorFactory.
    * This is used to implement no-down-time
    * @param other Some other LookupExtractorFactory which might need replaced
    * @return `true` if the other should be replaced by this one. `false` if this one should not replace the other factory
    */
-  boolean replaces(@Nullable LookupExtractorFactory other);
+  public abstract boolean replaces(@Nullable LookupExtractorFactory other);
+
+  /**
+   * @return Returns LookupExtractor associated with this factory
+   */
+  public abstract LookupExtractor get();
+
+  /**
+   * Some LookupExtractorFactories have multiple maps in one namespace.
+   * For those factories, mapNmae should be additionally given to get LookupExtractor
+   * @param mapName name of map in the namespace
+   * @return LookupExtractor for the given mapName
+   */
+  public LookupExtractor get(String mapName)
+  {
+    throw new ISE("mapName not supported");
+  }
 
   /**
    * @return Returns the actual introspection request handler, can return {@code null} if it is not supported.
    * This will be called once per HTTP request to introspect the actual lookup.
    */
   @Nullable
-  public LookupIntrospectHandler getIntrospectHandler();
+  public abstract LookupIntrospectHandler getIntrospectHandler();
 }

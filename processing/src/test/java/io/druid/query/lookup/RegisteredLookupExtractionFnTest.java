@@ -40,7 +40,12 @@ public class RegisteredLookupExtractionFnTest
       "foo", "bar",
       "bat", "baz"
   );
+  private static Map<String, String> MAP2 = ImmutableMap.of(
+      "foo", "bal",
+      "bat", "bau"
+  );
   private static final LookupExtractor LOOKUP_EXTRACTOR = new MapLookupExtractor(MAP, true);
+  private static final LookupExtractor LOOKUP_EXTRACTOR2 = new MapLookupExtractor(MAP2, true);
   private static final String LOOKUP_NAME = "some lookup";
 
   @Rule
@@ -55,6 +60,7 @@ public class RegisteredLookupExtractionFnTest
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
         manager,
         LOOKUP_NAME,
+        null,
         true,
         null,
         true,
@@ -67,6 +73,40 @@ public class RegisteredLookupExtractionFnTest
     Assert.assertEquals("not in the map", fn.apply("not in the map"));
   }
 
+  @Test
+  public void testMultipleMapsInOneLookup()
+  {
+    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    managerReturnsMultiMaps(manager);
+    EasyMock.replay(manager);
+    final RegisteredLookupExtractionFn fn1 = new RegisteredLookupExtractionFn(
+        manager,
+        LOOKUP_NAME,
+        "map1",
+        true,
+        null,
+        true,
+        false
+    );
+    final RegisteredLookupExtractionFn fn2 = new RegisteredLookupExtractionFn(
+        manager,
+        LOOKUP_NAME,
+        "map2",
+        true,
+        null,
+        true,
+        false
+    );
+    EasyMock.verify(manager);
+    for (String orig : Arrays.asList("", "foo", "bat")) {
+      Assert.assertEquals(LOOKUP_EXTRACTOR.apply(orig), fn1.apply(orig));
+    }
+    Assert.assertEquals("not in the map", fn1.apply("not in the map"));
+    for (String orig : Arrays.asList("", "foo", "bat")) {
+      Assert.assertEquals(LOOKUP_EXTRACTOR2.apply(orig), fn2.apply(orig));
+    }
+    Assert.assertEquals("not in the map", fn2.apply("not in the map"));
+  }
 
   @Test
   public void testMissingDelegation()
@@ -80,6 +120,7 @@ public class RegisteredLookupExtractionFnTest
       new RegisteredLookupExtractionFn(
           manager,
           LOOKUP_NAME,
+          null,
           true,
           null,
           true,
@@ -96,6 +137,7 @@ public class RegisteredLookupExtractionFnTest
   {
     expectedException.expectMessage("`lookup` required");
     new RegisteredLookupExtractionFn(
+        null,
         null,
         null,
         true,
@@ -116,6 +158,7 @@ public class RegisteredLookupExtractionFnTest
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
         manager,
         LOOKUP_NAME,
+        null,
         true,
         null,
         true,
@@ -144,6 +187,7 @@ public class RegisteredLookupExtractionFnTest
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
         manager,
         LOOKUP_NAME,
+        null,
         false,
         "something",
         true,
@@ -154,6 +198,7 @@ public class RegisteredLookupExtractionFnTest
         new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
+            null,
             false,
             "something",
             true,
@@ -165,6 +210,7 @@ public class RegisteredLookupExtractionFnTest
         new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
+            null,
             true,
             null,
             true,
@@ -177,6 +223,7 @@ public class RegisteredLookupExtractionFnTest
         new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
+            null,
             false,
             "something else",
             true,
@@ -190,6 +237,7 @@ public class RegisteredLookupExtractionFnTest
         new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
+            null,
             false,
             "something",
             false,
@@ -202,6 +250,7 @@ public class RegisteredLookupExtractionFnTest
         new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
+            null,
             false,
             "something",
             true,
@@ -215,6 +264,7 @@ public class RegisteredLookupExtractionFnTest
         new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
+            null,
             false,
             null,
             true,
@@ -257,6 +307,55 @@ public class RegisteredLookupExtractionFnTest
       public LookupExtractor get()
       {
         return LOOKUP_EXTRACTOR;
+      }
+    }).anyTimes();
+  }
+
+  private void managerReturnsMultiMaps(LookupReferencesManager manager)
+  {
+    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(new LookupExtractorFactory()
+    {
+      @Override
+      public boolean start()
+      {
+        return false;
+      }
+
+      @Override
+      public boolean close()
+      {
+        return false;
+      }
+
+      @Override
+      public boolean replaces(@Nullable LookupExtractorFactory other)
+      {
+        return false;
+      }
+
+      @Nullable
+      @Override
+      public LookupIntrospectHandler getIntrospectHandler()
+      {
+        return null;
+      }
+
+      @Override
+      public LookupExtractor get()
+      {
+        return null;
+      }
+
+      @Override
+      public LookupExtractor get(String mapName)
+      {
+        if (mapName.equals("map1")) {
+          return LOOKUP_EXTRACTOR;
+        }
+        if (mapName.equals("map2")) {
+          return LOOKUP_EXTRACTOR2;
+        }
+        return null;
       }
     }).anyTimes();
   }

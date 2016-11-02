@@ -23,27 +23,28 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import io.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.commons.lang.StringUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  *
  */
 @JsonTypeName("jdbc")
-public class JDBCExtractionNamespace implements ExtractionNamespace
+public class JDBCExtractionNamespace extends ExtractionNamespace
 {
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
   @JsonProperty
   private final String table;
   @JsonProperty
-  private final String keyColumn;
-  @JsonProperty
-  private final String valueColumn;
+  private final List<KeyValueMap> maps;
   @JsonProperty
   private final String tsColumn;
   @JsonProperty
@@ -55,10 +56,12 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
       final MetadataStorageConnectorConfig connectorConfig,
       @NotNull @JsonProperty(value = "table", required = true)
       final String table,
-      @NotNull @JsonProperty(value = "keyColumn", required = true)
+      @JsonProperty(value = "keyColumn", required = true)
       final String keyColumn,
-      @NotNull @JsonProperty(value = "valueColumn", required = true)
+      @JsonProperty(value = "valueColumn", required = true)
       final String valueColumn,
+      @JsonProperty(value = "maps", required = true)
+      List<KeyValueMap> maps,
       @Nullable @JsonProperty(value = "tsColumn", required = false)
       final String tsColumn,
       @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false)
@@ -68,8 +71,10 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
     Preconditions.checkNotNull(connectorConfig.getConnectURI(), "connectorConfig.connectURI");
     this.table = Preconditions.checkNotNull(table, "table");
-    this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
-    this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
+    Preconditions.checkArgument((keyColumn != null && valueColumn != null) || maps != null,
+        "Either keyColumn & valueColumn or maps should be specified");
+    this.maps = (maps != null) ? maps
+                               : ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, keyColumn, valueColumn));
     this.tsColumn = tsColumn;
     this.pollPeriod = pollPeriod == null ? new Period(0L) : pollPeriod;
   }
@@ -84,14 +89,9 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     return table;
   }
 
-  public String getKeyColumn()
+  public List<KeyValueMap> getMaps()
   {
-    return keyColumn;
-  }
-
-  public String getValueColumn()
-  {
-    return valueColumn;
+    return maps;
   }
 
   public String getTsColumn()
@@ -109,11 +109,10 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return String.format(
-        "JDBCExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
+        "JDBCExtractionNamespace = { connectorConfig = { %s }, table = %s, key & value Columns = [%s], tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,
-        keyColumn,
-        valueColumn,
+        StringUtils.join(maps, ','),
         tsColumn,
         pollPeriod
     );
@@ -137,17 +136,13 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     if (!table.equals(that.table)) {
       return false;
     }
-    if (!keyColumn.equals(that.keyColumn)) {
-      return false;
-    }
-    if (!valueColumn.equals(that.valueColumn)) {
+    if (!maps.equals(that.maps)) {
       return false;
     }
     if (tsColumn != null ? !tsColumn.equals(that.tsColumn) : that.tsColumn != null) {
       return false;
     }
     return pollPeriod.equals(that.pollPeriod);
-
   }
 
   @Override
@@ -155,8 +150,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   {
     int result = connectorConfig.hashCode();
     result = 31 * result + table.hashCode();
-    result = 31 * result + keyColumn.hashCode();
-    result = 31 * result + valueColumn.hashCode();
+    result = 31 * result + maps.hashCode();
     result = 31 * result + (tsColumn != null ? tsColumn.hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();
     return result;

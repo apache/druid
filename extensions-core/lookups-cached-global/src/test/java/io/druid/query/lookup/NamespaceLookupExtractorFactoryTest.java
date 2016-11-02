@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -40,6 +41,7 @@ import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -53,9 +55,11 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.ws.rs.core.Response;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class NamespaceLookupExtractorFactoryTest
 {
@@ -94,7 +98,7 @@ public class NamespaceLookupExtractorFactoryTest
         temporaryFolder.newFolder().toURI(),
         null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
-
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis(0),
         null
     );
@@ -282,8 +286,15 @@ public class NamespaceLookupExtractorFactoryTest
         EasyMock.eq(60000L)
     )).andReturn(true).once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("0").once();
+    final ConcurrentMap map = new ConcurrentHashMap<String, ConcurrentMap<String, String>>() {
+      @Override
+      public ConcurrentMap<String, String> get(Object key)
+      {
+        return new ConcurrentHashMap<String, String>();
+      }
+    };
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
-            .andReturn(new ConcurrentHashMap<String, String>())
+            .andReturn(map)
             .once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("0").once();
     EasyMock.expect(
@@ -320,9 +331,16 @@ public class NamespaceLookupExtractorFactoryTest
         EasyMock.eq(60000L)
     )).andReturn(true).once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("0").once();
+    final ConcurrentMap map = new ConcurrentHashMap<String, ConcurrentMap<String, String>>() {
+      @Override
+      public ConcurrentMap<String, String> get(Object key)
+      {
+        return new ConcurrentHashMap<String, String>();
+      }
+    };
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
-            .andReturn(new ConcurrentHashMap<String, String>())
-            .once();
+        .andReturn(map)
+        .once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn(null).once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
     EasyMock.replay(cacheManager);
@@ -361,15 +379,29 @@ public class NamespaceLookupExtractorFactoryTest
         EasyMock.eq(60000L)
     )).andReturn(true).once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("0").once();
+    final ConcurrentMap map = new ConcurrentHashMap<String, ConcurrentMap<String, String>>() {
+      @Override
+      public ConcurrentMap<String, String> get(Object key)
+      {
+        return new ConcurrentHashMap<String, String>(ImmutableMap.of("foo", "bar"));
+      }
+    };
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
-            .andReturn(new ConcurrentHashMap<String, String>(ImmutableMap.of("foo", "bar")))
-            .once();
+        .andReturn(map)
+        .once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("1").once();
 
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("2").once();
+    final ConcurrentMap map2 = new ConcurrentHashMap<String, ConcurrentMap<String, String>>() {
+      @Override
+      public ConcurrentMap<String, String> get(Object key)
+      {
+        return new ConcurrentHashMap<String, String>();
+      }
+    };
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
-            .andReturn(new ConcurrentHashMap<String, String>())
-            .once();
+        .andReturn(map2)
+        .once();
     EasyMock.expect(cacheManager.getVersion(EasyMock.anyString())).andReturn("2").once();
     EasyMock.expect(cacheManager.checkedDelete(EasyMock.anyString())).andReturn(true).once();
     EasyMock.replay(cacheManager);
@@ -566,14 +598,14 @@ public class NamespaceLookupExtractorFactoryTest
       Assert.assertNotNull(handler);
       final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
       Assert.assertNotNull(clazz.getMethod("getVersion").invoke(handler));
-      Assert.assertEquals(ImmutableSet.of("foo"), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
+      Assert.assertEquals(ImmutableSet.of(KeyValueMap.DEFAULT_MAPNAME), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
       Assert.assertEquals(
-          ImmutableSet.of("bar"),
-          ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity()
+          ImmutableList.of(ImmutableMap.of("foo", "bar")),
+          Lists.newArrayList((Collection<String>) ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity())
       );
       Assert.assertEquals(
-          ImmutableMap.builder().put("foo", "bar").build(),
-          ((Response) clazz.getMethod("getMap").invoke(handler)).getEntity()
+          ImmutableList.of(ImmutableMap.of(KeyValueMap.DEFAULT_MAPNAME, ImmutableMap.of("foo", "bar"))),
+          Lists.newArrayList((Map<String, Map<String, String>>) ((Response) clazz.getMethod("getMap").invoke(handler)).getEntity())
       );
     }
     finally {

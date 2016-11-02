@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @JsonTypeName("pollingLookup")
-public class PollingLookupFactory implements LookupExtractorFactory
+public class PollingLookupFactory extends LookupExtractorFactory
 {
   private static final Logger LOGGER = new Logger(PollingLookupFactory.class);
 

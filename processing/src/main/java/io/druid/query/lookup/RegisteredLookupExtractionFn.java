@@ -36,6 +36,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   private final Object delegateLock = new Object();
   private final LookupReferencesManager manager;
   private final String lookup;
+  private final String mapName;
   private final boolean retainMissingValue;
   private final String replaceMissingValueWith;
   private final boolean injective;
@@ -45,6 +46,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   public RegisteredLookupExtractionFn(
       @JacksonInject LookupReferencesManager manager,
       @JsonProperty("lookup") String lookup,
+      @JsonProperty("mapName") String mapName,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
       @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
       @JsonProperty("injective") final boolean injective,
@@ -58,12 +60,19 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     this.injective = injective;
     this.optimize = optimize == null ? true : optimize;
     this.lookup = lookup;
+    this.mapName = mapName;
   }
 
   @JsonProperty("lookup")
   public String getLookup()
   {
     return lookup;
+  }
+
+  @JsonProperty("mapName")
+  public String getMapName()
+  {
+    return mapName;
   }
 
   @JsonProperty("retainMissingValue")
@@ -95,11 +104,13 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   {
     final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
     final byte[] lookupName = StringUtils.toUtf8(getLookup());
+    final byte[] mapName = getMapName() == null ? new byte[] {} : StringUtils.toUtf8(getMapName());
     final byte[] delegateKey = ensureDelegate().getCacheKey();
     return ByteBuffer
-        .allocate(keyPrefix.length + 1 + lookupName.length + 1 + delegateKey.length)
+        .allocate(keyPrefix.length + 1 + lookupName.length + 1 + mapName.length + 1 + delegateKey.length)
         .put(keyPrefix).put((byte) 0xFF)
         .put(lookupName).put((byte) 0xFF)
+        .put(mapName).put((byte) 0xFF)
         .put(delegateKey)
         .array();
   }
@@ -140,8 +151,10 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
+          LookupExtractorFactory factory =
+              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup());
           delegate = new LookupExtractionFn(
-              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+              getMapName() == null ? factory.get() : factory.get(getMapName()),
               isRetainMissingValue(),
               getReplaceMissingValueWith(),
               isInjective(),
@@ -177,6 +190,14 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     if (!getLookup().equals(that.getLookup())) {
       return false;
     }
+    if (getMapName() != null) {
+      if (!getMapName().equals(that.getMapName())) {
+        return false;
+      }
+    } else if(that.getMapName() != null) {
+      return false;
+    }
+
     return getReplaceMissingValueWith() != null
            ? getReplaceMissingValueWith().equals(that.getReplaceMissingValueWith())
            : that.getReplaceMissingValueWith() == null;
@@ -186,6 +207,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   public int hashCode()
   {
     int result = getLookup().hashCode();
+    result = 31 * result + (getMapName() != null ? getMapName().hashCode() : 0);
     result = 31 * result + (isRetainMissingValue() ? 1 : 0);
     result = 31 * result + (getReplaceMissingValueWith() != null ? getReplaceMissingValueWith().hashCode() : 0);
     result = 31 * result + (isInjective() ? 1 : 0);
@@ -199,6 +221,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return "RegisteredLookupExtractionFn{" +
            "delegate=" + delegate +
            ", lookup='" + lookup + '\'' +
+           ", mapName='" + mapName + '\'' +
            ", retainMissingValue=" + retainMissingValue +
            ", replaceMissingValueWith='" + replaceMissingValueWith + '\'' +
            ", injective=" + injective +

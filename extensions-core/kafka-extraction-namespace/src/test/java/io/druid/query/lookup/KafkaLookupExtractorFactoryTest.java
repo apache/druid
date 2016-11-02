@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -270,7 +269,7 @@ public class KafkaLookupExtractorFactoryTest
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
-    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+    EasyMock.expect(cacheManager.getInnerCacheMap(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
@@ -314,7 +313,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartFailsFromTimeout() throws Exception
   {
-    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+    EasyMock.expect(cacheManager.getInnerCacheMap(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
@@ -361,7 +360,7 @@ public class KafkaLookupExtractorFactoryTest
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
-    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+    EasyMock.expect(cacheManager.getInnerCacheMap(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(false).once();
@@ -402,7 +401,7 @@ public class KafkaLookupExtractorFactoryTest
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
-    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+    EasyMock.expect(cacheManager.getInnerCacheMap(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
@@ -442,7 +441,7 @@ public class KafkaLookupExtractorFactoryTest
     )).andReturn(ImmutableList.of(kafkaStream)).once();
     EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
-    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+    EasyMock.expect(cacheManager.getInnerCacheMap(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
             .once();
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();

@@ -22,6 +22,8 @@ package io.druid.query.lookup.namespace;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import java.util.List;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "jdbc", value = JDBCExtractionNamespace.class),
@@ -33,7 +35,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * It is expected to have an accompanying ExtractionNamespaceFunctionFactory which handles the actual
  * extraction implementation.
  */
-public interface ExtractionNamespace
+public abstract class ExtractionNamespace
 {
-  long getPollMs();
+  List<KeyValueMap> getMaps()
+  {
+    return KeyValueMap.DEFAULT_MAPS;
+  }
+
+  public abstract long getPollMs();
 }

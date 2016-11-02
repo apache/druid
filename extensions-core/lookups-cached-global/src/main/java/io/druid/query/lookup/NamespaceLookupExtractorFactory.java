@@ -32,7 +32,9 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -43,7 +45,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @JsonTypeName("cachedNamespace")
-public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
+public class NamespaceLookupExtractorFactory extends LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
 
@@ -191,9 +193,15 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     return injective;
   }
 
-  // Grab the latest snapshot from the cache manager
   @Override
   public LookupExtractor get()
+  {
+    return get(KeyValueMap.DEFAULT_MAPNAME);
+  }
+
+  // Grab the latest snapshot from the cache manager
+  @Override
+  public LookupExtractor get(String mapName)
   {
     final Lock readLock = startStopSync.readLock();
     try {
@@ -214,7 +222,10 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         if (preVersion == null) {
           throw new ISE("Namespace vanished for [%s]", extractorID);
         }
-        map = manager.getCacheMap(extractorID);
+        map = manager.getCacheMap(extractorID).get(new MultiKey(extractorID, mapName));
+        if (map == null) {
+          throw new ISE("map [%s] does not exists in [%s]", mapName, extractorID);
+        }
         postVersion = manager.getVersion(extractorID);
         if (postVersion == null) {
           // We lost some horrible race... make sure we clean up
@@ -238,6 +249,37 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
               .array();
         }
       };
+    }
+    finally {
+      readLock.unlock();
+    }
+  }
+
+  public Map<MultiKey, Map<String, String>> getAllMaps()
+  {
+    final Lock readLock = startStopSync.readLock();
+    readLock.lock();
+    try {
+      if (!started) {
+        throw new ISE("Factory [%s] not started", extractorID);
+      }
+      String preVersion = null, postVersion = null;
+      Map<MultiKey, Map<String, String>> mapMap = null;
+      // Make sure we absolutely know what version of map we grabbed (for caching purposes)
+      do {
+        preVersion = manager.getVersion(extractorID);
+        if (preVersion == null) {
+          throw new ISE("Namespace vanished for [%s]", extractorID);
+        }
+        mapMap = manager.getCacheMap(extractorID);
+        postVersion = manager.getVersion(extractorID);
+        if (postVersion == null) {
+          // We lost some horrible race... make sure we clean up
+          manager.delete(extractorID);
+          throw new ISE("Lookup [%s] is deleting", extractorID);
+        }
+      } while (!preVersion.equals(postVersion));
+      return mapMap;
     }
     finally {
       readLock.unlock();

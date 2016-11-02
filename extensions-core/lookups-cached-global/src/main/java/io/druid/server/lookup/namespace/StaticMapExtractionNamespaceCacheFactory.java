@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class StaticMapExtractionNamespaceCacheFactory
-    implements ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
+    extends ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
 {
   private final String version = UUID.randomUUID().toString();
 

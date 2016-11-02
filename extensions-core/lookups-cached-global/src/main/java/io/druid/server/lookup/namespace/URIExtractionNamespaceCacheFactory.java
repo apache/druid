@@ -19,10 +19,13 @@
 
 package io.druid.server.lookup.namespace;
 
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.data.input.MapPopulator;
+import io.druid.data.input.MultiMapsPopulator;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RetryUtils;
@@ -30,6 +33,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
+import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
@@ -38,12 +42,13 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
 /**
  *
  */
-public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<URIExtractionNamespace>
+public class URIExtractionNamespaceCacheFactory extends ExtractionNamespaceCacheFactory<URIExtractionNamespace>
 {
   private static final int DEFAULT_NUM_RETRIES = 3;
   private static final Logger log = new Logger(URIExtractionNamespaceCacheFactory.class);
@@ -62,7 +67,8 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
       final String id,
       final URIExtractionNamespace extractionNamespace,
       @Nullable final String lastVersion,
-      final Map<String, String> cache
+      final ConcurrentMap<MultiKey, Map<String, String>> cache,
+      final Function<MultiKey, Map<String, String>> mapAllocator
   ) throws Exception
   {
     final boolean doSearch = extractionNamespace.getUriPrefix() != null;
@@ -158,9 +164,12 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
                 }
               };
             }
-            final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
-                extractionNamespace.getNamespaceParseSpec()
-                                   .getParser()
+            final MapPopulator.PopulateResult populateResult = new MultiMapsPopulator<>(
+                extractionNamespace.getParser(
+                    extractionNamespace.getNamespaceParseSpec().getParser(),
+                    id
+                ),
+                mapAllocator
             ).populate(source, cache);
             log.info(
                 "Finished loading %,d values from %,d lines for namespace [%s]",

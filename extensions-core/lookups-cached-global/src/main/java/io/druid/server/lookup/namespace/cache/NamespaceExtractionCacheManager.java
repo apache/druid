@@ -19,12 +19,14 @@
 
 package io.druid.server.lookup.namespace.cache;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Striped;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -35,7 +37,9 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import org.apache.commons.collections.keyvalue.MultiKey;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.Collection;
 import java.util.Map;
@@ -49,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 
 /**
  *
@@ -82,7 +87,21 @@ public abstract class NamespaceExtractionCacheManager
   protected final ConcurrentMap<String, NamespaceImplData> implData = new ConcurrentHashMap<>();
   protected final AtomicLong tasksStarted = new AtomicLong(0);
   protected final ServiceEmitter serviceEmitter;
+  private final ConcurrentHashMap<String, String> lastVersion = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, ConcurrentMap<MultiKey, Map<String, String>>> mapMap = new ConcurrentHashMap<>();
+  private final Striped<Lock> nsLocks = Striped.lock(32);
   private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap;
+
+  public static Function<MultiKey, Map<String, String>> getMapAllocator(final NamespaceExtractionCacheManager manager)
+  {
+    return new Function<MultiKey, Map<String, String>>() {
+      @Nullable
+      @Override
+      public Map<String, String> apply(@Nullable MultiKey key) {
+        return manager.getOrAllocateInnerCacheMap(key);
+      }
+    };
+  }
 
   public NamespaceExtractionCacheManager(
       Lifecycle lifecycle,
@@ -353,11 +372,12 @@ public abstract class NamespaceExtractionCacheManager
               // should never happen
               throw new NullPointerException(String.format("No data for namespace [%s]", id));
             }
-            final Map<String, String> cache = getCacheMap(cacheId);
+            final ConcurrentMap<MultiKey, Map<String, String>> cache = getCacheMap(cacheId);
             final String preVersion = implData.latestVersion;
 
             tasksStarted.incrementAndGet();
-            final String newVersion = factory.populateCache(id, namespace, preVersion, cache);
+            final String newVersion = factory.populateCache(id, namespace, preVersion, cache,
+                getMapAllocator(NamespaceExtractionCacheManager.this));
             if (newVersion.equals(preVersion)) {
               log.debug("Version `%s` already exists, skipping updating cache", preVersion);
             } else {
@@ -416,26 +436,90 @@ public abstract class NamespaceExtractionCacheManager
   }
 
   /**
-   * This method is expected to swap the cacheKey into the active namespace, and leave future requests for new cacheKey available. getCacheMap(cacheKey) should return empty data after this call.
+   * This method swaps the cacheKey into the active namespace, and leaves future requests for new cacheKey available. getInnerCacheMap(cacheKey) should return empty data after this call.
    *
    * @param namespaceKey The namespace to swap the cache into
    * @param cacheKey     The cacheKey that contains the data of interest
    *
    * @return true if old data was cleared. False if no old data was found
    */
-  protected abstract boolean swapAndClearCache(String namespaceKey, String cacheKey);
+  protected boolean swapAndClearCache(String namespaceKey, String cacheKey)
+  {
+    final Lock lock = nsLocks.get(namespaceKey);
+    lock.lock();
+    try {
+      ConcurrentMap<MultiKey, Map<String, String>> cacheMap = mapMap.get(cacheKey);
+      if (cacheMap == null) {
+        throw new IAE("Extraction Cache [%s] does not exist", cacheKey);
+      }
+      ConcurrentMap<MultiKey, Map<String, String>> prior = mapMap.put(namespaceKey, cacheMap);
+      mapMap.remove(cacheKey);
+      if (prior != null) {
+        // Old map will get GC'd when it is not used anymore
+        return true;
+      } else {
+        return false;
+      }
+    }
+    finally {
+      lock.unlock();
+    }
+  }
 
   /**
    * Return a ConcurrentMap with the specified ID (either namespace's name or a cache key ID)
+   * It contains key-value map for all names of maps
+   * Create empty map if no matching map exists
    *
    * @param namespaceOrCacheKey Either a namespace or cache key should be acceptable here.
    *
-   * @return A ConcurrentMap<String, String> that is backed by the impl which implements this method.
+   * @return A ConcurrentMap<String, Map<String, String>>
    */
-  public abstract ConcurrentMap<String, String> getCacheMap(String namespaceOrCacheKey);
+  public ConcurrentMap<MultiKey, Map<String, String>> getCacheMap(String namespaceOrCacheKey)
+  {
+    ConcurrentMap<MultiKey, Map<String, String>> map = mapMap.get(namespaceOrCacheKey);
+
+    if (map == null) {
+      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<MultiKey, Map<String, String>>());
+      map = mapMap.get(namespaceOrCacheKey);
+    }
+    return map;
+  }
 
   /**
-   * Clears out resources used by the namespace such as threads. Implementations may override this and call super.delete(...) if they have resources of their own which need cleared.
+   * Return a ConcurrentMap with the specified ID and mapName
+   * Create empty map if no matching mapName exists
+   *
+   * @param id A namespace key should be acceptable here.
+   *
+   * @param mapName A name of map in a given namespace.
+   *
+   * @return A Map<String, String>
+   */
+  public Map<String, String> getInnerCacheMap(String id, String mapName)
+  {
+    ConcurrentMap<MultiKey, Map<String, String>> maps = getCacheMap(id);
+
+    // Cannot use mapName as a key for inner cache lookup
+    // due to mapName collision when multiple namespace use the same mapName
+    MultiKey key = new MultiKey(id, mapName);
+    Map<String, String> map = maps.get(key);
+    if (map == null)
+    {
+      maps.putIfAbsent(key, getOrAllocateInnerCacheMap(key));
+      map = maps.get(key);
+    }
+
+    return map;
+  }
+
+  /**
+   * Clear out resources used by the namespace such as threads.
+   *
+   * Cached key-value map is two-level, outer map is namespace-level(onheap) and inner map is mapName-level(onheap or offheap).
+   * First, this method deletes all the inner maps of the given namespace
+   * with {@link #deleteInnerCacheMaps(ConcurrentMap) deleteInnerCacheMaps()} which is implemented differently for each cache type.
+   * Then, it deletes namespace-level map entry of the given namespace.
    *
    * @param ns The namespace to be deleted
    *
@@ -453,13 +537,44 @@ public abstract class NamespaceExtractionCacheManager
     synchronized (implDatum.changeLock) {
       if (removeNamespaceLocalMetadata(implDatum)) {
         log.info("Deleted namespace [%s]", ns);
-        return true;
+        final Lock lock = nsLocks.get(ns);
+        lock.lock();
+        try {
+          ConcurrentMap<MultiKey, Map<String, String>> map = mapMap.get(ns);
+          if (map != null) {
+            deleteInnerCacheMaps(map);
+            mapMap.remove(ns);
+            return true;
+          }
+          return false;
+        }
+        finally {
+          lock.unlock();
+        }
       } else {
         log.debug("Did not delete namespace [%s]", ns);
         return false;
       }
     }
   }
+
+  /**
+   * Delete all the inner maps associated with the given outer map
+   *
+   * @param map outer map that contains all the inner maps to delete
+   * @return True if success, false if fail
+   */
+  protected abstract boolean deleteInnerCacheMaps(final ConcurrentMap<MultiKey, Map<String, String>> map);
+
+  /**
+   * Get the map associated with the given key
+   *
+   * Implementation of this method should return non-null Map.
+   *
+   * @param key key represented by MultiKey(namespace, mapName)
+   * @return A ConcurrentMap<String, String>
+   */
+  public abstract ConcurrentMap<String, String> getOrAllocateInnerCacheMap(MultiKey key);
 
   public String getVersion(String namespace)
   {

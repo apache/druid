@@ -34,7 +34,7 @@ import javax.ws.rs.core.Response;
 import java.util.Map;
 
 @JsonTypeName("map")
-public class MapLookupExtractorFactory implements LookupExtractorFactory
+public class MapLookupExtractorFactory extends LookupExtractorFactory
 {
   @JsonProperty
   private final Map<String, String> map;

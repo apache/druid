@@ -108,8 +108,18 @@ So a config might look something like:
               "password": "diurd"
             },
             "table": "lookupTable",
-            "keyColumn": "country_id",
-            "valueColumn": "country_name",
+            "keyValueMaps":[
+              {
+                "mapName":"name",
+                "keyName":"country_id",
+                "valueName":"coutry_name"
+              },
+              {
+                "mapName":"capital",
+                "keyName":"country_id",
+                "valueName":"capital_city"
+              }
+            ],
             "tsColumn": "timeColumn"
           },
           "firstCacheTimeout": 120000,

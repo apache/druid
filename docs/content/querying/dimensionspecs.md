@@ -232,26 +232,7 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
 }
 ```
 
-```json
-{
-  "type":"lookup",
-  "lookup":{"type":"namespace","namespace":"some_lookup"},
-  "replaceMissingValueWith":"Unknown",
-  "injective":false
-}
-```
-
-```json
-{
-  "type":"lookup",
-  "lookup":{"type":"namespace","namespace":"some_lookup"},
-  "retainMissingValue":true,
-  "injective":false
-}
-```
-
-A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. 
-A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
+A lookup has only one type `map`. A `map` lookup is passed as part of the query. 
 
 A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
  
@@ -477,5 +458,17 @@ The second kind where it is not possible to pass at query time due to their size
   "dimension":"dimensionName",
   "outputName":"dimensionOutputName",
   "name":"lookupName"
+}
+```
+
+User can specify the `mapName` inside the given lookup as [Globally Cached Lookups](../development/extensions-core/lookups-cached-global.html) can have multiple maps in each lookup.
+
+```json
+{ 
+  "type":"lookup",
+  "dimension":"dimensionName",
+  "outputName":"dimensionOutputName",
+  "name":"lookupName",
+  "mapName":"map1"
 }
 ```

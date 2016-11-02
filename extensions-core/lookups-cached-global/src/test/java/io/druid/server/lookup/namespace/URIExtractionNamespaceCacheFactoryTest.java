@@ -32,6 +32,7 @@ import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
@@ -40,6 +41,7 @@ import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManagersTe
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import io.druid.server.metrics.NoopServiceEmitter;
+import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -221,7 +223,7 @@ public class URIExtractionNamespaceCacheFactoryTest
               catch (Exception e) {
                 throw Throwables.propagate(e);
               }
-              ConcurrentHashMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<String, Function<String, String>>();
+              ConcurrentHashMap<String, Map<String, Function<String, String>>> fnCacheMap = new ConcurrentHashMap<>();
               try {
                 return new Object[]{
                     String.format(
@@ -267,6 +269,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         new NoopServiceEmitter(),
         namespaceFunctionFactoryMap
     );
+    this.mapAllocator = NamespaceExtractionCacheManager.getMapAllocator(manager);
     namespaceFunctionFactoryMap.put(
         URIExtractionNamespace.class,
 
@@ -280,11 +283,12 @@ public class URIExtractionNamespaceCacheFactoryTest
   private final String suffix;
   private final Function<File, OutputStream> outStreamSupplier;
   private Lifecycle lifecycle;
-  private NamespaceExtractionCacheManager manager;
+  private final NamespaceExtractionCacheManager manager;
   private File tmpFile;
   private File tmpFileParent;
   private URIExtractionNamespaceCacheFactory factory;
   private URIExtractionNamespace namespace;
+  private final Function<MultiKey, Map<String, String>> mapAllocator;
   private String id;
 
   @Before
@@ -317,6 +321,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
+        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -334,7 +339,8 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     Assert.assertTrue(manager.getKnownIDs().isEmpty());
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
-    Map<String, String> map = manager.getCacheMap(id);
+    MultiKey key = new MultiKey(id, KeyValueMap.DEFAULT_MAPNAME);
+    Map<String, String> map = manager.getCacheMap(id).get(key);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
   }
@@ -348,12 +354,14 @@ public class URIExtractionNamespaceCacheFactoryTest
         Paths.get(this.namespace.getUri()).getParent().toUri(),
         Pattern.quote(Paths.get(this.namespace.getUri()).getFileName().toString()),
         this.namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) this.namespace.getPollMs()),
         null
     );
     Assert.assertTrue(!manager.getKnownIDs().contains(regexID));
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(regexID, namespace));
-    Map<String, String> map = manager.getCacheMap(regexID);
+    MultiKey key = new MultiKey(regexID, KeyValueMap.DEFAULT_MAPNAME);
+    Map<String, String> map = manager.getCacheMap(regexID).get(key);
     Assert.assertNotNull(map);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
@@ -373,6 +381,7 @@ public class URIExtractionNamespaceCacheFactoryTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
+         KeyValueMap.DEFAULT_MAPS,
           new Period(0),
           null
       );
@@ -382,7 +391,8 @@ public class URIExtractionNamespaceCacheFactoryTest
     }
 
     for (String id : ids) {
-      final Map<String, String> map = manager.getCacheMap(id);
+      MultiKey key = new MultiKey(id, KeyValueMap.DEFAULT_MAPNAME);
+      final Map<String, String> map = manager.getCacheMap(id).get(key);
       Assert.assertEquals("bar", map.get("foo"));
       Assert.assertEquals(null, map.get("baz"));
       manager.delete(id);
@@ -395,14 +405,15 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     Assert.assertTrue(manager.getKnownIDs().isEmpty());
 
-    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+    ConcurrentMap<MultiKey, Map<String, String>> mapMap = new ConcurrentHashMap<>();
+    String v = factory.populateCache(id, namespace, null, mapMap, mapAllocator);
 
-    String v = factory.populateCache(id, namespace, null, map);
+    Map<String, String> map = mapMap.get(new MultiKey(id, KeyValueMap.DEFAULT_MAPNAME));
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
     Assert.assertNotNull(v);
 
-    String v2 = factory.populateCache(id, namespace, v, map);
+    String v2 = factory.populateCache(id, namespace, v, mapMap, mapAllocator);
     Assert.assertEquals(v, v2);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
@@ -415,12 +426,13 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         null, null,
         namespace.getNamespaceParseSpec(),
+        namespace.getMaps(),
         Period.millis((int) namespace.getPollMs()),
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    factory.populateCache(id, badNamespace, null, map);
+    ConcurrentMap<MultiKey, Map<String, String>> map = new ConcurrentHashMap<>();
+    factory.populateCache(id, badNamespace, null, map, mapAllocator);
   }
 
   @Test(expected = FileNotFoundException.class)
@@ -432,12 +444,13 @@ public class URIExtractionNamespaceCacheFactoryTest
         Paths.get(namespace.getUri()).getParent().toUri(),
         Pattern.quote(Paths.get(namespace.getUri()).getFileName().toString()),
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    factory.populateCache(badId, badNamespace, null, map);
+    ConcurrentMap<MultiKey, Map<String, String>> map = new ConcurrentHashMap<>();
+    factory.populateCache(badId, badNamespace, null, map, mapAllocator);
   }
 
   @Test(expected = IAE.class)
@@ -448,6 +461,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         null,
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         null
     );
@@ -461,6 +475,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null,
         "",
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         null
     );
@@ -474,6 +489,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null,
         null,
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         ""
     );
@@ -487,6 +503,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         "",
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         ""
     );
@@ -501,6 +518,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         "[",
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         null
     );
@@ -522,10 +540,11 @@ public class URIExtractionNamespaceCacheFactoryTest
         null,
         null,
         namespace.getNamespaceParseSpec(),
+        KeyValueMap.DEFAULT_MAPS,
         Period.millis((int) namespace.getPollMs()),
         null
     );
-    final Map<String, String> map = new HashMap<>();
-    Assert.assertNotNull(factory.populateCache(id, extractionNamespace, null, map));
+    final ConcurrentMap<MultiKey, Map<String, String>> map = new ConcurrentHashMap<>();
+    Assert.assertNotNull(factory.populateCache(id, extractionNamespace, null, map, mapAllocator));
   }
 }
