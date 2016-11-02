@@ -27,7 +27,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.LikeFilter;
@@ -79,34 +78,25 @@ public class LikeDimFilter implements DimFilter
       MATCH_PATTERN
     }
 
-    // Strings match if they start with "prefix" AND:
-    //  (a) suffixStyle is MATCH_ANY
-    //  (b) suffixStyle is MATCH_EMPTY and there is nothing after prefix
-    //  (c) suffixStyle is MATCH_PATTERN and the part after prefix matches suffixPattern
+    // Prefix that matching strings will always start with. Used for helping with index lookups.
     private final String prefix;
-    private final SuffixStyle suffixStyle;
-    private final Pattern suffixPattern;
 
-    // Strings match if they match "pattern".
+    // Strings match if:
+    //  (a) suffixStyle is MATCH_ANY and they start with "prefix"
+    //  (b) suffixStyle is MATCH_EMPTY and they start with "prefix" and contain nothing after prefix
+    //  (c) suffixStyle is MATCH_PATTERN and the string matches "pattern"
+    private final SuffixStyle suffixStyle;
     private final Pattern pattern;
 
     private LikeMatcher(
         final String prefix,
         final SuffixStyle suffixStyle,
-        final Pattern suffixPattern,
         final Pattern pattern
     )
     {
       this.prefix = Strings.nullToEmpty(prefix);
       this.suffixStyle = Preconditions.checkNotNull(suffixStyle, "suffixStyle");
-      this.suffixPattern = suffixPattern;
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
-
-      if (suffixPattern == null && suffixStyle == SuffixStyle.MATCH_PATTERN) {
-        throw new IAE("Need suffixPattern for pattern matching!");
-      } else if (suffixPattern != null && suffixStyle != SuffixStyle.MATCH_PATTERN) {
-        throw new IAE("Can't have suffixPattern without pattern matching!");
-      }
     }
 
     public static LikeMatcher from(
@@ -146,16 +136,11 @@ public class LikeDimFilter implements DimFilter
       final String suffixRegexString = suffixRegex.toString();
 
       if (suffixRegexString.isEmpty()) {
-        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_EMPTY, null, Pattern.compile(regex.toString()));
+        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_EMPTY, Pattern.compile(regex.toString()));
       } else if (suffixRegexString.equals(WILDCARD)) {
-        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_ANY, null, Pattern.compile(regex.toString()));
+        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_ANY, Pattern.compile(regex.toString()));
       } else {
-        return new LikeMatcher(
-            prefix.toString(),
-            SuffixStyle.MATCH_PATTERN,
-            Pattern.compile(suffixRegexString),
-            Pattern.compile(regex.toString())
-        );
+        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_PATTERN, Pattern.compile(regex.toString()));
       }
     }
 
@@ -182,10 +167,10 @@ public class LikeDimFilter implements DimFilter
       if (suffixStyle == SuffixStyle.MATCH_ANY) {
         return true;
       } else if (suffixStyle == SuffixStyle.MATCH_EMPTY) {
-        return s == null || s.length() == prefix.length();
+        return (s == null ? 0 : s.length()) == prefix.length();
       } else {
         // suffixStyle is MATCH_PATTERN
-        return suffixPattern.matcher(Strings.nullToEmpty(s).substring(prefix.length())).matches();
+        return matches(s);
       }
     }
 
