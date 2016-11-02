@@ -56,7 +56,7 @@ public class LikeFilter implements Filter
       // dimension equals prefix
       return selector.getBitmapIndex(dimension, likeMatcher.getPrefix());
     } else if (extractionFn == null) {
-      // dimension startsWith prefix and is accepted by likeMatcher
+      // dimension startsWith prefix and is accepted by likeMatcher.matchesSuffixOnly
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
 
       if (bitmapIndex == null) {
