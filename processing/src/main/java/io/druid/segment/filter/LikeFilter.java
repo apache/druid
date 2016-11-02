@@ -58,7 +58,7 @@ public class LikeFilter implements Filter
       // dimension equals prefix
       return selector.getBitmapIndex(dimension, likeMatcher.getPrefix());
     } else if (extractionFn == null) {
-      // dimension startsWith prefix (and maybe matches pattern)
+      // dimension startsWith prefix (and maybe suffix matches suffixPattern)
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
 
       if (bitmapIndex == null) {
@@ -100,9 +100,7 @@ public class LikeFilter implements Filter
                 @Override
                 public ImmutableBitmap next()
                 {
-                  while (currIndex < bitmapIndex.getCardinality() && !(
-                      likeMatcher.getSuffixStyle() == LikeDimFilter.LikeMatcher.SuffixStyle.MATCH_ANY
-                      || likeMatcher.matches(dimValues.get(currIndex)))) {
+                  while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
                     currIndex++;
                   }
 

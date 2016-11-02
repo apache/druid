@@ -27,7 +27,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.LikeFilter;
@@ -38,11 +38,14 @@ import java.util.regex.Pattern;
 
 public class LikeDimFilter implements DimFilter
 {
+  // Regex matching characters that are definitely okay to include unescaped in a regex.
+  // Leads to excessively paranoid escaping, although shouldn't affect runtime beyond compiling the regex.
   private static final Pattern DEFINITELY_FINE = Pattern.compile("[\\w\\d\\s-]");
+  private static final String WILDCARD = ".*";
 
   private final String dimension;
   private final String pattern;
-  private final String escape;
+  private final Character escapeChar;
   private final ExtractionFn extractionFn;
   private final LikeMatcher likeMatcher;
 
@@ -56,14 +59,15 @@ public class LikeDimFilter implements DimFilter
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.pattern = Preconditions.checkNotNull(pattern, "pattern");
-    this.escape = Strings.emptyToNull(escape);
     this.extractionFn = extractionFn;
 
-    if (this.escape != null && this.escape.length() != 1) {
+    if (escape != null && escape.length() != 1) {
       throw new IllegalArgumentException("Escape must be null or a single character");
+    } else {
+      this.escapeChar = (escape == null || escape.isEmpty()) ? null : escape.charAt(0);
     }
 
-    this.likeMatcher = LikeMatcher.from(pattern, this.escape == null ? 0 : this.escape.charAt(0), extractionFn == null);
+    this.likeMatcher = LikeMatcher.from(pattern, this.escapeChar, extractionFn == null);
   }
 
   public static class LikeMatcher
@@ -75,94 +79,113 @@ public class LikeDimFilter implements DimFilter
       MATCH_PATTERN
     }
 
+    // Strings match if they start with "prefix" AND:
+    //  (a) suffixStyle is MATCH_ANY
+    //  (b) suffixStyle is MATCH_EMPTY and there is nothing after prefix
+    //  (c) suffixStyle is MATCH_PATTERN and the part after prefix matches suffixPattern
     private final String prefix;
     private final SuffixStyle suffixStyle;
     private final Pattern suffixPattern;
 
-    public LikeMatcher(final String prefix, final SuffixStyle suffixStyle, final Pattern suffixPattern)
+    // Strings match if they match "pattern".
+    private final Pattern pattern;
+
+    private LikeMatcher(
+        final String prefix,
+        final SuffixStyle suffixStyle,
+        final Pattern suffixPattern,
+        final Pattern pattern
+    )
     {
-      this.prefix = Strings.emptyToNull(prefix);
+      this.prefix = Strings.nullToEmpty(prefix);
       this.suffixStyle = Preconditions.checkNotNull(suffixStyle, "suffixStyle");
       this.suffixPattern = suffixPattern;
+      this.pattern = Preconditions.checkNotNull(pattern, "pattern");
 
       if (suffixPattern == null && suffixStyle == SuffixStyle.MATCH_PATTERN) {
-        throw new ISE("Need suffixPattern for pattern matching!");
+        throw new IAE("Need suffixPattern for pattern matching!");
       } else if (suffixPattern != null && suffixStyle != SuffixStyle.MATCH_PATTERN) {
-        throw new ISE("Can't have suffixPattern without pattern matching!");
+        throw new IAE("Can't have suffixPattern without pattern matching!");
       }
     }
 
     public static LikeMatcher from(
         final String likePattern,
-        final char escapeChar,
+        @Nullable final Character escapeChar,
         final boolean extractPrefix
     )
     {
       final StringBuilder prefix = new StringBuilder();
+      final StringBuilder suffixRegex = new StringBuilder();
       final StringBuilder regex = new StringBuilder();
       boolean escaping = false;
       boolean inPrefix = true;
       for (int i = 0; i < likePattern.length(); i++) {
         final char c = likePattern.charAt(i);
-        if (c == escapeChar && escapeChar != 0) {
+        if (escapeChar != null && c == escapeChar) {
           escaping = true;
         } else if (c == '%' && !escaping) {
           inPrefix = false;
-          regex.append(".*");
+          suffixRegex.append(WILDCARD);
+          regex.append(WILDCARD);
         } else if (c == '_' && !escaping) {
           inPrefix = false;
+          suffixRegex.append(".");
           regex.append(".");
         } else {
           if (inPrefix && extractPrefix) {
             prefix.append(c);
           } else {
-            // Excessively paranoid escaping, although shouldn't affect runtime beyond compiling the regex.
-            if (DEFINITELY_FINE.matcher(String.valueOf(c)).matches()) {
-              regex.append(c);
-            } else {
-              regex.append("\\u").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));
-            }
+            addPatternCharacter(suffixRegex, c);
           }
+          addPatternCharacter(regex, c);
           escaping = false;
         }
       }
 
-      final String regexString = regex.toString();
+      final String suffixRegexString = suffixRegex.toString();
 
-      if (regexString.isEmpty()) {
-        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_EMPTY, null);
-      } else if (regexString.equals(".*")) {
-        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_ANY, null);
+      if (suffixRegexString.isEmpty()) {
+        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_EMPTY, null, Pattern.compile(regex.toString()));
+      } else if (suffixRegexString.equals(WILDCARD)) {
+        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_ANY, null, Pattern.compile(regex.toString()));
       } else {
-        return new LikeMatcher(prefix.toString(), SuffixStyle.MATCH_PATTERN, Pattern.compile(regexString));
+        return new LikeMatcher(
+            prefix.toString(),
+            SuffixStyle.MATCH_PATTERN,
+            Pattern.compile(suffixRegexString),
+            Pattern.compile(regex.toString())
+        );
+      }
+    }
+
+    private static void addPatternCharacter(final StringBuilder patternBuilder, final char c)
+    {
+      if (DEFINITELY_FINE.matcher(String.valueOf(c)).matches()) {
+        patternBuilder.append(c);
+      } else {
+        patternBuilder.append("\\u").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));
       }
     }
 
     public boolean matches(@Nullable final String s)
     {
-      if (s == null) {
-        return prefix == null && (suffixStyle == SuffixStyle.MATCH_ANY
-                                  || suffixStyle == SuffixStyle.MATCH_EMPTY
-                                  || suffixPattern.matcher("").matches());
-      }
+      return pattern.matcher(Strings.nullToEmpty(s)).matches();
+    }
 
-      final String suffix;
-
-      if (prefix == null) {
-        suffix = s;
-      } else if (s.startsWith(prefix)) {
-        suffix = s.substring(prefix.length());
-      } else {
-        return false;
-      }
-
+    /**
+     * Checks if the suffix of "s" matches the suffix of this matcher. The first prefix.length characters
+     * of s are ignored. This method is useful if you've already independently verified the prefix.
+     */
+    public boolean matchesSuffixOnly(@Nullable final String s)
+    {
       if (suffixStyle == SuffixStyle.MATCH_ANY) {
         return true;
       } else if (suffixStyle == SuffixStyle.MATCH_EMPTY) {
-        return suffix.isEmpty();
+        return s == null || s.length() == prefix.length();
       } else {
         // suffixStyle is MATCH_PATTERN
-        return suffixPattern.matcher(suffix).matches();
+        return suffixPattern.matcher(Strings.nullToEmpty(s).substring(prefix.length())).matches();
       }
     }
 
@@ -229,11 +252,6 @@ public class LikeDimFilter implements DimFilter
     {
       return suffixStyle;
     }
-
-    public Pattern getSuffixPattern()
-    {
-      return suffixPattern;
-    }
   }
 
   @JsonProperty
@@ -251,7 +269,7 @@ public class LikeDimFilter implements DimFilter
   @JsonProperty
   public String getEscape()
   {
-    return escape;
+    return escapeChar != null ? escapeChar.toString() : null;
   }
 
   @JsonProperty
@@ -265,7 +283,7 @@ public class LikeDimFilter implements DimFilter
   {
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] patternBytes = StringUtils.toUtf8(pattern);
-    final byte[] escapeBytes = StringUtils.toUtf8(Strings.nullToEmpty(escape));
+    final byte[] escapeBytes = escapeChar == null ? new byte[0] : Chars.toByteArray(escapeChar);
     final byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
     final int sz = 4 + dimensionBytes.length + patternBytes.length + escapeBytes.length + extractionFnBytes.length;
     return ByteBuffer.allocate(sz)
@@ -316,10 +334,11 @@ public class LikeDimFilter implements DimFilter
     if (pattern != null ? !pattern.equals(that.pattern) : that.pattern != null) {
       return false;
     }
-    if (escape != null ? !escape.equals(that.escape) : that.escape != null) {
+    if (escapeChar != null ? !escapeChar.equals(that.escapeChar) : that.escapeChar != null) {
       return false;
     }
     return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+
   }
 
   @Override
@@ -327,7 +346,7 @@ public class LikeDimFilter implements DimFilter
   {
     int result = dimension != null ? dimension.hashCode() : 0;
     result = 31 * result + (pattern != null ? pattern.hashCode() : 0);
-    result = 31 * result + (escape != null ? escape.hashCode() : 0);
+    result = 31 * result + (escapeChar != null ? escapeChar.hashCode() : 0);
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
   }
@@ -349,8 +368,8 @@ public class LikeDimFilter implements DimFilter
 
     builder.append(" LIKE '").append(pattern).append("'");
 
-    if (escape != null) {
-      builder.append(" ESCAPE '").append(escape).append("'");
+    if (escapeChar != null) {
+      builder.append(" ESCAPE '").append(escapeChar).append("'");
     }
 
     return builder.toString();
