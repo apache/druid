@@ -34,8 +34,6 @@ import java.util.Iterator;
 
 public class LikeFilter implements Filter
 {
-  private static final String HIGHEST_CHARACTER = String.valueOf(Character.MAX_VALUE);
-
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final LikeDimFilter.LikeMatcher likeMatcher;
@@ -70,7 +68,7 @@ public class LikeFilter implements Filter
       final Indexed<String> dimValues = selector.getDimensionValues(dimension);
 
       final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
-      final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + HIGHEST_CHARACTER;
+      final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
       final int startIndex; // inclusive
       final int endIndex; // exclusive
 
@@ -80,7 +78,8 @@ public class LikeFilter implements Filter
       final int upperFound = bitmapIndex.getIndex(upper);
       endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
 
-      // Union bitmaps for all matching dimension values in range
+      // Union bitmaps for all matching dimension values in range.
+      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
       return selector.getBitmapFactory().union(
           new Iterable<ImmutableBitmap>()
           {
