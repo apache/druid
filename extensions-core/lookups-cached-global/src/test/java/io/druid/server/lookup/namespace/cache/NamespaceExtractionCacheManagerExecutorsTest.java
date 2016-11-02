@@ -94,24 +94,17 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     )
     {
       @Override
-      public Callable<String> getCachePopulator(
+      public String populateCache(
           final String id,
           final URIExtractionNamespace extractionNamespace,
           final String lastVersion,
           final Map<String, String> cache
-      )
+      ) throws Exception
       {
-        return new Callable<String>()
-        {
-          @Override
-          public String call() throws Exception
-          {
-            // Don't actually read off disk because TravisCI doesn't like that
-            cache.put(KEY, VALUE);
-            Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
-            return Long.toString(System.currentTimeMillis());
-          }
-        };
+        // Don't actually read off disk because TravisCI doesn't like that
+        cache.put(KEY,VALUE);
+        Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
+        return Long.toString(System.currentTimeMillis());
       }
     };
     manager = new OnHeapNamespaceExtractionCacheManager(
