@@ -122,30 +122,19 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     )
     {
       @Override
-      protected Runnable getPostRunnable(
-          final String id,
-          final String cacheId
-      )
+      protected void updateNamespace(final String id, final String cacheId, final String newVersion)
       {
-        final Runnable runnable = super.getPostRunnable(id, cacheId);
         cacheUpdateAlerts.putIfAbsent(id, new Object());
         final Object cacheUpdateAlerter = cacheUpdateAlerts.get(id);
-        return new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            synchronized (cacheUpdateAlerter) {
-              try {
-                runnable.run();
-                numRuns.incrementAndGet();
-              }
-              finally {
-                cacheUpdateAlerter.notifyAll();
-              }
-            }
+        synchronized (cacheUpdateAlerter) {
+          try {
+            super.updateNamespace(id, cacheId, newVersion);
+            numRuns.incrementAndGet();
           }
-        };
+          finally {
+            cacheUpdateAlerter.notifyAll();
+          }
+        }
       }
     };
     tmpFile = Files.createTempFile(tmpDir, "druidTestURIExtractionNS", ".dat").toFile();
