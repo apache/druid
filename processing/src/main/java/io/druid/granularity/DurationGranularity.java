@@ -21,6 +21,7 @@ package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.joda.time.DateTime;
 
@@ -42,6 +43,7 @@ public class DurationGranularity extends BaseQueryGranularity
 
   public DurationGranularity(long millis, long origin)
   {
+    Preconditions.checkArgument(millis > 0, "duration should be greater than 0!");
     this.length = millis;
     this.origin = origin % length;
   }

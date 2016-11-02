@@ -21,6 +21,7 @@ package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -44,7 +45,8 @@ public class  PeriodGranularity extends BaseQueryGranularity
       @JsonProperty("timeZone") DateTimeZone tz
   )
   {
-    this.period = period;
+    this.period = Preconditions.checkNotNull(period, "period can't be null!");
+    Preconditions.checkArgument(!Period.ZERO.equals(period), "zero period is not acceptable in QueryGranularity!");
     this.chronology = tz == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(tz);
     if(origin == null)
     {
