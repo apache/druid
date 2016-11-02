@@ -28,10 +28,8 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.Closer;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.UOE;
-import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
@@ -135,26 +133,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMinTime()
   {
-    GenericColumn column = null;
-    try {
-      column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
+    try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
       return new DateTime(column.getLongSingleValueRow(0));
-    }
-    finally {
-      CloseQuietly.close(column);
     }
   }
 
   @Override
   public DateTime getMaxTime()
   {
-    GenericColumn column = null;
-    try {
-      column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
+    try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
       return new DateTime(column.getLongSingleValueRow(column.length() - 1));
-    }
-    finally {
-      CloseQuietly.close(column);
     }
   }
 
@@ -202,8 +190,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public String getColumnTypeName(String columnName)
   {
     final Column column = index.getColumn(columnName);
-    final ComplexColumn complexColumn = column.getComplexColumn();
-    return complexColumn != null ? complexColumn.getTypeName() : column.getCapabilities().getType().toString();
+    try (final ComplexColumn complexColumn = column.getComplexColumn()) {
+      return complexColumn != null ? complexColumn.getTypeName() : column.getCapabilities().getType().toString();
+    }
   }
 
   @Override
@@ -382,10 +371,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
       final Map<String, DictionaryEncodedColumn> dictionaryColumnCache = Maps.newHashMap();
       final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
-      final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
       final Map<String, Object> objectColumnCache = Maps.newHashMap();
 
       final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
+
+      final Closer closer = Closer.create();
+      closer.register(timestamps);
 
       Iterable<Long> iterable = gran.iterable(interval.getStartMillis(), interval.getEndMillis());
       if (descending) {
@@ -471,6 +462,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
+                        closer.register(cachedColumn);
                         dictionaryColumnCache.put(dimension, cachedColumn);
                       }
 
@@ -592,6 +584,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         if (holder != null && (holder.getCapabilities().getType() == ValueType.FLOAT
                                                || holder.getCapabilities().getType() == ValueType.LONG)) {
                           cachedMetricVals = holder.getGenericColumn();
+                          closer.register(cachedMetricVals);
                           genericColumnCache.put(columnName, cachedMetricVals);
                         }
                       }
@@ -628,6 +621,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG
                                                || holder.getCapabilities().getType() == ValueType.FLOAT)) {
                           cachedMetricVals = holder.getGenericColumn();
+                          closer.register(cachedMetricVals);
                           genericColumnCache.put(columnName, cachedMetricVals);
                         }
                       }
@@ -676,6 +670,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
 
                         if (cachedColumnVals != null) {
+                          closer.register((Closeable) cachedColumnVals);
                           objectColumnCache.put(column, cachedColumnVals);
                         }
                       }
@@ -953,28 +948,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                 }
               }
           ),
-          new Closeable()
-          {
-            @Override
-            public void close() throws IOException
-            {
-              CloseQuietly.close(timestamps);
-              for (DictionaryEncodedColumn column : dictionaryColumnCache.values()) {
-                CloseQuietly.close(column);
-              }
-              for (GenericColumn column : genericColumnCache.values()) {
-                CloseQuietly.close(column);
-              }
-              for (ComplexColumn complexColumn : complexColumnCache.values()) {
-                CloseQuietly.close(complexColumn);
-              }
-              for (Object column : objectColumnCache.values()) {
-                if (column instanceof Closeable) {
-                  CloseQuietly.close((Closeable) column);
-                }
-              }
-            }
-          }
+          closer
       );
     }
   }
