@@ -19,7 +19,7 @@
 
 package io.druid.math.expr;
 
-import com.google.common.primitives.Longs;
+import io.druid.common.guava.GuavaUtils;
 
 /**
  */
@@ -34,7 +34,7 @@ public class Evals
       return (Number) value;
     }
     String stringValue = String.valueOf(value);
-    Long longValue = Longs.tryParse(stringValue);
+    Long longValue = GuavaUtils.tryParseLong(stringValue);
     if (longValue == null) {
       return Double.valueOf(stringValue);
     }

@@ -17,41 +17,24 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.common.guava;
 
-import io.druid.segment.data.Indexed;
+import com.google.common.primitives.Longs;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class ComplexColumnImpl extends AbstractColumn
+public class GuavaUtilsTest
 {
-  private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
-      .setType(ValueType.COMPLEX);
-
-  private final Indexed column;
-  private final String typeName;
-
-  public ComplexColumnImpl(String typeName, Indexed column)
+  @Test
+  public void testParsLong()
   {
-    this.column = column;
-    this.typeName = typeName;
-  }
-
-  @Override
-  public ColumnCapabilities getCapabilities()
-  {
-    return CAPABILITIES;
-  }
-
-  @Override
-  public int getLength()
-  {
-    return column.size();
-  }
-
-  @Override
-  public ComplexColumn getComplexColumn()
-  {
-    return new IndexedComplexColumn(typeName, column);
+    Assert.assertNull(Longs.tryParse("+100"));
+    Assert.assertNull(GuavaUtils.tryParseLong(""));
+    Assert.assertNull(GuavaUtils.tryParseLong(null));
+    Assert.assertNull(GuavaUtils.tryParseLong("+"));
+    Assert.assertNull(GuavaUtils.tryParseLong("++100"));
+    Assert.assertEquals((Object) Long.parseLong("+100"), GuavaUtils.tryParseLong("+100"));
+    Assert.assertEquals((Object) Long.parseLong("-100"), GuavaUtils.tryParseLong("-100"));
+    Assert.assertNotEquals(new Long(100), GuavaUtils.tryParseLong("+101"));
   }
 }

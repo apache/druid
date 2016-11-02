@@ -31,9 +31,7 @@ public class CountAggregatorTest
   @Test
   public void testAggregate()
   {
-    CountAggregator agg = new CountAggregator("billy");
-
-    Assert.assertEquals("billy", agg.getName());
+    CountAggregator agg = new CountAggregator();
 
     Assert.assertEquals(0L, agg.get());
     Assert.assertEquals(0L, agg.get());
@@ -51,7 +49,7 @@ public class CountAggregatorTest
   @Test
   public void testComparator()
   {
-    CountAggregator agg = new CountAggregator("billy");
+    CountAggregator agg = new CountAggregator();
 
     Object first = agg.get();
     agg.aggregate();

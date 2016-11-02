@@ -39,7 +39,8 @@ import io.druid.timeline.partition.ShardSpec;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 
-public class DefaultAppenderatorFactory implements AppenderatorFactory
+public class
+DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
 {
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
@@ -52,7 +53,7 @@ public class DefaultAppenderatorFactory implements AppenderatorFactory
   private final Cache cache;
   private final CacheConfig cacheConfig;
 
-  public DefaultAppenderatorFactory(
+  public DefaultRealtimeAppenderatorFactory(
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
