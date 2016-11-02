@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.hadoop.FSSpideringIterator;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +42,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class PartitionPathSpec implements PathSpec
 {
@@ -111,52 +113,22 @@ public class PartitionPathSpec implements PathSpec
             }
         )
         : ImmutableList.of(basePath);
-    Preconditions.checkArgument(indexingPaths.toString().contains(basePath.toString()));
 
     FileSystem fs = basePath.getFileSystem(job.getConfiguration());
     Set<String> paths = Sets.newTreeSet();
 
-    if (getPartitionColumns() != null) {
-      for (Path indexingPath: indexingPaths) {
-        log.info("Checking the directory recursively if it has the same name as the given partition column");
-        int indexingStartColumnIndex = 0;
+    Pattern matchPattern = (getPartitionColumns() != null && !getPartitionColumns().isEmpty()) ? getMatchPattern() : null;
 
-        // skip some partition columns for partial indexing of partitions
-        if (basePath.toString().length() != indexingPath.toString().length()) {
-          String targetToFindSkipColumns = indexingPath.toString().substring(basePath.toString().length() + 1);
-          String[] skipColumnValues = targetToFindSkipColumns.split(Path.SEPARATOR);
-          Preconditions.checkArgument(skipColumnValues.length <= partitionColumns.size(),
-              "partition columns should include all the columns specified in indexingPaths");
+    for (Path indexingPath: indexingPaths) {
+      Preconditions.checkArgument(indexingPath.toString().startsWith(basePath.toString()),
+          "indexingPaths should be subdirectories of basePath but %s is not", indexingPath);
 
-          for (String skipColumnValue: skipColumnValues) {
-            String[] columnValuePair = skipColumnValue.split("=");
-            Preconditions.checkArgument(columnValuePair.length == 2,
-                String.format("%s: indexingPaths should not have non-partitioning directories", skipColumnValue));
-            Preconditions.checkArgument(columnValuePair[0].equals(partitionColumns.get(indexingStartColumnIndex)));
-            indexingStartColumnIndex++;
-          }
+      Iterable<FileStatus> fsIterator = FSSpideringIterator.spiderIterable(fs, indexingPath);
+      for (FileStatus fileStatus: fsIterator) {
+        String path = fileStatus.getPath().toString();
+        if (matchPattern == null || matchPattern.matcher(path).matches()) {
+          paths.add(path);
         }
-
-        // scan all the sub-directories under indexingPaths and add them to input path
-        if (indexingStartColumnIndex == partitionColumns.size()) {
-          paths.add(fs.getFileStatus(indexingPath).getPath().toString());
-        } else {
-          Path[] pathToFilter = statusToPath(fs.listStatus(indexingPath, new PartitionPathFilter(partitionColumns.get(indexingStartColumnIndex))));
-
-          for (int idx = indexingStartColumnIndex + 1; idx < partitionColumns.size(); idx++) {
-            pathToFilter = statusToPath(fs.listStatus(pathToFilter, new PartitionPathFilter(partitionColumns.get(idx))));
-          }
-
-          for (Path path: pathToFilter) {
-            paths.add(path.toString());
-          }
-        }
-      }
-
-    } else {
-      log.info("Automatically find the partition columns from directory names");
-      for (Path indexingPath: indexingPaths) {
-        autoAddPath(paths, fs, indexingPath);
       }
     }
 
@@ -179,7 +151,7 @@ public class PartitionPathSpec implements PathSpec
     Map<String, String> values = Maps.newHashMap();
     for (String partition: partitions) {
       String[] keyValue = partition.split("=");
-      if (keyValue.length == 2) {
+      if (keyValue.length == 2 && isPartitionColumn(keyValue[0])) {
         values.put(keyValue[0], keyValue[1]);
       }
     }
@@ -187,55 +159,21 @@ public class PartitionPathSpec implements PathSpec
     return values;
   }
 
-  private Path[] statusToPath(FileStatus[] statuses)
+  private Pattern getMatchPattern()
   {
-    List<Path> dirPath = Lists.newArrayListWithExpectedSize(statuses.length);
-    for (FileStatus status: statuses) {
-      if (status.isDirectory()) {
-        dirPath.add(status.getPath());
-      }
+    Preconditions.checkNotNull(partitionColumns, "partitionColumns is null");
+
+    StringBuilder partitionPattern = new StringBuilder();
+    partitionPattern.append(".*").append(basePath).append(Path.SEPARATOR);
+    for (String partitionColumn: partitionColumns) {
+      partitionPattern.append(partitionColumn).append("=.*?").append(Path.SEPARATOR);
     }
 
-    return dirPath.toArray(new Path[dirPath.size()]);
+    return Pattern.compile(partitionPattern.append(".*").toString().replace("/","\\/"));
   }
 
-  private class PartitionPathFilter implements PathFilter
+  private boolean isPartitionColumn(String columnName)
   {
-    final String shouldBeStartWith;
-
-    public PartitionPathFilter(
-        String columnName
-    )
-    {
-      shouldBeStartWith = columnName + "=";
-    }
-
-    @Override
-    public boolean accept(Path path)
-    {
-      String pathName = path.getName();
-      if (pathName.split("=").length != 2)
-        return false;
-      return pathName.startsWith(shouldBeStartWith);
-    }
-  }
-
-  private void autoAddPath(Set<String> paths, FileSystem fs, Path path) throws IOException
-  {
-    boolean hasFile = false;
-    for (FileStatus fileStatus: fs.listStatus(path)) {
-      Path child = fileStatus.getPath();
-      if (fileStatus.isDirectory()) {
-        String[] split = child.getName().split("=");
-        if (split.length == 2) {
-          autoAddPath(paths, fs, child);
-        }
-      } else {
-        hasFile = true;
-      }
-    }
-
-    if (hasFile)
-      paths.add(path.toString());
+    return partitionColumns == null || partitionColumns.contains(columnName);
   }
 }

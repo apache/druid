@@ -140,13 +140,13 @@ s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
 
 ##### `partition`
 
-A type of inputSpec that expects data from partitioned table of most SQL on Hadoops like Hive and Impala: `.../partition_col1=XXX/partition_col2=XXX/...`.
+A type of inputSpec that expects data from partitioned table of most SQL-on-Hadoop solutions such as Hive and Impala: `.../partition_col1=XXX/partition_col2=XXX/...`.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |basePath|String|Base path of partitioned table|yes|
 |indexingPath|String|Base path to find partitioned data directories|no|
-|partitionColumns|List of String|List of Partition column names|no|
+|partitionColumns|List of String|List of partitioned column names|no|
 
 If indexingPath is not specified, it has the same value as basePath.
 If partitionColumns are not specified, automatically ingest columns and values from directory path by finding `x=y` pattern and considering x as column name and y as column value.
@@ -154,12 +154,25 @@ All partition columns are ingested as dimensions.
 
 If `basePath` is test, `indexingPath` is test/col1=a, `partitionColumns` are col1 and col2, and run with following input directories:
 ```
-hdfs://xxx.xxx.xxx.xxx:9000/test/col1=a/col2=1
-hdfs://xxx.xxx.xxx.xxx:9000/test/col1=a/col2=2
-hdfs://xxx.xxx.xxx.xxx:9000/test/col1=b/col2=1
-hdfs://xxx.xxx.xxx.xxx:9000/test/col1=a/colx=1
+test --- col1=a --- col2=1 
+      |          |
+      |          -- col2=2 
+      |          | 
+      |          -- colx=1
+      |
+      -- col1=b --- col2=1        
 ```
-first two directories are ingested with two additional dimensions `col1` and `col2` with corresponding values specified in the path, and last two directories are ignored.
+Then, first two directories are ingested with two additional dimensions `col1` and `col2` with corresponding values specified in the path, and last two directories are ignored.
+```
+test --- col1=a --- col2=1      -> ingested with additional dimensions, col1 = a and col2 = 1
+      |          |
+      |          -- col2=2      -> ingested with additional dimensions, col1 = a and col2 = 2
+      |          | 
+      |          -- colx=1      -> ignored
+      |
+      -- col1=b --- col2=1      -> ignored
+```
+
 
 ##### `dataSource`
 

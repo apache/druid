@@ -24,13 +24,13 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.Granularity;
 import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -55,7 +55,8 @@ public class PartitionPathSpecTest
   private PartitionPathSpec partitionPathSpec;
   private final String TEST_STRING_BASE_PATH = "TEST";
   private final List<String> TEST_STRING_PARTITION_COLS = ImmutableList.of("test1", "test2");
-  private final List<String> TEST_STRING_SINGLE_PARTITON_COLS = ImmutableList.of("test2");
+  private final List<String> TEST_STRING_SINGLE_PARTITION_COL_MID = ImmutableList.of("test1");
+  private final List<String> TEST_STRING_SINGLE_PARTITION_COL_LEAF = ImmutableList.of("test2");
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -117,7 +118,7 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
     partitionPathSpec.setPartitionColumns(TEST_STRING_PARTITION_COLS);
@@ -145,9 +146,10 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file3"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file4")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -181,10 +183,10 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
-    partitionPathSpec.setPartitionColumns(TEST_STRING_SINGLE_PARTITON_COLS);
+    partitionPathSpec.setPartitionColumns(TEST_STRING_SINGLE_PARTITION_COL_LEAF);
     partitionPathSpec.setInputFormat(org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class);
 
     Job job = Job.getInstance();
@@ -202,14 +204,69 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
 
     Map<String, String> columnsExpected = ImmutableMap.of(
         "test2", "123"
+    );
+
+    Map<String, String> partitionColumns = partitionPathSpec.getPartitionValues(
+        new Path(String.format("file:%s/test/test1=abc/test2=123/file1",testFolder.getRoot()))
+    );
+
+    Assert.assertEquals(columnsExpected, partitionColumns);
+  }
+
+  @Test
+  public void testAddInputPathNonPartitionSubdirectory() throws Exception
+  {
+    UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
+    HadoopIngestionSpec spec = new HadoopIngestionSpec(
+        new DataSchema(
+            "foo",
+            null,
+            new AggregatorFactory[0],
+            new UniformGranularitySpec(
+                Granularity.DAY,
+                QueryGranularities.MINUTE,
+                ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
+            ),
+            jsonMapper
+        ),
+        new HadoopIOConfig(null, null, null),
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
+    );
+
+    partitionPathSpec.setPartitionColumns(TEST_STRING_SINGLE_PARTITION_COL_MID);
+    partitionPathSpec.setInputFormat(org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class);
+
+    Job job = Job.getInstance();
+    String formatStr = "file:%s/%s;org.apache.hadoop.mapreduce.lib.input.TextInputFormat";
+
+    testFolder.newFolder("test", "test1=abc", "test2=123");
+    testFolder.newFolder("test", "test1=abc", "test2=456");
+    testFolder.newFile("test/test1=abc/test2=123/file1");
+    testFolder.newFile("test/test1=abc/test2=456/file2");
+
+    partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test");
+
+    partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
+
+    String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
+
+    String expected = Joiner.on(",").join(Lists.newArrayList(
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2")
+    ));
+
+    Assert.assertEquals("Did not find expected input paths", expected, actual);
+
+    Map<String, String> columnsExpected = ImmutableMap.of(
+        "test1", "abc"
     );
 
     Map<String, String> partitionColumns = partitionPathSpec.getPartitionValues(
@@ -236,10 +293,10 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
-    partitionPathSpec.setPartitionColumns(TEST_STRING_SINGLE_PARTITON_COLS);
+    partitionPathSpec.setPartitionColumns(TEST_STRING_SINGLE_PARTITION_COL_LEAF);
     partitionPathSpec.setInputFormat(org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class);
 
     Job job = Job.getInstance();
@@ -263,8 +320,8 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -297,7 +354,7 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
     partitionPathSpec.setPartitionColumns(TEST_STRING_PARTITION_COLS);
@@ -331,9 +388,10 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file3"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file4")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -367,7 +425,7 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
     Job job = Job.getInstance();
@@ -388,9 +446,10 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file3"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file4")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -424,7 +483,7 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
     Job job = Job.getInstance();
@@ -442,8 +501,8 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -476,7 +535,7 @@ public class PartitionPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null, false, false)
     );
 
     Job job = Job.getInstance();
@@ -503,9 +562,10 @@ public class PartitionPathSpecTest
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123/file1"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456/file2"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file3"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123/file4")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);

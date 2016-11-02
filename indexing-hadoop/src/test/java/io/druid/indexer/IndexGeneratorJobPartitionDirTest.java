@@ -26,12 +26,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -238,7 +238,9 @@ public class IndexGeneratorJobPartitionDirTest
                 true,
                 null,
                 true,
-                null
+                null,
+                false,
+                false
             )
         )
     );
@@ -312,11 +314,11 @@ public class IndexGeneratorJobPartitionDirTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        Indexed<String> hostString = adapter.getDimValueLookup("host");
+        Indexed<Comparable> hostString = adapter.getDimValueLookup("host");
         int hostIndex = adapter.getDimensionNames().indexOf("host");
-        Indexed<String> test1String = adapter.getDimValueLookup("test1");
+        Indexed<Comparable> test1String = adapter.getDimValueLookup("test1");
         int test1Index = adapter.getDimensionNames().indexOf("test1");
-        Indexed<String> test2String = adapter.getDimValueLookup("test2");
+        Indexed<Comparable> test2String = adapter.getDimValueLookup("test2");
         int test2Index = adapter.getDimensionNames().indexOf("test2");
         List<String> test1Expected = ImmutableList.of("a", "b");
         List<String> test2Expected = ImmutableList.of("1", "2");
@@ -324,10 +326,13 @@ public class IndexGeneratorJobPartitionDirTest
         for(Rowboat row: adapter.getRows())
         {
           Object[] metrics = row.getMetrics();
-          int[][] dimInts = row.getDims();
-          String host = hostString.get(dimInts[hostIndex][0]);
-          String test1 = test1String.get(dimInts[test1Index][0]);
-          String test2 = test2String.get(dimInts[test2Index][0]);
+          Object[] dimInts = row.getDims();
+          int[] valueHost = (int[])dimInts[hostIndex];
+          int[] valueTest1 = (int[])dimInts[test1Index];
+          int[] valueTest2 = (int[])dimInts[test2Index];
+          String host = (String)hostString.get(valueHost[0]);
+          String test1 = (String)test1String.get(valueTest1[0]);
+          String test2 = (String)test2String.get(valueTest2[0]);
 
           Assert.assertTrue(metrics.length == 2);
           Assert.assertTrue(test1Expected.contains(test1));
