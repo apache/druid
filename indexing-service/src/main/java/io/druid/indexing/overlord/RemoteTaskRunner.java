@@ -1083,7 +1083,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     // Clean blacklisted workers if blacklisted time has elapsed
     if(System.currentTimeMillis() - zkWorker.getLastCompletedTaskTime().getMillis() >
-            config.getTaskBlackListBackoffTimeMillis()){
+            config.getTaskBlackListBackoffTime().toStandardDuration().getMillis()){
       // White listing node
       log.debug( "Whitelisting worker [%s]. ", zkWorker);
       blackListedWorkers.remove(zkWorker);
@@ -1299,19 +1299,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
   {
-    return ImmutableList.copyOf(
-            Collections2.transform(
-                    blackListedWorkers,
-                    new Function<ZkWorker, ImmutableWorkerInfo>()
-                    {
-                      @Override
-                      public ImmutableWorkerInfo apply(ZkWorker input)
-                      {
-                        return input.toImmutable();
-                      }
-                    }
-            )
-    );
+    return getImmutableWorkerFromZK(blackListedWorkers);
   }
 
   @VisibleForTesting

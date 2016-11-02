@@ -71,9 +71,9 @@ public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   }
 
   @Override
-  public long getTaskBlackListBackoffTimeMillis()
+  public Period getTaskBlackListBackoffTime()
   {
-    return timeout.getMillis();
+    return timeout;
   }
 
   @Override

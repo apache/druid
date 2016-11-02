@@ -617,15 +617,15 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers() throws Exception
   {
-    Period timeoutPeriod = new Period("PT5S");
+    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
     makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(timeoutPeriod));
 
     TestRealtimeTask task1 = new TestRealtimeTask(
-            "rt1",
-            new TaskResource("rt1", 1),
+            "realtime1",
+            new TaskResource("realtime1", 1),
             "foo",
-            TaskStatus.success("rt1"),
+            TaskStatus.success("realtime1"),
             jsonMapper
     );
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
@@ -638,10 +638,10 @@ public class RemoteTaskRunnerTest
             remoteTaskRunner.findWorkerRunningTask(task1.getId()).getCountinouslyFailedTasksCount());
 
     TestRealtimeTask task2 = new TestRealtimeTask(
-            "rt2",
-            new TaskResource("rt2", 1),
+            "realtime2",
+            new TaskResource("realtime2", 1),
             "foo",
-            TaskStatus.running("rt2"),
+            TaskStatus.running("realtime2"),
             jsonMapper
     );
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
@@ -656,16 +656,17 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.cleanBlackListedNode(remoteTaskRunner.findWorkerRunningTask(task2.getId()));
 
     // After backOffTime the nodes are whitelisted
-    Thread.sleep(timeoutPeriod.toStandardDuration().getMillis());
+    System.out.println("Sleeping for " + timeoutPeriod.toStandardDuration().getMillis());
+    Thread.sleep(2*timeoutPeriod.toStandardDuration().getMillis());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
     Assert.assertEquals(2,
             remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
 
     TestRealtimeTask task3 = new TestRealtimeTask(
-            "rt3",
-            new TaskResource("rt3", 1),
+            "realtime3",
+            new TaskResource("realtime3", 1),
             "foo",
-            TaskStatus.running("rt3"),
+            TaskStatus.running("realtime3"),
             jsonMapper
     );
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);

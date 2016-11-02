@@ -69,10 +69,15 @@ http://<OVERLORD_IP>:<port>/console.html
 ```
 
 #### Blacklisted Workers
-If the workers fail tasks above a threshold, the overlord will blacklist these workers. No more than 20% of the nodes can be blacklisted.
+If the workers fail tasks above a threshold, the overlord will blacklist these workers. No more than 20% of the nodes can be blacklisted. Blacklisted nodes will be periodically whitelisted.
 
-Blacklisted nodes will be periodically whitelisted.
+The following vairables can be used to set the threshold and blacklist timeouts.
 
+```
+druid.indexer.runner.maxRetriesBeforeBlacklist
+druid.indexer.runner.taskBlackListBackoffTime
+druid.indexer.runner.taskBlackListCleanupPeriod
+```
 
 #### Autoscaling
 

@@ -54,8 +54,8 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   private int maxRetriesBeforeBlacklist = 5;
 
   @JsonProperty
-  @Min(60000)
-  private long taskBlackListBackoffTimeMillis = 900000;
+  @NotNull
+  private Period taskBlackListBackoffTime = new Period("PT15M");
 
   @JsonProperty
   @NotNull
@@ -95,12 +95,12 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
   }
 
-  public long getTaskBlackListBackoffTimeMillis() {
-    return taskBlackListBackoffTimeMillis;
+  public Period getTaskBlackListBackoffTime() {
+    return taskBlackListBackoffTime;
   }
 
-  public void setTaskBlackListBackoffTimeMillis(long taskBlackListBackoffTimeMillis) {
-    this.taskBlackListBackoffTimeMillis = taskBlackListBackoffTimeMillis;
+  public void setTaskBlackListBackoffTimeMillis(Period taskBlackListBackoffTime) {
+    this.taskBlackListBackoffTime = taskBlackListBackoffTime;
   }
 
   public Period getTaskBlackListCleanupPeriod() {
@@ -144,7 +144,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     if (maxRetriesBeforeBlacklist != that.maxRetriesBeforeBlacklist) {
       return false;
     }
-    if (taskBlackListBackoffTimeMillis != that.taskBlackListBackoffTimeMillis) {
+    if (!taskBlackListBackoffTime.equals(that.getTaskBlackListBackoffTime())) {
       return false;
     }
     return taskBlackListCleanupPeriod.equals(that.taskBlackListCleanupPeriod);
@@ -161,7 +161,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
     result = 31 * result + maxRetriesBeforeBlacklist;
-    result = 31 * result + (int)taskBlackListBackoffTimeMillis;
+    result = 31 * result + taskBlackListBackoffTime.hashCode();
     result = 31 * result + taskBlackListCleanupPeriod.hashCode();
     return result;
   }
@@ -177,7 +177,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
            ", taskShutdownLinkTimeout=" + taskShutdownLinkTimeout +
            ", pendingTasksRunnerNumThreads=" + pendingTasksRunnerNumThreads +
            ", maxRetriesBeforeBlacklist=" + maxRetriesBeforeBlacklist +
-           ", taskBlackListBackoffTimeMillis=" + taskBlackListBackoffTimeMillis +
+           ", taskBlackListBackoffTimeMillis=" + taskBlackListBackoffTime +
            ", taskBlackListCleanupPeriod=" + taskBlackListCleanupPeriod +
            '}';
   }

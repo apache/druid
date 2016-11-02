@@ -37,7 +37,7 @@ public class RemoteTaskRunnerConfigTest
   private static final long DEFAULT_MAX_ZNODE = 10 * 1024;
   private static final int DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS = 5;
   private static final int DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST = 5;
-  private static final long DEFAULT_TASK_BACKOFF = 900000;
+  private static final Period DEFAULT_TASK_BACKOFF = new Period("PT10M");
   private static final Period DEFAULT_BLACKLIST_CLEANUP_PERIOD = new Period("PT5M");
 
   @Test
@@ -181,11 +181,11 @@ public class RemoteTaskRunnerConfigTest
   }
 
   @Test
-  public void testGetTaskBlackListBackoffTimeMillis() throws Exception
+  public void testGettaskBlackListBackoffTime() throws Exception
   {
-    final long taskBlackListBackoffTimeMillis = 200;
+    final Period taskBlackListBackoffTime = new Period("PT1M");
     Assert.assertEquals(
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             reflect(generateRemoteTaskRunnerConfig(
                     DEFAULT_TIMEOUT,
                     DEFAULT_TIMEOUT,
@@ -194,9 +194,9 @@ public class RemoteTaskRunnerConfigTest
                     DEFAULT_TIMEOUT,
                     DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS,
                     DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     DEFAULT_BLACKLIST_CLEANUP_PERIOD
-            )).getTaskBlackListBackoffTimeMillis()
+            )).getTaskBlackListBackoffTime()
     );
   }
 
@@ -252,7 +252,7 @@ public class RemoteTaskRunnerConfigTest
     final long max = 20 * 1024;
     final int pendingTasksRunnerNumThreads = 20;
     final int maxRetriesBeforeBlacklist = 1;
-    final long taskBlackListBackoffTimeMillis = 1000;
+    final Period taskBlackListBackoffTime = new Period("PT1M");
     final Period taskBlackListCleanupPeriod = Period.years(10);
     Assert.assertEquals(
         reflect(generateRemoteTaskRunnerConfig(
@@ -263,7 +263,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -274,7 +274,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         ))
     );
@@ -287,7 +287,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -298,7 +298,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         ))
     );
@@ -311,7 +311,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -322,7 +322,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         ))
     );
@@ -335,7 +335,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -346,7 +346,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         ))
     );
@@ -360,7 +360,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -371,7 +371,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         ))
     );
@@ -386,7 +386,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -397,7 +397,7 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         ))
     );
@@ -411,7 +411,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
                 )),
         reflect(generateRemoteTaskRunnerConfig(
@@ -422,7 +422,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
                 ))
     );
@@ -436,7 +436,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )),
             reflect(generateRemoteTaskRunnerConfig(
@@ -447,7 +447,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             ))
     );
@@ -461,7 +461,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )),
             reflect(generateRemoteTaskRunnerConfig(
@@ -486,7 +486,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )),
             reflect(generateRemoteTaskRunnerConfig(
@@ -497,7 +497,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     DEFAULT_BLACKLIST_CLEANUP_PERIOD
             ))
     );
@@ -535,7 +535,7 @@ public class RemoteTaskRunnerConfigTest
     final long max = 20 * 1024;
     final int pendingTasksRunnerNumThreads = 20;
     final int maxRetriesBeforeBlacklist = 80;
-    final long taskBlackListBackoffTimeMillis = 10000;
+    final Period taskBlackListBackoffTime = new Period("PT1M");
     final Period taskBlackListCleanupPeriod = Period.years(10);
     Assert.assertEquals(
         reflect(generateRemoteTaskRunnerConfig(
@@ -546,7 +546,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -557,7 +557,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode()
     );
@@ -570,7 +570,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -581,7 +581,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode()
     );
@@ -594,7 +594,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -605,7 +605,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode()
     );
@@ -618,7 +618,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -629,7 +629,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode()
     );
@@ -643,7 +643,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -654,7 +654,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode()
     );
@@ -669,7 +669,7 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -680,7 +680,7 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             pendingTasksRunnerNumThreads,
             maxRetriesBeforeBlacklist,
-            taskBlackListBackoffTimeMillis,
+            taskBlackListBackoffTime,
             taskBlackListCleanupPeriod
         )).hashCode()
     );
@@ -694,7 +694,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
                 )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
@@ -705,7 +705,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
                 )).hashCode()
     );
@@ -719,7 +719,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )).hashCode(),
             reflect(generateRemoteTaskRunnerConfig(
@@ -730,7 +730,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )).hashCode()
     );
@@ -744,7 +744,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )).hashCode(),
             reflect(generateRemoteTaskRunnerConfig(
@@ -769,7 +769,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     taskBlackListCleanupPeriod
             )).hashCode(),
             reflect(generateRemoteTaskRunnerConfig(
@@ -780,7 +780,7 @@ public class RemoteTaskRunnerConfigTest
                     timeout,
                     pendingTasksRunnerNumThreads,
                     maxRetriesBeforeBlacklist,
-                    taskBlackListBackoffTimeMillis,
+                    taskBlackListBackoffTime,
                     DEFAULT_BLACKLIST_CLEANUP_PERIOD
             )).hashCode()
     );
@@ -799,7 +799,7 @@ public class RemoteTaskRunnerConfigTest
       Period taskShutdownLinkTimeout,
       int pendingTasksRunnerNumThreads,
       int maxRetriesBeforeBlacklist,
-      long taskBlackListBackoffTimeMillis,
+      Period taskBlackListBackoffTime,
       Period taskBlackListCleanupPeriod
   )
   {
@@ -811,7 +811,7 @@ public class RemoteTaskRunnerConfigTest
     objectMap.put("taskShutdownLinkTimeout", taskShutdownLinkTimeout);
     objectMap.put("pendingTasksRunnerNumThreads", pendingTasksRunnerNumThreads);
     objectMap.put("maxRetriesBeforeBlacklist", maxRetriesBeforeBlacklist);
-    objectMap.put("taskBlackListBackoffTimeMillis", taskBlackListBackoffTimeMillis);
+    objectMap.put("taskBlackListBackoffTime", taskBlackListBackoffTime);
     objectMap.put("taskBlackListCleanupPeriod", taskBlackListCleanupPeriod);
     return mapper.convertValue(objectMap, RemoteTaskRunnerConfig.class);
   }
