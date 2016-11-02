@@ -32,6 +32,7 @@ import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,7 +62,7 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
   public Callable<String> getCachePopulator(
       final String id,
       final URIExtractionNamespace extractionNamespace,
-      final String lastVersion,
+      @Nullable final String lastVersion,
       final Map<String, String> cache
   )
   {
@@ -129,6 +130,7 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
                 {
                   final String version = puller.getVersion(uri);
                   try {
+                    // Important to call equals() against version because lastVersion could be null
                     if (version.equals(lastVersion)) {
                       log.debug(
                           "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
