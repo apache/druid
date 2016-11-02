@@ -121,18 +121,22 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       if (!interval.contains(segment.getDataInterval())) {
         MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
         final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-        final GenericColumn timeValues = timeColumn.getGenericColumn();
+        try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
 
-        int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
-        int endIndex = Math.min(timeValues.length() - 1, getStartIndexOfTime(timeValues, interval.getEndMillis(), false));
+          int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
+          int endIndex = Math.min(
+              timeValues.length() - 1,
+              getStartIndexOfTime(timeValues, interval.getEndMillis(), false)
+          );
 
-        for (int i = startIndex; i <= endIndex; i++) {
-          timeBitmap.add(i);
+          for (int i = startIndex; i <= endIndex; i++) {
+            timeBitmap.add(i);
+          }
+
+          final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
+          timeFilteredBitmap =
+              (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
         }
-
-        final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
-        timeFilteredBitmap =
-            (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
       } else {
         timeFilteredBitmap = baseFilter;
       }
