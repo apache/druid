@@ -24,7 +24,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {
-        @JsonSubTypes.Type(name = "normalizedCostBalancer", value = DiskNormalizedCostBalancerStrategyFactory.class),
+        @JsonSubTypes.Type(name = "diskNormalizedCostBalancer", value = DiskNormalizedCostBalancerStrategyFactory.class),
         @JsonSubTypes.Type(name = "costBalancer", value = CostBalancerStrategyFactory.class),
         @JsonSubTypes.Type(name = "randomBalancer", value = RandomBalancerStrategyFactory.class),
 })
