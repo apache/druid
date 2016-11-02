@@ -29,4 +29,7 @@ public interface IndexedLongs extends Closeable
   public int size();
   public long get(int index);
   public void fill(int index, long[] toFill);
+
+  @Override
+  void close();
 }

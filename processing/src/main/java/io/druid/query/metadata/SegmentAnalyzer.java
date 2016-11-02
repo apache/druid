@@ -306,35 +306,36 @@ public class SegmentAnalyzer
       final String typeName
   )
   {
-    final ComplexColumn complexColumn = column != null ? column.getComplexColumn() : null;
-    final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues();
-    long size = 0;
+    try (final ComplexColumn complexColumn = column != null ? column.getComplexColumn() : null) {
+      final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues();
+      long size = 0;
 
-    if (analyzingSize() && complexColumn != null) {
-      final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-      if (serde == null) {
-        return ColumnAnalysis.error(String.format("unknown_complex_%s", typeName));
+      if (analyzingSize() && complexColumn != null) {
+        final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+        if (serde == null) {
+          return ColumnAnalysis.error(String.format("unknown_complex_%s", typeName));
+        }
+
+        final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
+        if (inputSizeFn == null) {
+          return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null, null, null);
+        }
+
+        final int length = column.getLength();
+        for (int i = 0; i < length; ++i) {
+          size += inputSizeFn.apply(complexColumn.getRowValue(i));
+        }
       }
 
-      final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
-      if (inputSizeFn == null) {
-        return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null, null, null);
-      }
-
-      final int length = column.getLength();
-      for (int i = 0; i < length; ++i) {
-        size += inputSizeFn.apply(complexColumn.getRowValue(i));
-      }
+      return new ColumnAnalysis(
+          typeName,
+          hasMultipleValues,
+          size,
+          null,
+          null,
+          null,
+          null
+      );
     }
-
-    return new ColumnAnalysis(
-        typeName,
-        hasMultipleValues,
-        size,
-        null,
-        null,
-        null,
-        null
-    );
   }
 }

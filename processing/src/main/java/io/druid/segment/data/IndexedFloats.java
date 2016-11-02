@@ -29,4 +29,7 @@ public interface IndexedFloats extends Closeable
   public int size();
   public float get(int index);
   public void fill(int index, float[] toFill);
+
+  @Override
+  void close();
 }

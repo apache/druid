@@ -21,8 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 
-import java.io.IOException;
-
 public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
 {
 
@@ -80,7 +78,7 @@ public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
     }
   }

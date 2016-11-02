@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -82,7 +81,7 @@ public class EntireLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
     }
   }

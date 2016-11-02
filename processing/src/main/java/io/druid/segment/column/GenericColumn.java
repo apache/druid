@@ -39,4 +39,7 @@ public interface GenericColumn extends Closeable
   public IndexedFloats getFloatMultiValueRow(int rowNum);
   public long getLongSingleValueRow(int rowNum);
   public IndexedLongs getLongMultiValueRow(int rowNum);
+
+  @Override
+  void close();
 }
