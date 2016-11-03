@@ -29,14 +29,9 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
-import io.druid.js.JavaScriptConfig;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.SubstringDimExtractionFn;
-import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.LikeDimFilter;
-import io.druid.query.ordering.StringComparators;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
@@ -151,11 +146,38 @@ public class LikeFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testMatchEmptyString()
+  {
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "", null, null),
+        ImmutableList.of("0")
+    );
+  }
+
+  @Test
+  public void testMatchEmptyStringWithExtractionFn()
+  {
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
+        ImmutableList.of("0", "1", "2", "3", "4", "5")
+    );
+  }
+
+  @Test
   public void testWildcardMatchWithEscape()
   {
     assertFilterMatches(
         new LikeDimFilter("dim1", "%@%ba%", "@", null),
         ImmutableList.of("5")
+    );
+  }
+
+  @Test
+  public void testWildcardMatchEverything()
+  {
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "%", "@", null),
+        ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
   }
 
