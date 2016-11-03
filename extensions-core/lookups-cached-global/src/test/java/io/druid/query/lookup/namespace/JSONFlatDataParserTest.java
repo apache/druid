@@ -31,8 +31,6 @@ import com.google.common.io.CharSink;
 import com.google.common.io.Files;
 import io.druid.data.input.MapPopulator;
 import io.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -54,9 +52,11 @@ public class JSONFlatDataParserTest
   private static final String VAL2 = "baz";
   private static final String OTHERVAL1 = "3";
   private static final String OTHERVAL2 = null;
+  private static final String CANBEEMPTY1 = "";
+  private static final String CANBEEMPTY2 = "notEmpty";
   private static final List<Map<String, Object>> MAPPINGS = ImmutableList.<Map<String, Object>>of(
-      ImmutableMap.<String, Object>of("key", "foo1", "val", "bar", "otherVal", 3),
-      ImmutableMap.<String, Object>of("key", "foo2", "val", "baz")
+      ImmutableMap.<String, Object>of("key", "foo1", "val", "bar", "otherVal", 3, "canBeEmpty", ""),
+      ImmutableMap.<String, Object>of("key", "foo2", "val", "baz", "canBeEmpty", "notEmpty")
   );
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -115,6 +115,20 @@ public class JSONFlatDataParserTest
     new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
     Assert.assertEquals(OTHERVAL1, map.get(KEY1));
     Assert.assertEquals(OTHERVAL2, map.get(KEY2));
+  }
+
+  @Test
+  public void testParseWithEmptyValues() throws Exception
+  {
+    final URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+        MAPPER,
+        "key",
+        "canBeEmpty"
+    );
+    final Map<String, String> map = new HashMap<>();
+    new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
+    Assert.assertEquals(CANBEEMPTY1, map.get(KEY1));
+    Assert.assertEquals(CANBEEMPTY2, map.get(KEY2));
   }
 
   @Test

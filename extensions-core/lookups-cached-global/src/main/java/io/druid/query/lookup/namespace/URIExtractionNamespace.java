@@ -221,8 +221,8 @@ public class URIExtractionNamespace implements ExtractionNamespace
       ).toString(); // Just in case is long
       final Object val = inner.get(value);
       if (val == null) {
-        // Skip nulls
-        return null;
+        // Skip null or missing values, treat them as if there were no row at all.
+        return ImmutableMap.of();
       }
       return ImmutableMap.of(k, val.toString());
     }

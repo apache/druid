@@ -167,13 +167,14 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
                       }
                     };
                   }
-                  final long valueCount = new MapPopulator<>(
+                  final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
                       extractionNamespace.getNamespaceParseSpec()
                                          .getParser()
                   ).populate(source, cache);
                   log.info(
-                      "Finished loading %,d values for namespace [%s]",
-                      valueCount,
+                      "Finished loading %,d values from %,d lines for namespace [%s]",
+                      populateResult.getEntries(),
+                      populateResult.getLines(),
                       id
                   );
                   return version;
