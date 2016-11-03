@@ -34,6 +34,7 @@ import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.HadoopFsWrapper;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
@@ -115,7 +116,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outDir.getParent());
-      if (!fs.rename(tmpFile.getParent(), outDir)) {
+      if (!HadoopFsWrapper.rename(fs, tmpFile.getParent(), outDir)) {
         if (fs.exists(outDir)) {
           log.info(
               "Unable to rename temp directory[%s] to segment directory[%s]. It is already pushed by a replica task.",
