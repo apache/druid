@@ -27,7 +27,7 @@ Also, the following built-in functions are supported.
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milli-seconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
-|timestamp_unix|same with 'timestamp' function but returns seconds instead |
+|unix_timestamp|same with 'timestamp' function but returns seconds instead |
 
 And built-in math functions. See javadoc of java.lang.Math for detailed explanation for each function.
 

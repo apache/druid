@@ -83,19 +83,14 @@ public abstract class ExprEval<T>
     return value;
   }
 
-  public Number numericValue()
-  {
-    return (Number) value;
-  }
-
-  public String stringValue()
-  {
-    return (String) value;
-  }
-
   public boolean isNull()
   {
     return value == null;
+  }
+
+  public Number numericValue()
+  {
+    return (Number) value;
   }
 
   public abstract int asInt();
@@ -121,19 +116,19 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public int asInt()
+    public final int asInt()
     {
       return value.intValue();
     }
 
     @Override
-    public long asLong()
+    public final long asLong()
     {
       return value.longValue();
     }
 
     @Override
-    public double asDouble()
+    public final double asDouble()
     {
       return value.doubleValue();
     }
@@ -147,19 +142,19 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public final ExprType type()
     {
       return ExprType.DOUBLE;
     }
 
     @Override
-    public boolean asBoolean()
+    public final boolean asBoolean()
     {
       return asDouble() > 0;
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ExprType castTo)
     {
       switch (castTo) {
         case DOUBLE:
@@ -181,19 +176,19 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public final ExprType type()
     {
       return ExprType.LONG;
     }
 
     @Override
-    public boolean asBoolean()
+    public final boolean asBoolean()
     {
       return asLong() > 0;
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ExprType castTo)
     {
       switch (castTo) {
         case DOUBLE:
@@ -215,43 +210,43 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public final ExprType type()
     {
       return ExprType.STRING;
     }
 
     @Override
-    public boolean isNull()
+    public final boolean isNull()
     {
       return Strings.isNullOrEmpty(value);
     }
 
     @Override
-    public int asInt()
+    public final int asInt()
     {
       return Integer.parseInt(value);
     }
 
     @Override
-    public long asLong()
+    public final long asLong()
     {
       return Long.parseLong(value);
     }
 
     @Override
-    public double asDouble()
+    public final double asDouble()
     {
       return Double.parseDouble(value);
     }
 
     @Override
-    public boolean asBoolean()
+    public final boolean asBoolean()
     {
       return Boolean.valueOf(value);
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ExprType castTo)
     {
       switch (castTo) {
         case DOUBLE:

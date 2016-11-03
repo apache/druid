@@ -41,7 +41,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new IAE("function '" + name() + "' needs 1 argument");
+        throw new IAE("function '%s' needs 1 argument", name());
       }
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
@@ -56,7 +56,7 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
-        throw new IAE("function '" + name() + "' needs 2 arguments");
+        throw new IAE("function '%s' needs 2 arguments", name());
       }
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
@@ -69,7 +69,7 @@ interface Function
   abstract class SingleParamMath extends SingleParam
   {
     @Override
-    protected ExprEval eval(ExprEval param)
+    protected final ExprEval eval(ExprEval param)
     {
       if (param.type() == ExprType.LONG) {
         return eval(param.asLong());
@@ -93,9 +93,9 @@ interface Function
   abstract class DoubleParamMath extends DoubleParam
   {
     @Override
-    protected ExprEval eval(ExprEval x, ExprEval y)
+    protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() == ExprType.STRING && y.type() == ExprType.STRING) {
+      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
         return ExprEval.of(null);
       }
       if (x.type() == ExprType.LONG && y.type() == ExprType.LONG) {
@@ -710,7 +710,7 @@ interface Function
         castTo = ExprType.valueOf(y.asString().toUpperCase());
       }
       catch (IllegalArgumentException e) {
-        throw new IAE("invalid type " + y.asString());
+        throw new IAE("invalid type '%s'", y.asString());
       }
       return x.castTo(castTo);
     }
@@ -728,18 +728,18 @@ interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1 && args.size() != 2) {
-        throw new IAE("function '" + name() + "' needs at least 1 or 2 arguments");
+        throw new IAE("function '%s' needs 1 or 2 arguments", name());
       }
       ExprEval value = args.get(0).eval(bindings);
       if (value.type() != ExprType.STRING) {
-        throw new IAE("first argument should be string type but got " + value.type() + " type");
+        throw new IAE("first argument should be string type but got %s type", value.type());
       }
 
       DateTimeFormatter formatter = ISODateTimeFormat.dateOptionalTimeParser();
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
         if (format.type() != ExprType.STRING) {
-          throw new IAE("second argument should be string type but got " + format.type() + " type");
+          throw new IAE("second argument should be string type but got %s type", format.type());
         }
         formatter = DateTimeFormat.forPattern(format.asString());
       }
@@ -748,7 +748,7 @@ interface Function
         date = DateTime.parse(value.asString(), formatter);
       }
       catch (IllegalArgumentException e) {
-        throw new IAE(e, "invalid value " + value.asString());
+        throw new IAE(e, "invalid value %s", value.asString());
       }
       return toValue(date);
     }
