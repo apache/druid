@@ -25,13 +25,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
-import com.yahoo.sketches.theta.Sketch;
 import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
-
 public class SketchEstimatePostAggregator implements PostAggregator
 {
 
@@ -82,16 +80,11 @@ public class SketchEstimatePostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    Sketch sketch = SketchAggregatorFactory.toSketch(field.compute(combinedAggregators));
+    SketchHolder holder = (SketchHolder)field.compute(combinedAggregators);
     if (errorBoundsStdDev != null) {
-      SketchEstimateWithErrorBounds result = new SketchEstimateWithErrorBounds(
-          sketch.getEstimate(),
-          sketch.getUpperBound(errorBoundsStdDev),
-          sketch.getLowerBound(errorBoundsStdDev),
-          errorBoundsStdDev);
-      return result;
+      return holder.getEstimateWithErrorBounds(errorBoundsStdDev);
     } else {
-      return sketch.getEstimate();
+      return holder.getEstimate();
     }
   }
 
