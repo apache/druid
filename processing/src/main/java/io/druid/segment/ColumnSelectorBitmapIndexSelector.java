@@ -98,13 +98,8 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public int getNumRows()
   {
-    GenericColumn column = null;
-    try {
-      column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
+    try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
       return column.length();
-    }
-    finally {
-      CloseQuietly.close(column);
     }
   }
 

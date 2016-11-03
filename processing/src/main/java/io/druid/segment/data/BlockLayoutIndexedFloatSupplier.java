@@ -20,12 +20,10 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -140,9 +138,11 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
-      Closeables.close(holder, false);
+      if (holder != null) {
+        holder.close();
+      }
     }
   }
 }

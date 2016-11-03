@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.Closer;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
@@ -178,8 +179,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         return new Iterator<Rowboat>()
         {
           final GenericColumn timestamps = input.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
-          final Object[] metrics;
+          final Closeable[] metrics;
           final Closeable[] columns;
+          final Closer closer = Closer.create();
 
           final int numMetrics = getMetricNames().size();
 
@@ -190,6 +192,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           boolean done = false;
 
           {
+            closer.register(timestamps);
+
             handlerSet.toArray(handlers);
             this.columns = FluentIterable
                 .from(handlerSet)
@@ -204,9 +208,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
                       }
                     }
                 ).toArray(Closeable.class);
+            for (Closeable column : columns) {
+              closer.register(column);
+            }
 
             final Indexed<String> availableMetrics = getMetricNames();
-            metrics = new Object[availableMetrics.size()];
+            metrics = new Closeable[availableMetrics.size()];
             for (int i = 0; i < metrics.length; ++i) {
               final Column column = input.getColumn(availableMetrics.get(i));
               final ValueType type = column.getCapabilities().getType();
@@ -222,6 +229,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
                   throw new ISE("Cannot handle type[%s]", type);
               }
             }
+            for (Closeable metricColumn : metrics) {
+              closer.register(metricColumn);
+            }
           }
 
           @Override
@@ -229,15 +239,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           {
             final boolean hasNext = currRow < numRows;
             if (!hasNext && !done) {
-              CloseQuietly.close(timestamps);
-              for (Object metric : metrics) {
-                if (metric instanceof Closeable) {
-                  CloseQuietly.close((Closeable) metric);
-                }
-              }
-              for (Closeable dimension : columns) {
-                CloseQuietly.close(dimension);
-              }
+              CloseQuietly.close(closer);
               done = true;
             }
             return hasNext;
@@ -315,8 +317,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         return "float";
       case LONG:
         return "long";
-      case COMPLEX:
-        return column.getComplexColumn().getTypeName();
+      case COMPLEX: {
+        try (ComplexColumn complexColumn = column.getComplexColumn() ) {
+          return complexColumn.getTypeName();
+        }
+      }
       default:
         throw new ISE("Unknown type[%s]", type);
     }

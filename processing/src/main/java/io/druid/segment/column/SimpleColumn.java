@@ -20,7 +20,6 @@
 package io.druid.segment.column;
 
 import com.google.common.base.Supplier;
-import com.metamx.common.guava.CloseQuietly;
 
 /**
  */
@@ -62,13 +61,8 @@ class SimpleColumn implements Column
   @Override
   public int getLength()
   {
-    GenericColumn column = null;
-    try {
-      column = genericColumn.get();
+    try (final GenericColumn column = genericColumn.get()) {
       return column.length();
-    }
-    finally {
-      CloseQuietly.close(column);
     }
   }
 
