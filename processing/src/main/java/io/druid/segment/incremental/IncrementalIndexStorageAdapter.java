@@ -589,7 +589,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   @Override
                   public Number get()
                   {
-                    return parsed.eval(binding);
+                    return parsed.eval(binding).numericValue();
                   }
                 };
               }

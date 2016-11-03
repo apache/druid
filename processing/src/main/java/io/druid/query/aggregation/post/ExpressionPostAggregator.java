@@ -95,7 +95,7 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    return parsed.eval(Parser.withMap(values));
+    return parsed.eval(Parser.withMap(values)).value();
   }
 
   @Override
