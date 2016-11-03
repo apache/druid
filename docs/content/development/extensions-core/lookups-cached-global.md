@@ -277,6 +277,8 @@ truck|something,3|buck
 }
 ```
 
+With customJson parsing, if the value field for a particular row is missing or null then that line will be skipped, and
+will not be included in the lookup.
 
 ### simpleJson lookupParseSpec
 The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value.
