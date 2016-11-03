@@ -103,7 +103,11 @@ public class Parser
       @Override
       public Number get(String name)
       {
-        return (Number)bindings.get(name);
+        Number number = (Number)bindings.get(name);
+        if (number == null && !bindings.containsKey(name)) {
+          throw new RuntimeException("No binding found for " + name);
+        }
+        return number;
       }
     };
   }

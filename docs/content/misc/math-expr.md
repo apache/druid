@@ -13,21 +13,26 @@ This expression language supports the following operators (listed in decreasing 
 |<, <=, >, >=, ==, !=|Binary Comparison|
 |&&,\|\||Binary Logical AND, OR|
 
-Long and double data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it intepreted as a double value.
+Long, double and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literal should be quoted by single quotation marks.
 
-Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not begin with a digit.
+Expressions can contain variables. Variable names may contain letters, digits, '\_' and '$'. Variable names must not begin with a digit. To escape other special characters, user can quote it with double quotation marks.
 
-For logical operators, a number is true if and only if it is positive. (0 means false)
+For logical operators, a number is true if and only if it is positive (0 or minus value means false). For string type, it's evaluation result of 'Boolean.valueOf(string)'.
 
-Also, the following in-built functions are supported.
+Also, the following built-in functions are supported.
 
 |name|description|
 |----|-----------|
-|sqrt|sqrt(x) would return square root of x|
-|if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else'|
+|cast|cast(expr,'LONG' or 'DOUBLE' or 'STRING') returns expr with specified type. exception can be thrown |
+|if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
+|nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
+|timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milli-seconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
+|unix_timestamp|same with 'timestamp' function but returns seconds instead |
 
-Built-in Math functions. See javadoc of java.lang.Math for detailed explanation for each function.
+And built-in math functions. See javadoc of java.lang.Math for detailed explanation for each function.
 
+|name|description|
+|----|-----------|
 |abs|abs(x) would return the absolute value of x|
 |acos|acos(x) would return the arc cosine of x|
 |asin|asin(x) would return the arc sine of x|
