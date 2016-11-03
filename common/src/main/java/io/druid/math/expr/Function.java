@@ -19,6 +19,12 @@
 
 package io.druid.math.expr;
 
+import io.druid.java.util.common.IAE;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+
 import java.util.List;
 
 /**
@@ -27,40 +33,90 @@ interface Function
 {
   String name();
 
-  Number apply(List<Expr> args, Expr.ObjectBinding bindings);
+  ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
 
   abstract class SingleParam implements Function
   {
     @Override
-    public Number apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 1) {
-        throw new RuntimeException("function '" + name() + "' needs 1 argument");
+        throw new IAE("function '%s' needs 1 argument", name());
       }
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
     }
 
-    protected abstract Number eval(Number x);
+    protected abstract ExprEval eval(ExprEval param);
   }
 
   abstract class DoubleParam implements Function
   {
     @Override
-    public Number apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 2) {
-        throw new RuntimeException("function '" + name() + "' needs 1 argument");
+        throw new IAE("function '%s' needs 2 arguments", name());
       }
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
       return eval(expr1.eval(bindings), expr2.eval(bindings));
     }
 
-    protected abstract Number eval(Number x, Number y);
+    protected abstract ExprEval eval(ExprEval x, ExprEval y);
   }
 
-  class Abs extends SingleParam
+  abstract class SingleParamMath extends SingleParam
+  {
+    @Override
+    protected final ExprEval eval(ExprEval param)
+    {
+      if (param.type() == ExprType.LONG) {
+        return eval(param.asLong());
+      } else if (param.type() == ExprType.DOUBLE) {
+        return eval(param.asDouble());
+      }
+      return ExprEval.of(null);
+    }
+
+    protected ExprEval eval(long param)
+    {
+      return eval((double) param);
+    }
+
+    protected ExprEval eval(double param)
+    {
+      return eval((long) param);
+    }
+  }
+
+  abstract class DoubleParamMath extends DoubleParam
+  {
+    @Override
+    protected final ExprEval eval(ExprEval x, ExprEval y)
+    {
+      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
+        return ExprEval.of(null);
+      }
+      if (x.type() == ExprType.LONG && y.type() == ExprType.LONG) {
+        return eval(x.asLong(), y.asLong());
+      } else {
+        return eval(x.asDouble(), y.asDouble());
+      }
+    }
+
+    protected ExprEval eval(long x, long y)
+    {
+      return eval((double) x, (double) y);
+    }
+
+    protected ExprEval eval(double x, double y)
+    {
+      return eval((long) x, (long) y);
+    }
+  }
+
+  class Abs extends SingleParamMath
   {
     @Override
     public String name()
@@ -69,13 +125,19 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(long param)
     {
-      return x instanceof Long ? Math.abs(x.longValue()) : Math.abs(x.doubleValue());
+      return ExprEval.of(Math.abs(param));
+    }
+
+    @Override
+    protected ExprEval eval(double param)
+    {
+      return ExprEval.of(Math.abs(param));
     }
   }
 
-  class Acos extends SingleParam
+  class Acos extends SingleParamMath
   {
     @Override
     public String name()
@@ -84,13 +146,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.acos(x.doubleValue());
+      return ExprEval.of(Math.acos(param));
     }
   }
 
-  class Asin extends SingleParam
+  class Asin extends SingleParamMath
   {
     @Override
     public String name()
@@ -99,13 +161,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.asin(x.doubleValue());
+      return ExprEval.of(Math.asin(param));
     }
   }
 
-  class Atan extends SingleParam
+  class Atan extends SingleParamMath
   {
     @Override
     public String name()
@@ -114,13 +176,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.atan(x.doubleValue());
+      return ExprEval.of(Math.atan(param));
     }
   }
 
-  class Cbrt extends SingleParam
+  class Cbrt extends SingleParamMath
   {
     @Override
     public String name()
@@ -129,13 +191,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.cbrt(x.doubleValue());
+      return ExprEval.of(Math.cbrt(param));
     }
   }
 
-  class Ceil extends SingleParam
+  class Ceil extends SingleParamMath
   {
     @Override
     public String name()
@@ -144,13 +206,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.ceil(x.doubleValue());
+      return ExprEval.of(Math.ceil(param));
     }
   }
 
-  class Cos extends SingleParam
+  class Cos extends SingleParamMath
   {
     @Override
     public String name()
@@ -159,13 +221,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.cos(x.doubleValue());
+      return ExprEval.of(Math.cos(param));
     }
   }
 
-  class Cosh extends SingleParam
+  class Cosh extends SingleParamMath
   {
     @Override
     public String name()
@@ -174,13 +236,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.cosh(x.doubleValue());
+      return ExprEval.of(Math.cosh(param));
     }
   }
 
-  class Exp extends SingleParam
+  class Exp extends SingleParamMath
   {
     @Override
     public String name()
@@ -189,13 +251,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.exp(x.doubleValue());
+      return ExprEval.of(Math.exp(param));
     }
   }
 
-  class Expm1 extends SingleParam
+  class Expm1 extends SingleParamMath
   {
     @Override
     public String name()
@@ -204,13 +266,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.expm1(x.doubleValue());
+      return ExprEval.of(Math.expm1(param));
     }
   }
 
-  class Floor extends SingleParam
+  class Floor extends SingleParamMath
   {
     @Override
     public String name()
@@ -219,13 +281,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.floor(x.doubleValue());
+      return ExprEval.of(Math.floor(param));
     }
   }
 
-  class GetExponent extends SingleParam
+  class GetExponent extends SingleParamMath
   {
     @Override
     public String name()
@@ -234,13 +296,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.getExponent(x.doubleValue());
+      return ExprEval.of(Math.getExponent(param));
     }
   }
 
-  class Log extends SingleParam
+  class Log extends SingleParamMath
   {
     @Override
     public String name()
@@ -249,13 +311,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.log(x.doubleValue());
+      return ExprEval.of(Math.log(param));
     }
   }
 
-  class Log10 extends SingleParam
+  class Log10 extends SingleParamMath
   {
     @Override
     public String name()
@@ -264,13 +326,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.log10(x.doubleValue());
+      return ExprEval.of(Math.log10(param));
     }
   }
 
-  class Log1p extends SingleParam
+  class Log1p extends SingleParamMath
   {
     @Override
     public String name()
@@ -279,13 +341,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.log1p(x.doubleValue());
+      return ExprEval.of(Math.log1p(param));
     }
   }
 
-  class NextUp extends SingleParam
+  class NextUp extends SingleParamMath
   {
     @Override
     public String name()
@@ -294,13 +356,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.nextUp(x.doubleValue());
+      return ExprEval.of(Math.nextUp(param));
     }
   }
 
-  class Rint extends SingleParam
+  class Rint extends SingleParamMath
   {
     @Override
     public String name()
@@ -309,13 +371,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.rint(x.doubleValue());
+      return ExprEval.of(Math.rint(param));
     }
   }
 
-  class Round extends SingleParam
+  class Round extends SingleParamMath
   {
     @Override
     public String name()
@@ -324,13 +386,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.round(x.doubleValue());
+      return ExprEval.of(Math.round(param));
     }
   }
 
-  class Signum extends SingleParam
+  class Signum extends SingleParamMath
   {
     @Override
     public String name()
@@ -339,13 +401,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.signum(x.doubleValue());
+      return ExprEval.of(Math.signum(param));
     }
   }
 
-  class Sin extends SingleParam
+  class Sin extends SingleParamMath
   {
     @Override
     public String name()
@@ -354,13 +416,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.sin(x.doubleValue());
+      return ExprEval.of(Math.sin(param));
     }
   }
 
-  class Sinh extends SingleParam
+  class Sinh extends SingleParamMath
   {
     @Override
     public String name()
@@ -369,13 +431,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.sinh(x.doubleValue());
+      return ExprEval.of(Math.sinh(param));
     }
   }
 
-  class Sqrt extends SingleParam
+  class Sqrt extends SingleParamMath
   {
     @Override
     public String name()
@@ -384,13 +446,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.sqrt(x.doubleValue());
+      return ExprEval.of(Math.sqrt(param));
     }
   }
 
-  class Tan extends SingleParam
+  class Tan extends SingleParamMath
   {
     @Override
     public String name()
@@ -399,13 +461,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.tan(x.doubleValue());
+      return ExprEval.of(Math.tan(param));
     }
   }
 
-  class Tanh extends SingleParam
+  class Tanh extends SingleParamMath
   {
     @Override
     public String name()
@@ -414,13 +476,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.tanh(x.doubleValue());
+      return ExprEval.of(Math.tanh(param));
     }
   }
 
-  class ToDegrees extends SingleParam
+  class ToDegrees extends SingleParamMath
   {
     @Override
     public String name()
@@ -429,13 +491,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.toDegrees(x.doubleValue());
+      return ExprEval.of(Math.toDegrees(param));
     }
   }
 
-  class ToRadians extends SingleParam
+  class ToRadians extends SingleParamMath
   {
     @Override
     public String name()
@@ -444,13 +506,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.toRadians(x.doubleValue());
+      return ExprEval.of(Math.toRadians(param));
     }
   }
 
-  class Ulp extends SingleParam
+  class Ulp extends SingleParamMath
   {
     @Override
     public String name()
@@ -459,13 +521,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x)
+    protected ExprEval eval(double param)
     {
-      return Math.ulp(x.doubleValue());
+      return ExprEval.of(Math.ulp(param));
     }
   }
 
-  class Atan2 extends DoubleParam
+  class Atan2 extends DoubleParamMath
   {
     @Override
     public String name()
@@ -474,13 +536,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(double y, double x)
     {
-      return Math.atan2(x.doubleValue(), y.doubleValue());
+      return ExprEval.of(Math.atan2(y, x));
     }
   }
 
-  class CopySign extends DoubleParam
+  class CopySign extends DoubleParamMath
   {
     @Override
     public String name()
@@ -489,13 +551,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(double x, double y)
     {
-      return Math.copySign(x.doubleValue(), y.doubleValue());
+      return ExprEval.of(Math.copySign(x, y));
     }
   }
 
-  class Hypot extends DoubleParam
+  class Hypot extends DoubleParamMath
   {
     @Override
     public String name()
@@ -504,13 +566,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(double x, double y)
     {
-      return Math.hypot(x.doubleValue(), y.doubleValue());
+      return ExprEval.of(Math.hypot(x, y));
     }
   }
 
-  class Remainder extends DoubleParam
+  class Remainder extends DoubleParamMath
   {
     @Override
     public String name()
@@ -519,13 +581,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(double x, double y)
     {
-      return Math.IEEEremainder(x.doubleValue(), y.doubleValue());
+      return ExprEval.of(Math.IEEEremainder(x, y));
     }
   }
 
-  class Max extends DoubleParam
+  class Max extends DoubleParamMath
   {
     @Override
     public String name()
@@ -534,16 +596,19 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(long x, long y)
     {
-      if (x instanceof Long && y instanceof Long) {
-        return Math.max(x.longValue(), y.longValue());
-      }
-      return Double.compare(x.doubleValue(), y.doubleValue()) >= 0 ? x : y;
+      return ExprEval.of(Math.max(x, y));
+    }
+
+    @Override
+    protected ExprEval eval(double x, double y)
+    {
+      return ExprEval.of(Math.max(x, y));
     }
   }
 
-  class Min extends DoubleParam
+  class Min extends DoubleParamMath
   {
     @Override
     public String name()
@@ -552,16 +617,19 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(long x, long y)
     {
-      if (x instanceof Long && y instanceof Long) {
-        return Math.min(x.longValue(), y.longValue());
-      }
-      return Double.compare(x.doubleValue(), y.doubleValue()) <= 0 ? x : y;
+      return ExprEval.of(Math.min(x, y));
+    }
+
+    @Override
+    protected ExprEval eval(double x, double y)
+    {
+      return ExprEval.of(Math.min(x, y));
     }
   }
 
-  class NextAfter extends DoubleParam
+  class NextAfter extends DoubleParamMath
   {
     @Override
     public String name()
@@ -570,13 +638,13 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(double x, double y)
     {
-      return Math.nextAfter(x.doubleValue(), y.doubleValue());
+      return ExprEval.of(Math.nextAfter(x, y));
     }
   }
 
-  class Pow extends DoubleParam
+  class Pow extends DoubleParamMath
   {
     @Override
     public String name()
@@ -585,9 +653,9 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(double x, double y)
     {
-      return Math.pow(x.doubleValue(), y.doubleValue());
+      return ExprEval.of(Math.pow(x, y));
     }
   }
 
@@ -600,9 +668,9 @@ interface Function
     }
 
     @Override
-    protected Number eval(Number x, Number y)
+    protected ExprEval eval(ExprEval x, ExprEval y)
     {
-      return Math.scalb(x.doubleValue(), y.intValue());
+      return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
     }
   }
 
@@ -615,18 +683,113 @@ interface Function
     }
 
     @Override
-    public Number apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() != 3) {
-        throw new RuntimeException("function 'if' needs 3 argument");
+        throw new IAE("function 'if' needs 3 arguments");
       }
 
-      Number x = args.get(0).eval(bindings);
-      if (x instanceof Long) {
-        return x.longValue() > 0 ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
-      } else {
-        return x.doubleValue() > 0 ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
+      ExprEval x = args.get(0).eval(bindings);
+      return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
+    }
+  }
+
+  class CastFunc extends DoubleParam
+  {
+    @Override
+    public String name()
+    {
+      return "cast";
+    }
+
+    @Override
+    protected ExprEval eval(ExprEval x, ExprEval y)
+    {
+      ExprType castTo;
+      try {
+        castTo = ExprType.valueOf(y.asString().toUpperCase());
       }
+      catch (IllegalArgumentException e) {
+        throw new IAE("invalid type '%s'", y.asString());
+      }
+      return x.castTo(castTo);
+    }
+  }
+
+  class TimestampFromEpochFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "timestamp";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("function '%s' needs 1 or 2 arguments", name());
+      }
+      ExprEval value = args.get(0).eval(bindings);
+      if (value.type() != ExprType.STRING) {
+        throw new IAE("first argument should be string type but got %s type", value.type());
+      }
+
+      DateTimeFormatter formatter = ISODateTimeFormat.dateOptionalTimeParser();
+      if (args.size() > 1) {
+        ExprEval format = args.get(1).eval(bindings);
+        if (format.type() != ExprType.STRING) {
+          throw new IAE("second argument should be string type but got %s type", format.type());
+        }
+        formatter = DateTimeFormat.forPattern(format.asString());
+      }
+      DateTime date;
+      try {
+        date = DateTime.parse(value.asString(), formatter);
+      }
+      catch (IllegalArgumentException e) {
+        throw new IAE(e, "invalid value %s", value.asString());
+      }
+      return toValue(date);
+    }
+
+    protected ExprEval toValue(DateTime date)
+    {
+      return ExprEval.of(date.getMillis());
+    }
+  }
+
+  class UnixTimestampFunc extends TimestampFromEpochFunc
+  {
+    @Override
+    public String name()
+    {
+      return "unix_timestamp";
+    }
+
+    @Override
+    protected final ExprEval toValue(DateTime date)
+    {
+      return ExprEval.of(date.getMillis() / 1000);
+    }
+  }
+
+  class NvlFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "nvl";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("function 'nvl' needs 2 arguments");
+      }
+      final ExprEval eval = args.get(0).eval(bindings);
+      return eval.isNull() ? args.get(1).eval(bindings) : eval;
     }
   }
 }
