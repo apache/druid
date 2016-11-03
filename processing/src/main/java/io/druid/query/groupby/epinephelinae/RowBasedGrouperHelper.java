@@ -681,7 +681,7 @@ public class RowBasedGrouperHelper
         @Override
         public Number get()
         {
-          return parsed.eval(binding);
+          return parsed.eval(binding).numericValue();
         }
       };
     }
