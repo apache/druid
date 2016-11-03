@@ -44,7 +44,7 @@ public class QueryResourceTestClient
 {
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final String router;
+  private final String routerUrl;
   private final StatusResponseHandler responseHandler;
 
   @Inject
@@ -56,7 +56,7 @@ public class QueryResourceTestClient
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.router = config.getRouterUrl();
+    this.routerUrl = config.getRouterUrl();
     this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
   }
 
@@ -64,7 +64,7 @@ public class QueryResourceTestClient
   {
     return String.format(
         "%s/druid/v2/",
-        router
+        routerUrl
     );
   }
 

@@ -79,13 +79,13 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getZookeeperHosts()
       {
-        return "http://" + dockerIp + ":2181";
+        return dockerIp + ":2181";
       }
 
       @Override
       public String getKafkaHost()
       {
-        return "http://" + dockerIp + ":9092";
+        return dockerIp + ":9092";
       }
 
 
