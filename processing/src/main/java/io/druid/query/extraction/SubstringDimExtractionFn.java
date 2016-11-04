@@ -130,4 +130,10 @@ public class SubstringDimExtractionFn extends DimExtractionFn
     result = 31 * result + end;
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return String.format("substring(%s, %s)", index, getLength());
+  }
 }
