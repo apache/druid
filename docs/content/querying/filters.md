@@ -202,10 +202,36 @@ The grammar for a IN filter is as follows:
 
 The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
+### Like filter
+
+Like filters can be used for basic wildcard searches. They are equivalent to the SQL LIKE operator. Special characters
+supported are "%" (matches any number of characters) and "\_" (matches any one character).
+
+|property|type|description|required?|
+|--------|-----------|---------|---------|
+|type|String|This should always be "like".|yes|
+|dimension|String|The dimension to filter on|yes|
+|pattern|String|LIKE pattern, such as "foo%" or "___bar".|yes|
+|escape|String|An escape character that can be used to escape special characters.|no|
+|extractionFn|[Extraction function](#filtering-with-extraction-functions)| Extraction function to apply to the dimension|no|
+
+Like filters support the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
+This Like filter expresses the condition `last_name LIKE "D%"` (i.e. last_name starts with "D").
+
+```json
+{
+    "type": "like",
+    "dimension": "last_name",
+    "pattern": "D%"
+}
+```
 
 ### Bound filter
 
-The Bound filter can be used to filter by comparing dimension values to an upper value and/or a lower value.
+Bound filters can be used to filter on ranges of dimension values. It can be used for comparison filtering like
+greater than, less than, greater than or equal to, less than or equal to, and "between" (if both "lower" and
+"upper" are set).
 
 |property|type|description|required?|
 |--------|-----------|---------|---------|
@@ -218,7 +244,7 @@ The Bound filter can be used to filter by comparing dimension values to an upper
 |ordering|String|Specifies the sorting order to use when comparing values against the bound. Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen". See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
 |extractionFn|[Extraction function](#filtering-with-extraction-functions)| Extraction function to apply to the dimension|no|
   
-The bound filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+Bound filters support the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
 The following bound filter expresses the condition `21 <= age <= 31`:
 ```json
