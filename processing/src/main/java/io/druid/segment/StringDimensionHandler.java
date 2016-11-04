@@ -19,9 +19,8 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
@@ -37,13 +36,13 @@ import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
-  private static final Logger log = new Logger(StringDimensionHandler.class);
-
   private final String dimensionName;
+  private final MultiValueHandling multiValueHandling;
 
-  public StringDimensionHandler(String dimensionName)
+  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling)
   {
     this.dimensionName = dimensionName;
+    this.multiValueHandling = multiValueHandling;
   }
 
   @Override
@@ -193,7 +192,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer();
+    return new StringDimensionIndexer(multiValueHandling);
   }
 
   @Override
@@ -220,21 +219,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
   }
 
-  public static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
-  {
-    @Override
-    public String apply(final Object o)
-    {
-      if (o == null) {
-        return null;
-      }
-      if (o instanceof String) {
-        return (String) o;
-      }
-      return o.toString();
-    }
-  };
-
   public static final Comparator<Integer> ENCODED_COMPARATOR = new Comparator<Integer>()
   {
     @Override
@@ -250,18 +234,4 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     }
   };
 
-  public static final Comparator<String> UNENCODED_COMPARATOR = new Comparator<String>()
-  {
-    @Override
-    public int compare(String o1, String o2)
-    {
-      if (o1 == null) {
-        return o2 == null ? 0 : -1;
-      }
-      if (o2 == null) {
-        return 1;
-      }
-      return o1.compareTo(o2);
-    }
-  };
 }

@@ -30,7 +30,7 @@ public class FloatDimensionSchema extends DimensionSchema
       @JsonProperty("name") String name
   )
   {
-    super(name);
+    super(name, null);
   }
 
   @Override
