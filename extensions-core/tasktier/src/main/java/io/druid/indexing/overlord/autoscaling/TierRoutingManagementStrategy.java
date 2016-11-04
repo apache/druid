@@ -31,14 +31,14 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TierRoutingTaskRunner;
 import io.druid.indexing.overlord.routing.TierRouteConfig;
 import io.druid.indexing.overlord.routing.TierTaskRunnerFactory;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.List;

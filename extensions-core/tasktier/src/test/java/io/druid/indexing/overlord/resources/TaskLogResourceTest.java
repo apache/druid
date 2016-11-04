@@ -151,3 +151,4 @@ public class TaskLogResourceTest
     TaskLogResource.buildURL(testNode, -1);
   }
 }
+

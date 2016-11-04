@@ -22,13 +22,13 @@ package io.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import io.druid.curator.announcement.Announcer;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.TierForkZkConfig;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.DruidNode;
 
 import java.io.IOException;

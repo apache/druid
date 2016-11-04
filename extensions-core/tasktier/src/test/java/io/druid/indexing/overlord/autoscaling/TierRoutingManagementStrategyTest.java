@@ -29,15 +29,15 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TierRoutingTaskRunner;
 import io.druid.indexing.overlord.routing.TierRouteConfig;
 import io.druid.indexing.overlord.routing.TierTaskRunnerFactory;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -344,3 +344,4 @@ public class TierRoutingManagementStrategyTest
     strategy.stopManagement();
   }
 }
+

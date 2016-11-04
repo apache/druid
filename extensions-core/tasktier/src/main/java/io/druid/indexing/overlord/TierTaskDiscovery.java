@@ -25,9 +25,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.overlord.config.TierForkZkConfig;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import org.apache.curator.framework.CuratorFramework;
 

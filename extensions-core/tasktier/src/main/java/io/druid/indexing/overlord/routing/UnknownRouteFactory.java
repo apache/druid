@@ -19,8 +19,8 @@
 
 package io.druid.indexing.overlord.routing;
 
-import com.metamx.common.UOE;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.java.util.common.UOE;
 
 public class UnknownRouteFactory implements TierTaskRunnerFactory
 {

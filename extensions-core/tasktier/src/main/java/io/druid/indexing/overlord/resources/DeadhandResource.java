@@ -19,8 +19,7 @@
 
 package io.druid.indexing.overlord.resources;
 
-
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.POST;

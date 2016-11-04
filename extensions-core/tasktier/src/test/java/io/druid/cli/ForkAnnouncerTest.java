@@ -75,3 +75,4 @@ public class ForkAnnouncerTest
     EasyMock.verify(announcer);
   }
 }
+

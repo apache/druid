@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.http.client.HttpClient;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
@@ -36,6 +35,7 @@ import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerResourceMana
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 

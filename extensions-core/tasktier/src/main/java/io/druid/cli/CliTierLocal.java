@@ -25,7 +25,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.util.Modules;
-import com.metamx.common.logger.Logger;
 import io.airlift.airline.Command;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
@@ -34,6 +33,7 @@ import io.druid.indexing.overlord.TierLocalTaskRunner;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 

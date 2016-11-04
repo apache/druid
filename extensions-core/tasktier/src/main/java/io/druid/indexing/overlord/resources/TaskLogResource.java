@@ -20,9 +20,9 @@
 package io.druid.indexing.overlord.resources;
 
 import com.google.common.base.Preconditions;
-import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.TierLocalTaskRunner;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 
 import javax.ws.rs.DefaultValue;

@@ -22,12 +22,12 @@ package io.druid.indexing.overlord.routing;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 
 public class DynamicUpstreamReporter implements TaskStatusReporter

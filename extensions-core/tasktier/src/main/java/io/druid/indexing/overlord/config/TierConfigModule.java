@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
@@ -37,6 +36,7 @@ import io.druid.indexing.overlord.TierTaskDiscovery;
 import io.druid.indexing.overlord.routing.TierRouteConfig;
 import io.druid.indexing.overlord.routing.TierTaskRunnerFactory;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;

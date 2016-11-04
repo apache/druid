@@ -166,17 +166,6 @@
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
-                <artifactId>java-util</artifactId>
-                <version>${metamx.java-util.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
                 <artifactId>bytebuffer-collections</artifactId>
                 <version>0.2.5</version>
             </dependency>

@@ -5,11 +5,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 
 import javax.annotation.Nullable;

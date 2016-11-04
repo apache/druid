@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.metamx.common.logger.Logger;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -31,6 +30,7 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TierLocalTaskRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.io.IOException;

@@ -26,13 +26,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.overlord.TierLocalTaskRunner;
 import io.druid.indexing.overlord.config.TierLocalTaskRunnerConfig;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.File;
