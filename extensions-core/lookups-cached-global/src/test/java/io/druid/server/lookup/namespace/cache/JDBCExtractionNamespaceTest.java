@@ -193,39 +193,31 @@ public class JDBCExtractionNamespaceTest
                     new JDBCExtractionNamespaceCacheFactory()
                     {
                       @Override
-                      public Callable<String> getCachePopulator(
+                      public String populateCache(
                           final String id,
                           final JDBCExtractionNamespace namespace,
                           final String lastVersion,
                           final Map<String, String> cache
-                      )
+                      ) throws Exception
                       {
-                        final Callable<String> cachePopulator = super.getCachePopulator(
-                            id,
-                            namespace,
-                            lastVersion,
-                            cache
-                        );
-                        return new Callable<String>()
-                        {
-                          @Override
-                          public String call() throws Exception
-                          {
-                            updateLock.lockInterruptibly();
-                            try {
-                              log.debug("Running cache populator");
-                              try {
-                                return cachePopulator.call();
-                              }
-                              finally {
-                                updates.incrementAndGet();
-                              }
-                            }
-                            finally {
-                              updateLock.unlock();
-                            }
+                        updateLock.lockInterruptibly();
+                        try {
+                          log.debug("Running cache populator");
+                          try {
+                            return super.populateCache(
+                                id,
+                                namespace,
+                                lastVersion,
+                                cache
+                            );
                           }
-                        };
+                          finally {
+                            updates.incrementAndGet();
+                          }
+                        }
+                        finally {
+                          updateLock.unlock();
+                        }
                       }
                     }
                 )

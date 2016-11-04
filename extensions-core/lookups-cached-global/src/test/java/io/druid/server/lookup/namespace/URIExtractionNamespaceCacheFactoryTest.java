@@ -72,7 +72,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -402,15 +401,13 @@ public class URIExtractionNamespaceCacheFactoryTest
     Assert.assertTrue(manager.getKnownIDs().isEmpty());
 
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    Callable<String> populator = factory.getCachePopulator(id, namespace, null, map);
 
-    String v = populator.call();
+    String v = factory.populateCache(id, namespace, null, map);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
     Assert.assertNotNull(v);
 
-    populator = factory.getCachePopulator(id, namespace, v, map);
-    String v2 = populator.call();
+    String v2 = factory.populateCache(id, namespace, v, map);
     Assert.assertEquals(v, v2);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
@@ -429,7 +426,7 @@ public class URIExtractionNamespaceCacheFactoryTest
     Assert.assertTrue(new File(namespace.getUri()).delete());
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
     try {
-      factory.getCachePopulator(id, badNamespace, null, map).call();
+      factory.populateCache(id, badNamespace, null, map);
     }
     catch (RuntimeException e) {
       Assert.assertNotNull(e.getCause());
@@ -471,7 +468,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         return t.getCause() != null && t.getCause() instanceof FileNotFoundException;
       }
     });
-    factory.getCachePopulator(badId, badNamespace, null, map).call();
+    factory.populateCache(badId, badNamespace, null, map);
   }
 
   @Test(expected = IAE.class)
@@ -560,6 +557,6 @@ public class URIExtractionNamespaceCacheFactoryTest
         null
     );
     final Map<String, String> map = new HashMap<>();
-    Assert.assertNotNull(factory.getCachePopulator(id, extractionNamespace, null, map).call());
+    Assert.assertNotNull(factory.populateCache(id, extractionNamespace, null, map));
   }
 }

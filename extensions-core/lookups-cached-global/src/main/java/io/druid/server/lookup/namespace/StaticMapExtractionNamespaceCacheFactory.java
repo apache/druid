@@ -24,7 +24,6 @@ import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 
 public class StaticMapExtractionNamespaceCacheFactory
     implements ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
@@ -32,7 +31,7 @@ public class StaticMapExtractionNamespaceCacheFactory
   private final String version = UUID.randomUUID().toString();
 
   @Override
-  public Callable<String> getCachePopulator(
+  public String populateCache(
       final String id,
       final StaticMapExtractionNamespace extractionNamespace,
       final String lastVersion,
@@ -46,15 +45,8 @@ public class StaticMapExtractionNamespaceCacheFactory
           "StaticMapExtractionNamespaceCacheFactory could only be configured for a namespace which is scheduled " +
           "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
-    return new Callable<String>()
-    {
-      @Override
-      public String call() throws Exception
-      {
-        swap.putAll(extractionNamespace.getMap());
-        return version;
-      }
-    };
+    swap.putAll(extractionNamespace.getMap());
+    return version;
   }
 
   String getVersion()

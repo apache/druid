@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ExecutorServices;
@@ -41,7 +40,6 @@ import javax.annotation.concurrent.GuardedBy;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -357,10 +355,9 @@ public abstract class NamespaceExtractionCacheManager
             }
             final Map<String, String> cache = getCacheMap(cacheId);
             final String preVersion = implData.latestVersion;
-            final Callable<String> runnable = factory.getCachePopulator(id, namespace, preVersion, cache);
 
             tasksStarted.incrementAndGet();
-            final String newVersion = runnable.call();
+            final String newVersion = factory.populateCache(id, namespace, preVersion, cache);
             if (newVersion.equals(preVersion)) {
               log.debug("Version `%s` already exists, skipping updating cache", preVersion);
             } else {

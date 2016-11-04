@@ -20,7 +20,6 @@
 package io.druid.query.lookup.namespace;
 
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  *
@@ -34,7 +33,8 @@ public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
    * is used to populate the namespace cache each time.
    * For ExtractionNamespace implementations which do not have regular updates, this function can be used to
    * initialize resources.
-   * If the result of the Callable is the same as what is passed in as lastVersion, then no swap takes place, and the swap is discarded.
+   * If the returned version is the same as what is passed in as lastVersion, then no swap takes place, and the swap
+   * is discarded.
    *
    * @param id                  The ID of ExtractionNamespace
    * @param extractionNamespace The ExtractionNamespace for which to populate data.
@@ -44,8 +44,7 @@ public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
    *                            a swappable cache of the data may ignore this but must make sure `buildFn(...)` returns
    *                            a proper Function.
    *
-   * @return A callable that will be used to refresh resources of the namespace and return the version string used in
-   * the populating
+   * @return return the (new) version string used in the populating
    */
-  Callable<String> getCachePopulator(String id, T extractionNamespace, String lastVersion, Map<String, String> swap);
+  String populateCache(String id, T extractionNamespace, String lastVersion, Map<String, String> swap) throws Exception;
 }

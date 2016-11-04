@@ -59,135 +59,128 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
   }
 
   @Override
-  public Callable<String> getCachePopulator(
+  public String populateCache(
       final String id,
       final URIExtractionNamespace extractionNamespace,
       @Nullable final String lastVersion,
       final Map<String, String> cache
-  )
+  ) throws Exception
   {
-    return new Callable<String>()
-    {
-      @Override
-      public String call()
-      {
-        final boolean doSearch = extractionNamespace.getUriPrefix() != null;
-        final URI originalUri = doSearch ? extractionNamespace.getUriPrefix() : extractionNamespace.getUri();
-        final SearchableVersionedDataFinder<URI> pullerRaw = pullers.get(originalUri.getScheme());
-        if (pullerRaw == null) {
-          throw new IAE(
-              "Unknown loader type[%s].  Known types are %s",
-              originalUri.getScheme(),
-              pullers.keySet()
-          );
-        }
-        if (!(pullerRaw instanceof URIDataPuller)) {
-          throw new IAE(
-              "Cannot load data from location [%s]. Data pulling from [%s] not supported",
-              originalUri,
-              originalUri.getScheme()
-          );
-        }
-        final URIDataPuller puller = (URIDataPuller) pullerRaw;
-        final URI uri;
-        if (doSearch) {
-          final Pattern versionRegex;
+    final boolean doSearch = extractionNamespace.getUriPrefix() != null;
+    final URI originalUri = doSearch ? extractionNamespace.getUriPrefix() : extractionNamespace.getUri();
+    final SearchableVersionedDataFinder<URI> pullerRaw = pullers.get(originalUri.getScheme());
+    if (pullerRaw == null) {
+      throw new IAE(
+          "Unknown loader type[%s].  Known types are %s",
+          originalUri.getScheme(),
+          pullers.keySet()
+      );
+    }
+    if (!(pullerRaw instanceof URIDataPuller)) {
+      throw new IAE(
+          "Cannot load data from location [%s]. Data pulling from [%s] not supported",
+          originalUri,
+          originalUri.getScheme()
+      );
+    }
+    final URIDataPuller puller = (URIDataPuller) pullerRaw;
+    final URI uri;
+    if (doSearch) {
+      final Pattern versionRegex;
 
-          if (extractionNamespace.getFileRegex() != null) {
-            versionRegex = Pattern.compile(extractionNamespace.getFileRegex());
-          } else {
-            versionRegex = null;
-          }
-          uri = pullerRaw.getLatestVersion(
-              extractionNamespace.getUriPrefix(),
-              versionRegex
-          );
-
-          if (uri == null) {
-            throw new RuntimeException(
-                new FileNotFoundException(
-                    String.format(
-                        "Could not find match for pattern `%s` in [%s] for %s",
-                        versionRegex,
-                        originalUri,
-                        extractionNamespace
-                    )
-                )
-            );
-          }
-        } else {
-          uri = extractionNamespace.getUri();
-        }
-
-        final String uriPath = uri.getPath();
-
-        try {
-          return RetryUtils.retry(
-              new Callable<String>()
-              {
-                @Override
-                public String call() throws Exception
-                {
-                  final String version = puller.getVersion(uri);
-                  try {
-                    // Important to call equals() against version because lastVersion could be null
-                    if (version.equals(lastVersion)) {
-                      log.debug(
-                          "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
-                          "Skipping ",
-                          uri.toString(),
-                          id,
-                          version
-                      );
-                      return lastVersion;
-                    }
-                  }
-                  catch (NumberFormatException ex) {
-                    log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
-                  }
-                  final ByteSource source;
-                  if (CompressionUtils.isGz(uriPath)) {
-                    // Simple gzip stream
-                    log.debug("Loading gz");
-                    source = new ByteSource()
-                    {
-                      @Override
-                      public InputStream openStream() throws IOException
-                      {
-                        return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
-                      }
-                    };
-                  } else {
-                    source = new ByteSource()
-                    {
-                      @Override
-                      public InputStream openStream() throws IOException
-                      {
-                        return puller.getInputStream(uri);
-                      }
-                    };
-                  }
-                  final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
-                      extractionNamespace.getNamespaceParseSpec()
-                                         .getParser()
-                  ).populate(source, cache);
-                  log.info(
-                      "Finished loading %,d values from %,d lines for namespace [%s]",
-                      populateResult.getEntries(),
-                      populateResult.getLines(),
-                      id
-                  );
-                  return version;
-                }
-              },
-              puller.shouldRetryPredicate(),
-              DEFAULT_NUM_RETRIES
-          );
-        }
-        catch (Exception e) {
-          throw Throwables.propagate(e);
-        }
+      if (extractionNamespace.getFileRegex() != null) {
+        versionRegex = Pattern.compile(extractionNamespace.getFileRegex());
+      } else {
+        versionRegex = null;
       }
-    };
+      uri = pullerRaw.getLatestVersion(
+          extractionNamespace.getUriPrefix(),
+          versionRegex
+      );
+
+      if (uri == null) {
+        throw new RuntimeException(
+            new FileNotFoundException(
+                String.format(
+                    "Could not find match for pattern `%s` in [%s] for %s",
+                    versionRegex,
+                    originalUri,
+                    extractionNamespace
+                )
+            )
+        );
+      }
+    } else {
+      uri = extractionNamespace.getUri();
+    }
+
+    final String uriPath = uri.getPath();
+
+    try {
+      return RetryUtils.retry(
+          new Callable<String>()
+          {
+            @Override
+            public String call() throws Exception
+            {
+              final String version = puller.getVersion(uri);
+              try {
+                // Important to call equals() against version because lastVersion could be null
+                if (version.equals(lastVersion)) {
+                  log.debug(
+                      "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
+                      "Skipping ",
+                      uri.toString(),
+                      id,
+                      version
+                  );
+                  return lastVersion;
+                }
+              }
+              catch (NumberFormatException ex) {
+                log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
+              }
+              final ByteSource source;
+              if (CompressionUtils.isGz(uriPath)) {
+                // Simple gzip stream
+                log.debug("Loading gz");
+                source = new ByteSource()
+                {
+                  @Override
+                  public InputStream openStream() throws IOException
+                  {
+                    return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
+                  }
+                };
+              } else {
+                source = new ByteSource()
+                {
+                  @Override
+                  public InputStream openStream() throws IOException
+                  {
+                    return puller.getInputStream(uri);
+                  }
+                };
+              }
+              final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
+                  extractionNamespace.getNamespaceParseSpec()
+                                     .getParser()
+              ).populate(source, cache);
+              log.info(
+                  "Finished loading %,d values from %,d lines for namespace [%s]",
+                  populateResult.getEntries(),
+                  populateResult.getLines(),
+                  id
+              );
+              return version;
+            }
+          },
+          puller.shouldRetryPredicate(),
+          DEFAULT_NUM_RETRIES
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

@@ -37,7 +37,7 @@ public class StaticMapExtractionNamespaceCacheFactoryTest
     final StaticMapExtractionNamespaceCacheFactory factory = new StaticMapExtractionNamespaceCacheFactory();
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
     final Map<String, String> cache = new HashMap<>();
-    Assert.assertEquals(factory.getVersion(), factory.getCachePopulator(null, namespace, null, cache).call());
+    Assert.assertEquals(factory.getVersion(), factory.populateCache(null, namespace, null, cache));
     Assert.assertEquals(MAP, cache);
   }
 
@@ -47,6 +47,6 @@ public class StaticMapExtractionNamespaceCacheFactoryTest
     final StaticMapExtractionNamespaceCacheFactory factory = new StaticMapExtractionNamespaceCacheFactory();
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
     final Map<String, String> cache = new HashMap<>();
-    Assert.assertNull(factory.getCachePopulator(null, namespace, factory.getVersion(), cache).call());
+    Assert.assertNull(factory.populateCache(null, namespace, factory.getVersion(), cache));
   }
 }
