@@ -135,7 +135,7 @@ public class IncrementalIndexSchema
 
     public Builder withDimensionsSpec(DimensionsSpec dimensionsSpec)
     {
-      this.dimensionsSpec = dimensionsSpec;
+      this.dimensionsSpec = dimensionsSpec == null ? DimensionsSpec.ofEmpty() : dimensionsSpec;
       return this;
     }
 

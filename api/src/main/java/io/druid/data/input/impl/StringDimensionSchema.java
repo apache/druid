@@ -26,16 +26,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class StringDimensionSchema extends DimensionSchema
 {
   @JsonCreator
-  public static StringDimensionSchema create(String name) {
+  public static StringDimensionSchema create(String name)
+  {
     return new StringDimensionSchema(name);
   }
 
   @JsonCreator
   public StringDimensionSchema(
-      @JsonProperty("name") String name
+      @JsonProperty("name") String name,
+      @JsonProperty("multiValueHandling") MultiValueHandling multiValueHandling
   )
   {
-    super(name);
+    super(name, multiValueHandling);
+  }
+
+  public StringDimensionSchema(String name)
+  {
+    this(name, null);
   }
 
   @Override
