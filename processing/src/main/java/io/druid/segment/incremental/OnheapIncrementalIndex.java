@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -97,13 +98,15 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       long minTimestamp,
       QueryGranularity gran,
       boolean rollup,
-      final AggregatorFactory[] metrics,
+      DimensionsSpec dimensionsSpec,
+      AggregatorFactory[] metrics,
       int maxRowCount
   )
   {
     this(
         new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
                                             .withQueryGranularity(gran)
+                                            .withDimensionsSpec(dimensionsSpec)
                                             .withMetrics(metrics)
                                             .withRollup(rollup)
                                             .build(),
@@ -125,6 +128,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         minTimestamp,
         gran,
         IncrementalIndexSchema.DEFAULT_ROLLUP,
+        null,
         metrics,
         maxRowCount
     );

@@ -912,7 +912,7 @@ public class IndexMerger
     for (int i = 0; i < mergedDimensions.size(); i++) {
       ColumnCapabilities capabilities = dimCapabilities.get(i);
       String dimName = mergedDimensions.get(i);
-      handlers[i] = DimensionHandlerUtil.getHandlerFromCapabilities(dimName, capabilities);
+      handlers[i] = DimensionHandlerUtil.getHandlerFromCapabilities(dimName, capabilities, null);
     }
     return handlers;
   }

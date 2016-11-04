@@ -166,7 +166,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * Get the minimum dimension value seen by this indexer.
    *
    * NOTE:
-   * On an in-memory segment (IncrementaIndex), we can determine min/max values by looking at the stream of
+   * On an in-memory segment (IncrementalIndex), we can determine min/max values by looking at the stream of
    * row values seen in calls to processSingleRowValToIndexKey().
    *
    * However, on a disk-backed segment (QueryableIndex), the numeric dimensions do not currently have any
@@ -259,9 +259,11 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    */
   public int getUnsortedEncodedArrayHashCode(EncodedTypeArray key);
 
+  public static final boolean LIST = true;
+  public static final boolean ARRAY = false;
 
   /**
-   * Given a row value array from a TimeAndDims key, as described in the documentatiion for compareUnsortedEncodedArrays(),
+   * Given a row value array from a TimeAndDims key, as described in the documentation for compareUnsortedEncodedArrays(),
    * convert the unsorted encoded values to a list or array of actual values.
    *
    * If the key has one element, this method should return a single Object instead of an array or list, ignoring
@@ -275,7 +277,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
 
 
   /**
-   * Given a row value array from a TimeAndDims key, as described in the documentatiion for compareUnsortedEncodedArrays(),
+   * Given a row value array from a TimeAndDims key, as described in the documentation for compareUnsortedEncodedArrays(),
    * convert the unsorted encoded values to an array of sorted encoded values (i.e., sorted by their corresponding actual values)
    *
    * @param key dimension value array from a TimeAndDims key

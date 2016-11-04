@@ -28,7 +28,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.IAE;
@@ -39,6 +42,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -795,11 +799,21 @@ public class IndexMergerTest
       return;
     }
 
-    Object encodedColumn = index.getColumn("dim2").getDictionaryEncoding();
-    Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("column");
-    field.setAccessible(true);
+    DictionaryEncodedColumn encodedColumn = index.getColumn("dim2").getDictionaryEncoding();
+    Object obj;
+    if (encodedColumn.hasMultipleValues()) {
+      Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
+      field.setAccessible(true);
 
-    Object obj = field.get(encodedColumn);
+      obj = field.get(encodedColumn);
+    } else {
+      Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("column");
+      field.setAccessible(true);
+
+      obj = field.get(encodedColumn);
+    }
+    // CompressedVSizeIntsIndexedSupplier$CompressedByteSizeIndexedInts
+    // CompressedVSizeIndexedSupplier$CompressedVSizeIndexed
     Field compressedSupplierField = obj.getClass().getDeclaredField("this$0");
     compressedSupplierField.setAccessible(true);
 
@@ -1716,11 +1730,13 @@ public class IndexMergerTest
     IncrementalIndex index1 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
         new LongSumAggregatorFactory("A", "A")
     });
-    index1.add(new MapBasedInputRow(
-        1L,
-        Lists.newArrayList("d1", "d2"),
-        ImmutableMap.<String, Object>of("d1", "a", "d2", "z", "A", 1)
-    ));
+    index1.add(
+        new MapBasedInputRow(
+            1L,
+            Lists.newArrayList("d1", "d2"),
+            ImmutableMap.<String, Object>of("d1", "a", "d2", "z", "A", 1)
+        )
+    );
     closer.closeLater(index1);
 
     IncrementalIndex index2 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
@@ -2169,5 +2185,114 @@ public class IndexMergerTest
         Assert.fail("v9-tmp dir not clean.");
       }
     }
+  }
+
+  @Test
+  public void testMultiValueHandling() throws Exception
+  {
+    InputRow[] rows = new InputRow[]{
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of(
+                "dim1", Arrays.asList("x", "a", "a", "b"),
+                "dim2", Arrays.asList("a", "x", "b", "x")
+            )
+        ),
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of(
+                "dim1", Arrays.asList("a", "b", "x"),
+                "dim2", Arrays.asList("x", "a", "b")
+            )
+        )
+    };
+
+    List<DimensionSchema> schema;
+    QueryableIndex index;
+    QueryableIndexIndexableAdapter adapter;
+    List<Rowboat> boatList;
+
+    // xaab-axbx + abx-xab --> aabx-abxx + abx-abx --> abx-abx + aabx-abxx
+    schema = DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "dim2"), MultiValueHandling.SORTED_ARRAY);
+    index = persistAndLoad(schema, rows);
+    adapter = new QueryableIndexIndexableAdapter(index);
+    boatList = ImmutableList.copyOf(adapter.getRows());
+
+    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(3, index.getColumnNames().size());
+
+    Assert.assertEquals(2, boatList.size());
+    Assert.assertArrayEquals(new int[][]{{0, 1, 2}, {0, 1, 2}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new int[][]{{0, 0, 1, 2}, {0, 1, 2, 2}}, boatList.get(1).getDims());
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "a"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "b"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "x"));
+
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim2", "a"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim2", "b"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim2", "x"));
+
+    // xaab-axbx + abx-xab --> abx-abx + abx-abx --> abx-abx
+    schema = DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "dim2"), MultiValueHandling.SORTED_SET);
+    index = persistAndLoad(schema, rows);
+
+    Assert.assertEquals(1, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(3, index.getColumnNames().size());
+
+    adapter = new QueryableIndexIndexableAdapter(index);
+    boatList = ImmutableList.copyOf(adapter.getRows());
+
+    Assert.assertEquals(1, boatList.size());
+    Assert.assertArrayEquals(new int[][]{{0, 1, 2}, {0, 1, 2}}, boatList.get(0).getDims());
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "a"));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "b"));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "x"));
+
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim2", "a"));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim2", "b"));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim2", "x"));
+
+    // xaab-axbx + abx-xab --> abx-xab + xaab-axbx
+    schema = DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "dim2"), MultiValueHandling.ARRAY);
+    index = persistAndLoad(schema, rows);
+
+    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(3, index.getColumnNames().size());
+
+    adapter = new QueryableIndexIndexableAdapter(index);
+    boatList = ImmutableList.copyOf(adapter.getRows());
+
+    Assert.assertEquals(2, boatList.size());
+    Assert.assertArrayEquals(new int[][]{{0, 1, 2}, {2, 0, 1}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new int[][]{{2, 0, 0, 1}, {0, 2, 1, 2}}, boatList.get(1).getDims());
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "a"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "b"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim1", "x"));
+
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim2", "a"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim2", "b"));
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dim2", "x"));
+  }
+
+  private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
+  {
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null, new DimensionsSpec(schema, null, null));
+    for (InputRow row : rows) {
+      toPersist.add(row);
+    }
+
+    final File tempDir = temporaryFolder.newFolder();
+    return closer.closeLater(INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist, tempDir, indexSpec)));
   }
 }

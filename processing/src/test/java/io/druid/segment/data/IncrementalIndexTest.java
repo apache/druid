@@ -196,6 +196,19 @@ public class IncrementalIndexTest
     return defaultCombiningAggregatorFactories;
   }
 
+  public static IncrementalIndex createIndex(
+      AggregatorFactory[] aggregatorFactories,
+      DimensionsSpec dimensionsSpec)
+  {
+    if (null == aggregatorFactories) {
+      aggregatorFactories = defaultAggregatorFactories;
+    }
+
+    return new OnheapIncrementalIndex(
+        0L, QueryGranularities.NONE, true, dimensionsSpec, aggregatorFactories, 1000000
+    );
+  }
+
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
@@ -203,7 +216,7 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularities.NONE, aggregatorFactories, 1000000
+        0L, QueryGranularities.NONE, true, null, aggregatorFactories, 1000000
     );
   }
 
@@ -214,7 +227,7 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularities.NONE, false, aggregatorFactories, 1000000
+        0L, QueryGranularities.NONE, false, null, aggregatorFactories, 1000000
     );
   }
 

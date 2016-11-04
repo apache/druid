@@ -42,7 +42,20 @@ public class DimensionsSpec
   private final Set<String> dimensionExclusions;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
 
+  public static DimensionsSpec ofEmpty()
+  {
+    return new DimensionsSpec(null, null, null);
+  }
+
   public static List<DimensionSchema> getDefaultSchemas(List<String> dimNames)
+  {
+    return getDefaultSchemas(dimNames, DimensionSchema.MultiValueHandling.ofDefault());
+  }
+
+  public static List<DimensionSchema> getDefaultSchemas(
+      final List<String> dimNames,
+      final DimensionSchema.MultiValueHandling multiValueHandling
+  )
   {
     return Lists.transform(
         dimNames,
@@ -51,7 +64,7 @@ public class DimensionsSpec
           @Override
           public DimensionSchema apply(String input)
           {
-            return new StringDimensionSchema(input);
+            return new StringDimensionSchema(input, multiValueHandling);
           }
         }
     );

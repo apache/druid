@@ -530,8 +530,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         return null;
                       }
 
-                      Object dimVals = indexer.convertUnsortedEncodedArrayToActualArrayOrList(dims[dimensionIndex], false);
-                      return dimVals;
+                      return indexer.convertUnsortedEncodedArrayToActualArrayOrList(
+                          dims[dimensionIndex], DimensionIndexer.ARRAY
+                      );
                     }
                   };
                 }
