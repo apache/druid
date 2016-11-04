@@ -174,7 +174,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public String toString()
   {
     return "FilteredAggregatorFactory{" +
-           ", delegate=" + delegate +
+           "delegate=" + delegate +
            ", filter=" + filter +
            '}';
   }
