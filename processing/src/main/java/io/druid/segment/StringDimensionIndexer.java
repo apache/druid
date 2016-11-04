@@ -213,7 +213,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   public StringDimensionIndexer(MultiValueHandling multiValueHandling)
   {
     this.dimLookup = new DimensionDictionary();
-    this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.SORTED_ARRAY : multiValueHandling;
+    this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
   }
 
   @Override
