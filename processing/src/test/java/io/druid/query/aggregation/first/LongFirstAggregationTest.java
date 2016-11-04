@@ -19,9 +19,9 @@
 
 package io.druid.query.aggregation.first;
 
-import com.metamx.common.Pair;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
