@@ -36,7 +36,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -50,82 +49,68 @@ public class JDBCExtractionNamespaceCacheFactory
   private final ConcurrentMap<String, DBI> dbiCache = new ConcurrentHashMap<>();
 
   @Override
-  public Callable<String> getCachePopulator(
+  public String populateCache(
       final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
       final Map<String, String> cache
-  )
+  ) throws Exception
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
     final Long lastDBUpdate = lastUpdates(id, namespace);
     if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
-      return new Callable<String>()
-      {
-        @Override
-        public String call() throws Exception
-        {
-          return lastVersion;
-        }
-      };
+      return lastVersion;
     }
-    return new Callable<String>()
-    {
-      @Override
-      public String call()
-      {
-        final long dbQueryStart = System.currentTimeMillis();
-        final DBI dbi = ensureDBI(id, namespace);
-        final String table = namespace.getTable();
-        final String valueColumn = namespace.getValueColumn();
-        final String keyColumn = namespace.getKeyColumn();
+    final long dbQueryStart = System.currentTimeMillis();
+    final DBI dbi = ensureDBI(id, namespace);
+    final String table = namespace.getTable();
+    final String valueColumn = namespace.getValueColumn();
+    final String keyColumn = namespace.getKeyColumn();
 
-        LOG.debug("Updating [%s]", id);
-        final List<Pair<String, String>> pairs = dbi.withHandle(
-            new HandleCallback<List<Pair<String, String>>>()
-            {
-              @Override
-              public List<Pair<String, String>> withHandle(Handle handle) throws Exception
-              {
-                final String query;
-                query = String.format(
-                    "SELECT %s, %s FROM %s",
-                    keyColumn,
-                    valueColumn,
-                    table
-                );
-                return handle
-                    .createQuery(
-                        query
-                    ).map(
-                        new ResultSetMapper<Pair<String, String>>()
-                        {
+    LOG.debug("Updating [%s]", id);
+    final List<Pair<String, String>> pairs = dbi.withHandle(
+        new HandleCallback<List<Pair<String, String>>>()
+        {
+          @Override
+          public List<Pair<String, String>> withHandle(Handle handle) throws Exception
+          {
+            final String query;
+            query = String.format(
+                "SELECT %s, %s FROM %s",
+                keyColumn,
+                valueColumn,
+                table
+            );
+            return handle
+                .createQuery(
+                    query
+                ).map(
+                    new ResultSetMapper<Pair<String, String>>()
+                    {
 
-                          @Override
-                          public Pair<String, String> map(
-                              final int index,
-                              final ResultSet r,
-                              final StatementContext ctx
-                          ) throws SQLException
-                          {
-                            return new Pair<String, String>(r.getString(keyColumn), r.getString(valueColumn));
-                          }
-                        }
-                    ).list();
-              }
-            }
-        );
-        for (Pair<String, String> pair : pairs) {
-          cache.put(pair.lhs, pair.rhs);
+                      @Override
+                      public Pair<String, String> map(
+                          final int index,
+                          final ResultSet r,
+                          final StatementContext ctx
+                      ) throws SQLException
+                      {
+                        return new Pair<>(r.getString(keyColumn), r.getString(valueColumn));
+                      }
+                    }
+                ).list();
+          }
         }
-        LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
-        if (lastDBUpdate != null) {
-          return lastDBUpdate.toString();
-        } else {
-          return String.format("%d", dbQueryStart);
-        }
-      }
-    };
+    );
+    for (Pair<String, String> pair : pairs) {
+      cache.put(pair.lhs, pair.rhs);
+    }
+    LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
+    if (lastDBUpdate != null) {
+      return lastDBUpdate.toString();
+    } else {
+      return String.format("%d", dbQueryStart);
+    }
   }
 
   private DBI ensureDBI(String id, JDBCExtractionNamespace namespace)

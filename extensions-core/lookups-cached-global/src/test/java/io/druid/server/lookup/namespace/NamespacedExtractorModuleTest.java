@@ -105,7 +105,7 @@ public class NamespacedExtractorModuleTest
         null
     );
     Map<String, String> map = new HashMap<>();
-    factory.getCachePopulator(namespaceID, namespace, null, map).call();
+    factory.populateCache(namespaceID, namespace, null, map);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
     cacheManager.delete(namespaceID);
