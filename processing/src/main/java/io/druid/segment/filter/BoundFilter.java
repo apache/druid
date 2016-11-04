@@ -61,12 +61,7 @@ public class BoundFilter implements Filter
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
 
       if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
-        if (doesMatch(null)) {
-          return selector.getBitmapFactory()
-                         .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
-        } else {
-          return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-        }
+        return doesMatch(null) ? Filters.allTrue(selector) : Filters.allFalse(selector);
       }
 
       // search for start, end indexes in the bitmaps; then include all bitmaps between those points

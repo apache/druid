@@ -38,7 +38,8 @@ import com.google.common.collect.RangeSet;
     @JsonSubTypes.Type(name="spatial", value=SpatialDimFilter.class),
     @JsonSubTypes.Type(name="in", value=InDimFilter.class),
     @JsonSubTypes.Type(name="bound", value=BoundDimFilter.class),
-    @JsonSubTypes.Type(name="interval", value=IntervalDimFilter.class)
+    @JsonSubTypes.Type(name="interval", value=IntervalDimFilter.class),
+    @JsonSubTypes.Type(name="like", value=LikeDimFilter.class)
 })
 public interface DimFilter
 {
