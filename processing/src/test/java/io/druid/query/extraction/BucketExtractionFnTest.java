@@ -53,6 +53,19 @@ public class BucketExtractionFnTest
   }
 
   @Test
+  public void testEqualsAndHashCode()
+  {
+    BucketExtractionFn extractionFn1 = new BucketExtractionFn(100.0, 0.5);
+    BucketExtractionFn extractionFn2 = new BucketExtractionFn(3.0, 2.0);
+    BucketExtractionFn extractionFn3 = new BucketExtractionFn(3.0, 2.0);
+
+    Assert.assertNotEquals(extractionFn1, extractionFn2);
+    Assert.assertNotEquals(extractionFn1.hashCode(), extractionFn2.hashCode());
+    Assert.assertEquals(extractionFn2, extractionFn3);
+    Assert.assertEquals(extractionFn2.hashCode(), extractionFn3.hashCode());
+  }
+
+  @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
