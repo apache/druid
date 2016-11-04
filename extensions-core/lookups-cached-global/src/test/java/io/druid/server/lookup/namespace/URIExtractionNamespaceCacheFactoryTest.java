@@ -72,7 +72,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -402,7 +401,6 @@ public class URIExtractionNamespaceCacheFactoryTest
     Assert.assertTrue(manager.getKnownIDs().isEmpty());
 
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    Callable<String> populator;
 
     String v = factory.populateCache(id, namespace, null, map);
     Assert.assertEquals("bar", map.get("foo"));

@@ -24,7 +24,6 @@ import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 
 public class StaticMapExtractionNamespaceCacheFactory
     implements ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
