@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.memory.Memory;
@@ -31,6 +30,8 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
+
+import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -110,10 +111,21 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    Union union = (Union) SetOperation.builder().build(size, Family.UNION);
-    updateUnion(union, lhs);
-    updateUnion(union, rhs);
-    return union.getResult(false, null);
+    final Union union;
+    if (lhs instanceof Union) {
+      union = (Union) lhs;
+      updateUnion(union, rhs);
+    } else if (rhs instanceof Union) {
+      union = (Union) rhs;
+      updateUnion(union, lhs);
+    } else {
+      union = (Union) SetOperation.builder().build(size, Family.UNION);
+      updateUnion(union, lhs);
+      updateUnion(union, rhs);
+    }
+
+
+    return union;
   }
 
   private void updateUnion(Union union, Object obj)
@@ -124,6 +136,8 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       union.update((Memory) obj);
     } else if (obj instanceof Sketch) {
       union.update((Sketch) obj);
+    } else if (obj instanceof Union) {
+      union.update(((Union) obj).getResult(false, null));
     } else {
       throw new IAE("Object of type [%s] can not be unioned", obj.getClass().getName());
     }

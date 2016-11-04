@@ -52,4 +52,16 @@ public class SelectorFilter implements Filter
   {
     return factory.makeValueMatcher(dimension, value);
   }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format("%s = %s", dimension, value);
+  }
 }

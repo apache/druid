@@ -20,6 +20,7 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -29,8 +30,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
@@ -58,6 +58,8 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.security.DruidAuthModule;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
@@ -78,13 +80,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  */
 public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
-  private static final Map<String, URLClassLoader> loadersMap = Maps.newHashMap();
+  private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
   private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
 
@@ -103,18 +107,14 @@ public class Initialization
     return retVal;
   }
 
-  /**
-   * Used for testing only
-   */
+  @VisibleForTesting
   static void clearLoadedModules()
   {
     extensionsMap.clear();
   }
 
-  /**
-   * Used for testing only
-   */
-  static Map<String, URLClassLoader> getLoadersMap()
+  @VisibleForTesting
+  static Map<File, URLClassLoader> getLoadersMap()
   {
     return loadersMap;
   }
@@ -264,7 +264,7 @@ public class Initialization
    */
   public static URLClassLoader getClassLoaderForExtension(File extension) throws MalformedURLException
   {
-    URLClassLoader loader = loadersMap.get(extension.getName());
+    URLClassLoader loader = loadersMap.get(extension);
     if (loader == null) {
       final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
       final URL[] urls = new URL[jars.size()];
@@ -274,8 +274,8 @@ public class Initialization
         log.info("added URL[%s]", url);
         urls[i++] = url;
       }
-      loader = new URLClassLoader(urls, Initialization.class.getClassLoader());
-      loadersMap.put(extension.getName(), loader);
+      loadersMap.putIfAbsent(extension, new URLClassLoader(urls, Initialization.class.getClassLoader()));
+      loader = loadersMap.get(extension);
     }
     return loader;
   }

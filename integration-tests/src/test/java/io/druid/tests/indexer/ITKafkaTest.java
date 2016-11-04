@@ -21,8 +21,9 @@ package io.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import io.druid.testing.utils.RetryUtil;
@@ -125,24 +126,20 @@ public class ITKafkaTest extends AbstractIndexerTest
       throw new ISE(e, "could not create kafka topic");
     }
 
-    String indexerSpec = "";
+    String indexerSpec;
 
     // replace temp strings in indexer file
     try {
       LOG.info("indexerFile name: [%s]", INDEXER_FILE);
-      indexerSpec = getTaskAsString(INDEXER_FILE);
-      indexerSpec = indexerSpec.replaceAll("%%TOPIC%%", TOPIC_NAME);
-      indexerSpec = indexerSpec.replaceAll("%%ZOOKEEPER_SERVER%%", config.getZookeeperHosts());
-      indexerSpec = indexerSpec.replaceAll("%%GROUP_ID%%", Long.toString(System.currentTimeMillis()));
-      indexerSpec = indexerSpec.replaceAll(
-          "%%SHUTOFFTIME%%",
-          new DateTime(
-              System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(
-                  2
-                  * MINUTES_TO_SEND
-              )
-          ).toString()
-      );
+      indexerSpec = getTaskAsString(INDEXER_FILE)
+          .replaceAll("%%DATASOURCE%%", DATASOURCE)
+          .replaceAll("%%TOPIC%%", TOPIC_NAME)
+          .replaceAll("%%ZOOKEEPER_SERVER%%", config.getZookeeperHosts())
+          .replaceAll("%%GROUP_ID%%", Long.toString(System.currentTimeMillis()))
+          .replaceAll(
+              "%%SHUTOFFTIME%%",
+              new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2 * MINUTES_TO_SEND)).toString()
+          );
       LOG.info("indexerFile: [%s]\n", indexerSpec);
     }
     catch (Exception e) {
@@ -217,26 +214,29 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     try {
       query_response_template = IOUtils.toString(is, "UTF-8");
-    } catch (IOException e) {
-	throw new ISE(e, "could not read query file: %s", QUERIES_FILE);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "could not read query file: %s", QUERIES_FILE);
     }
 
     String queryStr = query_response_template
-	// time boundary
-	.replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-	.replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
-	.replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-	// time series
-	.replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
-	.replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2)))
-	.replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-	.replace("%%TIMESERIES_ADDED%%", Integer.toString(added))
-	.replace("%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
+        .replaceAll("%%DATASOURCE%%", DATASOURCE)
+            // time boundary
+        .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
+        .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
+        .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
+            // time series
+        .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
+        .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2)))
+        .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
+        .replace("%%TIMESERIES_ADDED%%", Integer.toString(added))
+        .replace("%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
 
     // this query will probably be answered from the realtime task
     try {
       this.queryHelper.testQueriesFromString(queryStr, 2);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -285,7 +285,7 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // remove segments
     if (segmentsExist) {
-        unloadAndKillData(DATASOURCE);
+      unloadAndKillData(DATASOURCE);
     }
   }
 }

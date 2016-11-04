@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import com.metamx.common.MapUtils;
 import com.microsoft.azure.storage.StorageException;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.MapUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -60,7 +60,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
       ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );
@@ -99,7 +99,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         size
     );

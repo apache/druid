@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
@@ -43,7 +44,13 @@ public class Metadata
   private AggregatorFactory[] aggregators;
 
   @JsonProperty
+  private TimestampSpec timestampSpec;
+
+  @JsonProperty
   private QueryGranularity queryGranularity;
+
+  @JsonProperty
+  private Boolean rollup;
 
   public Metadata()
   {
@@ -61,6 +68,17 @@ public class Metadata
     return this;
   }
 
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
+  }
+
+  public Metadata setTimestampSpec(TimestampSpec timestampSpec)
+  {
+    this.timestampSpec = timestampSpec;
+    return this;
+  }
+
   public QueryGranularity getQueryGranularity()
   {
     return queryGranularity;
@@ -69,6 +87,17 @@ public class Metadata
   public Metadata setQueryGranularity(QueryGranularity queryGranularity)
   {
     this.queryGranularity = queryGranularity;
+    return this;
+  }
+
+  public Boolean isRollup()
+  {
+    return rollup;
+  }
+
+  public Metadata setRollup(Boolean rollup)
+  {
+    this.rollup = rollup;
     return this;
   }
 
@@ -111,7 +140,9 @@ public class Metadata
                                                    ? new ArrayList<AggregatorFactory[]>()
                                                    : null;
 
+    List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
     List<QueryGranularity> gransToMerge = new ArrayList<>();
+    List<Boolean> rollupToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
@@ -120,15 +151,25 @@ public class Metadata
           aggregatorsToMerge.add(metadata.getAggregators());
         }
 
+        if (timestampSpecsToMerge != null && metadata.getTimestampSpec() != null) {
+          timestampSpecsToMerge.add(metadata.getTimestampSpec());
+        }
+
         if (gransToMerge != null) {
           gransToMerge.add(metadata.getQueryGranularity());
+        }
+
+        if (rollupToMerge != null) {
+          rollupToMerge.add(metadata.isRollup());
         }
         mergedContainer.putAll(metadata.container);
       } else {
         //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
         //final merged segment should not have same in metadata
         aggregatorsToMerge = null;
+        timestampSpecsToMerge = null;
         gransToMerge = null;
+        rollupToMerge = null;
       }
     }
 
@@ -143,10 +184,31 @@ public class Metadata
       result.setAggregators(overrideMergedAggregators);
     }
 
+    if (timestampSpecsToMerge != null) {
+      result.setTimestampSpec(TimestampSpec.mergeTimestampSpec(timestampSpecsToMerge));
+    }
+
     if (gransToMerge != null) {
       result.setQueryGranularity(QueryGranularity.mergeQueryGranularities(gransToMerge));
     }
 
+    Boolean rollup = null;
+    if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
+      rollup = rollupToMerge.get(0);
+      for (Boolean r : rollupToMerge) {
+        if (r == null) {
+          rollup = null;
+          break;
+        } else if (!r.equals(rollup)) {
+          rollup = null;
+          break;
+        } else {
+          rollup = r;
+        }
+      }
+    }
+
+    result.setRollup(rollup);
     result.container.putAll(mergedContainer);
     return result;
 
@@ -171,9 +233,15 @@ public class Metadata
     if (!Arrays.equals(aggregators, metadata.aggregators)) {
       return false;
     }
-    return !(queryGranularity != null
-             ? !queryGranularity.equals(metadata.queryGranularity)
-             : metadata.queryGranularity != null);
+    if (timestampSpec != null ? !timestampSpec.equals(metadata.timestampSpec) : metadata.timestampSpec != null) {
+      return false;
+    }
+    if (rollup != null ? !rollup.equals(metadata.rollup) : metadata.rollup != null) {
+      return false;
+    }
+    return queryGranularity != null
+           ? queryGranularity.equals(metadata.queryGranularity)
+           : metadata.queryGranularity == null;
 
   }
 
@@ -181,8 +249,10 @@ public class Metadata
   public int hashCode()
   {
     int result = container.hashCode();
-    result = 31 * result + (aggregators != null ? Arrays.hashCode(aggregators) : 0);
+    result = 31 * result + Arrays.hashCode(aggregators);
+    result = 31 * result + (timestampSpec != null ? timestampSpec.hashCode() : 0);
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
+    result = 31 * result + (rollup != null ? rollup.hashCode() : 0);
     return result;
   }
 
@@ -190,10 +260,11 @@ public class Metadata
   public String toString()
   {
     return "Metadata{" +
-
            "container=" + container +
            ", aggregators=" + Arrays.toString(aggregators) +
+           ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
+           ", rollup=" + rollup +
            '}';
   }
 }

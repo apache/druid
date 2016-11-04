@@ -239,7 +239,7 @@ Returns total size and count for each datasource for each interval within given 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Enables a datasource.
+Enables all segments of datasource which are not overshadowed by others.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 

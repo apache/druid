@@ -23,10 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.logger.Logger;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.DataSegmentPusherUtil;
@@ -58,17 +59,24 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 	}
 
   @Override
-  public String getPathForHadoop(String dataSource)
+  public String getPathForHadoop()
   {
     throw new UnsupportedOperationException("Cassandra storage does not support indexing via Hadoop");
   }
 
+  @Deprecated
   @Override
-	public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
-	{
-		log.info("Writing [%s] to C*", indexFilesDir);
-		String key = JOINER.join(
-		    config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
+  public String getPathForHadoop(String dataSource)
+  {
+    return getPathForHadoop();
+  }
+
+  @Override
+  public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
+  {
+    log.info("Writing [%s] to C*", indexFilesDir);
+    String key = JOINER.join(
+        config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
 		    DataSegmentPusherUtil.getStorageDir(segment)
 		    );
 

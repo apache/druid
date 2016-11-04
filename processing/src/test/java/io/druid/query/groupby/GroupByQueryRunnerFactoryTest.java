@@ -22,28 +22,19 @@
 
 package io.druid.query.groupby;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.Query;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
-import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -58,7 +49,6 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -74,7 +64,7 @@ public class GroupByQueryRunnerFactoryTest
   @Test
   public void testMergeRunnersEnsureGroupMerging() throws Exception
   {
-    QueryRunnerFactory factory = createFactory();
+    QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig());
     QueryRunner mergedRunner = factory.mergeRunners(
         Executors.newSingleThreadExecutor(),
         ImmutableList.of(
@@ -146,43 +136,5 @@ public class GroupByQueryRunnerFactoryTest
     closerRule.closeLater(incrementalIndex);
 
     return new IncrementalIndexSegment(incrementalIndex, "test");
-  }
-
-  private GroupByQueryRunnerFactory createFactory()
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-
-    Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
-    StupidPool<ByteBuffer> pool = new StupidPool<>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(1024 * 1024);
-          }
-        });
-
-    QueryWatcher noopQueryWatcher = new QueryWatcher()
-    {
-      @Override
-      public void registerQuery(Query query, ListenableFuture future)
-      {
-
-      }
-    };
-
-    GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, pool);
-    GroupByQueryQueryToolChest toolchest = new GroupByQueryQueryToolChest(
-        configSupplier, mapper, engine, pool,
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    );
-    return new GroupByQueryRunnerFactory(
-        engine,
-        noopQueryWatcher,
-        configSupplier,
-        toolchest,
-        pool
-    );
   }
 }

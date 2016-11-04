@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.metamx.common.concurrent.ExecutorServiceConfig;
+import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.segment.column.ColumnConfig;
 import org.skife.config.Config;
 
@@ -37,12 +37,19 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return Integer.MAX_VALUE;
   }
 
-  @Override @Config(value = "${base_path}.numThreads")
+  @Override
+  @Config(value = "${base_path}.numThreads")
   public int getNumThreads()
   {
     // default to leaving one core for background tasks
     final int processors = Runtime.getRuntime().availableProcessors();
     return processors > 1 ? processors - 1 : processors;
+  }
+
+  @Config("${base_path}.numMergeBuffers")
+  public int getNumMergeBuffers()
+  {
+    return 0;
   }
 
   @Config(value = "${base_path}.columnCache.sizeBytes")

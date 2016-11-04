@@ -608,7 +608,9 @@
                 "size": 747056474,
                 "numRows": 3702583,
                 "aggregators": null,
-                "queryGranularity": null
+                "timestampSpec": null,
+                "queryGranularity": null,
+                "rollup":null
             },
             {
                 "id": "twitterstream_2013-01-02T00:00:00.000Z_2013-01-03T00:00:00.000Z_2013-01-03T03:44:58.791Z_v9",
@@ -627,7 +629,9 @@
                 "size": 755796690,
                 "numRows": 3743002,
                 "aggregators": null,
-                "queryGranularity": null
+                "timestampSpec": null,
+                "queryGranularity": null,
+                "rollup":null
             },
             {
                 "id": "twitterstream_2013-01-03T00:00:00.000Z_2013-01-04T00:00:00.000Z_2013-01-04T04:09:13.590Z_v9",
@@ -646,7 +650,9 @@
                 "size": 706893542,
                 "numRows":3502959,
                 "aggregators": null,
-                "queryGranularity": null
+                "timestampSpec": null,
+                "queryGranularity": null,
+                "rollup":null
             }
         ]
     },

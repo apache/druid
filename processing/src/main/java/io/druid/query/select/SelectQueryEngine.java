@@ -24,22 +24,23 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
-import io.druid.timeline.DataSegmentUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -82,10 +83,12 @@ public class SelectQueryEngine
     // should be rewritten with given interval
     final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
 
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
-        Filters.toFilter(query.getDimensionsFilter()),
+        filter,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()
@@ -105,12 +108,14 @@ public class SelectQueryEngine
             for (DimensionSpec dim : dims) {
               final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
               dimSelectors.put(dim.getOutputName(), dimSelector);
+              builder.addDimension(dim.getOutputName());
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
             for (String metric : metrics) {
               final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
               metSelectors.put(metric, metricSelector);
+              builder.addMetric(metric);
             }
 
             final PagingOffset offset = query.getPagingOffset(segmentId);

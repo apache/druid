@@ -22,11 +22,12 @@ package io.druid.server.lookup.namespace.cache;
 import com.google.common.primitives.Chars;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 
@@ -92,10 +93,14 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @Override
   public boolean delete(final String namespaceKey)
   {
+    // `super.delete` has a synchronization in it, don't call it in the lock.
+    if (!super.delete(namespaceKey)) {
+      return false;
+    }
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      return super.delete(namespaceKey) && mapMap.remove(namespaceKey) != null;
+      return mapMap.remove(namespaceKey) != null;
     }
     finally {
       lock.unlock();

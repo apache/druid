@@ -19,8 +19,6 @@
 
 package io.druid.collections;
 
-import java.io.IOException;
-
 /**
  */
 public class StupidResourceHolder<T> implements ResourceHolder<T>
@@ -46,7 +44,7 @@ public class StupidResourceHolder<T> implements ResourceHolder<T>
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Do nothing
   }

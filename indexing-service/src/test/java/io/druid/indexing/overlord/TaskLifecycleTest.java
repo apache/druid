@@ -34,10 +34,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Comparators;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
@@ -71,6 +68,10 @@ import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -456,9 +457,16 @@ public class TaskLifecycleTest
     return new DataSegmentPusher()
     {
       @Override
-      public String getPathForHadoop(String dataSource)
+      public String getPathForHadoop()
       {
         throw new UnsupportedOperationException();
+      }
+
+      @Deprecated
+      @Override
+      public String getPathForHadoop(String dataSource)
+      {
+        return getPathForHadoop();
       }
 
       @Override
@@ -565,7 +573,7 @@ public class TaskLifecycleTest
         }, // segment announcer
         handoffNotifierFactory,
         queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
-        null, // query executor service
+        MoreExecutors.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(
@@ -643,7 +651,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null, false)
         ),
         mapper,
         null
@@ -701,7 +709,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory()),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null, false)
         ),
         mapper,
         null
@@ -752,7 +760,7 @@ public class TaskLifecycleTest
                                 .version("2011-04-6T16:52:46.119-05:00")
                                 .dimensions(ImmutableList.<String>of())
                                 .metrics(ImmutableList.<String>of())
-                                .shardSpec(new NoneShardSpec())
+                                .shardSpec(NoneShardSpec.instance())
                                 .binaryVersion(9)
                                 .size(0)
                                 .build();
@@ -993,8 +1001,15 @@ public class TaskLifecycleTest
   {
     dataSegmentPusher = new DataSegmentPusher()
     {
+      @Deprecated
       @Override
       public String getPathForHadoop(String s)
+      {
+        return getPathForHadoop();
+      }
+
+      @Override
+      public String getPathForHadoop()
       {
         throw new UnsupportedOperationException();
       }
@@ -1053,7 +1068,7 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null, false)
         ),
         mapper,
         null

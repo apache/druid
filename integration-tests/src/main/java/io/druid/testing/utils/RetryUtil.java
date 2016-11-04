@@ -20,8 +20,9 @@
 package io.druid.testing.utils;
 
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;

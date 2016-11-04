@@ -31,15 +31,15 @@ import org.mozilla.javascript.Context;
 public class JavaScriptFilter implements Filter
 {
   private final String dimension;
-  private final JavaScriptDimFilter.JavaScriptPredicate predicate;
+  private final JavaScriptDimFilter.JavaScriptPredicateFactory predicateFactory;
 
   public JavaScriptFilter(
       String dimension,
-      JavaScriptDimFilter.JavaScriptPredicate predicate
+      JavaScriptDimFilter.JavaScriptPredicateFactory predicate
   )
   {
     this.dimension = dimension;
-    this.predicate = predicate;
+    this.predicateFactory = predicate;
   }
 
   @Override
@@ -52,7 +52,7 @@ public class JavaScriptFilter implements Filter
         @Override
         public boolean apply(String input)
         {
-          return predicate.applyInContext(cx, input);
+          return predicateFactory.applyInContext(cx, input);
         }
       };
 
@@ -67,6 +67,12 @@ public class JavaScriptFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     // suboptimal, since we need create one context per call to predicate.apply()
-    return factory.makeValueMatcher(dimension, predicate);
+    return factory.makeValueMatcher(dimension, predicateFactory);
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(dimension) != null;
   }
 }

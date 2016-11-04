@@ -23,7 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
-import com.metamx.common.guava.Sequences;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -91,10 +91,10 @@ public class SearchQueryRunnerWithCaseTest
 
     return transformToConstructionFeeder(
         Arrays.asList(
-            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1")),
-            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2")),
-            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3)),
-            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4))
+            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1"), "index1"),
+            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2"), "index2"),
+            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3), "index3"),
+            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4), "index4")
         )
     );
   }
@@ -152,6 +152,34 @@ public class SearchQueryRunnerWithCaseTest
     searchQuery = builder.query("preferred", true).build();
     expectedResults.put(placementDimension, Sets.newHashSet("preferred"));
     expectedResults.put(placementishDimension, Sets.newHashSet("preferred"));
+    checkSearchQuery(searchQuery, expectedResults);
+  }
+
+  @Test
+  public void testSearchIntervals()
+  {
+    SearchQuery searchQuery;
+    Druids.SearchQueryBuilder builder = testBuilder()
+        .dimensions(Arrays.asList(qualityDimension))
+        .intervals("2011-01-12T00:00:00.000Z/2011-01-13T00:00:00.000Z");
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+
+    searchQuery = builder.query("otive").build();
+    expectedResults.put(qualityDimension, Sets.newHashSet("AutoMotive"));
+    checkSearchQuery(searchQuery, expectedResults);
+  }
+
+  @Test
+  public void testSearchNoOverrappingIntervals()
+  {
+    SearchQuery searchQuery;
+    Druids.SearchQueryBuilder builder = testBuilder()
+        .dimensions(Arrays.asList(qualityDimension))
+        .intervals("2011-01-10T00:00:00.000Z/2011-01-11T00:00:00.000Z");
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+
+    searchQuery = builder.query("business").build();
+    expectedResults.put(qualityDimension, Sets.<String>newHashSet());
     checkSearchQuery(searchQuery, expectedResults);
   }
 

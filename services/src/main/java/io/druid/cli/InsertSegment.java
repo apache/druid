@@ -27,13 +27,14 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.DruidNode;
@@ -41,7 +42,6 @@ import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -58,7 +58,7 @@ public class InsertSegment extends GuiceRunnable
   private String workingDirPath;
 
   @Option(name = "--updateDescriptor", description = "if set to true, this tool will update loadSpec field in descriptor.json if the path in loadSpec is different from where desciptor.json was found. Default value is true", required = false)
-  private boolean updateDescriptor = true;
+  private String updateDescriptor;
 
   private ObjectMapper mapper;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -97,7 +97,7 @@ public class InsertSegment extends GuiceRunnable
 
     Set<DataSegment> segments = null;
     try {
-      segments = dataSegmentFinder.findSegments(workingDirPath, updateDescriptor);
+      segments = dataSegmentFinder.findSegments(workingDirPath, Boolean.valueOf(updateDescriptor));
     }
     catch (SegmentLoadingException e) {
       Throwables.propagate(e);

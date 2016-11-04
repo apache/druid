@@ -27,23 +27,24 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.FunctionalIterator;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.parsers.CloseableIterator;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.FunctionalIterator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
@@ -66,7 +67,7 @@ import java.util.NoSuchElementException;
  */
 public class GroupByQueryEngine
 {
-  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
+  private static final int MISSING_VALUE = -1;
 
   private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
@@ -94,8 +95,10 @@ public class GroupByQueryEngine
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
 
+    Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimFilter()));
+
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
-        Filters.toFilter(query.getDimFilter()),
+        filter,
         intervals.get(0),
         query.getGranularity(),
         false
@@ -187,7 +190,7 @@ public class GroupByQueryEngine
         final IndexedInts row = dimSelector.getRow();
         if (row == null || row.size() == 0) {
           ByteBuffer newKey = key.duplicate();
-          newKey.putInt(dimSelector.getValueCardinality());
+          newKey.putInt(MISSING_VALUE);
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
         } else {
           for (Integer dimValue : row) {
@@ -306,16 +309,12 @@ public class GroupByQueryEngine
 
     public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
     {
+      final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
+
       this.query = query;
       this.cursor = cursor;
       this.metricsBuffer = metricsBuffer;
-
-      this.maxIntermediateRows = Math.min(
-          query.getContextValue(
-              CTX_KEY_MAX_INTERMEDIATE_ROWS,
-              config.getMaxIntermediateRows()
-          ), config.getMaxIntermediateRows()
-      );
+      this.maxIntermediateRows = querySpecificConfig.getMaxIntermediateRows();
 
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();
@@ -407,7 +406,7 @@ public class GroupByQueryEngine
                   for (int i = 0; i < dimensions.size(); ++i) {
                     final DimensionSelector dimSelector = dimensions.get(i);
                     final int dimVal = keyBuffer.getInt();
-                    if (dimSelector.getValueCardinality() != dimVal) {
+                    if (MISSING_VALUE != dimVal) {
                       theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
                     }
                   }

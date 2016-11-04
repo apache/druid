@@ -28,11 +28,11 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -142,10 +142,12 @@ public class DetermineHashedPartitionsJob implements Jobby
             new UniformGranularitySpec(
                 config.getGranularitySpec().getSegmentGranularity(),
                 config.getGranularitySpec().getQueryGranularity(),
-                intervals
+                config.getGranularitySpec().isRollup(),
+                intervals,
+                config.getGranularitySpec().getTimezone()
             )
         );
-        log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
+        log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
@@ -171,7 +173,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
           if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+            actualSpecs.add(new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++));
           } else {
             for (int i = 0; i < numberOfShards; ++i) {
               actualSpecs.add(
@@ -241,7 +243,8 @@ public class DetermineHashedPartitionsJob implements Jobby
     protected void innerMap(
         InputRow inputRow,
         Object value,
-        Context context
+        Context context,
+        boolean reportParseExceptions
     ) throws IOException, InterruptedException
     {
 
@@ -316,7 +319,9 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
       HyperLogLogCollector aggregate = HyperLogLogCollector.makeLatestCollector();
       for (BytesWritable value : values) {
-        aggregate.fold(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()));
+        aggregate.fold(
+            HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
+        );
       }
       Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
       intervals.add(interval);
@@ -412,6 +417,3 @@ public class DetermineHashedPartitionsJob implements Jobby
   }
 
 }
-
-
-

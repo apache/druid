@@ -22,14 +22,15 @@ package io.druid.query.search.search;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.granularity.QueryGranularity;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -40,6 +41,8 @@ import java.util.Map;
  */
 public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 {
+  private static final SearchSortSpec DEFAULT_SORT_SPEC = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
+
   private final DimFilter dimFilter;
   private final SearchSortSpec sortSpec;
   private final QueryGranularity granularity;
@@ -62,20 +65,25 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   {
     super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
-    this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
+    this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
     this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
-    this.querySpec = querySpec;
+    this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
 
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
-    Preconditions.checkNotNull(querySpec, "Must specify a query");
   }
 
   @Override
   public boolean hasFilters()
   {
     return dimFilter != null;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
   }
 
   @Override
@@ -215,18 +223,36 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     SearchQuery that = (SearchQuery) o;
 
-    if (limit != that.limit) return false;
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) return false;
-    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) return false;
+    if (limit != that.limit) {
+      return false;
+    }
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
+      return false;
+    }
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
+      return false;
+    }
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
+      return false;
+    }
+    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) {
+      return false;
+    }
+    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) {
+      return false;
+    }
 
     return true;
   }

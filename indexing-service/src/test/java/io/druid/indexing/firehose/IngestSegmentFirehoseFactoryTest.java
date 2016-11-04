@@ -32,7 +32,6 @@ import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Module;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
@@ -57,6 +56,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -213,8 +213,15 @@ public class IngestSegmentFirehoseFactoryTest
         newMockEmitter(),
         new DataSegmentPusher()
         {
+          @Deprecated
           @Override
           public String getPathForHadoop(String dataSource)
+          {
+            return getPathForHadoop();
+          }
+
+          @Override
+          public String getPathForHadoop()
           {
             throw new UnsupportedOperationException();
           }
@@ -291,7 +298,9 @@ public class IngestSegmentFirehoseFactoryTest
                     DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.<SpatialDimensionSchema>of()
-                )
+                ),
+                null,
+                null
             )
         )
     )) {
@@ -409,7 +418,9 @@ public class IngestSegmentFirehoseFactoryTest
               DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
               ImmutableList.<SpatialDimensionSchema>of()
-          )
+          ),
+          null,
+          null
       )
   );
 

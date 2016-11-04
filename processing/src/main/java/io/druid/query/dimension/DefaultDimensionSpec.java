@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 
@@ -128,14 +128,22 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
+    if (this == o) {
+      return true;
+    }
     // LegacyDimensionSpec can be equal to DefaultDimensionSpec
-    if (!(o instanceof DefaultDimensionSpec)) return false;
+    if (!(o instanceof DefaultDimensionSpec)) {
+      return false;
+    }
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) return false;
-    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) return false;
+    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
+      return false;
+    }
+    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) {
+      return false;
+    }
 
     return true;
   }

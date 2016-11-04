@@ -24,9 +24,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -36,7 +36,6 @@ import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.BitmapCompressedIndexedInts;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
@@ -46,9 +45,11 @@ import io.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -76,10 +77,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
       if (col == null) {
         log.warn("Wtf!? column[%s] didn't exist!?!?!?", dim);
-      } else if (col.getDictionaryEncoding() != null) {
-        availableDimensions.add(dim);
       } else {
-        log.info("No dictionary on dimension[%s]", dim);
+        if (col.getDictionaryEncoding() == null) {
+          log.info("No dictionary on dimension[%s]", dim);
+        }
+        availableDimensions.add(dim);
       }
     }
 
@@ -117,7 +119,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimValueLookup(String dimension)
+  public Indexed<Comparable> getDimValueLookup(String dimension)
   {
     final Column column = input.getColumn(dimension);
 
@@ -131,12 +133,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return null;
     }
 
-    return new Indexed<String>()
+    return new Indexed<Comparable>()
     {
       @Override
-      public Class<? extends String> getClazz()
+      public Class<? extends Comparable> getClazz()
       {
-        return String.class;
+        return Comparable.class;
       }
 
       @Override
@@ -146,19 +148,19 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       }
 
       @Override
-      public String get(int index)
+      public Comparable get(int index)
       {
         return dict.lookupName(index);
       }
 
       @Override
-      public int indexOf(String value)
+      public int indexOf(Comparable value)
       {
         return dict.lookupId(value);
       }
 
       @Override
-      public Iterator<String> iterator()
+      public Iterator<Comparable> iterator()
       {
         return IndexedIterable.create(this).iterator();
       }
@@ -177,28 +179,31 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         {
           final GenericColumn timestamps = input.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
           final Object[] metrics;
-
-          final DictionaryEncodedColumn[] dictionaryEncodedColumns;
+          final Closeable[] columns;
 
           final int numMetrics = getMetricNames().size();
+
+          final DimensionHandler[] handlers = new DimensionHandler[availableDimensions.size()];
+          Collection<DimensionHandler> handlerSet = input.getDimensionHandlers().values();
 
           int currRow = 0;
           boolean done = false;
 
           {
-            this.dictionaryEncodedColumns = FluentIterable
-                .from(getDimensionNames())
+            handlerSet.toArray(handlers);
+            this.columns = FluentIterable
+                .from(handlerSet)
                 .transform(
-                    new Function<String, DictionaryEncodedColumn>()
+                    new Function<DimensionHandler, Closeable>()
                     {
                       @Override
-                      public DictionaryEncodedColumn apply(String dimName)
+                      public Closeable apply(DimensionHandler handler)
                       {
-                        return input.getColumn(dimName)
-                                    .getDictionaryEncoding();
+                        Column column = input.getColumn(handler.getDimensionName());
+                        return handler.getSubColumn(column);
                       }
                     }
-                ).toArray(DictionaryEncodedColumn.class);
+                ).toArray(Closeable.class);
 
             final Indexed<String> availableMetrics = getMetricNames();
             metrics = new Object[availableMetrics.size()];
@@ -230,10 +235,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
                   CloseQuietly.close((Closeable) metric);
                 }
               }
-              for (Object dimension : dictionaryEncodedColumns) {
-                if (dimension instanceof Closeable) {
-                  CloseQuietly.close((Closeable) dimension);
-                }
+              for (Closeable dimension : columns) {
+                CloseQuietly.close(dimension);
               }
               done = true;
             }
@@ -247,22 +250,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               throw new NoSuchElementException();
             }
 
-            final int[][] dims = new int[dictionaryEncodedColumns.length][];
+            final Object[] dims = new Object[columns.length];
             int dimIndex = 0;
-            for (final DictionaryEncodedColumn dict : dictionaryEncodedColumns) {
-              final IndexedInts dimVals;
-              if (dict.hasMultipleValues()) {
-                dimVals = dict.getMultiValueRow(currRow);
-              } else {
-                dimVals = new ArrayBasedIndexedInts(new int[]{dict.getSingleValueRow(currRow)});
-              }
-
-              int[] theVals = new int[dimVals.size()];
-              for (int j = 0; j < theVals.length; ++j) {
-                theVals[j] = dimVals.get(j);
-              }
-
-              dims[dimIndex++] = theVals;
+            for (final Closeable column : columns) {
+              dims[dimIndex] = handlers[dimIndex].getRowValueArrayFromColumn(column, currRow);
+              dimIndex++;
             }
 
             Object[] metricArray = new Object[numMetrics];
@@ -277,7 +269,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             }
 
             final Rowboat retVal = new Rowboat(
-                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow
+                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow, handlers
             );
 
             ++currRow;
@@ -360,5 +352,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return metadata;
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return input.getDimensionHandlers();
   }
 }

@@ -22,8 +22,8 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
-import io.druid.query.filter.DimFilterCacheHelper;
+import io.druid.java.util.common.StringUtils;
+import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -74,8 +74,13 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
-    int selectorCardinality = selector.getValueCardinality();
-    int cardinality = isWhitelist ? values.size() : selectorCardinality - values.size();
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0) {
+      throw new UnsupportedOperationException("Cannot decorate a selector with no dictionary");
+    }
+
+    // Upper bound on cardinality of the filtered spec.
+    final int cardinality = isWhitelist ? values.size() : selectorCardinality;
 
     int count = 0;
     final Map<Integer,Integer> forwardMapping = new HashMap<>(cardinality);
@@ -119,10 +124,10 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
                                           .put(CACHE_TYPE_ID)
                                           .put(delegateCacheKey)
                                           .put((byte) (isWhitelist ? 1 : 0))
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                                          .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                    .put(DimFilterUtils.STRING_SEPARATOR);
     }
     return filterCacheKey.array();
   }

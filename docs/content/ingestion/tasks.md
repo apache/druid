@@ -113,19 +113,35 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|75000|no|
 |numShards|Directly specify the number of shards to create. You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
+|buildV9Directly|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|false|no|
+|forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
 
 #### IndexSpec
 
-The indexSpec defines segment storage format options to be used at indexing
-time, such as bitmap type, and column compression formats.
+The indexSpec defines segment storage format options to be used at indexing time, such as bitmap type and column
+compression formats. The indexSpec is optional and default parameters will be used if not specified.
 
-The indexSpec is optional and default parameters will be used if not specified.
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
+|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
 
-|property|description|possible values|default|required?|
-|--------|-----------|---------------|-------|---------|
-|bitmap|type of bitmap compression to use for inverted indices.|`"concise"`, `"roaring"`|`"concise"`|no|
-|dimensionCompression|compression format for dimension columns|`"uncompressed"`, `"lz4"`, `"lzf"`|`"lz4"`|no|
-|metricCompression|compression format for metric columns, defaults to LZ4|`"lz4"`, `"lzf"`|`"lz4"`|no|
+##### Bitmap types
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `concise`.|yes|
+
+For Roaring bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `roaring`.|yes|
+|compressRunOnSerialization|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 Segment Merging Tasks
 ---------------------
@@ -146,7 +162,10 @@ Append tasks append a list of segments together into a single segment (one after
 
 ### Merge Task
 
-Merge tasks merge a list of segments together. Any common timestamps are merged. The grammar is:
+Merge tasks merge a list of segments together. Any common timestamps are merged.
+If rollup is disabled as part of ingestion, common timestamps are not merged and rows are reordered by their timestamp.
+
+The grammar is:
 
 ```json
 {
@@ -154,6 +173,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
+    "rollup": <whether or not to rollup data during a merge>,
     "segments": <JSON list of DataSegment objects to merge>
 }
 ```

@@ -19,8 +19,8 @@
 
 package io.druid.metadata;
 
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 
 public abstract class MetadataStorage
 {

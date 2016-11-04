@@ -20,10 +20,10 @@
 package io.druid.collections;
 
 import com.google.common.base.Supplier;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 
-import java.io.IOException;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
+
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -87,7 +87,7 @@ public class StupidPool<T>
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       if (!closed.compareAndSet(false, true)) {
         log.warn(new ISE("Already Closed!"), "Already closed");

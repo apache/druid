@@ -19,7 +19,7 @@
 
 package io.druid.segment.data;
 
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 
 import java.io.IOException;
 

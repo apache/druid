@@ -249,6 +249,25 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testResetSupervisor() throws Exception
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    supervisor1.reset();
+    replayAll();
+
+    manager.start();
+    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1"));
+    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home"));
+
+    verifyAll();
+  }
+
   private class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;

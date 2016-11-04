@@ -22,9 +22,9 @@ package io.druid.server.coordinator.helper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.coordinator.BalancerSegmentHolder;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -119,7 +119,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         log.info("No segments found.  Cannot balance.");
         continue;
       }
-
+      long unmoved = 0L;
       for (int iter = 0; iter < maxSegmentsToMove; iter++) {
         final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
@@ -128,16 +128,25 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
           if (holder != null) {
             moveSegment(segmentToMove, holder.getServer(), params);
+          } else {
+            ++unmoved;
           }
         }
       }
+      if (unmoved == maxSegmentsToMove) {
+        // Cluster should be alive and constantly adjusting
+        log.info("No good moves found in tier [%s]", tier);
+      }
+      stats.addToTieredStat("unmovedCount", tier, unmoved);
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
       if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
         strategy.emitStats(tier, stats, serverHolderList);
-
       }
       log.info(
-          "[%s]: Segments Moved: [%d]", tier, currentlyMovingSegments.get(tier).size()
+          "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
+          tier,
+          currentlyMovingSegments.get(tier).size(),
+          unmoved
       );
 
     }

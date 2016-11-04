@@ -27,13 +27,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -53,9 +54,11 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.apache.commons.lang.mutable.MutableInt;
+import org.joda.time.Interval;
 
 import java.util.Arrays;
 import java.util.List;
@@ -85,11 +88,16 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     final SearchQuery query = (SearchQuery) input;
-    final Filter filter = Filters.toFilter(query.getDimensionsFilter());
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
     final List<DimensionSpec> dimensions = query.getDimensions();
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();
     final boolean descending = query.isDescending();
+    final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
+    if (intervals.size() != 1) {
+      throw new IAE("Should only have one interval, got[%s]", intervals);
+    }
+    final Interval interval = intervals.get(0);
 
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
@@ -109,6 +117,26 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       final ImmutableBitmap baseFilter =
           filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
 
+      ImmutableBitmap timeFilteredBitmap;
+      if (!interval.contains(segment.getDataInterval())) {
+        MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
+        final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
+        final GenericColumn timeValues = timeColumn.getGenericColumn();
+
+        int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
+        int endIndex = Math.min(timeValues.length() - 1, getStartIndexOfTime(timeValues, interval.getEndMillis(), false));
+
+        for (int i = startIndex; i <= endIndex; i++) {
+          timeBitmap.add(i);
+        }
+
+        final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
+        timeFilteredBitmap =
+            (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
+      } else {
+        timeFilteredBitmap = baseFilter;
+      }
+
       for (DimensionSpec dimension : dimsToSearch) {
         final Column column = index.getColumn(dimension.getDimension());
         if (column == null) {
@@ -127,8 +155,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
               continue;
             }
             ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-            if (baseFilter != null) {
-              bitmap = bitmapFactory.intersection(Arrays.asList(baseFilter, bitmap));
+            if (timeFilteredBitmap != null) {
+              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
             }
             if (bitmap.size() > 0) {
               MutableInt counter = new MutableInt(bitmap.size());
@@ -165,7 +193,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       dimsToSearch = dimensions;
     }
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularities.ALL, descending);
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), descending);
 
     final TreeMap<SearchHit, MutableInt> retVal = cursors.accumulate(
         Maps.<SearchHit, SearchHit, MutableInt>newTreeMap(query.getSort().getComparator()),
@@ -217,6 +245,36 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     );
 
     return makeReturnResult(limit, retVal);
+  }
+
+  protected int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
+  {
+    int low = 0;
+    int high = timeValues.length() - 1;
+
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      long midVal = timeValues.getLongSingleValueRow(mid);
+
+      if (midVal < time) {
+        low = mid + 1;
+      } else if (midVal > time) {
+        high = mid - 1;
+      } else { // key found
+        int i;
+        // rewind the index of the same time values
+        for (i = mid - 1; i >= 0; i--) {
+          long prev = timeValues.getLongSingleValueRow(i);
+          if (time != prev) {
+            break;
+          }
+        }
+        return inclusive ? i + 1 : i;
+      }
+    }
+    // key not found.
+    // return insert index
+    return inclusive ? low : low - 1;
   }
 
   private Sequence<Result<SearchResultValue>> makeReturnResult(

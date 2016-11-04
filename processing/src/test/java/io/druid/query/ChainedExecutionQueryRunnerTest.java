@@ -23,9 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.easymock.Capture;
@@ -281,7 +281,7 @@ public class ChainedExecutionQueryRunnerTest
     }
     catch (ExecutionException e) {
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
-      Assert.assertEquals("Query timeout", e.getCause().getMessage());
+      Assert.assertEquals("Query timeout", ((QueryInterruptedException) e.getCause()).getErrorCode());
       cause = (QueryInterruptedException) e.getCause();
     }
     queriesInterrupted.await();

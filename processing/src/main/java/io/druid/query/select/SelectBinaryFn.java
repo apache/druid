@@ -19,13 +19,15 @@
 
 package io.druid.query.select;
 
-import com.metamx.common.guava.nary.BinaryFn;
+import com.google.common.collect.Sets;
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -77,6 +79,9 @@ public class SelectBinaryFn
 
     SelectResultValueBuilder builder = new SelectResultValueBuilder.MergeBuilder(timestamp, pagingSpec, descending);
 
+    builder.addDimensions(mergeColumns(arg1.getValue().getDimensions(), arg2.getValue().getDimensions()));
+    builder.addMetrics(mergeColumns(arg1.getValue().getMetrics(), arg2.getValue().getMetrics()));
+
     for (EventHolder event : arg1Val) {
       builder.addEntry(event);
     }
@@ -86,5 +91,22 @@ public class SelectBinaryFn
     }
 
     return builder.build();
+  }
+
+  private Set<String> mergeColumns(final Set<String> arg1, final Set<String> arg2)
+  {
+    if (arg1.isEmpty()) {
+      return arg2;
+    }
+
+    if (arg2.isEmpty()) {
+      return arg1;
+    }
+
+    if (arg1.equals(arg2)) {
+      return arg1;
+    }
+
+    return Sets.union(arg1, arg2);
   }
 }

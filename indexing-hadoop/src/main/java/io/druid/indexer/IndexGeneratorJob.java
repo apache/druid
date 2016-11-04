@@ -33,23 +33,26 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NumberedShardSpec;
+import io.druid.timeline.partition.ShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -77,6 +80,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -216,15 +220,18 @@ public class IndexGeneratorJob implements Jobby
       Bucket theBucket,
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
-      Iterable<String> oldDimOrder
+      Iterable<String> oldDimOrder,
+      Map<String, ColumnCapabilitiesImpl> oldCapabilities
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(theBucket.time.getMillis())
+        .withTimestampSpec(config.getSchema().getDataSchema().getParser().getParseSpec().getTimestampSpec())
         .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
+        .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
     OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
@@ -234,7 +241,7 @@ public class IndexGeneratorJob implements Jobby
     );
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-      newIndex.loadDimensionIterable(oldDimOrder);
+      newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);
     }
 
     return newIndex;
@@ -263,7 +270,8 @@ public class IndexGeneratorJob implements Jobby
     protected void innerMap(
         InputRow inputRow,
         Object value,
-        Context context
+        Context context,
+        boolean reportParseExceptions
     ) throws IOException, InterruptedException
     {
       // Group by bucket, sort by timestamp
@@ -287,9 +295,9 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(inputRow, combiningAggs)
+                                  InputRowSerde.toBytes(inputRow, combiningAggs, reportParseExceptions)
                                                                       :
-                                  InputRowSerde.toBytes(inputRow, aggregators);
+                                  InputRowSerde.toBytes(inputRow, aggregators, reportParseExceptions);
 
       context.write(
           new SortableBytes(
@@ -337,7 +345,7 @@ public class IndexGeneratorJob implements Jobby
         LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
-        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null);
+        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null, null);
         index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
@@ -348,7 +356,7 @@ public class IndexGeneratorJob implements Jobby
             dimOrder.addAll(index.getDimensionOrder());
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder);
+            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder, index.getColumnCapabilities());
           }
 
           index.add(value);
@@ -369,9 +377,10 @@ public class IndexGeneratorJob implements Jobby
         context.progress();
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, dimensions);
+        // reportParseExceptions is true as any unparseable data is already handled by the mapper.
         context.write(
             key,
-            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
+            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs, true))
         );
       }
       index.close();
@@ -511,13 +520,14 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
+      boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       if (config.isBuildV9Directly()) {
         return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
         );
       } else {
         return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
         );
       }
     }
@@ -552,6 +562,7 @@ public class IndexGeneratorJob implements Jobby
           bucket,
           combiningAggs,
           config,
+          null,
           null
       );
       try {
@@ -649,7 +660,8 @@ public class IndexGeneratorJob implements Jobby
                 bucket,
                 combiningAggs,
                 config,
-                allDimensionNames
+                allDimensionNames,
+                persistIndex.getColumnCapabilities()
             );
             startTime = System.currentTimeMillis();
             ++indexCount;
@@ -689,6 +701,18 @@ public class IndexGeneratorJob implements Jobby
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())
             .getFileSystem(context.getConfiguration());
+
+        // ShardSpec used for partitioning within this Hadoop job.
+        final ShardSpec shardSpecForPartitioning = config.getShardSpec(bucket).getActualSpec();
+
+        // ShardSpec to be published.
+        final ShardSpec shardSpecForPublishing;
+        if (config.isForceExtendableShardSpecs()) {
+          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(),config.getShardSpecCount(bucket));
+        } else {
+          shardSpecForPublishing = shardSpecForPartitioning;
+        }
+
         final DataSegment segmentTemplate = new DataSegment(
             config.getDataSource(),
             interval,
@@ -696,7 +720,7 @@ public class IndexGeneratorJob implements Jobby
             null,
             ImmutableList.copyOf(allDimensionNames),
             metricNames,
-            config.getShardSpec(bucket).getActualSpec(),
+            shardSpecForPublishing,
             -1,
             -1
         );

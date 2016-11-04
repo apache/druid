@@ -22,19 +22,16 @@ package io.druid.benchmark;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.io.BaseEncoding;
-import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -75,7 +72,8 @@ public class BoundFilterBenchmark
           true,
           false,
           false,
-          null
+          null,
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -87,7 +85,8 @@ public class BoundFilterBenchmark
           false,
           false,
           false,
-          null
+          null,
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -99,7 +98,8 @@ public class BoundFilterBenchmark
           false,
           false,
           false,
-          null
+          null,
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -111,7 +111,8 @@ public class BoundFilterBenchmark
           true,
           false,
           true,
-          null
+          null,
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -123,7 +124,8 @@ public class BoundFilterBenchmark
           false,
           false,
           true,
-          null
+          null,
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -135,7 +137,8 @@ public class BoundFilterBenchmark
           false,
           false,
           true,
-          null
+          null,
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -153,7 +156,7 @@ public class BoundFilterBenchmark
   {
     step = (END_INT - START_INT) / cardinality;
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory();
+    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)

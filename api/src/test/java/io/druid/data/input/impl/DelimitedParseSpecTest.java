@@ -25,7 +25,6 @@ import io.druid.TestObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.validation.constraints.Null;
 import java.io.IOException;
 import java.util.Arrays;
 

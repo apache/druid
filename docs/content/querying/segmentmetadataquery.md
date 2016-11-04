@@ -11,6 +11,7 @@ Segment metadata queries return per-segment information about:
 * Interval the segment covers
 * Column type of all the columns in the segment
 * Estimated total segment byte size in if it was stored in a flat format
+* Is the segment rolled up
 * Segment id
 
 ```json
@@ -126,6 +127,10 @@ dimension columns.
 
 * `intervals` in the result will contain the list of intervals associated with the queried segments.
 
+#### timestampSpec
+
+* `timestampSpec` in the result will contain timestampSpec of data stored in segments. this can be null if timestampSpec of segments was unknown or unmergeable (if merging is enabled).
+
 #### queryGranularity
 
 * `queryGranularity` in the result will contain query granularity of data stored in segments. this can be null if query granularity of segments was unknown or unmergeable (if merging is enabled).
@@ -138,6 +143,11 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 * Merging can be strict or lenient. See *lenientAggregatorMerge* below for details.
 
 * The form of the result is a map of column name to aggregator.
+
+#### rollup
+
+* `rollup` in the result is true/false/null.
+* When merging is enabled, if some are rollup, others are not, result is null.
 
 ### lenientAggregatorMerge
 

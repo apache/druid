@@ -48,6 +48,7 @@ public class DruidMetrics
   public final static String TASK_STATUS = "taskStatus";
 
   public final static String SERVER = "server";
+  public final static String TIER = "tier";
 
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {
@@ -82,14 +83,22 @@ public class DruidMetrics
             ).toArray(new String[query.getIntervals().size()])
         )
         .setDimension("hasFilters", String.valueOf(query.hasFilters()))
-        .setDimension("duration", query.getDuration().toString());
+        .setDimension("duration", query.getDuration().toString())
+        .setDimension(ID, Strings.nullToEmpty(query.getId()));
   }
 
   public static <T> ServiceMetricEvent.Builder makeQueryTimeMetric(
-      final ObjectMapper jsonMapper, final Query<T> query, final String remoteAddr
+      final QueryToolChest<T, Query<T>> toolChest,
+      final ObjectMapper jsonMapper,
+      final Query<T> query,
+      final String remoteAddr
   ) throws JsonProcessingException
   {
-    return makePartialQueryTimeMetric(query)
+    final ServiceMetricEvent.Builder baseMetric = toolChest == null
+                                                  ? makePartialQueryTimeMetric(query)
+                                                  : toolChest.makeMetricBuilder(query);
+
+    return baseMetric
         .setDimension(
             "context",
             jsonMapper.writeValueAsString(
@@ -98,7 +107,6 @@ public class DruidMetrics
                 : query.getContext()
             )
         )
-        .setDimension("remoteAddress", remoteAddr)
-        .setDimension(ID, query.getId());
+        .setDimension("remoteAddress", remoteAddr);
   }
 }

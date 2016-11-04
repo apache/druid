@@ -22,7 +22,7 @@ package io.druid.benchmark.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.metamx.common.logger.Logger;
+
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -30,6 +30,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -71,6 +72,9 @@ public class IndexPersistBenchmark
 
   @Param({"basic"})
   private String schema;
+
+  @Param({"true", "false"})
+  private boolean rollup;
 
   private static final Logger log = new Logger(IndexPersistBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -156,6 +160,7 @@ public class IndexPersistBenchmark
             .withQueryGranularity(QueryGranularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,

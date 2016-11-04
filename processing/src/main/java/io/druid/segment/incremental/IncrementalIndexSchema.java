@@ -21,35 +21,48 @@ package io.druid.segment.incremental;
 
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
 /**
  */
 public class IncrementalIndexSchema
 {
+  public static final boolean DEFAULT_ROLLUP = true;
   private final long minTimestamp;
+  private final TimestampSpec timestampSpec;
   private final QueryGranularity gran;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
+  private final boolean rollup;
 
   public IncrementalIndexSchema(
       long minTimestamp,
+      TimestampSpec timestampSpec,
       QueryGranularity gran,
       DimensionsSpec dimensionsSpec,
-      AggregatorFactory[] metrics
+      AggregatorFactory[] metrics,
+      boolean rollup
   )
   {
     this.minTimestamp = minTimestamp;
+    this.timestampSpec = timestampSpec;
     this.gran = gran;
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
+    this.rollup = rollup;
   }
 
   public long getMinTimestamp()
   {
     return minTimestamp;
+  }
+
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
   }
 
   public QueryGranularity getGran()
@@ -67,12 +80,19 @@ public class IncrementalIndexSchema
     return metrics;
   }
 
+  public boolean isRollup()
+  {
+    return rollup;
+  }
+
   public static class Builder
   {
     private long minTimestamp;
+    private TimestampSpec timestampSpec;
     private QueryGranularity gran;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
+    private boolean rollup;
 
     public Builder()
     {
@@ -80,11 +100,30 @@ public class IncrementalIndexSchema
       this.gran = QueryGranularities.NONE;
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
+      this.rollup = true;
     }
 
     public Builder withMinTimestamp(long minTimestamp)
     {
       this.minTimestamp = minTimestamp;
+      return this;
+    }
+
+    public Builder withTimestampSpec(TimestampSpec timestampSpec)
+    {
+      this.timestampSpec = timestampSpec;
+      return this;
+    }
+
+    public Builder withTimestampSpec(InputRowParser parser)
+    {
+      if (parser != null
+          && parser.getParseSpec() != null
+          && parser.getParseSpec().getTimestampSpec() != null) {
+        this.timestampSpec = parser.getParseSpec().getTimestampSpec();
+      } else {
+        this.timestampSpec = new TimestampSpec(null, null, null);
+      }
       return this;
     }
 
@@ -119,10 +158,16 @@ public class IncrementalIndexSchema
       return this;
     }
 
+    public Builder withRollup(boolean rollup)
+    {
+      this.rollup = rollup;
+      return this;
+    }
+
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, gran, dimensionsSpec, metrics
+          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics, rollup
       );
     }
   }

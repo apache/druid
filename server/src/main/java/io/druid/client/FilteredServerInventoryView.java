@@ -20,7 +20,8 @@
 package io.druid.client;
 
 import com.google.common.base.Predicate;
-import com.metamx.common.Pair;
+
+import io.druid.java.util.common.Pair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 

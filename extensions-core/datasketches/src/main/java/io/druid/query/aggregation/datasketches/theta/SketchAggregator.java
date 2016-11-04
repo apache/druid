@@ -19,13 +19,14 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -107,6 +108,8 @@ public class SketchAggregator implements Aggregator
       union.update((Memory) update);
     } else if (update instanceof Sketch) {
       union.update((Sketch) update);
+    } else if (update instanceof Union) {
+      union.update(((Union) update).getResult(false, null));
     } else if (update instanceof String) {
       union.update((String) update);
     } else if (update instanceof byte[]) {

@@ -20,14 +20,14 @@
 package io.druid.benchmark.indexing;
 
 import com.google.common.hash.Hashing;
-import com.metamx.common.logger.Logger;
+
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
-
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -63,6 +63,9 @@ public class IndexIngestionBenchmark
   @Param({"basic"})
   private String schema;
 
+  @Param({"true", "false"})
+  private boolean rollup;
+
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -94,7 +97,7 @@ public class IndexIngestionBenchmark
     }
   }
 
-  @Setup(Level.Iteration)
+  @Setup(Level.Invocation)
   public void setup2() throws IOException
   {
     incIndex = makeIncIndex();
@@ -107,11 +110,12 @@ public class IndexIngestionBenchmark
             .withQueryGranularity(QueryGranularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,
         true,
-        rowsPerSegment
+        rowsPerSegment * 2
     );
   }
 

@@ -3,39 +3,70 @@ layout: doc_page
 ---
 # Working with different versions of Hadoop
 
-## Download Hadoop Dependencies
+Druid can interact with Hadoop in two ways:
 
-```hadoop-client:2.3.0``` is already bundled in the Druid release tarball. You can get it by downloading the tarball at [druid.io](http://druid.io/downloads.html).
-Unpack the tarball; You will see a ```hadoop-dependencies``` folder that contains all the Hadoop dependencies. Each dependency will have its own folder
-that contains Hadoop jars.
+1. [Use HDFS for deep storage](../development/extensions-core/hdfs.html) using the druid-hdfs-storage extension.
+2. [Batch-load data from Hadoop](../ingestion/batch-ingestion.html) using Map/Reduce jobs.
 
-You can also use the `pull-deps` tool to download other Hadoop dependencies you want. 
-See [pull-deps](../operations/pull-deps.html) for a complete example.
-Another way is using a minimal `pom.xml` only contains your version of `hadoop-client` and then run `mvn dependency:copy-dependency` to get required libraries.
+These are not necessarily linked together; you can load data with Hadoop jobs into a non-HDFS deep storage (like S3),
+and you can use HDFS for deep storage even if you're loading data from streams rather than using Hadoop jobs.
 
-## Load Hadoop dependencies
+For best results, use these tips when configuring Druid to interact with your favorite Hadoop distribution.
 
-There are two different ways to let Druid pick up your Hadoop version, choose the one that fits your need.
+## Tip #1: Place Hadoop XMLs on Druid classpath
 
-### Load Hadoop dependencies from Hadoop dependencies directory
+Place your Hadoop configuration XMLs (core-site.xml, hdfs-site.xml, yarn-site.xml, mapred-site.xml) on the classpath
+of your Druid nodes. You can do this by copying them into `conf/druid/_common/core-site.xml`,
+`conf/druid/_common/hdfs-site.xml`, and so on. This allows Druid to find your Hadoop cluster and properly submit jobs.
 
-You can create a Hadoop dependency directory and tell Druid to load your Hadoop dependencies from there.
+## Tip #2: Classloader modification on Hadoop (Map/Reduce jobs only)
 
-To make this work, follow the steps below
+Druid uses a number of libraries that are also likely present on your Hadoop cluster, and if these libraries conflict,
+your Map/Reduce jobs can fail. This problem can be avoided by enabling classloader isolation using the Hadoop job
+property `mapreduce.job.classloader = true`. This instructs Hadoop to use a separate classloader for Druid dependencies
+and for Hadoop's own dependencies.
 
-**Tell Druid where your Hadoop dependencies are**
+If your version of Hadoop does not support this functionality, you can also try setting the property
+`mapreduce.job.user.classpath.first = true`. This instructs Hadoop to prefer loading Druid's version of a library when
+there is a conflict.
 
-Specify `druid.extensions.hadoopDependenciesDir` (root directory for Hadoop related dependencies) See [Configuration](../configuration/index.html).
+Generally, you should only set one of these parameters, not both.
 
-The value for this property should be set to the absolute path of the folder that contains all the Hadoop dependencies. 
-In general, you should simply reuse the release tarball's ```hadoop-dependencies``` directory.
+These properties can be set in either one of the following ways:
+
+- Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [batch ingestion documentation](../ingestion/batch-ingestion.html)).
+- Using system properties, e.g. on the middleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true`.
+
+## Tip #3: Use specific versions of Hadoop libraries
+
+Druid loads Hadoop client libraries from two different locations. Each set of libraries is loaded in an isolated
+classloader.
+
+1. HDFS deep storage uses jars from `extensions/druid-hdfs-storage/` to read and write Druid data on HDFS.
+2. Batch ingestion uses jars from `hadoop-dependencies/` to submit Map/Reduce jobs (location customizable via the
+`druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html)).
+
+`hadoop-client:2.3.0` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
+many Hadoop distributions (the version does not necessarily need to match), but if you run into issues, you can instead
+have Druid load libraries that exactly match your distribution. To do this, either copy the jars from your Hadoop
+cluster, or use the `pull-deps` tool to download the jars from a Maven repository.
+
+### Preferred: Load using Druid's standard mechanism
+
+If you have issues with HDFS deep storage, you can switch your Hadoop client libraries by recompiling the
+druid-hdfs-storage extension using an alternate version of the Hadoop client libraries. You can do this by editing
+the main Druid pom.xml and rebuilding the distribution by running `mvn package`.
+
+If you have issues with Map/Reduce jobs, you can switch your Hadoop client libraries without rebuilding Druid. You can
+do this by adding a new set of libraries to the `hadoop-dependencies/` directory (or another directory specified by
+druid.extensions.hadoopDependenciesDir) and then using `hadoopDependencyCoordinates` in the
+[Hadoop Index Task](../ingestion/batch-ingestion.html) to specify the Hadoop dependencies you want Druid to load.
 
 Example:
 
-Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid_tarball/hadoop-dependencies`, and you have downloaded 
-`hadoop-client` 2.3.0 and 2.4.0.
-
-Then underneath ```hadoop-dependencies```, it should look like this:
+Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid_tarball/hadoop-dependencies`, and you have downloaded
+`hadoop-client` 2.3.0 and 2.4.0, either by copying them from your Hadoop cluster or by using `pull-deps` to download
+the jars from a Maven repository. Then underneath `hadoop-dependencies`, your jars should look like this:
 
 ```
 hadoop-dependencies/
@@ -58,63 +89,53 @@ hadoop-dependencies/
     ..... lots of jars
 ```
 
-As you can see, under ```hadoop-client```, there are two sub-directories, each denotes a version of ```hadoop-client```. 
+As you can see, under `hadoop-client`, there are two sub-directories, each denotes a version of `hadoop-client`.
 
-**Tell Druid what version of Hadoop to load**
+Next, use `hadoopDependencyCoordinates` in [Hadoop Index Task](../ingestion/batch-ingestion.html) to specify the Hadoop dependencies you want Druid to load.
 
-Use `hadoopDependencyCoordinates` in [Hadoop Index Task](../ingestion/batch-ingestion.html) to specify the Hadoop dependencies you want Druid to load.
-
-For example, in your Hadoop Index Task spec file, you have
+For example, in your Hadoop Index Task spec file, you can write:
 
 `"hadoopDependencyCoordinates": ["org.apache.hadoop:hadoop-client:2.4.0"]`
 
-This instructs Druid to load hadoop-client 2.4.0 when processing the task. What happens behind the scene is that Druid first looks for a folder 
-called ```hadoop-client``` underneath `druid.extensions.hadoopDependenciesDir`, then looks for a folder called ```2.4.0``` 
-underneath ```hadoop-client```, upon successfully locating these folders, hadoop-client 2.4.0 is loaded.
+This instructs Druid to load hadoop-client 2.4.0 when processing the task. What happens behind the scene is that Druid first looks for a folder
+called `hadoop-client` underneath `druid.extensions.hadoopDependenciesDir`, then looks for a folder called `2.4.0`
+underneath `hadoop-client`, and upon successfully locating these folders, hadoop-client 2.4.0 is loaded.
 
-### Append your Hadoop jars to the Druid classpath
+### Alternative: Append your Hadoop jars to the Druid classpath
 
-If you don't like the way above, and you just want to use one specific Hadoop version, and don't want Druid to work with different Hadoop versions, you can
+You can also load Hadoop client libraries in Druid's main classloader, rather than an isolated classloader. This
+mechanism is relatively easy to reason about, but it also means that you have to ensure that all dependency jars on the
+classpath are compatible. That is, Druid makes no provisions while using this method to maintain class loader isolation
+so you must make sure that the jars on your classpath are mutually compatible.
 
-(1) Set `druid.indexer.task.defaultHadoopCoordinates=[]`.  `druid.indexer.task.defaultHadoopCoordinates` specifies the default Hadoop coordinates that Druid uses. Its default value is `["org.apache.hadoop:hadoop-client:2.3.0"]`. By setting it to an empty list, Druid will not load any other Hadoop dependencies except the ones specified in the classpath.
+1. Set `druid.indexer.task.defaultHadoopCoordinates=[]`. By setting this to an empty list, Druid will not load any other Hadoop dependencies except the ones specified in the classpath.
+2. Append your Hadoop jars to Druid's classpath. Druid will load them into the system.
 
-(2) Append your Hadoop jars to the classpath, Druid will load them into the system. This mechanism is relatively easy to reason about, but it also means that you have to ensure that all dependency jars on the classpath are compatible. That is, Druid makes no provisions while using this method to maintain class loader isolation so you must make sure that the jars on your classpath are mutually compatible.
+## Notes on specific Hadoop distributions
 
-#### Hadoop 2.x
+If the tips above do not solve any issues you are having with HDFS deep storage or Hadoop batch indexing, you may
+have luck with one of the following suggestions contributed by the Druid community.
 
-The default version of Hadoop bundled with Druid is 2.3.
-
-To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`(See [Index Hadoop Task](../ingestion/tasks.html)). You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.4.0 as `["org.apache.hadoop:hadoop-client:2.4.0"]`), which will overwrite the default Hadoop coordinates Druid uses.
-
-The Hadoop Index Task takes this parameter has part of the task JSON and the standalone Hadoop indexer takes this parameter as a command line argument.
-
-If you are still having problems, include all relevant hadoop jars at the beginning of the classpath of your indexing or historical nodes.
-
-#### CDH
+### CDH
 
 Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid when running a Mapreduce job like:
+
 ```
 java.lang.VerifyError: class com.fasterxml.jackson.datatype.guava.deser.HostAndPortDeserializer overrides final method deserialize.(Lcom/fasterxml/jackson/core/JsonParser;Lcom/fasterxml/jackson/databind/DeserializationContext;)Ljava/lang/Object;
 ```
 
-In order to use the Cloudera distribution of Hadoop, you must configure Mapreduce to
-[favor Druid classpath over Hadoop]((https://hadoop.apache.org/docs/r2.7.1/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html))
-(i.e. use Jackson version provided with Druid).
+**Preferred workaround**
 
-This can be achieved by either:
-- adding `"mapreduce.job.user.classpath.first": "true"` to the `jobProperties` property of the `tuningConfig` of your indexing task (see the [Job properties section for the Batch Ingestion using the HadoopDruidIndexer page](../ingestion/batch-ingestion.html)).
-- configuring the Druid Middle Manager to add the following property when creating a new Peon: `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.user.classpath.first=true`
-- edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid
+First, try the tip under "Classloader modification on Hadoop" above. More recent versions of CDH have been reported to
+work with the classloader isolation option (`mapreduce.job.classloader = true`).
 
-Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid.
+**Alternate workaround - 1**
 
-**Workaround - 1**
-
-Currently, our best workaround is to edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid.
+You can try editing Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid.
 
 For more about building Druid, please see [Building Druid](../development/build.html).
 
-**Workaround - 2**
+**Alternate workaround - 2**
 
 Another workaround solution is to build a custom fat jar of Druid using [sbt](http://www.scala-sbt.org/), which manually excludes all the conflicting Jackson dependencies, and then put this fat jar in the classpath of the command that starts overlord indexing service. To do this, please follow the following steps.
 
@@ -143,7 +164,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.13.0")
 
 (10) Include the fat jar in the classpath when you start the indexing service. Make sure you've removed 'lib/*' from your classpath because now the fat jar includes all you need.
 
-**Workaround - 3**
+**Alternate workaround - 3**
 
 If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat jar: relocation all jackson packages will resolve it too. In this way, druid will not be affected by jackson library embedded in hadoop. Please follow the steps below:
 
@@ -233,7 +254,3 @@ java -Xmx32m \
   io.druid.cli.Main index hadoop \
   $config_path
 ```
-
-## Working with Hadoop 1.x and older
-
-We recommend recompiling Druid with your particular version of Hadoop by changing the dependencies in Druid's pom.xml files. Make sure to also either override the default `hadoopDependencyCoordinates` in the code or pass your Hadoop version in as part of indexing.

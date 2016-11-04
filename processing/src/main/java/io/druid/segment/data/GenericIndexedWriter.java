@@ -134,11 +134,13 @@ public class GenericIndexedWriter<T> implements Closeable
 
   public InputSupplier<InputStream> combineStreams()
   {
+    // ByteSource.concat is only available in guava 15 and higher
+    // This is guava 14 compatible
     return ByteStreams.join(
         Iterables.transform(
             Arrays.asList("meta", "header", "values"),
-            new Function<String,InputSupplier<InputStream>>() {
-
+            new Function<String, InputSupplier<InputStream>>()
+            {
               @Override
               public InputSupplier<InputStream> apply(final String input)
               {

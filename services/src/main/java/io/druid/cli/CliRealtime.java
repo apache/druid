@@ -24,9 +24,10 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.druid.guice.RealtimeModule;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 

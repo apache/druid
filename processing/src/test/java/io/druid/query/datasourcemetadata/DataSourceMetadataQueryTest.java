@@ -25,10 +25,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -118,7 +118,8 @@ public class DataSourceMetadataQueryTest
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ), new IncrementalIndexSegment(rtIndex, "test")
+        ), new IncrementalIndexSegment(rtIndex, "test"),
+        null
     );
     DateTime timestamp = new DateTime(System.currentTimeMillis());
     rtIndex.add(

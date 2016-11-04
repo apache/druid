@@ -22,6 +22,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -35,6 +36,7 @@ public class GenericRecordAsMap implements Map<String, Object>
 {
   private final GenericRecord record;
   private final boolean fromPigAvroStorage;
+  private final boolean binaryAsString;
 
   private static final Function<Object, String> PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL = new Function<Object, String>()
   {
@@ -46,10 +48,11 @@ public class GenericRecordAsMap implements Map<String, Object>
     }
   };
 
-  public GenericRecordAsMap(GenericRecord record, boolean fromPigAvroStorage)
+  public GenericRecordAsMap(GenericRecord record, boolean fromPigAvroStorage, boolean binaryAsString)
   {
     this.record = record;
     this.fromPigAvroStorage = fromPigAvroStorage;
+    this.binaryAsString = binaryAsString;
   }
 
   @Override
@@ -82,7 +85,7 @@ public class GenericRecordAsMap implements Map<String, Object>
    * <li> avro schema type -> druid dimension:</li>
    * <ul>
    * <li>null, boolean, int, long, float, double, string, Records, Enums, Maps, Fixed -> String, using String.valueOf</li>
-   * <li>bytes -> Arrays.toString() </li>
+   * <li>bytes -> Arrays.toString() or new String if binaryAsString is true</li>
    * <li>Arrays -> List&lt;String&gt;, using Lists.transform(&lt;List&gt;dimValue, TO_STRING_INCLUDING_NULL)</li>
    * </ul>
    * <li> avro schema type -> druid metric:</li>
@@ -102,7 +105,14 @@ public class GenericRecordAsMap implements Map<String, Object>
       return Lists.transform((List) field, PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL);
     }
     if (field instanceof ByteBuffer) {
-      return Arrays.toString(((ByteBuffer) field).array());
+      if (binaryAsString) {
+        return new String(((ByteBuffer) field).array());
+      } else {
+        return Arrays.toString(((ByteBuffer) field).array());
+      }
+    }
+    if (field instanceof Utf8) {
+      return field.toString();
     }
     return field;
   }

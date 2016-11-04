@@ -52,6 +52,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public boolean deleteDataSourceMetadata(String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
   {
     return ImmutableList.of();

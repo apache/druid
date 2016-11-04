@@ -27,8 +27,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.Granularity;
-import com.metamx.common.ISE;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -46,6 +44,8 @@ import io.druid.indexer.hadoop.DatasourceInputFormat;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -96,7 +96,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 12334
             )
@@ -112,7 +112,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 12335
             )
@@ -268,7 +268,8 @@ public class DatasourcePathSpecTest
                             new DimensionsSpec(null, null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "visited")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),

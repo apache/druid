@@ -3,9 +3,9 @@
 When submitting a pull request (PR), please use the following guidelines:
 
 - Make sure your code respects existing formatting conventions. In general, follow
-  the same coding style as the code that you are modifying. If you are using
-  IntelliJ, you can import our code style settings xml:
-  [druid_intellij_formatting.xml](https://github.com/druid-io/druid/raw/master/druid_intellij_formatting.xml).
+  the same coding style as the code that you are modifying.
+- For Intellij you can import our code style settings xml: [druid_intellij_formatting.xml](https://github.com/druid-io/druid/raw/master/druid_intellij_formatting.xml).
+- For Eclipse you can import our code style settings xml: [eclipse_formatting.xml](https://github.com/druid-io/druid/raw/master/eclipse_formatting.xml).
 - Do add/update documentation appropriately for the change you are making.
 - If you are introducing a new feature you may want to first submit your idea
   for feedback to the [mailing list](mailto:druid-development@googlegroups.com).

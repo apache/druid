@@ -20,11 +20,11 @@
 package io.druid.segment;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterators;
 import io.druid.segment.data.IndexedInts;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 public class NullDimensionSelector implements DimensionSelector
 {
@@ -41,8 +41,8 @@ public class NullDimensionSelector implements DimensionSelector
     }
 
     @Override
-    public Iterator<Integer> iterator() {
-      return Iterators.singletonIterator(0);
+    public IntIterator iterator() {
+      return IntIterators.singleton(0);
     }
 
     @Override

@@ -25,9 +25,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Sequences;
+import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -36,11 +37,11 @@ import io.druid.query.TableDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
-import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
@@ -56,6 +57,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -154,11 +156,13 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
-        toEvents(new String[]{EventHolder.timestampKey + ":TIME"}, V_0112_0114),
+        toFullEvents(V_0112_0114),
+        Lists.newArrayList("market", "quality", "placement", "placementish", "partial_null_column", "null_column"),
+        Lists.newArrayList("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
         offset.startOffset(),
         offset.threshold()
     );
-    verify(expectedResults, results);
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   @Test
@@ -242,6 +246,8 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Sets.newHashSet("mar", "qual", "place"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -286,6 +292,8 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Sets.newHashSet("mar", "qual", "place"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -356,6 +364,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
+        Lists.newArrayList("market"),
+        Lists.<String>newArrayList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -387,6 +397,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
+        Lists.newArrayList("quality"),
+        Lists.<String>newArrayList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -450,6 +462,8 @@ public class SelectQueryRunnerTest
       PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
       List<Result<SelectResultValue>> expectedResults = toExpected(
           events,
+          Lists.newArrayList("quality"),
+          Lists.<String>newArrayList("index"),
           offset.startOffset(),
           offset.threshold()
       );
@@ -504,6 +518,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
+        Lists.newArrayList(QueryRunnerTestHelper.qualityDimension),
+        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
         offset.startOffset(),
         offset.threshold()
     );
@@ -537,12 +553,14 @@ public class SelectQueryRunnerTest
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.<String, Integer>of(),
+                Sets.newHashSet("market", "quality", "placement", "placementish", "partial_null_column", "null_column"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen"),
                 Lists.<EventHolder>newArrayList()
             )
         )
     );
 
-    verify(expectedResults, results);
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   @Test
@@ -571,6 +589,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
+        Lists.newArrayList("foo"),
+        Lists.<String>newArrayList("foo2"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -583,6 +603,18 @@ public class SelectQueryRunnerTest
         QueryRunnerTestHelper.segmentId,
         PagingOffset.toOffset(startDelta, descending)
     );
+  }
+
+  private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)
+  {
+    return toEvents(new String[]{EventHolder.timestampKey + ":TIME",
+                                 QueryRunnerTestHelper.marketDimension + ":STRING",
+                                 QueryRunnerTestHelper.qualityDimension + ":STRING",
+                                 QueryRunnerTestHelper.placementDimension + ":STRING",
+                                 QueryRunnerTestHelper.placementishDimension + ":STRINGS",
+                                 QueryRunnerTestHelper.indexMetric + ":FLOAT",
+                                 QueryRunnerTestHelper.partialNullDimension + ":STRING"},
+                    valueSet);
   }
 
   private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
@@ -600,17 +632,19 @@ public class SelectQueryRunnerTest
                       Map<String, Object> event = Maps.newHashMap();
                       String[] values = input.split("\\t");
                       for (int i = 0; i < dimSpecs.length; i++) {
-                        if (dimSpecs[i] == null || i >= dimSpecs.length) {
+                        if (dimSpecs[i] == null || i >= dimSpecs.length || i >= values.length) {
                           continue;
                         }
                         String[] specs = dimSpecs[i].split(":");
                         event.put(
                             specs[0],
+                            specs.length == 1 || specs[1].equals("STRING") ? values[i] :
                             specs[1].equals("TIME") ? new DateTime(values[i]) :
                             specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
                             specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
                             specs[1].equals("LONG") ? Long.valueOf(values[i]) :
                             specs[1].equals("NULL") ? null :
+                            specs[1].equals("STRINGS") ? Arrays.asList(values[i].split("\u0001")) :
                             values[i]
                         );
                       }
@@ -626,6 +660,8 @@ public class SelectQueryRunnerTest
 
   private List<Result<SelectResultValue>> toExpected(
       List<List<Map<String, Object>>> targets,
+      List<String> dimensions,
+      List<String> metrics,
       final int offset,
       final int threshold
   )
@@ -653,7 +689,11 @@ public class SelectQueryRunnerTest
       expected.add(
           new Result(
               new DateTime(group.get(0).get(EventHolder.timestampKey)),
-              new SelectResultValue(ImmutableMap.of(QueryRunnerTestHelper.segmentId, lastOffset), holders)
+              new SelectResultValue(
+                  ImmutableMap.of(QueryRunnerTestHelper.segmentId, lastOffset),
+                  Sets.<String>newHashSet(dimensions),
+                  Sets.<String>newHashSet(metrics),
+                  holders)
           )
       );
     }
@@ -678,6 +718,9 @@ public class SelectQueryRunnerTest
         Assert.assertEquals(entry.getValue(), actual.getValue().getPagingIdentifiers().get(entry.getKey()));
       }
 
+      Assert.assertEquals(expected.getValue().getDimensions(), actual.getValue().getDimensions());
+      Assert.assertEquals(expected.getValue().getMetrics(), actual.getValue().getMetrics());
+
       Iterator<EventHolder> expectedEvts = expected.getValue().getEvents().iterator();
       Iterator<EventHolder> actualEvts = actual.getValue().getEvents().iterator();
 
@@ -695,7 +738,7 @@ public class SelectQueryRunnerTest
           if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
             actVal = ((Double) actVal).floatValue();
           }
-          Assert.assertEquals(ex.getValue(), actVal);
+          Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
         }
       }
 
@@ -708,4 +751,19 @@ public class SelectQueryRunnerTest
       throw new ISE("This iterator should be exhausted!");
     }
   }
+
+  private static Iterable<Result<SelectResultValue>> populateNullColumnAtLastForQueryableIndexCase(Iterable<Result<SelectResultValue>> results, String columnName)
+  {
+    // A Queryable index does not have the null column when it has loaded a index.
+    for (Result<SelectResultValue> value : results) {
+      Set<String> dimensions = value.getValue().getDimensions();
+      if (dimensions.contains(columnName)) {
+        break;
+      }
+      dimensions.add(columnName);
+    }
+
+    return results;
+  }
+
 }

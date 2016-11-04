@@ -25,6 +25,30 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
  */
 public interface Filter
 {
+  /**
+   * Get a bitmap index, indicating rows that match this filter.
+   *
+   * @param selector Object used to retrieve bitmap indexes
+   * @return A bitmap indicating rows that match this filter.
+   */
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+
+
+  /**
+   * Get a ValueMatcher that applies this filter to row values.
+   *
+   * @param factory Object used to create ValueMatchers
+   * @return ValueMatcher that applies this filter to row values.
+   */
   public ValueMatcher makeMatcher(ValueMatcherFactory factory);
+
+
+  /**
+   * Indicates whether this filter can return a bitmap index for filtering, based on
+   * the information provided by the input BitmapIndexSelector.
+   *
+   * @param selector Object used to retrieve bitmap indexes
+   * @return true if this Filter can provide a bitmap index using the selector, false otherwise
+   */
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector);
 }

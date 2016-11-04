@@ -23,8 +23,9 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import com.microsoft.azure.storage.StorageException;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 
 import java.io.File;
@@ -73,7 +74,9 @@ public class AzureTaskLogs implements TaskLogs {
     final String taskKey = getTaskLogKey(taskid);
 
     try {
-      if (!azureStorage.getBlobExists(container, taskKey)) return Optional.absent();
+      if (!azureStorage.getBlobExists(container, taskKey)) {
+        return Optional.absent();
+      }
 
       return Optional.<ByteSource>of(
           new ByteSource() {

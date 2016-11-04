@@ -1,6 +1,5 @@
 package io.druid.timeline.partition;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.TestObjectMapper;
 import org.junit.Assert;
@@ -11,8 +10,8 @@ public class NoneShardSpecTest
   @Test
   public void testEqualsAndHashCode()
   {
-    final ShardSpec one = new NoneShardSpec();
-    final ShardSpec two = new NoneShardSpec();
+    final ShardSpec one = NoneShardSpec.instance();
+    final ShardSpec two = NoneShardSpec.instance();
     Assert.assertEquals(one, two);
     Assert.assertEquals(one.hashCode(), two.hashCode());
   }

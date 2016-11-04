@@ -19,10 +19,10 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  */
@@ -47,9 +47,9 @@ public class EmptyIndexedInts implements IndexedInts
   }
 
   @Override
-  public Iterator<Integer> iterator()
+  public IntIterator iterator()
   {
-    return ImmutableList.<Integer>of().iterator();
+    return IntIterators.EMPTY_ITERATOR;
   }
 
   @Override

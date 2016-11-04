@@ -31,11 +31,12 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerConfig;
@@ -47,8 +48,6 @@ import kafka.serializer.Decoder;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
-import javax.ws.rs.GET;
-import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -80,10 +79,11 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
-  private final String factoryId = UUID.randomUUID().toString();
+  private final String factoryId;
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
 
+  private volatile ConsumerConnector consumerConnector;
   private volatile ListenableFuture<?> future = null;
 
   @JsonProperty
@@ -116,6 +116,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
+    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID().toString();
   }
 
   public KafkaLookupExtractorFactory(
@@ -194,9 +195,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
             @Override
             public void run()
             {
-              while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
-                final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
+              while (!executorService.isShutdown()) {
+                consumerConnector = buildConnector(kafkaProperties);
                 try {
+                  if (executorService.isShutdown()) {
+                    break;
+                  }
+
                   final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
                       new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
                   );
@@ -270,7 +275,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        executorService.shutdown();
+        if (!future.isDone() && !future.cancel(false)) {
           LOG.warn("Could not cancel kafka listening thread");
         }
         LOG.error(e, "Failed to start kafka extraction factory");
@@ -283,7 +289,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
   }
 
-  // Overriden in tests
+  // Overridden in tests
   ConsumerConnector buildConnector(Properties properties)
   {
     return new kafka.javaapi.consumer.ZookeeperConsumerConnector(
@@ -300,10 +306,15 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         return !started.get();
       }
       started.set(false);
-      executorService.shutdownNow();
+      executorService.shutdown();
+
+      if (consumerConnector != null) {
+        consumerConnector.shutdown();
+      }
+
       final ListenableFuture<?> future = this.future;
       if (future != null) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        if (!future.isDone() && !future.cancel(false)) {
           LOG.error("Error cancelling future for topic [%s]", getKafkaTopic());
           return false;
         }
@@ -323,11 +334,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       return false;
     }
 
-    if (other == null) {
-      return false;
-    }
-
-    if (getClass() != other.getClass()) {
+    if (other == null || getClass() != other.getClass()) {
       return true;
     }
 
@@ -344,7 +351,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public LookupIntrospectHandler getIntrospectHandler()
   {
-    return new KafkaLookupExtractorIntrospectionHandler();
+    return new KafkaLookupExtractorIntrospectionHandler(this);
   }
 
   @Override
@@ -367,7 +374,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               .putLong(startCount)
               .array();
         } else {
-          // If the number of things added HAS changed during the coruse of this extractor's life, we CANNOT cache
+          // If the number of things added HAS changed during the course of this extractor's life, we CANNOT cache
           final byte[] scrambler = StringUtils.toUtf8(UUID.randomUUID().toString());
           return ByteBuffer
               .allocate(idutf8.length + 1 + scrambler.length + 1)
@@ -405,20 +412,5 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   ListenableFuture<?> getFuture()
   {
     return future;
-  }
-
-
-  class KafkaLookupExtractorIntrospectionHandler implements LookupIntrospectHandler
-  {
-    @GET
-    public Response getActive()
-    {
-      final ListenableFuture<?> future = getFuture();
-      if (future != null && !future.isDone()) {
-        return Response.ok().build();
-      } else {
-        return Response.status(Response.Status.GONE).build();
-      }
-    }
   }
 }

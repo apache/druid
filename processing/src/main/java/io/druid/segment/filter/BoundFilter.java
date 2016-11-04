@@ -20,10 +20,13 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -39,32 +42,22 @@ public class BoundFilter implements Filter
   private final Comparator<String> comparator;
   private final ExtractionFn extractionFn;
 
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
+
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
     this.boundDimFilter = boundDimFilter;
-    this.comparator = boundDimFilter.isAlphaNumeric()
-                      ? StringComparators.ALPHANUMERIC
-                      : StringComparators.LEXICOGRAPHIC;
+    this.comparator = boundDimFilter.getOrdering();
     this.extractionFn = boundDimFilter.getExtractionFn();
+    this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
   }
 
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    if (boundDimFilter.isAlphaNumeric() || extractionFn != null) {
-      return Filters.matchPredicate(
-          boundDimFilter.getDimension(),
-          selector,
-          new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              return doesMatch(input);
-            }
-          }
-      );
-    } else {
+    if (boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC) && extractionFn == null) {
+      // Optimization for lexicographic bounds with no extractionFn => binary search through the index
+
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
 
       if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
@@ -134,31 +127,85 @@ public class BoundFilter implements Filter
             }
           }
       );
+    } else {
+      return Filters.matchPredicate(
+          boundDimFilter.getDimension(),
+          selector,
+          getPredicateFactory().makeStringPredicate()
+      );
     }
   }
 
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(
-        boundDimFilter.getDimension(),
-        new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
+    return factory.makeValueMatcher(boundDimFilter.getDimension(), getPredicateFactory());
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
+  }
+
+  private DruidPredicateFactory getPredicateFactory()
+  {
+    return new DruidPredicateFactory()
+    {
+      @Override
+      public Predicate<String> makeStringPredicate()
+      {
+        if (extractionFn != null) {
+          return new Predicate<String>()
           {
-            return doesMatch(input);
-          }
+            @Override
+            public boolean apply(String input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else {
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return doesMatch(input);
+            }
+          };
         }
-    );
+      }
+
+      @Override
+      public DruidLongPredicate makeLongPredicate()
+      {
+        if (extractionFn != null) {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return longPredicateSupplier.get();
+        } else {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return doesMatch(String.valueOf(input));
+            }
+          };
+        }
+      }
+    };
   }
 
   private boolean doesMatch(String input)
   {
-    if (extractionFn != null) {
-      input = extractionFn.apply(input);
-    }
-
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
               || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null

@@ -25,21 +25,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
-import io.druid.common.utils.ServletResourceUtils;
+import com.google.common.base.Throwables;
+
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
@@ -85,66 +80,8 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
     this.injective = injective;
     this.manager = manager;
-    this.extractorID = buildID();
-    this.lookupIntrospectHandler = new LookupIntrospectHandler()
-    {
-      @GET
-      @Path("/keys")
-      @Produces(MediaType.APPLICATION_JSON)
-      public Response getKeys()
-      {
-        try {
-          return Response.ok(getLatest().keySet()).build();
-        }
-        catch (ISE e) {
-          return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
-        }
-      }
-
-      @GET
-      @Path("/values")
-      @Produces(MediaType.APPLICATION_JSON)
-      public Response getValues()
-      {
-        try {
-          return Response.ok(getLatest().values()).build();
-        }
-        catch (ISE e) {
-          return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
-        }
-      }
-
-      @GET
-      @Path("/version")
-      @Produces(MediaType.APPLICATION_JSON)
-      public Response getVersion()
-      {
-        final String version = manager.getVersion(extractorID);
-        if (null == version) {
-          // Handle race between delete and this method being called
-          return Response.status(Response.Status.NOT_FOUND).build();
-        } else {
-          return Response.ok(ImmutableMap.of("version", version)).build();
-        }
-      }
-
-      @GET
-      @Produces(MediaType.APPLICATION_JSON)
-      public Response getMap()
-      {
-        try {
-          return Response.ok(getLatest()).build();
-        }
-        catch (ISE e) {
-          return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
-        }
-      }
-
-      private Map<String, String> getLatest()
-      {
-        return ((MapLookupExtractor) get()).getMap();
-      }
-    };
+    this.extractorID = String.format("namespace-factory-%s-%s", extractionNamespace, UUID.randomUUID().toString());
+    this.lookupIntrospectHandler = new NamespaceLookupIntrospectHandler(this, manager, extractorID);
   }
 
   @VisibleForTesting
@@ -160,19 +97,24 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public boolean start()
   {
     final Lock writeLock = startStopSync.writeLock();
-    writeLock.lock();
+    try {
+      writeLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
     try {
       if (started) {
         LOG.warn("Already started! [%s]", extractorID);
         return true;
       }
-      if(firstCacheTimeout > 0) {
+      if (firstCacheTimeout > 0) {
         if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
           LOG.error("Failed to schedule and wait for lookup [%s]", extractorID);
           return false;
         }
       } else {
-        if(!manager.scheduleOrUpdate(extractorID, extractionNamespace)) {
+        if (!manager.scheduleOrUpdate(extractorID, extractionNamespace)) {
           LOG.error("Failed to schedule lookup [%s]", extractorID);
           return false;
         }
@@ -190,7 +132,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public boolean close()
   {
     final Lock writeLock = startStopSync.writeLock();
-    writeLock.lock();
+    try {
+      writeLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
     try {
       if (!started) {
         LOG.warn("Not started! [%s]", extractorID);
@@ -244,17 +191,17 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     return injective;
   }
 
-  private String buildID()
-  {
-    return UUID.randomUUID().toString();
-  }
-
   // Grab the latest snapshot from the cache manager
   @Override
   public LookupExtractor get()
   {
     final Lock readLock = startStopSync.readLock();
-    readLock.lock();
+    try {
+      readLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
     try {
       if (!started) {
         throw new ISE("Factory [%s] not started", extractorID);

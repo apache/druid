@@ -32,14 +32,16 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.logger.Logger;
+
+import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -304,6 +306,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
     }
 
+    // Find which segments are used (i.e. not overshadowed).
+    final Set<DataSegment> usedSegments = Sets.newHashSet();
+    for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
+                                                                                     .lookup(JodaUtils.ETERNITY)) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        usedSegments.add(chunk.getObject());
+      }
+    }
+
     final AtomicBoolean txnFailure = new AtomicBoolean(false);
 
     try {
@@ -334,7 +345,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               }
 
               for (final DataSegment segment : segments) {
-                if (announceHistoricalSegment(handle, segment)) {
+                if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
                   inserted.add(segment);
                 }
               }
@@ -575,7 +586,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return true if the segment was added, false if it already existed
    */
-  private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
+  private boolean announceHistoricalSegment(
+      final Handle handle,
+      final DataSegment segment,
+      final boolean used
+  ) throws IOException
   {
     try {
       if (segmentExists(handle, segment)) {
@@ -600,7 +615,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("end", segment.getInterval().getEnd().toString())
             .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
             .bind("version", segment.getVersion())
-            .bind("used", true)
+            .bind("used", used)
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
 
@@ -772,6 +787,26 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return retVal;
   }
 
+  public boolean deleteDataSourceMetadata(final String dataSource)
+  {
+    return connector.retryWithHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            int rows = handle.createStatement(
+                String.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+            )
+                             .bind("dataSource", dataSource)
+                             .execute();
+
+            return rows > 0;
+          }
+        }
+    );
+  }
+
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(
@@ -833,13 +868,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  @Override
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = connector.getDBI().withHandle(
-        new HandleCallback<List<DataSegment>>()
+    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
+        new TransactionCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> withHandle(Handle handle) throws IOException, SQLException
+          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
           {
             return handle
                 .createQuery(
@@ -848,6 +884,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         dbTables.getSegmentsTable()
                     )
                 )
+                .setFetchSize(connector.getStreamingFetchSize())
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.TuningConfig;
-import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -100,5 +99,22 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
+  }
+
+  @Test
+  public void testCopyOf() throws Exception
+  {
+    KafkaTuningConfig original = new KafkaTuningConfig(1, 2, new Period("PT3S"), new File("/tmp/xxx"), 4, new IndexSpec(), true, true, 5L);
+    KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
+
+    Assert.assertEquals(1, copy.getMaxRowsInMemory());
+    Assert.assertEquals(2, copy.getMaxRowsPerSegment());
+    Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
+    Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
+    Assert.assertEquals(4, copy.getMaxPendingPersists());
+    Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
+    Assert.assertEquals(true, copy.getBuildV9Directly());
+    Assert.assertEquals(true, copy.isReportParseExceptions());
+    Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
   }
 }

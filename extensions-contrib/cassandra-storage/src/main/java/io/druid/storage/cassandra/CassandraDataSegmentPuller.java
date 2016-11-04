@@ -21,12 +21,13 @@ package io.druid.storage.cassandra;
 
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.ISE;
-import com.metamx.common.RetryUtils;
-import com.metamx.common.logger.Logger;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ObjectMetadata;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -59,7 +60,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
     String key = (String) segment.getLoadSpec().get("key");
     getSegmentFiles(key, outDir);
   }
-  public com.metamx.common.FileUtils.FileCopyResult getSegmentFiles(final String key, final File outDir) throws SegmentLoadingException{
+  public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(final String key, final File outDir) throws SegmentLoadingException{
     log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
     if (!outDir.exists()) {
       outDir.mkdirs();
@@ -73,13 +74,13 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
     final File tmpFile = new File(outDir, "index.zip");
     log.info("Pulling to temporary local cache [%s]", tmpFile.getAbsolutePath());
 
-    final com.metamx.common.FileUtils.FileCopyResult localResult;
+    final io.druid.java.util.common.FileUtils.FileCopyResult localResult;
     try {
       localResult = RetryUtils.retry(
-          new Callable<com.metamx.common.FileUtils.FileCopyResult>()
+          new Callable<io.druid.java.util.common.FileUtils.FileCopyResult>()
           {
             @Override
-            public com.metamx.common.FileUtils.FileCopyResult call() throws Exception
+            public io.druid.java.util.common.FileUtils.FileCopyResult call() throws Exception
             {
               try (OutputStream os = new FileOutputStream(tmpFile)) {
                 final ObjectMetadata meta = ChunkedStorage
@@ -88,7 +89,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
                     .withConcurrencyLevel(CONCURRENCY)
                     .call();
               }
-              return new com.metamx.common.FileUtils.FileCopyResult(tmpFile);
+              return new io.druid.java.util.common.FileUtils.FileCopyResult(tmpFile);
             }
           },
           Predicates.<Throwable>alwaysTrue(),
@@ -98,7 +99,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
       throw new SegmentLoadingException(e, "Unable to copy key [%s] to file [%s]", key, tmpFile.getAbsolutePath());
     }
     try{
-    final com.metamx.common.FileUtils.FileCopyResult result =  CompressionUtils.unzip(tmpFile, outDir);
+    final io.druid.java.util.common.FileUtils.FileCopyResult result =  CompressionUtils.unzip(tmpFile, outDir);
       log.info(
           "Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
           result.size()

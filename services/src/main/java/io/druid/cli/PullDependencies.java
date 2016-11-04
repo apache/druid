@@ -24,13 +24,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
+
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.internal.DefaultTeslaAether;
@@ -461,6 +462,10 @@ public class PullDependencies implements Runnable
 
   private void createRootExtensionsDirectory(File atLocation)
   {
+    if (atLocation.isDirectory()) {
+      log.info("Root extension directory [%s] already exists, skip creating");
+      return;
+    }
     if (!atLocation.mkdirs()) {
       throw new ISE(
           String.format(

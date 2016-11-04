@@ -21,9 +21,9 @@ package io.druid.common.utils;
 
 /**
  */
-public class StringUtils extends com.metamx.common.StringUtils
+public class StringUtils extends io.druid.java.util.common.StringUtils
 {
-  public static final String EMPTY = "";
+  private static final byte[] EMPTY_BYTES = new byte[0];
 
   // should be used only for estimation
   // returns the same result with StringUtils.fromUtf8(value).length for valid string values
@@ -45,5 +45,10 @@ public class StringUtils extends com.metamx.common.StringUtils
       }
     }
     return length;
+  }
+
+  public static byte[] toUtf8WithNullToEmpty(final String string)
+  {
+    return string == null ? EMPTY_BYTES : toUtf8(string);
   }
 }

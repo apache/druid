@@ -29,11 +29,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;

@@ -61,4 +61,15 @@ public class NotFilter implements Filter
       }
     };
   }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return baseFilter.supportsBitmapIndex(selector);
+  }
+
+  public Filter getBaseFilter()
+  {
+    return baseFilter;
+  }
 }

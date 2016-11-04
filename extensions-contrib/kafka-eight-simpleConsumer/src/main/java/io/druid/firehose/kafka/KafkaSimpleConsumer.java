@@ -23,8 +23,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.net.HostAndPort;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.logger.Logger;
 import kafka.api.FetchRequest;
 import kafka.api.FetchRequestBuilder;
 import kafka.api.PartitionOffsetRequestInfo;
@@ -238,7 +239,7 @@ public class KafkaSimpleConsumer
       }
       catch (Exception e) {
         ensureNotInterrupted(e);
-        log.warn(e, "caughte exception in fetch {} - {}", topic, partitionId);
+        log.warn(e, "caught exception in fetch {} - {}", topic, partitionId);
         response = null;
       }
 

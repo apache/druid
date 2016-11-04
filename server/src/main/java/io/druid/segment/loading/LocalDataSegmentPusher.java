@@ -24,8 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
 
@@ -54,9 +55,16 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
+  public String getPathForHadoop()
+  {
+    return config.getStorageDirectory().getAbsoluteFile().toURI().toString();
+  }
+
+  @Deprecated
+  @Override
   public String getPathForHadoop(String dataSource)
   {
-    return new File(config.getStorageDirectory().getAbsoluteFile(), dataSource).toURI().toString();
+    return getPathForHadoop();
   }
 
   @Override

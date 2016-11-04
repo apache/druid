@@ -25,8 +25,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import com.metamx.common.CompressionUtils;
 import com.metamx.emitter.EmittingLogger;
+
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
@@ -62,9 +63,16 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
+  public String getPathForHadoop()
+  {
+    return String.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
+  }
+
+  @Deprecated
+  @Override
   public String getPathForHadoop(String dataSource)
   {
-    return String.format("s3n://%s/%s/%s", config.getBucket(), config.getBaseKey(), dataSource);
+    return getPathForHadoop();
   }
 
   @Override

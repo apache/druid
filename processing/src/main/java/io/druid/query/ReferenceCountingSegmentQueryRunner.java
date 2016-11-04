@@ -19,9 +19,9 @@
 
 package io.druid.query;
 
-import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.guava.ResourceClosingSequence;
-import com.metamx.common.guava.Sequence;
+import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.guava.ResourceClosingSequence;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.segment.ReferenceCountingSegment;
 
 import java.io.Closeable;

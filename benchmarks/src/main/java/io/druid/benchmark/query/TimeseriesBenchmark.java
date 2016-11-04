@@ -24,9 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
+
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -35,6 +33,9 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -45,12 +46,15 @@ import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -64,11 +68,13 @@ import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -104,7 +110,7 @@ public class TimeseriesBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
 
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
@@ -167,6 +173,64 @@ public class TimeseriesBenchmark
 
       basicQueries.put("A", queryA);
     }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
+                                                     StringComparators.NUMERIC);
+      queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterNumeric", timeFilterQuery);
+    }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
+                                                     StringComparators.ALPHANUMERIC);
+      queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterAlphanumeric", timeFilterQuery);
+    }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(new Interval(200000, 300000)));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      queryAggs.add(lsaf);
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterByInterval", timeFilterQuery);
+    }
+
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }

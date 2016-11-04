@@ -23,10 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularity;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -47,6 +47,7 @@ import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
@@ -178,6 +179,40 @@ public class TimeseriesQueryRunnerTest
 
       lastResult = result;
       ++count;
+    }
+
+    Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
+  }
+
+  @Test
+  public void testTimeseriesNoAggregators()
+  {
+    QueryGranularity gran = QueryGranularities.DAY;
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(gran)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .descending(descending)
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    final DateTime expectedLast = descending ?
+                                  QueryRunnerTestHelper.earliest :
+                                  QueryRunnerTestHelper.last;
+
+    Result lastResult = null;
+    for (Result<TimeseriesResultValue> result : results) {
+      DateTime current = result.getTimestamp();
+      Assert.assertFalse(
+          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
+      );
+      Assert.assertEquals(ImmutableMap.of(), result.getValue().getBaseObject());
+      lastResult = result;
     }
 
     Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
@@ -2204,7 +2239,8 @@ public class TimeseriesQueryRunnerTest
                                                   true,
                                                   null,
                                                   null,
-                                                  null
+                                                  null,
+                                                  StringComparators.LEXICOGRAPHIC
                                               ),
                                               new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
@@ -2213,7 +2249,8 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   true,
                                                   null,
-                                                  null
+                                                  null,
+                                                  StringComparators.LEXICOGRAPHIC
                                               ),
                                               (DimFilter) new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
@@ -2222,7 +2259,8 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   null,
                                                   null,
-                                                  null
+                                                  null,
+                                                  StringComparators.LEXICOGRAPHIC
                                               )
                                           )
                                       )

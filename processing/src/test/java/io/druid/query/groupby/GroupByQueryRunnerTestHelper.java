@@ -22,17 +22,20 @@ package io.druid.query.groupby;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -68,6 +71,25 @@ public class GroupByQueryRunnerTestHelper
 
     DateTime ts = new DateTime(timestamp);
     return new MapBasedRow(ts, theVals);
+  }
+
+  public static List<Row> createExpectedRows(String[] columnNames, Object[]... values)
+  {
+    int timeIndex = Arrays.asList(columnNames).indexOf(Column.TIME_COLUMN_NAME);
+    Preconditions.checkArgument(timeIndex >= 0);
+
+    List<Row> expected = Lists.newArrayList();
+    for (Object[] value : values) {
+      Preconditions.checkArgument(value.length == columnNames.length);
+      Map<String, Object> theVals = Maps.newHashMapWithExpectedSize(value.length);
+      for (int i = 0; i < columnNames.length; i++) {
+        if (i != timeIndex) {
+          theVals.put(columnNames[i], value[i]);
+        }
+      }
+      expected.add(new MapBasedRow(new DateTime(value[timeIndex]), theVals));
+    }
+    return expected;
   }
 
 }

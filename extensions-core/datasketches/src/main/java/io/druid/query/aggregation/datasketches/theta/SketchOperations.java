@@ -20,7 +20,6 @@
 package io.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.base.Charsets;
-import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.memory.NativeMemory;
@@ -30,6 +29,9 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
+
+import io.druid.java.util.common.logger.Logger;
+
 import org.apache.commons.codec.binary.Base64;
 
 public class SketchOperations

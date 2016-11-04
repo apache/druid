@@ -25,10 +25,15 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
@@ -37,6 +42,7 @@ import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
@@ -221,6 +227,13 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
     {
+      if (getTypeForDimension(dimension) == ValueType.LONG) {
+        return Filters.getLongValueMatcher(
+            columnSelectorFactory.makeLongColumnSelector(dimension),
+            value
+        );
+      }
+
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
       );
@@ -233,31 +246,71 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         return new BooleanValueMatcher(valueString == null);
       }
 
-      final int valueId = selector.lookupId(valueString);
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
+      final int cardinality = selector.getValueCardinality();
+
+      if (cardinality >= 0) {
+        // Dictionary-encoded dimension. Compare by id instead of by value to save time.
+        final int valueId = selector.lookupId(valueString);
+
+        return new ValueMatcher()
         {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return valueString == null;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (row.get(i) == valueId) {
-                return true;
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return valueString == null;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (row.get(i) == valueId) {
+                  return true;
+                }
               }
+              return false;
             }
-            return false;
           }
-        }
-      };
+        };
+      } else {
+        // Not dictionary-encoded. Skip the optimization.
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return valueString == null;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (Objects.equals(selector.lookupName(row.get(i)), valueString)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        };
+      }
     }
 
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Predicate predicate)
+    public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
+    {
+      ValueType type = getTypeForDimension(dimension);
+      switch (type) {
+        case LONG:
+          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
+        case STRING:
+          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
+        default:
+          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
+      }
+    }
+
+    public ValueMatcher makeStringValueMatcher(final String dimension, final Predicate<String> predicate)
     {
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
@@ -269,35 +322,80 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         return new BooleanValueMatcher(doesMatchNull);
       }
 
-      // Check every value in the dimension, as a String.
       final int cardinality = selector.getValueCardinality();
-      final BitSet valueIds = new BitSet(cardinality);
-      for (int i = 0; i < cardinality; i++) {
-        if (predicate.apply(selector.lookupName(i))) {
-          valueIds.set(i);
-        }
-      }
 
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return doesMatchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (valueIds.get(row.get(i))) {
-                return true;
-              }
-            }
-            return false;
+      if (cardinality >= 0) {
+        // Dictionary-encoded dimension. Check every value; build a bitset of matching ids.
+        final BitSet valueIds = new BitSet(cardinality);
+        for (int i = 0; i < cardinality; i++) {
+          if (predicate.apply(selector.lookupName(i))) {
+            valueIds.set(i);
           }
         }
-      };
+
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return doesMatchNull;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (valueIds.get(row.get(i))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        };
+      } else {
+        // Not dictionary-encoded. Skip the optimization.
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return doesMatchNull;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (predicate.apply(selector.lookupName(row.get(i)))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        };
+      }
+    }
+
+    private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
+    {
+      return Filters.getLongPredicateMatcher(
+          columnSelectorFactory.makeLongColumnSelector(dimension),
+          predicate
+      );
+    }
+
+    private ValueType getTypeForDimension(String dimension)
+    {
+      // FilteredAggregatorFactory is sometimes created from a ColumnSelectorFactory that
+      // has no knowledge of column capabilities/types.
+      // Default to LONG for __time, STRING for everything else.
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        return ValueType.LONG;
+      }
+      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimension);
+      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 }

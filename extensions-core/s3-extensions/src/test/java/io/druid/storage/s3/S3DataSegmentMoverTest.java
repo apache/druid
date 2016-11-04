@@ -23,7 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.MapUtils;
+
+import io.druid.java.util.common.MapUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -53,7 +54,7 @@ public class S3DataSegmentMoverTest
       ),
       ImmutableList.of("dim1", "dim1"),
       ImmutableList.of("metric1", "metric2"),
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );
@@ -128,7 +129,7 @@ public class S3DataSegmentMoverTest
         ),
         ImmutableList.of("dim1", "dim1"),
         ImmutableList.of("metric1", "metric2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         1
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
@@ -151,7 +152,7 @@ public class S3DataSegmentMoverTest
         ),
         ImmutableList.of("dim1", "dim1"),
         ImmutableList.of("metric1", "metric2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         1
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));

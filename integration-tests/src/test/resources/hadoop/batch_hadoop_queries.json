@@ -63,7 +63,9 @@
         "size": 34881,
         "numRows": 1014,
         "aggregators": null,
-        "queryGranularity": null
+        "timestampSpec": null,
+        "queryGranularity": null,
+        "rollup":null
       }
     ]
   },

@@ -21,12 +21,12 @@ package io.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -75,7 +75,8 @@ public class JobHelperTest
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "visited_num")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -117,7 +118,9 @@ public class JobHelperTest
                 false,
                 null,
                 null,
-                null
+                null,
+                false,
+                false
             )
         )
     );

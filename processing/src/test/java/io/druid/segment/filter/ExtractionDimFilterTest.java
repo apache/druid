@@ -71,7 +71,7 @@ public class ExtractionDimFilterTest
   {
     return ImmutableList.of(
         new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory()},
-        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory()}
+        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory(null)}
     );
   }
 

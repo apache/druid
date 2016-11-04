@@ -23,8 +23,11 @@ OrderByColumnSpecs indicate how to do order by operations. Each order-by conditi
 ```json 
 {
     "dimension" : "<Any dimension or metric name>",
-    "direction" : <"ascending"|"descending">
+    "direction" : <"ascending"|"descending">,
+    "dimensionOrder" : <"lexicographic"(default)|"alphanumeric"|"strlen"|"numeric">
 }
 ```
 
-If only the dimension is provided (as a JSON string), the default order-by is ascending.
+If only the dimension is provided (as a JSON string), the default order-by is ascending with lexicographic sorting.
+
+See [Sorting Orders](./sorting-orders.html) for more information on the sorting orders specified by "dimensionOrder".

@@ -22,7 +22,6 @@ package io.druid.client.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import io.druid.client.ImmutableSegmentLoadInfo;
-import io.druid.client.SegmentLoadInfo;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
@@ -50,7 +49,7 @@ public class ImmutableSegmentLoadInfoTest
             null,
             null,
             null,
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0, 0
         ), Sets.newHashSet(new DruidServerMetadata("a", "host", 10, "type", "tier", 1))
     );

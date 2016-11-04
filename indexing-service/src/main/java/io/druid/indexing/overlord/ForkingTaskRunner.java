@@ -43,10 +43,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Self;
@@ -58,6 +54,10 @@ import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.metrics.MonitorsConfig;
@@ -428,6 +428,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             boolean runFailed = true;
 
                             final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+
+                            // This will block for a while. So we append the thread information with more details
+                            final String priorThreadName = Thread.currentThread().getName();
+                            Thread.currentThread().setName(String.format("%s-[%s]", priorThreadName, task.getId()));
+
                             try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
                               final int statusCode = processHolder.process.waitFor();
@@ -437,6 +442,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
                             finally {
+                              Thread.currentThread().setName(priorThreadName);
                               // Upload task logs
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
                             }

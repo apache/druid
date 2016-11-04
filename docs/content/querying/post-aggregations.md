@@ -77,6 +77,12 @@ Example JavaScript aggregator:
   "function": "function(delta, total) { return 100 * Math.abs(delta) / total; }"
 }
 ```
+
+<div class="note info">
+Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
+about using Druid's JavaScript functionality.
+</div>
+
 ### HyperUnique Cardinality post-aggregator
 
 The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object such that it can be used in post aggregations.

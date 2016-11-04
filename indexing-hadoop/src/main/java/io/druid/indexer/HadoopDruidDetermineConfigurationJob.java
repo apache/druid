@@ -22,7 +22,8 @@ package io.druid.indexer;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
+
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -80,7 +81,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
           shardSpecs.put(bucket, specs);
           log.info("DateTime[%s], spec[%s]", bucket, specs);
         } else {
-          final HadoopyShardSpec spec = new HadoopyShardSpec(new NoneShardSpec(), shardCount++);
+          final HadoopyShardSpec spec = new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++);
           shardSpecs.put(bucket, Lists.newArrayList(spec));
           log.info("DateTime[%s], spec[%s]", bucket, spec);
         }

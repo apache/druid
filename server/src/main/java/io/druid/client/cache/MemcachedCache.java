@@ -32,13 +32,13 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Ints;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
 import io.druid.collections.LoadBalancingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.logger.Logger;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -473,9 +473,6 @@ public class MemcachedCache implements Cache
         return null;
       }
     }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   @Override
@@ -492,9 +489,6 @@ public class MemcachedCache implements Cache
       // operation did not get queued in time (queue is full)
       errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
-    }
-    catch (IOException e) {
-      Throwables.propagate(e);
     }
   }
 
@@ -588,9 +582,6 @@ public class MemcachedCache implements Cache
         log.warn(e, "Exception pulling item from cache");
         return results;
       }
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
     }
   }
 

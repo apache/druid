@@ -193,7 +193,7 @@ In `conf/druid/_common/common.runtime.properties`, replace
 
 - `druid.zk.service.host`
 
-In `conf/_common/common.runtime.properties`, replace
+In `conf/druid/_common/common.runtime.properties`, replace
 "metadata.store.ip" with the IP address of the machine that you will use as your metadata store:
 
 - `druid.metadata.storage.connector.connectURI`

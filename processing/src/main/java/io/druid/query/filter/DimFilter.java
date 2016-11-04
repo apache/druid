@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.RangeSet;
 
 /**
  */
@@ -36,8 +37,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name="javascript", value=JavaScriptDimFilter.class),
     @JsonSubTypes.Type(name="spatial", value=SpatialDimFilter.class),
     @JsonSubTypes.Type(name="in", value=InDimFilter.class),
-    @JsonSubTypes.Type(name="bound", value=BoundDimFilter.class)
-
+    @JsonSubTypes.Type(name="bound", value=BoundDimFilter.class),
+    @JsonSubTypes.Type(name="interval", value=IntervalDimFilter.class)
 })
 public interface DimFilter
 {
@@ -56,4 +57,19 @@ public interface DimFilter
    * @return a Filter that implements this DimFilter, or null if this DimFilter is a no-op.
    */
   public Filter toFilter();
+
+  /**
+   * Returns a RangeSet that represents the possible range of the input dimension for this DimFilter.This is
+   * applicable to filters that use dimensions such as select, in, bound, and logical filters such as and, or, not.
+   *
+   * Null represents that the range cannot be determined, and will be returned for filters such as javascript and regex
+   * where there's no easy way to determine the filtered range. It is treated the same way as an all range in most
+   * cases, however there are some subtle difference at logical filters such as not filter, where complement of all
+   * is nothing while complement of null is still null.
+   *
+   * @param dimension name of the dimension to get range for
+   * @return a RangeSet that represent the possible range of the input dimension, or null if it is not possible to
+   * determine for this DimFilter.
+   */
+  public RangeSet<String> getDimensionRangeSet(String dimension);
 }

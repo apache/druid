@@ -33,14 +33,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.io.Closeables;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.nary.BinaryFn;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
@@ -268,7 +268,8 @@ public class DeterminePartitionsJob implements Jobby
     protected void innerMap(
         InputRow inputRow,
         Object value,
-        Context context
+        Context context,
+        boolean reportParseExceptions
     ) throws IOException, InterruptedException
     {
       final List<Object> groupKey = Rows.toGroupKey(
@@ -349,7 +350,8 @@ public class DeterminePartitionsJob implements Jobby
     protected void innerMap(
         InputRow inputRow,
         Object value,
-        Context context
+        Context context,
+        boolean reportParseExceptions
     ) throws IOException, InterruptedException
     {
       final Map<String, Iterable<String>> dims = Maps.newHashMap();
@@ -643,7 +645,7 @@ public class DeterminePartitionsJob implements Jobby
             final ShardSpec shardSpec;
 
             if (currentDimPartitions.partitions.isEmpty()) {
-              shardSpec = new NoneShardSpec();
+              shardSpec = NoneShardSpec.instance();
             } else {
               if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
                 // Combine with previous shard

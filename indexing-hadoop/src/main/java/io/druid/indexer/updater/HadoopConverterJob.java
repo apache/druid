@@ -28,12 +28,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
+
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -147,8 +148,26 @@ public class HadoopConverterJob
   {
     final Path jobDir = getJobPath(job.getJobID(), job.getWorkingDirectory());
     final FileSystem fs = jobDir.getFileSystem(job.getConfiguration());
-    fs.delete(jobDir, true);
-    fs.delete(getJobClassPathDir(job.getJobName(), job.getWorkingDirectory()), true);
+    RuntimeException e = null;
+    try {
+      JobHelper.deleteWithRetry(fs, jobDir, true);
+    }
+    catch (RuntimeException ex) {
+      e = ex;
+    }
+    try {
+      JobHelper.deleteWithRetry(fs, getJobClassPathDir(job.getJobName(), job.getWorkingDirectory()), true);
+    }
+    catch (RuntimeException ex) {
+      if (e == null) {
+        e = ex;
+      } else {
+        e.addSuppressed(ex);
+      }
+    }
+    if (e != null) {
+      throw e;
+    }
   }
 
 

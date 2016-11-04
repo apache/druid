@@ -25,13 +25,13 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -143,10 +143,10 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(2, results.size());
 
     MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
 
     row = (MapBasedRow) results.get(1);
-    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
   }
 
   @Test

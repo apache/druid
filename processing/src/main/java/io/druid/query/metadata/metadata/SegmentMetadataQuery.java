@@ -29,6 +29,8 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
+import io.druid.query.UnionDataSource;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
@@ -55,7 +57,9 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     INTERVAL,
     AGGREGATORS,
     MINMAX,
-    QUERYGRANULARITY;
+    TIMESTAMPSPEC,
+    QUERYGRANULARITY,
+    ROLLUP;
 
     @JsonValue
     @Override
@@ -122,8 +126,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     this.merge = merge == null ? false : merge;
     this.analysisTypes = (analysisTypes == null) ? DEFAULT_ANALYSIS_TYPES : analysisTypes;
     Preconditions.checkArgument(
-        dataSource instanceof TableDataSource,
-        "SegmentMetadataQuery only supports table datasource"
+        dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource,
+        "SegmentMetadataQuery only supports table or union datasource"
     );
     this.lenientAggregatorMerge = lenientAggregatorMerge == null ? false : lenientAggregatorMerge;
   }
@@ -150,6 +154,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasFilters()
   {
     return false;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    return null;
   }
 
   @Override
@@ -180,9 +190,19 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return analysisTypes.contains(AnalysisType.AGGREGATORS);
   }
 
+  public boolean hasTimestampSpec()
+  {
+    return analysisTypes.contains(AnalysisType.TIMESTAMPSPEC);
+  }
+
   public boolean hasQueryGranularity()
   {
     return analysisTypes.contains(AnalysisType.QUERYGRANULARITY);
+  }
+
+  public boolean hasRollup()
+  {
+    return analysisTypes.contains(AnalysisType.ROLLUP);
   }
 
   public boolean hasMinMax()

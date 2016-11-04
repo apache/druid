@@ -24,12 +24,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -156,7 +156,7 @@ public abstract class BaseFilterTest
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.<String, BitmapSerdeFactory>of(
         "concise", new ConciseBitmapSerdeFactory(),
-        "roaring", new RoaringBitmapSerdeFactory()
+        "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
     final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
@@ -239,6 +239,7 @@ public abstract class BaseFilterTest
                                                           .indexSpec(new IndexSpec(
                                                               bitmapSerdeFactoryEntry.getValue(),
                                                               null,
+                                                              null,
                                                               null
                                                           ))
                                                           .indexMerger(indexMergerEntry.getValue());
@@ -252,7 +253,7 @@ public abstract class BaseFilterTest
     return constructors;
   }
 
-  private DimFilter maybeOptimize(final DimFilter dimFilter)
+  protected DimFilter maybeOptimize(final DimFilter dimFilter)
   {
     if (dimFilter == null) {
       return null;
@@ -260,7 +261,7 @@ public abstract class BaseFilterTest
     return optimize ? dimFilter.optimize() : dimFilter;
   }
 
-  private Sequence<Cursor> makeCursorSequence(final Filter filter)
+  protected Sequence<Cursor> makeCursorSequence(final Filter filter)
   {
     final Sequence<Cursor> cursors = adapter.makeCursors(
         filter,

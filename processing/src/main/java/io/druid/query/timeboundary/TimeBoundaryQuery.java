@@ -23,12 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.StringUtils;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
@@ -52,6 +53,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   private static final byte CACHE_TYPE_ID = 0x0;
 
+  private final DimFilter dimFilter;
   private final String bound;
 
   @JsonCreator
@@ -59,6 +61,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("bound") String bound,
+      @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -70,19 +73,31 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
         context
     );
 
+    this.dimFilter = dimFilter;
     this.bound = bound == null ? "" : bound;
   }
 
   @Override
-  public boolean hasFilters()
+  public boolean hasFilters() {
+    return dimFilter != null;
+  }
+
+  @Override
+  public DimFilter getFilter()
   {
-    return false;
+    return null;
   }
 
   @Override
   public String getType()
   {
     return Query.TIME_BOUNDARY;
+  }
+
+  @JsonProperty("filter")
+  public DimFilter getDimensionsFilter()
+  {
+    return dimFilter;
   }
 
   @JsonProperty
@@ -98,6 +113,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
         getDataSource(),
         getQuerySegmentSpec(),
         bound,
+        dimFilter,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -109,6 +125,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
         getDataSource(),
         spec,
         bound,
+        dimFilter,
         getContext()
     );
   }
@@ -120,16 +137,21 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
         dataSource,
         getQuerySegmentSpec(),
         bound,
+        dimFilter,
         getContext()
     );
   }
 
   public byte[] getCacheKey()
   {
+    final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
-    return ByteBuffer.allocate(1 + boundBytes.length)
+    final byte delimiter = (byte) 0xff;
+    return ByteBuffer.allocate(2 + boundBytes.length + filterBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(boundBytes)
+                     .put(delimiter)
+                     .put(filterBytes)
                      .array();
   }
 
@@ -211,6 +233,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", duration=" + getDuration() +
            ", bound=" + bound +
+           ", dimFilter=" + dimFilter +
            '}';
   }
 
@@ -233,6 +256,10 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       return false;
     }
 
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
+      return false;
+    }
+
     return true;
   }
 
@@ -241,6 +268,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   {
     int result = super.hashCode();
     result = 31 * result + bound.hashCode();
+    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     return result;
   }
 }

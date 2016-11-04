@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularity;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -775,6 +775,7 @@ public class Druids
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private String bound;
+    private DimFilter dimFilter;
     private Map<String, Object> context;
 
     public TimeBoundaryQueryBuilder()
@@ -782,6 +783,7 @@ public class Druids
       dataSource = null;
       querySegmentSpec = null;
       bound = null;
+      dimFilter = null;
       context = null;
     }
 
@@ -791,6 +793,7 @@ public class Druids
           dataSource,
           querySegmentSpec,
           bound,
+          dimFilter,
           context
       );
     }
@@ -801,6 +804,7 @@ public class Druids
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
           .bound(builder.bound)
+          .filters(builder.dimFilter)
           .context(builder.context);
     }
 
@@ -837,6 +841,24 @@ public class Druids
     public TimeBoundaryQueryBuilder bound(String b)
     {
       bound = b;
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
       return this;
     }
 

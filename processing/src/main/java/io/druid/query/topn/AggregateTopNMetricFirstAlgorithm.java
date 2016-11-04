@@ -19,9 +19,9 @@
 
 package io.druid.query.topn;
 
-import com.metamx.common.ISE;
-import com.metamx.common.Pair;
 import io.druid.collections.StupidPool;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
@@ -61,7 +61,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     return new TopNParams(
         dimSelector,
         cursor,
-        dimSelector.getValueCardinality(),
         Integer.MAX_VALUE
     );
   }
@@ -129,7 +128,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   private int[] getDimValSelectorForTopNMetric(TopNParams params, TopNResultBuilder resultBuilder)
   {
-    int[] dimValSelector = new int[params.getDimSelector().getValueCardinality()];
+    int[] dimValSelector = new int[params.getCardinality()];
     Arrays.fill(dimValSelector, SKIP_POSITION_VALUE);
 
     Iterator<DimValHolder> dimValIter = resultBuilder.getTopNIterator();

@@ -21,8 +21,9 @@ package io.druid.client.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import com.metamx.common.StringUtils;
 import com.metamx.emitter.service.ServiceEmitter;
+
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

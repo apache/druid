@@ -19,15 +19,9 @@
 
 package io.druid.query.aggregation.histogram;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.PostAggregator;
@@ -35,20 +29,18 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.GroupByQueryEngine;
-import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.segment.TestHelper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -59,91 +51,81 @@ public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
+  private String testName;
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(1024 * 1024);
-          }
-        }
-    );
-
-    final GroupByQueryConfig config = new GroupByQueryConfig();
-    config.setMaxIntermediateRows(10000);
-
-    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, pool);
-
-    final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
-        engine,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        configSupplier,
-        new GroupByQueryQueryToolChest(
-            configSupplier, mapper, engine, pool,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
-        pool
-    );
-
-    GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
+    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public String toString()
+      {
+        return "default";
+      }
+    };
+    final GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
       public boolean isSingleThreaded()
       {
         return true;
       }
+
+      @Override
+      public String toString()
+      {
+        return "singleThreaded";
+      }
     };
-    singleThreadedConfig.setMaxIntermediateRows(10000);
-
-    final Supplier<GroupByQueryConfig> singleThreadedConfigSupplier = Suppliers.ofInstance(singleThreadedConfig);
-    final GroupByQueryEngine singleThreadEngine = new GroupByQueryEngine(singleThreadedConfigSupplier, pool);
-
-    final GroupByQueryRunnerFactory singleThreadFactory = new GroupByQueryRunnerFactory(
-        singleThreadEngine,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        singleThreadedConfigSupplier,
-        new GroupByQueryQueryToolChest(
-            singleThreadedConfigSupplier, mapper, singleThreadEngine, pool,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
-        pool
-    );
-
-
-    final Function<Object, Object[]> function = new Function<Object, Object[]>()
+    final GroupByQueryConfig v2Config = new GroupByQueryConfig()
     {
       @Override
-      public Object[] apply(@Nullable Object input)
+      public String getDefaultStrategy()
       {
-        return new Object[]{factory, input};
+        return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2";
       }
     };
 
-    return Lists.newArrayList(
-        Iterables.concat(
-            Iterables.transform(
-                QueryRunnerTestHelper.makeQueryRunners(factory),
-                function
-            ),
-            Iterables.transform(
-                QueryRunnerTestHelper.makeQueryRunners(singleThreadFactory),
-                function
-            )
-        )
+    defaultConfig.setMaxIntermediateRows(10000);
+    singleThreadedConfig.setMaxIntermediateRows(10000);
+
+    final List<Object[]> constructors = Lists.newArrayList();
+    final List<GroupByQueryConfig> configs = ImmutableList.of(
+        defaultConfig,
+        singleThreadedConfig,
+        v2Config
     );
+
+    for (GroupByQueryConfig config : configs) {
+      final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
+      for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+        final String testName = String.format(
+            "config=%s, runner=%s",
+            config.toString(),
+            runner.toString()
+        );
+        constructors.add(new Object[]{testName, factory, runner});
+      }
+    }
+
+    return constructors;
   }
 
-  public ApproximateHistogramGroupByQueryTest(GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public ApproximateHistogramGroupByQueryTest(String testName, GroupByQueryRunnerFactory factory, QueryRunner runner)
   {
+    this.testName = testName;
     this.factory = factory;
     this.runner = runner;
+
+    //Note: this is needed in order to properly register the serde for Histogram.
+    new ApproximateHistogramDruidModule().configure(null);
   }
 
   @Test

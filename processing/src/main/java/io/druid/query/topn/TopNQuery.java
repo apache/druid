@@ -73,7 +73,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.aggregatorSpecs = aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
@@ -89,6 +89,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public boolean hasFilters()
   {
     return dimFilter != null;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
   }
 
   @Override
@@ -163,7 +169,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
-  public TopNQuery withDimensionSpec(DimensionSpec spec){
+  public TopNQuery withDimensionSpec(DimensionSpec spec)
+  {
     return new TopNQuery(
         getDataSource(),
         spec,
@@ -177,7 +184,25 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         getContext()
     );
   }
-  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs){
+
+  public TopNQuery withAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
+  {
+    return new TopNQuery(
+        getDataSource(),
+        getDimensionSpec(),
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
+  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs)
+  {
     return new TopNQuery(
         getDataSource(),
         getDimensionSpec(),
@@ -276,23 +301,39 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     TopNQuery topNQuery = (TopNQuery) o;
 
-    if (threshold != topNQuery.threshold) return false;
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null)
+    if (threshold != topNQuery.threshold) {
       return false;
-    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) return false;
-    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null)
+    }
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null) {
       return false;
-    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) return false;
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs) : topNQuery.postAggregatorSpecs != null)
+    }
+    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) {
       return false;
-    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null)
+    }
+    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null) {
       return false;
+    }
+    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) {
+      return false;
+    }
+    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs) : topNQuery.postAggregatorSpecs != null) {
+      return false;
+    }
+    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null) {
+      return false;
+    }
 
     return true;
   }
