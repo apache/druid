@@ -47,7 +47,7 @@ public class TestQueryHelper
   {
     this.jsonMapper = jsonMapper;
     this.queryClient = queryClient;
-    this.broker = config.getBrokerHost();
+    this.broker = config.getBrokerUrl();
   }
 
   public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
@@ -116,6 +116,6 @@ public class TestQueryHelper
 
   private String getBrokerURL()
   {
-    return String.format("http://%s/druid/v2?pretty", broker);
+    return String.format("%s/druid/v2?pretty", broker);
   }
 }

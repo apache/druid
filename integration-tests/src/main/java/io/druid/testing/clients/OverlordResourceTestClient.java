@@ -28,12 +28,12 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.guice.annotations.Global;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
+import io.druid.testing.guice.TestClient;
 import io.druid.testing.utils.RetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -54,20 +54,21 @@ public class OverlordResourceTestClient
 
   @Inject
   OverlordResourceTestClient(
-      ObjectMapper jsonMapper,
-      @Global HttpClient httpClient, IntegrationTestingConfig config
+    ObjectMapper jsonMapper,
+    @TestClient HttpClient httpClient,
+    IntegrationTestingConfig config
   )
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.indexer = config.getIndexerHost();
+    this.indexer = config.getIndexerUrl();
     this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
   }
 
   private String getIndexerURL()
   {
     return String.format(
-        "http://%s/druid/indexer/v1/",
+        "%s/druid/indexer/v1/",
         indexer
     );
   }

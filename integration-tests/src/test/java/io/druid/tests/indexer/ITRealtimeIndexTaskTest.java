@@ -25,12 +25,12 @@ import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
+import io.druid.testing.guice.TestClient;
 import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.ServerDiscoveryUtil;
 import org.apache.commons.io.IOUtils;
@@ -86,7 +86,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
   @Inject
   ServerDiscoveryFactory factory;
   @Inject
-  @Global
+  @TestClient
   HttpClient httpClient;
 
   @Inject
@@ -255,8 +255,8 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
   private String getRouterURL()
   {
     return String.format(
-        "http://%s/druid/v2?pretty",
-        config.getRouterHost()
+        "%s/druid/v2?pretty",
+        config.getRouterUrl()
     );
   }
 

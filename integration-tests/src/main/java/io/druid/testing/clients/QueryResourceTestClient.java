@@ -29,10 +29,10 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.query.Query;
 import io.druid.testing.IntegrationTestingConfig;
+import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -44,27 +44,27 @@ public class QueryResourceTestClient
 {
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final String router;
+  private final String routerUrl;
   private final StatusResponseHandler responseHandler;
 
   @Inject
   QueryResourceTestClient(
       ObjectMapper jsonMapper,
-      @Global HttpClient httpClient,
+      @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
   )
   {
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.router = config.getRouterHost();
+    this.routerUrl = config.getRouterUrl();
     this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
   }
 
   private String getBrokerURL()
   {
     return String.format(
-        "http://%s/druid/v2/",
-        router
+        "%s/druid/v2/",
+        routerUrl
     );
   }
 
