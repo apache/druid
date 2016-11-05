@@ -19,14 +19,14 @@
 
 package io.druid.java.util.common;
 
-import java.io.File;
 import java.nio.MappedByteBuffer;
 
 /**
  * Facilitates using try-with-resources with {@link MappedByteBuffer}s which don't implement {@link AutoCloseable}.
  *
  * <p>This interface is a specialization of {@code io.druid.collections.ResourceHandler}.
- * @see FileUtils#map(File)
+ *
+ * @see FileUtils#map
  */
 public final class MappedByteBufferHandler implements AutoCloseable
 {
