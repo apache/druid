@@ -21,7 +21,6 @@ package io.druid.java.util.common;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import io.druid.java.util.common.logger.Logger;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;

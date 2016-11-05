@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -35,10 +36,6 @@ import io.druid.java.util.common.logger.Logger;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Map;
-
-import static com.google.protobuf.DescriptorProtos.FileDescriptorSet;
-import static com.google.protobuf.Descriptors.Descriptor;
-import static com.google.protobuf.Descriptors.FileDescriptor;
 
 @JsonTypeName("protobuf")
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser
@@ -84,7 +81,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 
   private Map<String, Object> buildStringKeyMap(ByteBuffer input)
   {
-    final Descriptor descriptor = getDescriptor(descriptorFileInClasspath);
+    final Descriptors.Descriptor descriptor = getDescriptor(descriptorFileInClasspath);
     final Map<String, Object> theMap = Maps.newHashMap();
 
     try {
@@ -114,13 +111,13 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
     return theMap;
   }
 
-  private Descriptor getDescriptor(String descriptorFileInClassPath)
+  private Descriptors.Descriptor getDescriptor(String descriptorFileInClassPath)
   {
     try {
       InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFileInClassPath);
-      FileDescriptorSet set = FileDescriptorSet.parseFrom(fin);
-      FileDescriptor file = FileDescriptor.buildFrom(
-          set.getFile(0), new FileDescriptor[]
+      DescriptorProtos.FileDescriptorSet set = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
+      Descriptors.FileDescriptor file = Descriptors.FileDescriptor.buildFrom(
+          set.getFile(0), new Descriptors.FileDescriptor[]
           {}
       );
       return file.getMessageTypes().get(0);
