@@ -19,8 +19,7 @@
 
 package io.druid.server.lookup.cache.loading;
 
-
-import static com.google.common.base.Preconditions.checkArgument;
+import com.google.common.base.Preconditions;
 
 /**
  * Statistics about the performance of a {@link LoadingCache}. Instances of this class are immutable.
@@ -45,9 +44,9 @@ public class LookupCacheStats
       long evictionCount
   )
   {
-    checkArgument(hitCount >= 0);
-    checkArgument(missCount >= 0);
-    checkArgument(evictionCount >= 0);
+    Preconditions.checkArgument(hitCount >= 0);
+    Preconditions.checkArgument(missCount >= 0);
+    Preconditions.checkArgument(evictionCount >= 0);
 
     this.hitCount = hitCount;
     this.missCount = missCount;

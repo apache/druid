@@ -21,8 +21,6 @@ package io.druid.segment.column;
 
 import io.druid.segment.data.Indexed;
 
-import java.io.IOException;
-
 /**
 */
 public class IndexedComplexColumn implements ComplexColumn

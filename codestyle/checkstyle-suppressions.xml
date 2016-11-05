@@ -25,4 +25,10 @@
 
 <suppressions>
   <!-- See http://checkstyle.sourceforge.net/config_filters.html#SuppressionFilter for examples -->
+
+  <!-- Code copied from TestNG to apply a bugfix -->
+  <suppress checks="AvoidStaticImport" files="[\\/]org[\\/]testng[\\/]" />
+
+  <!-- Our tests have many legacy usages of static imports; enforcement is impratical until those are removed. -->
+  <suppress checks="AvoidStaticImport" files="[\\/]src[\\/]test[\\/]" />
 </suppressions>

@@ -23,7 +23,6 @@ import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
-import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;

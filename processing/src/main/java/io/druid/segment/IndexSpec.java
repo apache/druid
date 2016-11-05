@@ -76,7 +76,7 @@ public class IndexSpec
    *
    * @param bitmapSerdeFactory type of bitmap to use (e.g. roaring or concise), null to use the default.
    *                           Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type"
-   *                           setting, or, if none was set, uses the default {@link BitmapSerde.DefaultBitmapSerdeFactory}
+   *                           setting, or, if none was set, uses the default defined in {@link BitmapSerde}
    *
    * @param dimensionCompression compression format for dimension columns, null to use the default.
    *                             Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}

@@ -19,7 +19,6 @@
 
 package io.druid.math.expr;
 
-import com.google.common.base.Strings;
 import com.google.common.math.LongMath;
 import io.druid.java.util.common.IAE;
 

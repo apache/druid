@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
