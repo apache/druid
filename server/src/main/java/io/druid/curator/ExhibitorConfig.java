@@ -51,9 +51,6 @@ public class ExhibitorConfig
   @Min(0)
   private int pollingMs = 10000;
 
-  @JsonProperty
-  private String backupZkHosts = "";
-
   public List<String> getHosts()
   {
     ImmutableList.Builder<String> builder = ImmutableList.builder();
@@ -91,8 +88,4 @@ public class ExhibitorConfig
     return pollingMs;
   }
 
-  public String getBackupZkHosts()
-  {
-    return backupZkHosts;
-  }
 }

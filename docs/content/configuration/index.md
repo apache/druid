@@ -84,12 +84,13 @@ That is, it allows Druid to keep the connections of Exhibitor-supervised ZooKeep
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.exhibitor.service.hosts`|Comma-separated hostnames of Exhibitor instances. Please specify this property instead of `druid.zk.service.host` if you want to use Exhibitor-supervised cluster.|none|
+|`druid.exhibitor.service.hosts`|Comma-separated hostnames of Exhibitor instances. Please specify this property if you want to use Exhibitor-supervised cluster.|none|
 |`druid.exhibitor.service.port`|The REST port used to connect to Exhibitor.|`8080`|
 |`druid.exhibitor.service.restUriPath`|The path of the REST call used to get the server set.|`/exhibitor/v1/cluster/list`|
 |`druid.exhibitor.service.useSsl`|Boolean flag for whether or not to use https protocol.|`false`|
 |`druid.exhibitor.service.pollingMs`|How ofter to poll the exhibitors for the list|`10000`|
-|`druid.exhibitor.service.backupZkHosts`|The fixed connection string to use as a backup. This property is used in case an Exhibitor instance can't be contacted|null|
+
+Note that `druid.zk.service.host` is used as a backup in case an Exhibitor instance can't be contacted.
 
 ### Startup Logging
 

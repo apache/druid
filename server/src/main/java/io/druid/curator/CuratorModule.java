@@ -104,14 +104,14 @@ public class CuratorModule implements Module
   private CuratorFrameworkFactory.Builder newCuratorBuilder(CuratorConfig config, ExhibitorConfig exConfig)
   {
     CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
-    Optional<EnsembleProvider> provider = newEnsembleProvider(exConfig);
+    Optional<EnsembleProvider> provider = newEnsembleProvider(exConfig, config.getZkHosts());
     if (provider.isPresent()) {
       return builder.ensembleProvider(provider.get());
     }
     return builder.connectString(config.getZkHosts());
   }
 
-  private Optional<EnsembleProvider> newEnsembleProvider(ExhibitorConfig config)
+  private Optional<EnsembleProvider> newEnsembleProvider(ExhibitorConfig config, String backupZkHosts)
   {
     List<String> exhibitorHosts = config.getHosts();
     if (exhibitorHosts.isEmpty()) {
@@ -121,7 +121,7 @@ public class CuratorModule implements Module
         new Exhibitors(
             exhibitorHosts,
             config.getRestPort(),
-            newBackupProvider(config.getBackupZkHosts())
+            newBackupProvider(backupZkHosts)
         ),
         new DefaultExhibitorRestClient(config.getUseSsl()),
         config.getRestUriPath(),
