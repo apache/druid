@@ -34,7 +34,6 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 
-import net.spy.memcached.util.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -61,17 +60,6 @@ public class CoordinatorClient
     this.client = client;
     this.jsonMapper = jsonMapper;
     this.selector = selector;
-  }
-
-  public List<String> findDatasources(List<String> dataSources)
-  {
-    return execute(
-        HttpMethod.GET,
-        String.format("/datasources/?nameRegex=%s", StringUtils.join(dataSources, ",")),
-        new TypeReference<List<String>>()
-        {
-        }
-    );
   }
 
   public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)

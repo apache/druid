@@ -20,7 +20,6 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -116,22 +115,18 @@ public class DatasourcesResource
                                              ) :
                                              InventoryViewUtils.getDataSources(serverInventoryView);
     if (!Strings.isNullOrEmpty(regex)) {
+      List<Matcher> matchers = Lists.newArrayList();
+      for (String pattern : regex.split(",")) {
+        matchers.add(Pattern.compile(pattern.trim()).matcher(""));
+      }
       Set<DruidDataSource> filtered = Sets.newLinkedHashSet();
-      for (String part : regex.split(",")) {
-        final Matcher matcher = Pattern.compile(part.trim()).matcher("");
-        filtered.addAll(
-            Sets.filter(
-                datasources,
-                new Predicate<DruidDataSource>()
-                {
-                  @Override
-                  public boolean apply(DruidDataSource input)
-                  {
-                    return matcher.reset(input.getName()).matches();
-                  }
-                }
-            )
-        );
+      for (DruidDataSource dataSource : datasources) {
+        for (Matcher matcher : matchers) {
+          if (matcher.reset(dataSource.getName()).matches()) {
+            filtered.add(dataSource);
+            break;
+          }
+        }
       }
       datasources = filtered;
     }

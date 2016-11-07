@@ -22,6 +22,7 @@ package io.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -58,6 +59,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -129,14 +131,17 @@ public class BrokerQueryResource extends QueryResource
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof RegexDataSource) {
-      Set<String> found = Sets.newLinkedHashSet();
-      Iterable<DruidServer> inventory = serverInventoryView.getInventory();
+      List<Matcher> matchers = Lists.newArrayList();
       for (String pattern : dataSource.getNames()) {
-        Matcher matcher = Pattern.compile(pattern).matcher("");
-        for (DruidServer server : inventory) {
-          for (DruidDataSource source : server.getDataSources()) {
+        matchers.add(Pattern.compile(pattern).matcher(""));
+      }
+      Set<String> found = Sets.newLinkedHashSet();
+      for (DruidServer server : serverInventoryView.getInventory()) {
+        for (DruidDataSource source : server.getDataSources()) {
+          for (Matcher matcher : matchers) {
             if (matcher.reset(source.getName()).matches()) {
               found.add(source.getName());
+              break;
             }
           }
         }
