@@ -71,7 +71,7 @@ class LongExpr extends ConstantExpr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.of(value);
+    return ExprEval.ofLong(value);
   }
 }
 
@@ -115,11 +115,11 @@ class DoubleExpr extends ConstantExpr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.of(value);
+    return ExprEval.ofDouble(value);
   }
 }
 
-class IdentifierExpr extends ConstantExpr
+class IdentifierExpr implements Expr
 {
   private final String value;
 
@@ -138,6 +138,12 @@ class IdentifierExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.bestEffortOf(bindings.get(value));
+  }
+
+  @Override
+  public void visit(Visitor visitor)
+  {
+    visitor.visit(this);
   }
 }
 

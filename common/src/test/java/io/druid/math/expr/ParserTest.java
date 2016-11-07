@@ -157,6 +157,9 @@ public class ParserTest
 
     validate("1^2*3+4", "(+ (* (^ 1 2) 3) 4)", "7");
     validate("-1^2*-3+-4", "(+ (* (^ -1 2) -3) -4)", "-7");
+
+    validate("max(3, 4)", "(max [3, 4])", "4");
+    validate("min(1, max(3, 4))", "(min [1, (max [3, 4])])", "1");
   }
 
   private void validate(String expression, String withoutFlatten, String withFlatten)

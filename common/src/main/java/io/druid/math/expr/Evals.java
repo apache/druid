@@ -49,7 +49,7 @@ public class Evals
 
   public static boolean isConstant(Expr expr)
   {
-    return expr instanceof DoubleExpr || expr instanceof LongExpr || expr instanceof StringExpr;
+    return expr instanceof ConstantExpr;
   }
 
   public static boolean isAllConstants(Expr... exprs)
@@ -60,7 +60,7 @@ public class Evals
   public static boolean isAllConstants(List<Expr> exprs)
   {
     for (Expr expr : exprs) {
-      if (!isConstant(expr)) {
+      if (!(expr instanceof ConstantExpr)) {
         return false;
       }
     }
@@ -77,7 +77,7 @@ public class Evals
                    .newInstance(binary.op, left, right);
     }
     catch (Exception e) {
-      log.info(e, "failed to rewrite expression " + binary);
+      log.warn(e, "failed to rewrite expression " + binary);
       return binary;  // best effort.. keep it working
     }
   }

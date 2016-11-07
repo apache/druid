@@ -26,14 +26,24 @@ import io.druid.java.util.common.IAE;
  */
 public abstract class ExprEval<T>
 {
+  public static ExprEval ofLong(Number longValue)
+  {
+    return new LongExprEval(longValue);
+  }
+
   public static ExprEval of(long longValue)
   {
     return new LongExprEval(longValue);
   }
 
-  public static ExprEval of(double longValue)
+  public static ExprEval ofDouble(Number doubleValue)
   {
-    return new DoubleExprEval(longValue);
+    return new DoubleExprEval(doubleValue);
+  }
+
+  public static ExprEval of(double doubleValue)
+  {
+    return new DoubleExprEval(doubleValue);
   }
 
   public static ExprEval of(String stringValue)

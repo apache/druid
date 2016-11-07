@@ -110,7 +110,7 @@ public class Parser
     } else if (expr instanceof UnaryExpr) {
       UnaryExpr unary = (UnaryExpr) expr;
       Expr eval = flatten(unary.expr);
-      if (Evals.isConstant(eval)) {
+      if (eval instanceof ConstantExpr) {
         expr = expr.eval(null).toExpr();
       } else if (eval != unary.expr) {
         if (expr instanceof UnaryMinusExpr) {
@@ -131,7 +131,7 @@ public class Parser
         flattened |= flatten != args.get(i);
         fattening.add(flatten);
       }
-      if (Evals.isAllConstants(args)) {
+      if (Evals.isAllConstants(fattening)) {
         expr = expr.eval(null).toExpr();
       } else if (flattened) {
         expr = new FunctionExpr(functionExpr.name, fattening);
