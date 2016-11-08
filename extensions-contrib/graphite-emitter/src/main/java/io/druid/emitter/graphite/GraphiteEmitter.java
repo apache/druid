@@ -136,16 +136,14 @@ public class GraphiteEmitter implements Emitter
 
   private class ConsumerRunnable implements Runnable
   {
-    private PickledGraphite pickledGraphite = new PickledGraphite(
-        graphiteEmitterConfig.getHostname(),
-        graphiteEmitterConfig.getPort(),
-        graphiteEmitterConfig.getBatchSize()
-    );
-
     @Override
     public void run()
     {
-      try {
+      try (PickledGraphite pickledGraphite = new PickledGraphite(
+          graphiteEmitterConfig.getHostname(),
+          graphiteEmitterConfig.getPort(),
+          graphiteEmitterConfig.getBatchSize()
+      )) {
         if (!pickledGraphite.isConnected()) {
           log.info("trying to connect to graphite server");
           pickledGraphite.connect();
@@ -176,12 +174,11 @@ public class GraphiteEmitter implements Emitter
               Thread.currentThread().interrupt();
             } else if (e instanceof SocketException) {
               pickledGraphite.close();
-              log.info("had exception [%s] trying to re-connect to graphite server", ((SocketException) e).getMessage());
+              log.info("had exception [%s] trying to re-connect to graphite server", e.getMessage());
               pickledGraphite.connect();
             }
           }
         }
-        pickledGraphite.flush();
       }
       catch (Exception e) {
         log.error(e, e.getMessage());
