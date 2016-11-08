@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 /**
  * This RTree has been optimized to work with bitmap inverted indexes.
- * <p>
+ *
  * This code will probably make a lot more sense if you read:
  * http://www.sai.msu.su/~megera/postgres/gist/papers/gutman-rtree.pdf
  */
@@ -61,18 +61,18 @@ public class RTree
 
   /**
    * This description is from the original paper.
-   * <p>
+   *
    * Algorithm Insert: Insert a new index entry E into an R-tree.
-   * <p>
+   *
    * I1. [Find position for new record]. Invoke {@link #chooseLeaf(Node, Point)} to select
    * a leaf node L in which to place E.
-   * <p>
+   *
    * I2. [Add records to leaf node]. If L has room for another entry, install E. Otherwise invoke
    * {@link SplitStrategy} split methods to obtain L and LL containing E and all the old entries of L.
-   * <p>
+   *
    * I3. [Propagate changes upward]. Invoke {@link #adjustTree(Node, Node)} on L, also passing LL if a split was
    * performed.
-   * <p>
+   *
    * I4. [Grow tree taller]. If node split propagation caused the root to split, create a new record whose
    * children are the two resulting nodes.
    *
@@ -152,17 +152,17 @@ public class RTree
 
   /**
    * This description is from the original paper.
-   * <p>
+   *
    * Algorithm ChooseLeaf. Select a leaf node in which to place a new index entry E.
-   * <p>
+   *
    * CL1. [Initialize]. Set N to be the root node.
-   * <p>
+   *
    * CL2. [Leaf check]. If N is a leaf, return N.
-   * <p>
+   *
    * CL3. [Choose subtree]. If N is not a leaf, let F be the entry in N whose rectangle
    * FI needs least enlargement to include EI. Resolve ties by choosing the entry with the rectangle
    * of smallest area.
-   * <p>
+   *
    * CL4. [Descend until a leaf is reached]. Set N to be the child node pointed to by Fp and repeated from CL2.
    *
    * @param node  - current node to evaluate
@@ -198,14 +198,14 @@ public class RTree
 
   /**
    * This description is from the original paper.
-   * <p>
+   *
    * AT1. [Initialize]. Set N=L. If L was split previously, set NN to be the resulting second node.
-   * <p>
+   *
    * AT2. [Check if done]. If N is the root, stop.
-   * <p>
+   *
    * AT3. [Adjust covering rectangle in parent entry]. Let P be the parent node of N, and let Ev(N)I be N's entry in P.
    * Adjust Ev(N)I so that it tightly encloses all entry rectangles in N.
-   * <p>
+   *
    * AT4. [Propagate node split upward]. If N has a partner NN resulting from an earlier split, create a new entry
    * Ev(NN) with Ev(NN)p pointing to NN and Ev(NN)I enclosing all rectangles in NN. Add Ev(NN) to p is there is room.
    * Otherwise, invoke {@link SplitStrategy} split to product p and pp containing Ev(NN) and all p's old entries.

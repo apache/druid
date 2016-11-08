@@ -34,7 +34,7 @@ public interface MutableBitmap extends ImmutableBitmap
   /**
    * Compute the bitwise-or of this bitmap with another bitmap. The current
    * bitmap is modified whereas the other bitmap is left intact.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param mutableBitmap other bitmap
@@ -44,7 +44,7 @@ public interface MutableBitmap extends ImmutableBitmap
   /**
    * Compute the bitwise-and of this bitmap with another bitmap. The current
    * bitmap is modified whereas the other bitmap is left intact.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param mutableBitmap other bitmap
@@ -55,7 +55,7 @@ public interface MutableBitmap extends ImmutableBitmap
   /**
    * Compute the bitwise-xor of this bitmap with another bitmap. The current
    * bitmap is modified whereas the other bitmap is left intact.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param mutableBitmap other bitmap
@@ -65,7 +65,7 @@ public interface MutableBitmap extends ImmutableBitmap
   /**
    * Compute the bitwise-andNot of this bitmap with another bitmap. The current
    * bitmap is modified whereas the other bitmap is left intact.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param mutableBitmap other bitmap
@@ -100,7 +100,7 @@ public interface MutableBitmap extends ImmutableBitmap
    * Write out a serialized (Immutable) version of the bitmap to the ByteBuffer. We preprend
    * the serialized bitmap with a 4-byte int indicating the size in bytes. Thus
    * getSizeInBytes() + 4 bytes are written.
-   * <p>
+   *
    * (These 4 bytes are required by ConciseSet but not by RoaringBitmap.
    * Nevertheless, we always write them for the sake of simplicity, even if it
    * wastes 4 bytes in some instances.)

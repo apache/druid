@@ -57,7 +57,7 @@ public interface ImmutableBitmap
 
   /**
    * Compute the bitwise-or of this bitmap with another bitmap. A new bitmap is generated.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param otherBitmap other bitmap
@@ -66,7 +66,7 @@ public interface ImmutableBitmap
 
   /**
    * Compute the bitwise-and of this bitmap with another bitmap. A new bitmap is generated.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param otherBitmap other bitmap
@@ -75,7 +75,7 @@ public interface ImmutableBitmap
 
   /**
    * Compute the bitwise-andNot of this bitmap with another bitmap. A new bitmap is generated.
-   * <p>
+   *
    * Note that the other bitmap should be of the same class instance.
    *
    * @param otherBitmap other bitmap

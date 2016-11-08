@@ -36,7 +36,7 @@ import java.util.Iterator;
  * 2 + numDims * Floats.BYTES to 2 + 2 * numDims * Floats.BYTES : maxCoordinates
  * concise set
  * rest (children) : Every 4 bytes is storing an offset representing the position of a child.
- * <p>
+ *
  * The child offset is an offset from the initialOffset
  */
 public class ImmutableNode

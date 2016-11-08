@@ -50,15 +50,15 @@ public abstract class GutmanSplitStrategy implements SplitStrategy
 
   /**
    * This algorithm is from the original paper.
-   * <p>
+   *
    * Algorithm Split. Divide a set of M+1 index entries into two groups.
-   * <p>
+   *
    * S1. [Pick first entry for each group]. Apply Algorithm {@link #pickSeeds(java.util.List)} to choose
    * two entries to be the first elements of the groups. Assign each to a group.
-   * <p>
+   *
    * S2. [Check if done]. If all entries have been assigned, stop. If one group has so few entries that all the rest
    * must be assigned to it in order for it to have the minimum number m, assign them and stop.
-   * <p>
+   *
    * S3. [Select entry to assign]. Invoke Algorithm {@link #pickNext(java.util.List, Node[])}
    * to choose the next entry to assign. Add it to the group whose covering rectangle will have to be enlarged least to
    * accommodate it. Resolve ties by adding the entry to the group smaller area, then to the one with fewer entries, then

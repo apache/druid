@@ -84,7 +84,7 @@ public class PolygonBound extends RectangularBound
    * abscissa[i] is the horizontal coordinate for the i'th corner of the polygon,
    * and ordinate[i] is the vertical coordinate for the i'th corner.
    * The polygon must have more than 2 corners, so the length of abscissa or ordinate must be equal or greater than 3.
-   * <p>
+   *
    * if the polygon is a rectangular, which corners are {0.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}, {1.0, 0.0},
    * the abscissa should be {0.0, 0.0, 1.0, 1.0} and ordinate should be {0.0, 1.0, 1.0, 0.0}
    */

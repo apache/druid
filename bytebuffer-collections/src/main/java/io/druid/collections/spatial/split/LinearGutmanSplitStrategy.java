@@ -35,15 +35,15 @@ public class LinearGutmanSplitStrategy extends GutmanSplitStrategy
 
   /**
    * This algorithm is from the original paper.
-   * <p>
+   *
    * Algorithm LinearPickSeeds. Select two entries to be the first elements of the groups.
-   * <p>
+   *
    * LPS1. [Find extreme rectangles along all dimensions]. Along each dimension, find the entry whose rectangle has
    * the highest low side, and the one with the lowest high side. Record the separation.
-   * <p>
+   *
    * LPS2. [Adjust for shape of the rectangle cluster]. Normalize the separations by dividing by the width of the
    * entire set along the corresponding dimension.
-   * <p>
+   *
    * LPS3. [Select the most extreme pair]. Choose the pair with the greatest normalized separation along any dimension.
    *
    * @param nodes - nodes to choose from
@@ -103,7 +103,7 @@ public class LinearGutmanSplitStrategy extends GutmanSplitStrategy
 
   /**
    * This algorithm is from the original paper.
-   * <p>
+   *  
    * Algorithm LinearPickNext. PickNext simply choose any of the remaining entries.
    *
    * @param nodes  - remaining nodes
