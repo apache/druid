@@ -175,6 +175,8 @@ public class GraphiteEmitter implements Emitter
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
             } else if (e instanceof SocketException) {
+              pickledGraphite.close();
+              log.info("had exception [%s] trying to re-connect to graphite server", ((SocketException) e).getMessage());
               pickledGraphite.connect();
             }
           }
