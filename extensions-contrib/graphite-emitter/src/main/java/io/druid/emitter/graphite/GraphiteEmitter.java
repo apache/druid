@@ -173,8 +173,10 @@ public class GraphiteEmitter implements Emitter
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
             } else if (e instanceof SocketException) {
+              // This is antagonistic to general Closeable contract in Java,
+              // it is needed to allow re-connection in case of the socket is closed due long period of inactivity
               pickledGraphite.close();
-              log.info("had exception [%s] trying to re-connect to graphite server", e.getMessage());
+              log.warn("Trying to re-connect to graphite server");
               pickledGraphite.connect();
             }
           }
