@@ -17,8 +17,28 @@
 * under the License.
 */
 
-package io.druid.tasklogs;
+package io.druid.indexer;
 
-public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller
+import io.druid.java.util.common.logger.Logger;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
+/**
+ * Used by ResetCluster to delete the Hadoop Working Path.
+ */
+public class HadoopWorkingDirCleaner
 {
+  private static final Logger log = new Logger(HadoopWorkingDirCleaner.class);
+
+  public static String runTask(String[] args) throws Exception
+  {
+    String workingPath = args[0];
+    log.info("Deleting indexing hadoop working path [%s].", workingPath);
+    Path p = new Path(workingPath);
+    FileSystem fs = p.getFileSystem(new Configuration());
+    fs.delete(p, true);
+
+    return null;
+  }
 }

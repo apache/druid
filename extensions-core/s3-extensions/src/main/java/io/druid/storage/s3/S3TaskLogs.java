@@ -138,4 +138,10 @@ public class S3TaskLogs implements TaskLogs
   {
     return String.format("%s/%s/log", config.getS3Prefix(), taskid);
   }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }
