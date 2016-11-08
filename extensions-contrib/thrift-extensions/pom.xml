@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ~ Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ ~ or more contributor license agreements. See the NOTICE file
+ ~ distributed with this work for additional information
+ ~ regarding copyright ownership. Metamarkets licenses this file
+ ~ to you under the Apache License, Version 2.0 (the
+ ~ "License"); you may not use this file except in compliance
+ ~ with the License. You may obtain a copy of the License at
+ ~
+ ~ http://www.apache.org/licenses/LICENSE-2.0
+ ~
+ ~ Unless required by applicable law or agreed to in writing,
+ ~ software distributed under the License is distributed on an
+ ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ ~ KIND, either express or implied. See the License for the
+ ~ specific language governing permissions and limitations
+ ~ under the License.
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <groupId>io.druid</groupId>
+    <artifactId>druid</artifactId>
+    <version>0.9.3-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.druid.extensions.contrib</groupId>
+  <artifactId>druid-thrift-extensions</artifactId>
+  <name>druid-thrift-extensions</name>
+  <description>druid-thrift-extensions</description>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>dtrott</id>
+      <url>http://maven.davidtrott.com/repository</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <profiles>
+    <profile>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <os.family>mac</os.family>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <properties>
+        <os.family>linux</os.family>
+      </properties>
+    </profile>
+  </profiles>
+
+  <properties>
+    <thrift.version>0.6.1</thrift.version>
+    <!--the default thrift binary is under version 0.6.1-->
+    <thrift.exec>${basedir}/src/main/native/${os.family}/bin/thrift</thrift.exec>
+    <elephantbird.version>4.6</elephantbird.version>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.thrift.tools</groupId>
+        <artifactId>maven-thrift-plugin</artifactId>
+        <version>0.1.10</version>
+        <configuration>
+          <thriftExecutable>${thrift.exec}</thriftExecutable>
+          <thriftSourceRoot>${basedir}/src/test/thrift</thriftSourceRoot>
+          <generator>java:private-members,hashcode</generator>
+        </configuration>
+        <executions>
+          <execution>
+            <id>thrift-test-sources</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-api</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+      <version>${thrift.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.compile.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter.elephantbird</groupId>
+      <artifactId>elephant-bird-core</artifactId>
+      <version>${elephantbird.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter.elephantbird</groupId>
+      <artifactId>elephant-bird-hadoop-compat</artifactId>
+      <version>${elephantbird.version}</version>
+    </dependency>
+    <!-- Tests -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>
