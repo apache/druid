@@ -172,6 +172,7 @@ public class GraphiteEmitter implements Emitter
             log.error(e, e.getMessage());
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
+              break;
             } else if (e instanceof SocketException) {
               // This is antagonistic to general Closeable contract in Java,
               // it is needed to allow re-connection in case of the socket is closed due long period of inactivity
