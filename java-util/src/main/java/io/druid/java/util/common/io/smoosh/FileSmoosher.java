@@ -267,7 +267,7 @@ public class FileSmoosher implements Closeable
     for (File file : fileToProcess) {
       add(file);
       if (!file.delete()) {
-        LOG.warn("Unable to delete file [%s]", file.getPath());
+        LOG.warn("Unable to delete file [%s]", file);
       }
     }
   }
@@ -294,7 +294,7 @@ public class FileSmoosher implements Closeable
       private final FileOutputStream out = new FileOutputStream(tmpFile);
       private final GatheringByteChannel channel = out.getChannel();
       private final Closer closer = Closer.create();
-      ;
+
       private int currOffset = 0;
 
       {
@@ -370,18 +370,18 @@ public class FileSmoosher implements Closeable
     if (!completedFiles.isEmpty() || !filesInProcess.isEmpty()) {
       for (File file : completedFiles) {
         if (!file.delete()) {
-          LOG.warn("Unable to delete file [%s]", file.getPath());
+          LOG.warn("Unable to delete file [%s]", file);
         }
       }
       for (File file : filesInProcess) {
         if (!file.delete()) {
-          LOG.warn("Unable to delete file [%s]", file.getPath());
+          LOG.warn("Unable to delete file [%s]", file);
         }
       }
-      throw new ISE(String.format(
-          "%d writers needs to be closed before closing smoosher.",
-          filesInProcess.size() + completedFiles.size()
-      ));
+      throw new ISE(
+          "[%d] writers in progress and [%d] completed writers needs to be closed before closing smoosher.",
+          filesInProcess.size(), completedFiles.size()
+      );
     }
 
     if (currOut != null) {
