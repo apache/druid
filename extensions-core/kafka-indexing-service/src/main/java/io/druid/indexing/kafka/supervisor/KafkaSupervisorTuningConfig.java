@@ -45,6 +45,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
+      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("workerThreads") Integer workerThreads,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
@@ -61,7 +62,8 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         indexSpec,
         buildV9Directly,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        resetOffsetAutomatically
     );
 
     this.workerThreads = workerThreads;
@@ -114,6 +116,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            ", buildV9Directly=" + getBuildV9Directly() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
+           ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", workerThreads=" + workerThreads +
            ", chatThreads=" + chatThreads +
            ", chatRetries=" + chatRetries +
