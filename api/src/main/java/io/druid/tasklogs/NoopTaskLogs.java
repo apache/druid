@@ -42,4 +42,10 @@ public class NoopTaskLogs implements TaskLogs
   {
     log.info("Not pushing logs for task: %s", taskid);
   }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Noop: No task logs are deleted.");
+  }
 }

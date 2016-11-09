@@ -58,6 +58,10 @@ public class LocalDataStorageDruidModule implements DruidModule
         binder, "druid.storage.type", Key.get(DataSegmentPusher.class), Key.get(LocalDataSegmentPusher.class)
     );
 
+    PolyBind.createChoice(
+        binder, "druid.storage.type", Key.get(DataSegmentKiller.class), Key.get(LocalDataSegmentKiller.class)
+    );
+
     PolyBind.createChoice(binder, "druid.storage.type", Key.get(DataSegmentFinder.class), null);
   }
 

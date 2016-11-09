@@ -22,7 +22,6 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.hadoop.conf.Configuration;
@@ -114,6 +113,15 @@ public class HdfsTaskLogs implements TaskLogs
   private static String mergePaths(String path1, String path2)
   {
     return path1 + (path1.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR) + path2;
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Deleting all task logs from hdfs dir [%s].", config.getDirectory());
+    Path taskLogDir = new Path(config.getDirectory());
+    FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
+    fs.delete(taskLogDir, true);
   }
 }
 
