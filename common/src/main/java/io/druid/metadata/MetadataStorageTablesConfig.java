@@ -178,4 +178,19 @@ public class MetadataStorageTablesConfig
   {
     return supervisorTable;
   }
+
+  public String getTasksTable()
+  {
+    return tasksTable;
+  }
+
+  public String getTaskLogTable()
+  {
+    return taskLogTable;
+  }
+
+  public String getTaskLockTable()
+  {
+    return taskLockTable;
+  }
 }

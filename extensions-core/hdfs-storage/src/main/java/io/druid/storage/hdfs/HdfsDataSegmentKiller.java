@@ -39,10 +39,13 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
   private final Configuration config;
 
+  private final Path storageDirectory;
+
   @Inject
-  public HdfsDataSegmentKiller(final Configuration config)
+  public HdfsDataSegmentKiller(final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
   {
     this.config = config;
+    this.storageDirectory = new Path(pusherConfig.getStorageDirectory());
   }
 
   @Override
@@ -86,6 +89,14 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Unable to kill segment");
     }
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Deleting all segment files from hdfs dir [%s].", storageDirectory.toUri().toString());
+    final FileSystem fs = storageDirectory.getFileSystem(config);
+    fs.delete(storageDirectory, true);
   }
 
   private boolean safeNonRecursiveDelete(FileSystem fs, Path path)

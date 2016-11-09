@@ -128,9 +128,15 @@ public abstract class HadoopTask extends AbstractTask
    */
   protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws MalformedURLException
   {
+    return buildClassLoader(hadoopDependencyCoordinates, toolbox.getConfig().getDefaultHadoopCoordinates());
+  }
+
+  public static ClassLoader buildClassLoader(final List<String> hadoopDependencyCoordinates,
+                                             final List<String> defaultHadoopCoordinates) throws MalformedURLException
+  {
     final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
                                                           ? hadoopDependencyCoordinates
-                                                          : toolbox.getConfig().getDefaultHadoopCoordinates();
+                                                          : defaultHadoopCoordinates;
 
     final List<URL> jobURLs = Lists.newArrayList(
         Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())

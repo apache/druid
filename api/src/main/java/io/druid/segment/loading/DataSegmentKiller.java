@@ -21,9 +21,13 @@ package io.druid.segment.loading;
 
 import io.druid.timeline.DataSegment;
 
+import java.io.IOException;
+
 /**
  */
 public interface DataSegmentKiller
 {
-  public void kill(DataSegment segments) throws SegmentLoadingException;
+  void kill(DataSegment segments) throws SegmentLoadingException;
+  void killAll() throws IOException;
+
 }

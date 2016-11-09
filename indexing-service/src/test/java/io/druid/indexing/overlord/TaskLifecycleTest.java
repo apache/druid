@@ -91,6 +91,7 @@ import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentKiller;
+import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -515,7 +516,7 @@ public class TaskLifecycleTest
         tac,
         emitter,
         dataSegmentPusher,
-        new LocalDataSegmentKiller(),
+        new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig()),
         new DataSegmentMover()
         {
           @Override

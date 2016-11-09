@@ -114,4 +114,10 @@ public class AzureTaskLogs implements TaskLogs {
   private String getTaskLogKey(String taskid) {
     return String.format("%s/%s/log", config.getPrefix(), taskid);
   }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }

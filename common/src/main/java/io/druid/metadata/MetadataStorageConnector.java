@@ -53,4 +53,6 @@ public interface MetadataStorageConnector
   void createAuditTable();
 
   void createSupervisorsTable();
+
+  void deleteAllRecords(String tableName);
 }

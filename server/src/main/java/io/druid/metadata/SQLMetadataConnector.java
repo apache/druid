@@ -628,4 +628,31 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
   }
+
+  public void deleteAllRecords(final String tableName)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws Exception
+            {
+              if (tableExists(handle, tableName)) {
+                log.info("Deleting all records from table[%s]", tableName);
+                final Batch batch = handle.createBatch();
+                batch.add("DELETE FROM " + tableName);
+                batch.execute();
+              } else {
+                log.info("Table[%s] does not exit.", tableName);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception while deleting records from table");
+    }
+  }
 }

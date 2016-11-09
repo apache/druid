@@ -20,10 +20,10 @@
 package io.druid.segment.loading;
 
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.MapUtils;
 import io.druid.timeline.DataSegment;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -58,4 +58,9 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
     return loader;
   }
 
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }

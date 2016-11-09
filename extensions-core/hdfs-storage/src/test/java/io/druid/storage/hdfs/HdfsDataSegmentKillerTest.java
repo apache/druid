@@ -41,7 +41,17 @@ public class HdfsDataSegmentKillerTest
   public void testKill() throws Exception
   {
     Configuration config = new Configuration();
-    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(config);
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "/tmp";
+          }
+        }
+    );
 
     FileSystem fs = FileSystem.get(config);
 
@@ -99,7 +109,17 @@ public class HdfsDataSegmentKillerTest
   public void testKillNonExistingSegment() throws Exception
   {
     Configuration config = new Configuration();
-    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(config);
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "/tmp";
+          }
+        }
+    );
     killer.kill(getSegmentWithPath(new Path("/xxx/", "index.zip").toString()));
   }
 

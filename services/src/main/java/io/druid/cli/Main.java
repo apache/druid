@@ -73,7 +73,8 @@ public class Main
                PullDependencies.class,
                CreateTables.class,
                InsertSegment.class,
-               DumpSegment.class
+               DumpSegment.class,
+               ResetCluster.class
            );
 
     builder.withGroup("index")
