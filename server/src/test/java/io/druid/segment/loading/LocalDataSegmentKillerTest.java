@@ -41,7 +41,7 @@ public class LocalDataSegmentKillerTest
   @Test
   public void testKill() throws Exception
   {
-    LocalDataSegmentKiller  killer = new LocalDataSegmentKiller();
+    LocalDataSegmentKiller  killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
 
     // Create following segments and then delete them in this order and assert directory deletions
     // /tmp/dataSource/interval1/v1/0/index.zip
@@ -49,7 +49,7 @@ public class LocalDataSegmentKillerTest
     // /tmp/dataSource/interval1/v2/0/index.zip
     // /tmp/dataSource/interval2/v1/0/index.zip
 
-    File dataSourceDir = temporaryFolder.newFolder();
+    final File dataSourceDir = temporaryFolder.newFolder();
 
     File interval1Dir = new File(dataSourceDir, "interval1");
     File version11Dir = new File(interval1Dir, "v1");
