@@ -22,8 +22,9 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import io.druid.query.Result;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
 
 public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
@@ -44,12 +45,12 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   @SuppressWarnings("unchecked")
   public Result<TopNResultValue> apply(Cursor cursor)
   {
-    final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+    final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
         query.getDimensionSpec().getDimension(),
         cursor,
         null
     );
-    final Object dimSelector = queryHelper.getColumnValueSelector(query.getDimensionSpec(), cursor);
+    final ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(query.getDimensionSpec(), cursor);
     final QueryDimensionInfo dimInfo = new QueryDimensionInfo(query.getDimensionSpec(), queryHelper, dimSelector, 0);
     if (dimSelector == null) {
       return null;

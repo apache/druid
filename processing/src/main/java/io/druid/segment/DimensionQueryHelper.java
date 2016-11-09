@@ -31,15 +31,26 @@ import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
-import org.apache.commons.lang.mutable.MutableInt;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
-public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType>, EncodedTypeArray, ActualType extends Comparable<ActualType>>
+/**
+ * Query related interface.
+ *
+ * Contains a collection of query processing methods for functionality that is dependent on
+ * the type of a dimension.
+ *
+ * Each DimensionQueryHelper is associated with a single dimension.
+ *
+ * @param <ActualType> The type of this dimension's values
+ * @param <RowValuesType> The type of the row values object for this dimension
+ * @param <ValueSelectorType> The type of the row value selector (e.g. DimensionSelector) for this dimension
+ */
+public interface DimensionQueryHelper<ActualType extends Comparable<ActualType>, RowValuesType, ValueSelectorType extends ColumnValueSelector>
 {
   /**
    * Get a typed column value selector (DimensionSelector, LongColumnSelector, etc.) from a ColumnSelectorFactory.
@@ -47,7 +58,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param columnSelectorFactory Column value selector provider
    * @return Column value selector for the dimension specified by dimensionSpec.
    */
-  public Object getColumnValueSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory columnSelectorFactory);
+  ValueSelectorType getColumnValueSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory columnSelectorFactory);
 
 
   /**
@@ -61,7 +72,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param rowValues The row object to return the size of
    * @return size of the row object
    */
-  public int getRowSize(Object rowValues);
+  int getRowSize(RowValuesType rowValues);
 
 
   /**
@@ -75,10 +86,10 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param valueSelector The dimension value selector object
    * @return Cardinality of the dimension value selector object, -1 if cardinality is not available.
    */
-  public int getCardinality(Object valueSelector);
+  int getCardinality(ValueSelectorType valueSelector);
 
 
-  /** Functions for QueryableIndexStorageAdapter, FilteredAggregatorFactory **/
+  // Functions for QueryableIndexStorageAdapter, FilteredAggregatorFactory
   /**
    * Create a single value ValueMatcher, used for filtering by QueryableIndexStorageAdapter and FilteredAggregatorFactory.
    *
@@ -86,7 +97,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param value Value to match against
    * @return ValueMatcher that matches on 'value'
    */
-  public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, Comparable value);
+  ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, ActualType value);
 
 
   /**
@@ -96,7 +107,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param predicateFactory A DruidPredicateFactory that provides the filter predicates to be matched
    * @return A ValueMatcher that applies the predicate for this DimensionQueryHelper's value type from the predicateFactory
    */
-  public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory);
+  ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory);
 
 
   /**
@@ -107,7 +118,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param dimSelector Dimension value selector
    * @param hasher Hasher used for cardinality aggregator calculations
    */
-  public void hashRow(Object dimSelector, Hasher hasher);
+  void hashRow(ValueSelectorType dimSelector, Hasher hasher);
 
 
   /**
@@ -117,7 +128,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param dimSelector Dimension value selector
    * @param collector HLL collector used for cardinality aggregator calculations
    */
-  public void hashValues(Object dimSelector, HyperLogLogCollector collector);
+  void hashValues(ValueSelectorType dimSelector, HyperLogLogCollector collector);
 
 
   /**
@@ -129,7 +140,26 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    *
    * @return size, in bytes, of this dimension's values in the grouping key.
    */
-  public int getGroupingKeySize();
+  int getGroupingKeySize();
+
+
+  /**
+   * Used by GroupByEngine.
+   *
+   * A grouping key contains a concatenation of byte[] representations of dimension values.
+   *
+   * When comparing two grouping keys, the individual dimension values will be compared using this method
+   * provided by the query helper.
+   *
+   * @param b1 ByteBuffer containing the first comparison value
+   * @param pos1 Offset within b1 of the first comparison value
+   * @param b2 ByteBuffer containing the second comparison value
+   * @param pos2 Offset within b2 of the second comparison value
+   * @return A negative value if the value at pos1 of b1 is < than the value at pos2 of b2
+   *         0 if the two values are equal
+   *         A positive value if the first value is > than the latter
+   */
+  int compareGroupingKeys(ByteBuffer b1, int pos1, ByteBuffer b2, int pos2);
 
 
   /**
@@ -142,7 +172,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    *
    * @return A comparator suitable for comparing byte representations of this dimension's type of values.
    */
-  public Comparator<byte[]> getGroupingKeyByteComparator();
+  Comparator<byte[]> getGroupingKeyByteComparator();
 
 
   /**
@@ -159,11 +189,11 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param dimSelector Dimension value selector, used for value lookups if needed
    * @param keyBuffer Grouping key, already positioned at this dimension's offset
    */
-  public void readDimValueFromGroupingKey(
-      Map<String, Object> theEvent,
+  void processDimValueFromGroupingKey(
       String outputName,
-      Object dimSelector,
-      ByteBuffer keyBuffer
+      ValueSelectorType dimSelector,
+      ByteBuffer keyBuffer,
+      Map<String, Object> theEvent
   );
 
 
@@ -190,8 +220,8 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param updateValuesFn Function provided by GroupByEngine for updateValues() recursion
    * @return Return the result of calling updateValuesFn on the updated grouping key
    */
-  public List<ByteBuffer> addDimValuesToGroupingKey(
-      Object dimSelector,
+  List<ByteBuffer> addDimValuesToGroupingKey(
+      ValueSelectorType dimSelector,
       ByteBuffer key,
       Function<ByteBuffer, List<ByteBuffer>> updateValuesFn
   );
@@ -203,22 +233,21 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param dimSelector Dimension value selector
    * @return Current row
    */
-  public Object getRowFromDimSelector(Object dimSelector);
+  RowValuesType getRowFromDimSelector(ValueSelectorType dimSelector);
 
 
   /**
    * Used by GroupByEngineV2.
    *
-   * Read the first value within a row values object (IndexedInts, IndexedLongs, etc.) and add that value
-   * to the keyBuffer at keyBufferPosition, and return the size of the row values object.
+   * Read the first value within a row values object (IndexedInts, IndexedLongs, etc.) and write that value
+   * to the keyBuffer at keyBufferPosition. If rowSize is 0, write GROUP_BY_MISSING_VALUE instead.
    *
    * @param valuesObj row values object
    * @param keyBuffer grouping key
    * @param keyBufferPosition offset within grouping key
-   * @return size of the row values object
    */
-  public int initializeGroupingKeyV2Dimension(
-      final Object valuesObj,
+  void initializeGroupingKeyV2Dimension(
+      final RowValuesType valuesObj,
       final ByteBuffer keyBuffer,
       final int keyBufferPosition
   );
@@ -227,15 +256,15 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
   /**
    * Used by GroupByEngineV2.
    *
-   * Read the value at rowValueIdx from a row values object and add that value to the keyBuffer at keyBufferPosition.
+   * Read the value at rowValueIdx from a row values object and write that value to the keyBuffer at keyBufferPosition.
    *
    * @param values row values object
    * @param rowValueIdx index of the value to read
    * @param keyBuffer grouping key
    * @param keyBufferPosition offset within grouping key
    */
-  public void addValueToGroupingKeyV2(
-      Object values,
+  void addValueToGroupingKeyV2(
+      RowValuesType values,
       int rowValueIdx,
       ByteBuffer keyBuffer,
       final int keyBufferPosition
@@ -260,10 +289,10 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param resultMap result map for the group by query being served
    * @param key grouping key
    */
-  public void readValueFromGroupingKeyV2(
+  void processValueFromGroupingKeyV2(
       QueryDimensionInfo dimInfo,
-      Map<String, Object> resultMap,
-      ByteBuffer key
+      ByteBuffer key,
+      Map<String, Object> resultMap
   );
 
 
@@ -282,7 +311,7 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param capabilities Object indicating if dimension values are sorted
    * @return an Aggregator[][] for integer-valued dimensions, null otherwise
    */
-  public Aggregator[][] getDimExtractionRowSelector(TopNParams params, TopNQuery query, Capabilities capabilities);
+  Aggregator[][] getDimExtractionRowSelector(TopNParams params, TopNQuery query, Capabilities capabilities);
 
 
   /**
@@ -306,8 +335,8 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param cursor Cursor for the segment being queried
    * @param query The TopN query being served.
    */
-  public void dimExtractionScanAndAggregate(
-      Object selector,
+  void dimExtractionScanAndAggregate(
+      ValueSelectorType selector,
       Aggregator[][] rowSelector,
       Map<Comparable, Aggregator[]> aggregatesStore,
       Cursor cursor,
@@ -326,9 +355,9 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param dimSelector Dimension value selector
    * @param resultMap Output map of the select query being served
    */
-  public void addRowValuesToSelectResult(
+  void addRowValuesToSelectResult(
       String outputName,
-      Object dimSelector,
+      ValueSelectorType dimSelector,
       Map<String, Object> resultMap
   );
 
@@ -349,11 +378,11 @@ public interface DimensionQueryHelper<EncodedType extends Comparable<EncodedType
    * @param set The result set of the search query
    * @param limit The limit of the search query
    */
-  public void updateSearchResultSet(
+  void updateSearchResultSet(
       String outputName,
-      Object dimSelector,
+      ValueSelectorType dimSelector,
       SearchQuerySpec searchQuerySpec,
-      TreeMap<SearchHit, MutableInt> set,
-      int limit
+      int limit,
+      Object2IntRBTreeMap<SearchHit> set
   );
 }

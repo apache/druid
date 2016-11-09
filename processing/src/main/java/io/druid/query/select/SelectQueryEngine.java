@@ -32,8 +32,9 @@ import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -105,16 +106,16 @@ public class SelectQueryEngine
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-            final Map<String, QueryDimensionInfo> dimInfoMap = Maps.newLinkedHashMap();
+            final List<QueryDimensionInfo> dimInfoList = Lists.newArrayList();
             for (DimensionSpec dimSpec : dims) {
-              final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+              final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
                   dimSpec.getDimension(),
                   cursor,
                   Lists.<String>newArrayList(adapter.getAvailableDimensions())
               );
-              final Object dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+              final ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
               final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
-              dimInfoMap.put(dimSpec.getOutputName(), dimInfo);
+              dimInfoList.add(dimInfo);
               builder.addDimension(dimSpec.getOutputName());
             }
 
@@ -134,9 +135,7 @@ public class SelectQueryEngine
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
-              for (Map.Entry<String, QueryDimensionInfo> entry : dimInfoMap.entrySet()) {
-                final String dim = entry.getKey();
-                final QueryDimensionInfo dimInfo = entry.getValue();
+              for (QueryDimensionInfo dimInfo : dimInfoList) {
                 dimInfo.queryHelper.addRowValuesToSelectResult(dimInfo.outputName, dimInfo.selector, theEvent);
               }
 

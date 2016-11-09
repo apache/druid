@@ -21,17 +21,15 @@ package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
 import java.util.List;
 
-public final class DimensionHandlerUtil
+public final class DimensionHandlerUtils
 {
-  private DimensionHandlerUtil() {}
+  private DimensionHandlerUtils() {}
 
   public static DimensionHandler getHandlerFromCapabilities(
       String dimensionName,
@@ -39,53 +37,38 @@ public final class DimensionHandlerUtil
       MultiValueHandling multiValueHandling
   )
   {
-    DimensionHandler handler = null;
     if (capabilities == null) {
-      return null;
+      return new StringDimensionHandler(dimensionName, multiValueHandling);
     }
 
     if (dimensionName.equals(Column.TIME_COLUMN_NAME)) {
       return new StringDimensionHandler(Column.TIME_COLUMN_NAME, MultiValueHandling.ARRAY);
     }
 
+    multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
+
     if (capabilities.getType() == ValueType.STRING) {
       if (!capabilities.isDictionaryEncoded() || !capabilities.hasBitmapIndexes()) {
         throw new IAE("String column must have dictionary encoding and bitmap index.");
       }
-      // use default behavior
-      multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
-      handler = new StringDimensionHandler(dimensionName, multiValueHandling);
-    }
-    if (capabilities.getType() == ValueType.LONG) {
-      //handler = new LongDimensionHandler(dimensionName);
+      return new StringDimensionHandler(dimensionName, multiValueHandling);
     }
 
-    if (capabilities.getType() == ValueType.FLOAT) {
-      //handler = new FloatDimensionHandler(dimensionName);
-    }
-
-    if (handler == null) {
-      //return new StringDimensionHandler(dimensionName);
-      //throw new IAE("Could not create handler from invalid column type: " + capabilities.getType());
-    }
-    return handler;
+    // Return a StringDimensionHandler by default (null columns will be treated as String typed)
+    return new StringDimensionHandler(dimensionName, multiValueHandling);
   }
 
   public static DimensionQueryHelper makeQueryHelper(String dimName, ColumnSelectorFactory columnSelectorFactory, List<String> availableDimensions)
   {
     final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dimName, capabilities, null);
-    // treat null columns as strings
-    if (handler == null) {
-      handler = new StringDimensionHandler(dimName, null);
-    }
+    DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null);
+
     // treat metrics as null for now
     if (availableDimensions != null) {
-      if (!Lists.newArrayList(availableDimensions).contains(dimName)) {
+      if (availableDimensions.contains(dimName)) {
         handler = new StringDimensionHandler(dimName, null);
       }
     }
-    final DimensionQueryHelper queryHelper = handler.makeQueryHelper();
-    return queryHelper;
+    return handler.makeQueryHelper();
   }
 }

@@ -42,7 +42,7 @@ public interface DimensionMergerLegacy<EncodedTypeArray> extends DimensionMerger
    * @param valueEncodingFile Destination file
    * @throws IOException
    */
-  public void writeValueMetadataToFile(FileOutputSupplier valueEncodingFile) throws IOException;
+  void writeValueMetadataToFile(FileOutputSupplier valueEncodingFile) throws IOException;
 
 
   /**
@@ -50,7 +50,7 @@ public interface DimensionMergerLegacy<EncodedTypeArray> extends DimensionMerger
    * @param rowValueOut Destination file
    * @throws IOException
    */
-  public void writeRowValuesToFile(FileOutputSupplier rowValueOut) throws IOException;
+  void writeRowValuesToFile(FileOutputSupplier rowValueOut) throws IOException;
 
 
   /**
@@ -59,11 +59,11 @@ public interface DimensionMergerLegacy<EncodedTypeArray> extends DimensionMerger
    * @param spatialOut Destination file for spatial indexes
    * @throws IOException
    */
-  public void writeIndexesToFiles(
+  void writeIndexesToFiles(
       ByteSink invertedOut,
       OutputSupplier<FileOutputStream> spatialOut
   ) throws IOException;
 
 
-  public File makeDimFile() throws IOException;
+  File makeDimFile() throws IOException;
 }

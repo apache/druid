@@ -20,9 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -37,7 +35,6 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
@@ -1044,7 +1041,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
           dimension,
           cursor,
           Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
@@ -1061,7 +1058,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
           dimension,
           cursor,
           Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())

@@ -40,7 +40,7 @@ public interface ValueMatcherFactory
    * An implementation of this method should be able to handle dimensions of various types.
    *
    * @param dimension The dimension to filter.
-   * @param value     The value to match against.
+   * @param value     The value to match against, represented as a String.
    *
    * @return An object that matches row values on the provided value.
    */

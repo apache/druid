@@ -24,7 +24,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
@@ -48,8 +47,9 @@ import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
@@ -59,13 +59,12 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.filter.Filters;
-import org.apache.commons.lang.mutable.MutableInt;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  */
@@ -81,12 +80,12 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
   private QueryDimensionInfo getDimInfoFromSpec(DimensionSpec dimSpec, StorageAdapter adapter, Cursor cursor)
   {
-    final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+    final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
         dimSpec.getDimension(),
         cursor,
         Lists.<String>newArrayList(adapter.getAvailableDimensions())
     );
-    final Object dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+    final ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
     final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
     return dimInfo;
   }
@@ -106,7 +105,6 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     final List<DimensionSpec> dimensions = query.getDimensions();
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();
-    final boolean descending = query.isDescending();
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     if (intervals.size() != 1) {
       throw new IAE("Should only have one interval, got[%s]", intervals);
@@ -118,115 +116,23 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
     final StorageAdapter storageAdapter = segment.asStorageAdapter();
 
-    // Split dimension list into bitmap-supporting list and non-bitmap supporting list
-    Iterable<DimensionSpec> dimsToSearch;
-    if (dimensions == null || dimensions.isEmpty()) {
-      dimsToSearch = Iterables.transform(storageAdapter.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
-    } else {
-      dimsToSearch = dimensions;
-    }
+    final List<DimensionSpec> bitmapDims = Lists.newArrayList();
+    final List<DimensionSpec> nonBitmapDims = Lists.newArrayList();
+    partitionDimensionList(index, storageAdapter, dimensions, bitmapDims, nonBitmapDims);
 
-    final List<DimensionSpec> bitmapDims;
-    final List<DimensionSpec> nonbitmapDims;
-    if (index != null) {
-      bitmapDims = Lists.newArrayList();
-      nonbitmapDims = Lists.newArrayList();
-      for (DimensionSpec spec : dimsToSearch) {
-        if (spec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
-          bitmapDims.add(spec);
-          continue;
-        }
-        ColumnCapabilities capabilities = storageAdapter.getColumnCapabilities(spec.getDimension());
-        if (capabilities == null) {
-          continue;
-        }
-
-        if (capabilities.hasBitmapIndexes()) {
-          bitmapDims.add(spec);
-        } else {
-          nonbitmapDims.add(spec);
-        }
-      }
-    } else {
-      // no QueryableIndex available, so nothing has bitmaps
-      bitmapDims = null;
-      nonbitmapDims = Lists.newArrayList(dimsToSearch);
-    }
+    final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<SearchHit>(query.getSort().getComparator());
+    retVal.defaultReturnValue(0);
 
     // Get results from bitmap supporting dims first
-    if (bitmapDims != null) {
-      final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
-      final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
-
-      final ImmutableBitmap baseFilter =
-          filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
-
-      ImmutableBitmap timeFilteredBitmap;
-      if (!interval.contains(segment.getDataInterval())) {
-        MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-        final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-        try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
-
-          int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
-          int endIndex = Math.min(
-              timeValues.length() - 1,
-              getStartIndexOfTime(timeValues, interval.getEndMillis(), false)
-          );
-
-          for (int i = startIndex; i <= endIndex; i++) {
-            timeBitmap.add(i);
-          }
-
-          final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
-          timeFilteredBitmap =
-              (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
-        }
-      } else {
-        timeFilteredBitmap = baseFilter;
-      }
-
-      for (DimensionSpec dimension : bitmapDims) {
-        final Column column = index.getColumn(dimension.getDimension());
-        if (column == null) {
-          continue;
-        }
-
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
-        ExtractionFn extractionFn = dimension.getExtractionFn();
-        if (extractionFn == null) {
-          extractionFn = IdentityExtractionFn.getInstance();
-        }
-        if (bitmapIndex != null) {
-          for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-            String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
-            if (!searchQuerySpec.accept(dimVal)) {
-              continue;
-            }
-            ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-            if (timeFilteredBitmap != null) {
-              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
-            }
-            if (bitmap.size() > 0) {
-              MutableInt counter = new MutableInt(bitmap.size());
-              MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
-              if (prev != null) {
-                counter.add(prev.intValue());
-              }
-              if (retVal.size() >= limit) {
-                return makeReturnResult(limit, retVal);
-              }
-            }
-          }
-        }
-      }
-
-      if (nonbitmapDims.size() == 0 || retVal.size() >= limit) {
+    if (!bitmapDims.isEmpty()) {
+      processBitmapDims(index, filter, interval, bitmapDims, searchQuerySpec, limit, retVal);
+      // If there are no non-bitmap dims to search, or we've already hit the result limit, just return now
+      if (nonBitmapDims.size() == 0 || retVal.size() >= limit) {
         return makeReturnResult(limit, retVal);
       }
     }
 
     final StorageAdapter adapter = segment.asStorageAdapter();
-
     if (adapter == null) {
       log.makeAlert("WTF!? Unable to process search query on segment.")
          .addData("segment", segment.getIdentifier())
@@ -235,43 +141,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), descending);
-
-    final TreeMap<SearchHit, MutableInt> retVal = cursors.accumulate(
-        Maps.<SearchHit, SearchHit, MutableInt>newTreeMap(query.getSort().getComparator()),
-        new Accumulator<TreeMap<SearchHit, MutableInt>, Cursor>()
-        {
-          @Override
-          public TreeMap<SearchHit, MutableInt> accumulate(TreeMap<SearchHit, MutableInt> set, Cursor cursor)
-          {
-            if (set.size() >= limit) {
-              return set;
-            }
-
-            Map<String, QueryDimensionInfo> dimInfoMap = Maps.newLinkedHashMap();
-
-            for (DimensionSpec dim : nonbitmapDims) {
-              dimInfoMap.put(dim.getOutputName(), getDimInfoFromSpec(dim, adapter, cursor));
-            }
-            while (!cursor.isDone()) {
-              for (Map.Entry<String, QueryDimensionInfo> entry : dimInfoMap.entrySet()) {
-                final QueryDimensionInfo dimInfo = entry.getValue();
-                dimInfo.queryHelper.updateSearchResultSet(dimInfo.outputName, dimInfo.selector, searchQuerySpec, set, limit);
-
-                if (set.size() >= limit) {
-                  return set;
-                }
-              }
-
-              cursor.advance();
-            }
-
-            return set;
-          }
-        }
-    );
-
+    processNonBitmapDims(query, adapter, filter, interval, limit, nonBitmapDims, searchQuerySpec, retVal);
     return makeReturnResult(limit, retVal);
   }
 
@@ -306,13 +176,15 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   }
 
   private Sequence<Result<SearchResultValue>> makeReturnResult(
-      int limit, TreeMap<SearchHit, MutableInt> retVal)
+      int limit,
+      Object2IntRBTreeMap<SearchHit> retVal
+  )
   {
     Iterable<SearchHit> source = Iterables.transform(
-        retVal.entrySet(), new Function<Map.Entry<SearchHit, MutableInt>, SearchHit>()
+        retVal.entrySet(), new Function<Map.Entry<SearchHit, Integer>, SearchHit>()
         {
           @Override
-          public SearchHit apply(Map.Entry<SearchHit, MutableInt> input)
+          public SearchHit apply(Map.Entry<SearchHit, Integer> input)
           {
             SearchHit hit = input.getKey();
             return new SearchHit(hit.getDimension(), hit.getValue(), input.getValue().intValue());
@@ -330,4 +202,171 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         )
     );
   }
+
+  // Split dimension list into bitmap-supporting list and non-bitmap supporting list
+  private void partitionDimensionList(
+      QueryableIndex index,
+      StorageAdapter storageAdapter,
+      List<DimensionSpec> dimensions,
+      List<DimensionSpec> bitmapDims,
+      List<DimensionSpec> nonBitmapDims
+  )
+  {
+    List<DimensionSpec> dimsToSearch;
+    if (dimensions == null || dimensions.isEmpty()) {
+      dimsToSearch = Lists.newArrayList(Iterables.transform(
+          storageAdapter.getAvailableDimensions(),
+          Druids.DIMENSION_IDENTITY
+      ));
+    } else {
+      dimsToSearch = dimensions;
+    }
+
+    if (index != null) {
+      for (DimensionSpec spec : dimsToSearch) {
+        if (spec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+          bitmapDims.add(spec);
+          continue;
+        }
+        ColumnCapabilities capabilities = storageAdapter.getColumnCapabilities(spec.getDimension());
+        if (capabilities == null) {
+          continue;
+        }
+
+        if (capabilities.hasBitmapIndexes()) {
+          bitmapDims.add(spec);
+        } else {
+          nonBitmapDims.add(spec);
+        }
+      }
+    } else {
+      // no QueryableIndex available, so nothing has bitmaps
+      nonBitmapDims.addAll(dimsToSearch);
+    }
+  }
+
+  private void processNonBitmapDims(
+      SearchQuery query,
+      final StorageAdapter adapter,
+      Filter filter,
+      Interval interval,
+      final int limit,
+      final List<DimensionSpec> nonBitmapDims,
+      final SearchQuerySpec searchQuerySpec,
+      final Object2IntRBTreeMap<SearchHit> retVal
+  )
+  {
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), query.isDescending());
+
+    cursors.accumulate(
+        retVal,
+        new Accumulator<Object2IntRBTreeMap<SearchHit>, Cursor>()
+        {
+          @Override
+          public Object2IntRBTreeMap<SearchHit> accumulate(Object2IntRBTreeMap<SearchHit> set, Cursor cursor)
+          {
+            if (set.size() >= limit) {
+              return set;
+            }
+
+            List<QueryDimensionInfo> dimInfoList = Lists.newArrayList();
+            for (DimensionSpec dim : nonBitmapDims) {
+              dimInfoList.add(getDimInfoFromSpec(dim, adapter, cursor));
+            }
+
+            while (!cursor.isDone()) {
+              for (QueryDimensionInfo dimInfo : dimInfoList) {
+                dimInfo.queryHelper.updateSearchResultSet(
+                    dimInfo.outputName,
+                    dimInfo.selector,
+                    searchQuerySpec,
+                    limit,
+                    set
+                );
+
+                if (set.size() >= limit) {
+                  return set;
+                }
+              }
+
+              cursor.advance();
+            }
+
+            return set;
+          }
+        }
+    );
+  }
+
+  private void processBitmapDims(
+      QueryableIndex index,
+      Filter filter,
+      Interval interval,
+      List<DimensionSpec> bitmapDims,
+      SearchQuerySpec searchQuerySpec,
+      int limit,
+      final Object2IntRBTreeMap<SearchHit> retVal
+  )
+  {
+    final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+
+    final ImmutableBitmap baseFilter =
+        filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
+
+    ImmutableBitmap timeFilteredBitmap;
+    if (!interval.contains(segment.getDataInterval())) {
+      MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
+      final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
+      try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
+
+        int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
+        int endIndex = Math.min(
+            timeValues.length() - 1,
+            getStartIndexOfTime(timeValues, interval.getEndMillis(), false)
+        );
+
+        for (int i = startIndex; i <= endIndex; i++) {
+          timeBitmap.add(i);
+        }
+
+        final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
+        timeFilteredBitmap =
+            (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
+      }
+    } else {
+      timeFilteredBitmap = baseFilter;
+    }
+
+    for (DimensionSpec dimension : bitmapDims) {
+      final Column column = index.getColumn(dimension.getDimension());
+      if (column == null) {
+        continue;
+      }
+
+      final BitmapIndex bitmapIndex = column.getBitmapIndex();
+      ExtractionFn extractionFn = dimension.getExtractionFn();
+      if (extractionFn == null) {
+        extractionFn = IdentityExtractionFn.getInstance();
+      }
+      if (bitmapIndex != null) {
+        for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
+          String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
+          if (!searchQuerySpec.accept(dimVal)) {
+            continue;
+          }
+          ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+          if (timeFilteredBitmap != null) {
+            bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
+          }
+          if (bitmap.size() > 0) {
+            retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
+            if (retVal.size() >= limit) {
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+
 }

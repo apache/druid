@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.google.common.hash.Hasher;
 import com.google.common.primitives.Ints;
 import io.druid.query.aggregation.Aggregator;
@@ -40,20 +39,23 @@ import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.IndexedInts;
-import org.apache.commons.lang.mutable.MutableInt;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
-public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer, int[], String>
+public class StringDimensionQueryHelper implements DimensionQueryHelper<String, IndexedInts, DimensionSelector>
 {
   private static final int GROUP_BY_MISSING_VALUE = -1;
+  public static final String CARDINALITY_AGG_NULL_STRING = "\u0000";
+  public static final char CARDINALITY_AGG_SEPARATOR = '\u0001';
   private final String dimensionName;
 
   private static Comparator<byte[]> GROUPING_KEY_COMPARATOR = new Comparator<byte[]>()
@@ -67,50 +69,43 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
     }
   };
 
-  private static boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
   public StringDimensionQueryHelper(String dimensionName) {
     this.dimensionName = dimensionName;
   }
 
   @Override
-  public Object getColumnValueSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory columnSelectorFactory)
+  public DimensionSelector getColumnValueSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory columnSelectorFactory)
   {
     return columnSelectorFactory.makeDimensionSelector(dimensionSpec);
   }
 
   @Override
-  public int getRowSize(Object rowValues)
+  public int getRowSize(IndexedInts rowValues)
   {
-    return ((IndexedInts) rowValues).size();
+    return rowValues.size();
   }
 
   @Override
-  public int getCardinality(Object valueSelector)
+  public int getCardinality(DimensionSelector valueSelector)
   {
-    return ((DimensionSelector) valueSelector).getValueCardinality();
+    return valueSelector.getValueCardinality();
   }
 
-  public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final Comparable value)
+  @Override
+  public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final String value)
   {
     final DimensionSelector selector = cursor.makeDimensionSelector(
         new DefaultDimensionSpec(dimensionName, dimensionName)
     );
 
     // if matching against null, rows with size 0 should also match
-    final boolean matchNull = isComparableNullOrEmpty(value);
+    final boolean matchNull = Strings.isNullOrEmpty(value);
 
     final int cardinality = selector.getValueCardinality();
 
     if (cardinality >= 0) {
       // Dictionary-encoded dimension. Compare by id instead of by value to save time.
-      final int valueId = selector.lookupId((String) value);
+      final int valueId = selector.lookupId(value);
 
       return new ValueMatcher()
       {
@@ -157,6 +152,7 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
     }
   }
 
+  @Override
   public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory)
   {
     final DimensionSelector selector = cursor.makeDimensionSelector(
@@ -221,38 +217,38 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
     }
   }
 
-  public void hashRow(Object dimSelector, Hasher hasher)
+  @Override
+  public void hashRow(DimensionSelector dimSelector, Hasher hasher)
   {
-    final DimensionSelector selector = (DimensionSelector) dimSelector;
-    final IndexedInts row = selector.getRow();
+    final IndexedInts row = dimSelector.getRow();
     final int size = row.size();
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
-      final String value = selector.lookupName(row.get(0));
-      hasher.putUnencodedChars(value != null ? value : CardinalityAggregator.NULL_STRING);
+      final String value = dimSelector.lookupName(row.get(0));
+      hasher.putUnencodedChars(convertValueForCardinalityAggregator(value));
     } else if (size != 0) {
       final String[] values = new String[size];
       for (int i = 0; i < size; ++i) {
-        final String value = selector.lookupName(row.get(i));
-        values[i] = value != null ? value : CardinalityAggregator.NULL_STRING;
+        final String value = dimSelector.lookupName(row.get(i));
+        values[i] = convertValueForCardinalityAggregator(value);
       }
       // Values need to be sorted to ensure consistent multi-value ordering across different segments
       Arrays.sort(values);
       for (int i = 0; i < size; ++i) {
         if (i != 0) {
-          hasher.putChar(CardinalityAggregator.SEPARATOR);
+          hasher.putChar(CARDINALITY_AGG_SEPARATOR);
         }
         hasher.putUnencodedChars(values[i]);
       }
     }
   }
 
-  public void hashValues(Object dimSelector, HyperLogLogCollector collector)
+  @Override
+  public void hashValues(DimensionSelector dimSelector, HyperLogLogCollector collector)
   {
-    final DimensionSelector selector = (DimensionSelector) dimSelector;
-    for (final Integer index : selector.getRow()) {
-      final String value = selector.lookupName(index);
-      collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(value == null ? CardinalityAggregator.NULL_STRING : value).asBytes());
+    for (final Integer index : dimSelector.getRow()) {
+      final String value = dimSelector.lookupName(index);
+      collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(convertValueForCardinalityAggregator(value)).asBytes());
     }
   }
 
@@ -263,38 +259,45 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
   }
 
   @Override
+  public int compareGroupingKeys(ByteBuffer b1, int pos1, ByteBuffer b2, int pos2)
+  {
+    final int v1 = b1.getInt(pos1);
+    final int v2 = b2.getInt(pos2);
+    return Ints.compare(v1, v2);
+  }
+
+  @Override
   public Comparator<byte[]> getGroupingKeyByteComparator()
   {
     return GROUPING_KEY_COMPARATOR;
   }
 
   @Override
-  public void readDimValueFromGroupingKey(
-      Map<String, Object> theEvent, String outputName, Object dimSelector, ByteBuffer keyBuffer
+  public void processDimValueFromGroupingKey(
+      String outputName, DimensionSelector dimSelector, ByteBuffer keyBuffer, Map<String, Object> theEvent
   )
   {
-    final DimensionSelector selector = (DimensionSelector) dimSelector;
     final int dimVal = keyBuffer.getInt();
     if (dimVal != GROUP_BY_MISSING_VALUE) {
-      theEvent.put(outputName, selector.lookupName(dimVal));
+      theEvent.put(outputName, dimSelector.lookupName(dimVal));
     }
   }
 
   @Override
   public List<ByteBuffer> addDimValuesToGroupingKey(
-      Object selector, ByteBuffer key, Function<ByteBuffer, List<ByteBuffer>> updateValuesFn
+      DimensionSelector selector, ByteBuffer key, Function<ByteBuffer, List<ByteBuffer>> updateValuesFn
   )
   {
     List<ByteBuffer> unaggregatedBuffers = null;
-    final DimensionSelector dimSelector = (DimensionSelector) selector;
-    final IndexedInts row = dimSelector.getRow();
+    final IndexedInts row = selector.getRow();
     if (row == null || row.size() == 0) {
       ByteBuffer newKey = key.duplicate();
       newKey.putInt(GROUP_BY_MISSING_VALUE);
       unaggregatedBuffers = updateValuesFn.apply(newKey);
     } else {
-      for (Integer dimValue : row) {
+      for (IntIterator rowIt = row.iterator(); rowIt.hasNext(); ) {
         ByteBuffer newKey = key.duplicate();
+        int dimValue = rowIt.nextInt();
         newKey.putInt(dimValue);
         unaggregatedBuffers = updateValuesFn.apply(newKey);
       }
@@ -303,50 +306,46 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
   }
 
   @Override
-  public Object getRowFromDimSelector(Object dimSelector) {
-    final DimensionSelector selector = (DimensionSelector) dimSelector;
-    IndexedInts values = selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
-    return values;
+  public IndexedInts getRowFromDimSelector(DimensionSelector selector) {
+    return selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
   }
 
   @Override
-  public int initializeGroupingKeyV2Dimension(
-      final Object valuesObj,
+  public void initializeGroupingKeyV2Dimension(
+      final IndexedInts values,
       final ByteBuffer keyBuffer,
       final int keyBufferPosition
   )
   {
-    IndexedInts values = (IndexedInts) valuesObj;
-    final int rowSize = values.size();
+    int rowSize = values.size();
     if (rowSize == 0) {
       keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
     } else {
       keyBuffer.putInt(keyBufferPosition, values.get(0));
     }
-    return rowSize;
   }
 
   @Override
   public void addValueToGroupingKeyV2(
-      final Object values,
+      final IndexedInts values,
       final int rowValueIdx,
       final ByteBuffer keyBuffer,
       final int keyBufferPosition
   )
   {
-    IndexedInts intValues = (IndexedInts) values;
     keyBuffer.putInt(
         keyBufferPosition,
-        intValues.get(rowValueIdx)
+        values.get(rowValueIdx)
     );
   }
 
   @Override
-  public void readValueFromGroupingKeyV2(QueryDimensionInfo dimInfo, Map<String, Object> resultMap, ByteBuffer key)
+  public void processValueFromGroupingKeyV2(QueryDimensionInfo dimInfo, ByteBuffer key, Map<String, Object> resultMap)
   {
     final int id = key.getInt(dimInfo.keyBufferPosition);
 
-    if (id >= 0) {
+    // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
+    if (id != GROUP_BY_MISSING_VALUE) {
       resultMap.put(
           dimInfo.spec.getOutputName(),
           ((DimensionSelector) dimInfo.selector).lookupName(id)
@@ -357,6 +356,11 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
   @Override
   public Aggregator[][] getDimExtractionRowSelector(TopNParams params, TopNQuery query, Capabilities capabilities)
   {
+    // This method is used for the DimExtractionTopNAlgorithm only.
+    // Unlike regular topN we cannot rely on ordering to optimize.
+    // Optimization possibly requires a reverse lookup from value to ID, which is
+    // not possible when applying an extraction function
+
     final BaseTopNAlgorithm.AggregatorArrayProvider provider = new BaseTopNAlgorithm.AggregatorArrayProvider(
         (DimensionSelector) params.getDimSelector(),
         query,
@@ -364,23 +368,19 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
         capabilities
     );
 
-    // Unlike regular topN we cannot rely on ordering to optimize.
-    // Optimization possibly requires a reverse lookup from value to ID, which is
-    // not possible when applying an extraction function
     return provider.build();
   }
 
   @Override
-  public void dimExtractionScanAndAggregate(Object selector, Aggregator[][] rowSelector, Map<Comparable, Aggregator[]> aggregatesStore, Cursor cursor, TopNQuery query)
+  public void dimExtractionScanAndAggregate(DimensionSelector selector, Aggregator[][] rowSelector, Map<Comparable, Aggregator[]> aggregatesStore, Cursor cursor, TopNQuery query)
   {
-    final DimensionSelector dimSelector = (DimensionSelector) selector;
-    final IndexedInts dimValues = dimSelector.getRow();
+    final IndexedInts dimValues = selector.getRow();
 
     for (int i = 0; i < dimValues.size(); ++i) {
       final int dimIndex = dimValues.get(i);
       Aggregator[] theAggregators = rowSelector[dimIndex];
       if (theAggregators == null) {
-        final String key = dimSelector.lookupName(dimIndex);
+        final String key = selector.lookupName(dimIndex);
         theAggregators = aggregatesStore.get(key);
         if (theAggregators == null) {
           theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -397,9 +397,8 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
 
 
   @Override
-  public void addRowValuesToSelectResult(String outputName, Object dimSelector, Map<String, Object> theEvent)
+  public void addRowValuesToSelectResult(String outputName, DimensionSelector selector, Map<String, Object> theEvent)
   {
-    final DimensionSelector selector = (DimensionSelector) dimSelector;
     if (selector == null) {
       theEvent.put(outputName, null);
     } else {
@@ -409,7 +408,7 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
         final String dimVal = selector.lookupName(vals.get(0));
         theEvent.put(outputName, dimVal);
       } else {
-        List<String> dimVals = Lists.newArrayList();
+        List<String> dimVals = new ArrayList<>(vals.size());
         for (int i = 0; i < vals.size(); ++i) {
           dimVals.add(selector.lookupName(vals.get(i)));
         }
@@ -419,20 +418,20 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
   }
 
   @Override
-  public void updateSearchResultSet(String outputName, Object dimSelector, SearchQuerySpec searchQuerySpec, TreeMap<SearchHit, MutableInt> set, int limit)
+  public void updateSearchResultSet(
+      String outputName,
+      DimensionSelector selector,
+      SearchQuerySpec searchQuerySpec,
+      int limit,
+      final Object2IntRBTreeMap<SearchHit> set
+  )
   {
-    final DimensionSelector selector = (DimensionSelector) dimSelector;
-
     if (selector != null) {
       final IndexedInts vals = selector.getRow();
       for (int i = 0; i < vals.size(); ++i) {
         final String dimVal = selector.lookupName(vals.get(i));
         if (searchQuerySpec.accept(dimVal)) {
-          MutableInt counter = new MutableInt(1);
-          MutableInt prev = set.put(new SearchHit(outputName, dimVal), counter);
-          if (prev != null) {
-            counter.add(prev.intValue());
-          }
+          set.addTo(new SearchHit(outputName, dimVal), 1);
           if (set.size() >= limit) {
             return;
           }
@@ -440,4 +439,11 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<Integer,
       }
     }
   }
+
+  // CardinalityAggregator has a special representation for nulls
+  private String convertValueForCardinalityAggregator(String value)
+  {
+    return value == null ? CARDINALITY_AGG_NULL_STRING : value;
+  }
+
 }

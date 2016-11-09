@@ -49,7 +49,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandler;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -57,7 +57,6 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.StringDimensionHandler;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -207,8 +206,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         // This ColumnSelectorFactory implementation has no knowledge of column capabilities.
         // However, this method may still be called by FilteredAggregatorFactory's ValueMatcherFactory
         // to check column types.
-        // Just return null, the caller will assume default types in that case.
-        //return null;
+        // If column capabilities are not available, return null, the caller will assume default types in that case.
         return columnCapabilities == null ? null : columnCapabilities.get(columnName);
       }
 
@@ -409,14 +407,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
-        DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
             dimName,
             capabilities,
             dimSchema.getMultiValueHandling()
         );
-        if (handler == null) {
-          handler = new StringDimensionHandler(dimName, null);
-        }
         addNewDimension(dimName, capabilities, handler);
       }
       columnCapabilities.put(dimName, capabilities);
@@ -577,10 +572,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             capabilities.setHasBitmapIndexes(true);
             columnCapabilities.put(dimension, capabilities);
           }
-          DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dimension, capabilities, null);
-          if (handler == null) {
-            handler = new StringDimensionHandler(dimension, null);
-          }
+          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
           desc = addNewDimension(dimension, capabilities, handler);
         }
         DimensionHandler handler = desc.getHandler();
@@ -760,10 +752,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         if (dimensionDescs.get(dim) == null) {
           ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
           columnCapabilities.put(dim, capabilities);
-          DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dim, capabilities, null);
-          if (handler == null) {
-            handler = new StringDimensionHandler(dim, null);
-          }
+          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
           addNewDimension(dim, capabilities, handler);
         }
       }

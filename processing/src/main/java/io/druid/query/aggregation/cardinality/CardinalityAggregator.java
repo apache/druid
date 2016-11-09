@@ -30,14 +30,11 @@ import java.util.List;
 
 public class CardinalityAggregator implements Aggregator
 {
-  public static final String NULL_STRING = "\u0000";
-
   private final String name;
   private final List<QueryDimensionInfo> dimInfoList;
   private final boolean byRow;
 
   public static final HashFunction hashFn = Hashing.murmur3_128();
-  public static final char SEPARATOR = '\u0001';
 
   protected static void hashRow(List<QueryDimensionInfo> dimInfoList, HyperLogLogCollector collector)
   {

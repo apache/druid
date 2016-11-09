@@ -37,7 +37,8 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
 import org.apache.commons.codec.binary.Base64;
 
@@ -157,10 +158,10 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private List<QueryDimensionInfo> makeDimensionInfoList(final ColumnSelectorFactory columnSelectorFactory)
   {
-    List<QueryDimensionInfo> dimInfoList = Lists.newArrayList();
+    List<QueryDimensionInfo> dimInfoList = new ArrayList(fields.size());
     for (DimensionSpec dimSpec : fields) {
-      DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(dimSpec.getDimension(), columnSelectorFactory, null);
-      Object dimSelector = queryHelper.getColumnValueSelector(dimSpec, columnSelectorFactory);
+      DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(dimSpec.getDimension(), columnSelectorFactory, null);
+      ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(dimSpec, columnSelectorFactory);
       QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
       dimInfoList.add(dimInfo);
     }

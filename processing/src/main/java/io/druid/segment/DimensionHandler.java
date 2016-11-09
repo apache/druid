@@ -62,7 +62,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    *
    * @return Dimension name
    */
-  public String getDimensionName();
+  String getDimensionName();
 
 
   /**
@@ -71,7 +71,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    *
    * @return A new DimensionIndexer object.
    */
-  public DimensionIndexer<EncodedType, EncodedTypeArray, ActualType> makeIndexer();
+  DimensionIndexer<EncodedType, EncodedTypeArray, ActualType> makeIndexer();
 
 
   /**
@@ -88,7 +88,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
    * @return A new DimensionMergerV9 object.
    */
-  public DimensionMergerV9<EncodedTypeArray> makeMerger(
+  DimensionMergerV9<EncodedTypeArray> makeMerger(
       IndexSpec indexSpec,
       File outDir,
       IOPeon ioPeon,
@@ -111,7 +111,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
    * @return A new DimensionMergerLegacy object.
    */
-  public DimensionMergerLegacy<EncodedTypeArray> makeLegacyMerger(
+  DimensionMergerLegacy<EncodedTypeArray> makeLegacyMerger(
       IndexSpec indexSpec,
       File outDir,
       IOPeon ioPeon,
@@ -120,7 +120,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
   ) throws IOException;
 
 
-  public DimensionQueryHelper<EncodedType, EncodedTypeArray, ActualType> makeQueryHelper();
+  public DimensionQueryHelper makeQueryHelper();
 
 
   /**
@@ -132,7 +132,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    * @param dimVals Array of row values
    * @return Size of dimVals
    */
-  public int getLengthFromEncodedArray(EncodedTypeArray dimVals);
+  int getLengthFromEncodedArray(EncodedTypeArray dimVals);
 
 
   /**
@@ -147,7 +147,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    *
    * @return integer indicating comparison result of arrays
    */
-  public int compareSortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
+  int compareSortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
 
 
   /**
@@ -168,7 +168,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    *
    * @return integer indicating comparison result of arrays
    */
-  public void validateSortedEncodedArrays(
+  void validateSortedEncodedArrays(
       EncodedTypeArray lhs,
       EncodedTypeArray rhs,
       Indexed<ActualType> lhsEncodings,
@@ -186,7 +186,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    * @param column Column for this dimension from a QueryableIndex
    * @return The type-specific column subobject for this dimension.
    */
-  public Closeable getSubColumn(Column column);
+  Closeable getSubColumn(Column column);
 
 
   /**
@@ -200,5 +200,5 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    * @param currRow The index of the row to retrieve
    * @return The row from "column" specified by "currRow", as an array of values
    */
-  public Object getRowValueArrayFromColumn(Closeable column, int currRow);
+  Object getRowValueArrayFromColumn(Closeable column, int currRow);
 }

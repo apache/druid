@@ -40,8 +40,9 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
@@ -154,12 +155,12 @@ public class GroupByQueryEngineV2
 
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = query.getDimensions().get(i);
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
           dimSpec.getDimension(),
           cursor,
           Lists.newArrayList(adapter.getAvailableDimensions())
       );
-      final Object selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+      final ColumnValueSelector selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
       final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, selector, curPos);
       dims[i] = dimInfo;
       curPos += queryHelper.getGroupingKeySize();
@@ -246,7 +247,8 @@ outer:
           for (int i = 0; i < dims.length; i++) {
             final DimensionQueryHelper queryHelper = dims[i].queryHelper;
             valuess[i] = queryHelper.getRowFromDimSelector(dims[i].selector);
-            int rowSize = queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
+            int rowSize = queryHelper.getRowSize(valuess[i]);
+            queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
             stack[i] = rowSize == 0 ? 0 : 1;
           }
         }
@@ -270,7 +272,8 @@ outer:
             dims[stackp].queryHelper.addValueToGroupingKeyV2(valuess[stackp], stack[stackp], keyBuffer, dims[stackp].keyBufferPosition);
             stack[stackp]++;
             for (int i = stackp + 1; i < stack.length; i++) {
-              int rowSize = dims[i].queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
+              int rowSize = dims[i].queryHelper.getRowSize(valuess[i]);
+              dims[i].queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
               stack[i] = rowSize == 0 ? 0 : 1;
             }
             stackp = stack.length - 1;
@@ -296,8 +299,8 @@ outer:
               Map<String, Object> theMap = Maps.newLinkedHashMap();
 
               // Add dimensions.
-              for (int i = 0; i < dims.length; i++) {
-                dims[i].queryHelper.readValueFromGroupingKeyV2(dims[i], theMap, entry.getKey());
+              for (QueryDimensionInfo dimInfo : dims) {
+                dimInfo.queryHelper.processValueFromGroupingKeyV2(dimInfo, entry.getKey(), theMap);
               }
 
               // Add aggregations.
@@ -349,8 +352,8 @@ outer:
     public GroupByEngineKeySerde(final QueryDimensionInfo dims[])
     {
       int keySize = 0;
-      for (int i = 0; i < dims.length; i++) {
-        keySize += dims[i].queryHelper.getGroupingKeySize();
+      for (QueryDimensionInfo dimInfo : dims) {
+        keySize += dimInfo.queryHelper.getGroupingKeySize();
       }
       this.keySize = keySize;
     }

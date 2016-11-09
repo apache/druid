@@ -20,21 +20,56 @@
 package io.druid.query;
 
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionQueryHelper;
 
+/**
+ * A grouping of various related objects used during query processing for a single dimension, used for convenience.
+ *
+ * Each QueryDimensionInfo is associated with a single dimension.
+ */
 public class QueryDimensionInfo
 {
+  /**
+   * The DimensionSpec representing this QueryDimensionInfo's dimension, taken from the query being processed.
+   */
   public final DimensionSpec spec;
+
+  /**
+   * Helper object that handles type-specific operations for this dimension within query processing engines.
+   */
   public final DimensionQueryHelper queryHelper;
+
+  /**
+   * Internal name of the dimension.
+   */
   public final String name;
+
+  /**
+   * Name of the dimension to be returned in query results.
+   */
   public final String outputName;
-  public final Object selector;
+
+  /**
+   * Column value selector for this dimension, e.g. a DimensionSelector for String dimensions.
+   */
+  public final ColumnValueSelector selector;
+
+  /**
+   * Cardinality of the dimension's value set, taken from the queryHelper.
+   */
+  public final int cardinality;
+
+  /**
+   * Used by the GroupBy engines, indicates the offset of this dimension's value within the grouping key.
+   */
   public final int keyBufferPosition;
+
 
   public QueryDimensionInfo(
       DimensionSpec spec,
       DimensionQueryHelper queryHelper,
-      Object selector,
+      ColumnValueSelector selector,
       int keyBufferPosition
   )
   {
@@ -43,11 +78,7 @@ public class QueryDimensionInfo
     this.name = spec.getDimension();
     this.outputName = spec.getOutputName();
     this.selector = selector;
+    this.cardinality = queryHelper.getCardinality(selector);
     this.keyBufferPosition = keyBufferPosition;
-  }
-
-  public int getCardinality()
-  {
-    return queryHelper.getCardinality(selector);
   }
 }

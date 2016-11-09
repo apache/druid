@@ -36,5 +36,5 @@ public interface DimensionMergerV9<EncodedTypeArray> extends DimensionMerger<Enc
    *
    * @return ColumnDescriptor that IndexMergerV9 will use to build a column.
    */
-  public ColumnDescriptor makeColumnDescriptor() throws IOException;
+  ColumnDescriptor makeColumnDescriptor() throws IOException;
 }

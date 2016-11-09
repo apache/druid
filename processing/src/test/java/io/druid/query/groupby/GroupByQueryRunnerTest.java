@@ -36,7 +36,6 @@ import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;

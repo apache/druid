@@ -21,33 +21,23 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionHandler;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.StringDimensionHandler;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 
 import java.nio.ByteBuffer;
-import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
@@ -233,7 +223,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         );
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(dimension, columnSelectorFactory, null);
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(dimension, columnSelectorFactory, null);
       return queryHelper.getValueMatcher(columnSelectorFactory, value);
     }
 
@@ -244,7 +234,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          final DimensionQueryHelper queryHelper = DimensionHandlerUtil.makeQueryHelper(dimension, columnSelectorFactory, null);
+          final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(dimension, columnSelectorFactory, null);
           return queryHelper.getValueMatcher(columnSelectorFactory, predicateFactory);
         default:
           return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));

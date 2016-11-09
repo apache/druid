@@ -33,13 +33,9 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandler;
-import io.druid.segment.DimensionHandlerUtil;
-import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -97,8 +93,6 @@ public class TopNQueryEngine
   {
     final Capabilities capabilities = adapter.getCapabilities();
     final String dimension = query.getDimensionSpec().getDimension();
-    final ColumnCapabilities columnCapabilities = adapter.getColumnCapabilities(dimension);
-
     final int cardinality = adapter.getDimensionCardinality(dimension);
 
     int numBytesPerRecord = 0;
