@@ -35,7 +35,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
