@@ -25,6 +25,15 @@ If you are running the indexing service in remote mode, the task logs must be st
 |--------|-----------|-------|
 |`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
 
+You can also configure the Overlord to automatically retain the task logs only for last x seconds by configuring following additional properties.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In seconds, task logs to be retained created in last x seconds. |None|
+|`druid.indexer.logs.kill.initialDelay`| Optional. Number of seconds after overlord start when first auto kill is run. |random value less than 300 (5 mins)|
+|`druid.indexer.logs.kill.delay`|Optional. Number of seconds of delay between successive executions of auto kill run. |21600 (6 hours)|
+
 ##### File Task Logs
 
 Store task logs in the local filesystem.

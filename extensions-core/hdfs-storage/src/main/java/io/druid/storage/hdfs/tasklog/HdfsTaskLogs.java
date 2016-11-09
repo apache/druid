@@ -28,7 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -122,6 +124,28 @@ public class HdfsTaskLogs implements TaskLogs
     Path taskLogDir = new Path(config.getDirectory());
     FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
     fs.delete(taskLogDir, true);
+  }
+
+  @Override
+  public void kill(long beforeTimestamp) throws IOException
+  {
+    Path taskLogDir = new Path(config.getDirectory());
+    FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
+    if (fs.exists(taskLogDir)) {
+      RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(taskLogDir);
+      while (iter.hasNext()) {
+        LocatedFileStatus file = iter.next();
+        if (file.getModificationTime() < beforeTimestamp) {
+          Path p = file.getPath();
+          log.info("Deleting hdfs task log [%s].", p.toUri().toString());
+          fs.delete(p, true);
+        }
+
+        if (Thread.interrupted()) {
+          throw new IOException("Thread interrupted. Couldn't delete all tasklogs.");
+        }
+      }
+    }
   }
 }
 
