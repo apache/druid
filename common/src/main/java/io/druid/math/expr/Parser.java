@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Lists;
 
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
@@ -68,7 +69,7 @@ public class Parser
   public static Function getFunction(String name) {
     Supplier<Function> supplier = func.get(name.toLowerCase());
     if (supplier == null) {
-      throw new IllegalArgumentException("Invalid function name '" + name + "'");
+      throw new IAE("Invalid function name '%s'", name);
     }
     return supplier.get();
   }
@@ -125,16 +126,16 @@ public class Parser
       FunctionExpr functionExpr = (FunctionExpr) expr;
       List<Expr> args = functionExpr.args;
       boolean flattened = false;
-      List<Expr> fattening = Lists.newArrayListWithCapacity(args.size());
+      List<Expr> flattening = Lists.newArrayListWithCapacity(args.size());
       for (int i = 0; i < args.size(); i++) {
         Expr flatten = flatten(args.get(i));
         flattened |= flatten != args.get(i);
-        fattening.add(flatten);
+        flattening.add(flatten);
       }
-      if (Evals.isAllConstants(fattening)) {
+      if (Evals.isAllConstants(flattening)) {
         expr = expr.eval(null).toExpr();
       } else if (flattened) {
-        expr = new FunctionExpr(functionExpr.name, fattening);
+        expr = new FunctionExpr(functionExpr.name, flattening);
       }
     }
     return expr;

@@ -259,7 +259,7 @@ class UnaryNotExpr extends UnaryExpr
 }
 
 // all concrete subclass of this should have constructor with the form of <init>(String, Expr, Expr)
-// if it's not possible, just sure Evals.binaryOp() can handle that
+// if it's not possible, just be sure Evals.binaryOp() can handle that
 abstract class BinaryOpExprBase implements Expr
 {
   protected final String op;
