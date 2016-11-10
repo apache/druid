@@ -389,40 +389,40 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             // and the current message offset in the kafka partition is more than the
             // next message offset that we are trying to fetch
             if (tuningConfig.isResetOffsetAutomatically()) {
-              for (TopicPartition topicPartitions : consumer.assignment()) {
-                final long currentOffset = consumer.position(topicPartitions);
+              for (TopicPartition topicPartition : consumer.assignment()) {
+                final long currentOffset = consumer.position(topicPartition);
                 log.trace("Current consumer position is [%d]", currentOffset);
-                log.trace("Next offset required is [%d]", nextOffsets.get(topicPartitions.partition()));
+                log.trace("Next offset required is [%d]", nextOffsets.get(topicPartition.partition()));
                 // seek to the beginning to get the least available offset
-                consumer.seekToBeginning(topicPartitions);
-                final long leastAvailableOffset = consumer.position(topicPartitions);
+                consumer.seekToBeginning(topicPartition);
+                final long leastAvailableOffset = consumer.position(topicPartition);
                 log.trace("Least consumer offset is [%d]", leastAvailableOffset);
                 // reset the seek
-                consumer.seek(topicPartitions, currentOffset);
+                consumer.seek(topicPartition, currentOffset);
 
                 if (leastAvailableOffset > currentOffset) {
                   if (ioConfig.isUseEarliestOffset()) {
                     log.makeAlert("Got OffsetOutOfRangeException [%s], resetting to the earliest offset", e.getMessage());
-                    consumer.seekToBeginning(topicPartitions);
-                    nextOffsets.put(topicPartitions.partition(), consumer.position(topicPartitions));
-                    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartitions));
+                    consumer.seekToBeginning(topicPartition);
+                    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
+                    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartition));
                   } else {
                     log.makeAlert("Got OffsetOutOfRangeException [%s], resetting to the latest offset", e.getMessage());
-                    consumer.seekToEnd(topicPartitions);
-                    nextOffsets.put(topicPartitions.partition(), consumer.position(topicPartitions));
-                    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartitions));
+                    consumer.seekToEnd(topicPartition);
+                    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
+                    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartition));
                   }
-                }
-                // check if we seeked passed the endOffset for this partition
-                if (consumer.position(topicPartitions) >= endOffsets.get(topicPartitions.partition())
-                    && assignment.remove(topicPartitions.partition())) {
-                  log.info(
-                      "Finished reading topic[%s], partition[%,d].",
-                      topicPartitions.topic(),
-                      topicPartitions.partition()
-                  );
-                  assignPartitions(consumer, topic, assignment);
-                  stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+                  // check if we seeked passed the endOffset for this partition
+                  if (consumer.position(topicPartition) >= endOffsets.get(topicPartition.partition())
+                      && assignment.remove(topicPartition.partition())) {
+                    log.info(
+                        "Finished reading topic[%s], partition[%,d].",
+                        topicPartition.topic(),
+                        topicPartition.partition()
+                    );
+                    assignPartitions(consumer, topic, assignment);
+                    stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+                  }
                 }
               }
             } else {
