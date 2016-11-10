@@ -62,25 +62,25 @@ public class CoordinatorClient
     this.selector = selector;
   }
 
+
   public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
   {
-    return execute(
-        HttpMethod.GET,
-        String.format("/datasources/%s/intervals/%s/serverview?partial=%s",
+    try {
+      StatusResponseHolder response = client.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(
+                  String.format(
+                      "%s/datasources/%s/intervals/%s/serverview?partial=%s",
+                      baseUrl(),
                       dataSource,
                       interval.toString().replace("/", "_"),
-                      incompleteOk),
-        new TypeReference<List<ImmutableSegmentLoadInfo>>()
-        {
-        }
-    );
-  }
-
-  private <T> T execute(HttpMethod method, String resource, TypeReference<T> resultType)
-  {
-    try {
-      Request request = new Request(method, new URL(baseUrl() + resource));
-      StatusResponseHolder response = client.go(request, RESPONSE_HANDLER).get();
+                      incompleteOk
+                  )
+              )
+          ),
+          RESPONSE_HANDLER
+      ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while fetching serverView status[%s] content[%s]",
@@ -88,7 +88,12 @@ public class CoordinatorClient
             response.getContent()
         );
       }
-      return jsonMapper.readValue(response.getContent(), resultType);
+      return jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
+          {
+
+          }
+      );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

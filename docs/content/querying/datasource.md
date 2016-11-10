@@ -46,7 +46,7 @@ This is used for nested groupBys and is only currently supported for groupBys.
 
 ### Regex Data Source
 
-You can use regex patterns for name of datasource. Because translations is done in broker, you cannot use this directly to historical or realtime node directly.
+You can use regex patterns for name of datasource. Cause translations is done in broker, you cannot use this in historical or realtime node directly (will throw exception in some point).
 
 ```json
 {
