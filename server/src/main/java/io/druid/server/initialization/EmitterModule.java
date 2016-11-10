@@ -19,7 +19,6 @@
 
 package io.druid.server.initialization;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
@@ -77,7 +76,7 @@ public class EmitterModule implements Module
 
   @Provides
   @ManageLifecycle
-  public ServiceEmitter getServiceEmitter(@Self Supplier<DruidNode> configSupplier, Emitter emitter)
+  public ServiceEmitter getServiceEmitter(@Self Provider<DruidNode> configSupplier, Emitter emitter)
   {
     final DruidNode config = configSupplier.get();
     final ServiceEmitter retVal = new ServiceEmitter(config.getServiceName(), config.getHostAndPort(), emitter);
