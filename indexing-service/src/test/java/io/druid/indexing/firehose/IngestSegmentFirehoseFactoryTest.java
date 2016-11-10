@@ -80,6 +80,7 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -533,21 +534,6 @@ public class IngestSegmentFirehoseFactoryTest
 
   private static ServiceEmitter newMockEmitter()
   {
-    return new ServiceEmitter(null, null, null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-
-      }
-
-      @Override
-      public void emit(ServiceEventBuilder builder)
-      {
-
-      }
-    };
-
-
+    return new NoopServiceEmitter();
   }
 }
