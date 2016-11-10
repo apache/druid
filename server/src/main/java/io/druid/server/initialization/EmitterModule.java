@@ -19,6 +19,7 @@
 
 package io.druid.server.initialization;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -84,8 +85,7 @@ public class EmitterModule implements Module
     String version = getClass().getPackage().getImplementationVersion();
     final ImmutableMap<String, String> otherServiceDimensions = ImmutableMap.of(
         "version",
-        // Version is null during `mvn test`.
-        version != null ? version : "testing-version"
+        Strings.nullToEmpty(version) // Version is null during `mvn test`.
     );
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
