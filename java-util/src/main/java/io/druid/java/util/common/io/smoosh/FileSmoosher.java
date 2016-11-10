@@ -31,6 +31,7 @@ import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.MappedByteBufferHandler;
+import io.druid.java.util.common.logger.Logger;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -59,7 +60,9 @@ import java.util.Set;
  * various "chunk" files will be varying sizes and it is not possible to add a
  * file of size greater than Integer.MAX_VALUE.
  * <p/>
- * This class is not thread safe but allows writing multiple files even if main
+ * This class is not thread safe.
+ * <p/>
+ * This class allows writing multiple files even if main
  * smoosh file writer is open. If main smoosh file writer is already open, it
  * delegates the write into temporary file on the file system which is later
  * copied on to the main smoosh file and underlying temporary file will be
@@ -69,6 +72,7 @@ public class FileSmoosher implements Closeable
 {
   private static final String FILE_EXTENSION = "smoosh";
   private static final Joiner joiner = Joiner.on(",");
+  private static final Logger LOG = new Logger(FileSmoosher.class);
 
   private final File baseDir;
   private final int maxChunkSize;
@@ -99,6 +103,16 @@ public class FileSmoosher implements Closeable
     this.maxChunkSize = maxChunkSize;
 
     Preconditions.checkArgument(maxChunkSize > 0, "maxChunkSize must be a positive value.");
+  }
+
+  static File metaFile(File baseDir)
+  {
+    return new File(baseDir, String.format("meta.%s", FILE_EXTENSION));
+  }
+
+  static File makeChunkFile(File baseDir, int i)
+  {
+    return new File(baseDir, String.format("%05d.%s", i, FILE_EXTENSION));
   }
 
   public Set<String> getInternalFilenames()
@@ -155,8 +169,7 @@ public class FileSmoosher implements Closeable
     // If current writer is in use then create a new SmooshedWriter which
     // writes into temporary file which is later merged into original
     // FileSmoosher.
-    if (writerCurrentlyInUse)
-    {
+    if (writerCurrentlyInUse) {
       return delegateSmooshedWriter(name, size);
     }
 
@@ -251,10 +264,11 @@ public class FileSmoosher implements Closeable
     // Get processed elements from the stack and write.
     List<File> fileToProcess = new ArrayList<>(completedFiles);
     completedFiles = Lists.newArrayList();
-    for (File file: fileToProcess)
-    {
+    for (File file : fileToProcess) {
       add(file);
-      file.delete();
+      if (!file.delete()) {
+        LOG.warn("Unable to delete file [%s]", file);
+      }
     }
   }
 
@@ -265,7 +279,9 @@ public class FileSmoosher implements Closeable
    *
    * @param name fileName
    * @param size size of the file.
+   *
    * @return
+   *
    * @throws IOException
    */
   private SmooshedWriter delegateSmooshedWriter(final String name, final long size) throws IOException
@@ -275,14 +291,17 @@ public class FileSmoosher implements Closeable
 
     return new SmooshedWriter()
     {
-      private int currOffset = 0;
       private final FileOutputStream out = new FileOutputStream(tmpFile);
-      private final GatheringByteChannel channel = out.getChannel();;
+      private final GatheringByteChannel channel = out.getChannel();
       private final Closer closer = Closer.create();
+
+      private int currOffset = 0;
+
       {
         closer.register(out);
         closer.register(channel);
       }
+
       @Override
       public void close() throws IOException
       {
@@ -294,6 +313,7 @@ public class FileSmoosher implements Closeable
           mergeWithSmoosher();
         }
       }
+
       public int bytesLeft()
       {
         return (int) (size - currOffset);
@@ -347,17 +367,21 @@ public class FileSmoosher implements Closeable
   public void close() throws IOException
   {
     //book keeping checks on created file.
-    if (!completedFiles.isEmpty() || !filesInProcess.isEmpty())
-    {
-      for (File file: completedFiles)
-      {
-        file.delete();
+    if (!completedFiles.isEmpty() || !filesInProcess.isEmpty()) {
+      for (File file : completedFiles) {
+        if (!file.delete()) {
+          LOG.warn("Unable to delete file [%s]", file);
+        }
       }
-      for (File file: filesInProcess)
-      {
-        file.delete();
+      for (File file : filesInProcess) {
+        if (!file.delete()) {
+          LOG.warn("Unable to delete file [%s]", file);
+        }
       }
-      throw new ISE(String.format("%d writers needs to be closed before closing smoosher.", filesInProcess.size() + completedFiles.size()));
+      throw new ISE(
+          "[%d] writers in progress and [%d] completed writers needs to be closed before closing smoosher.",
+          filesInProcess.size(), completedFiles.size()
+      );
     }
 
     if (currOut != null) {
@@ -391,16 +415,6 @@ public class FileSmoosher implements Closeable
     File outFile = makeChunkFile(baseDir, fileNum);
     outFiles.add(outFile);
     return new Outer(fileNum, new FileOutputStream(outFile), maxChunkSize);
-  }
-
-  static File metaFile(File baseDir)
-  {
-    return new File(baseDir, String.format("meta.%s", FILE_EXTENSION));
-  }
-
-  static File makeChunkFile(File baseDir, int i)
-  {
-    return new File(baseDir, String.format("%05d.%s", i, FILE_EXTENSION));
   }
 
   public static class Outer implements SmooshedWriter
