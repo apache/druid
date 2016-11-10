@@ -23,10 +23,10 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-
 import io.druid.indexing.common.config.FileTaskLogsConfig;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -81,5 +81,12 @@ public class FileTaskLogs implements TaskLogs
   private File fileForTask(final String taskid)
   {
     return new File(config.getDirectory(), String.format("%s.log", taskid));
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info("Deleting all task logs from local dir [%s].", config.getDirectory().getAbsolutePath());
+    FileUtils.deleteDirectory(config.getDirectory());
   }
 }

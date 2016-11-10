@@ -26,6 +26,7 @@ import com.google.inject.multibindings.MapBinder;
 import io.druid.indexing.common.config.FileTaskLogsConfig;
 import io.druid.indexing.common.tasklogs.FileTaskLogs;
 import io.druid.tasklogs.NoopTaskLogs;
+import io.druid.tasklogs.TaskLogKiller;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogs;
 
@@ -46,5 +47,6 @@ public class IndexingServiceTaskLogsModule implements Module
     binder.bind(FileTaskLogs.class).in(LazySingleton.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
+    binder.bind(TaskLogKiller.class).to(TaskLogs.class);
   }
 }

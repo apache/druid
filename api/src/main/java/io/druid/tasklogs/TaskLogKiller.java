@@ -19,6 +19,11 @@
 
 package io.druid.tasklogs;
 
-public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller
+import java.io.IOException;
+
+/**
+ */
+public interface TaskLogKiller
 {
+  void killAll() throws IOException;
 }
