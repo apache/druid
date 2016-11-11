@@ -20,8 +20,8 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.spatial.search.Bound;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;

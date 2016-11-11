@@ -19,7 +19,7 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.collections.spatial.ImmutableRTree;
+import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.segment.column.SpatialIndex;
 
 /**

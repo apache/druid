@@ -27,8 +27,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.bitmap.RoaringBitmapFactory;
+
 import io.druid.data.input.InputRow;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;

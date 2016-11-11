@@ -1,0 +1,145 @@
+<!--
+  ~ Licensed to Metamarkets Group Inc. (Metamarkets) under one
+  ~ or more contributor license agreements. See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership. Metamarkets licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied. See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <title>Benchmark results for methods in class RangeBitmapBenchmarkTest</title>
+
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+      google.load("jquery", "1.4.2");
+      google.load('visualization', '1', {packages: ['linechart', 'table']});
+
+
+    </script>
+
+    <style type="text/css">
+        #content {
+          width: 800px ;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        #chart {
+          width: 600px;
+          height: 400px;
+          margin-left: auto;
+          margin-right: auto;
+          margin-bottom: 10px;
+          display: block;
+        }
+        
+        ul.expander {
+          display: inline;
+          margin-left: 0;
+          padding-left: 0;
+          font-size: .8em;
+        }
+
+        ul.expander li {
+          margin-left: 0;
+          list-style: none;
+          display: inline;
+        }
+
+        ul.expander li:before {
+          content: "\25BA\0020";  // 25B8
+        }
+
+        ul.expander li.expanded:before {
+          content: "\25BC\0020";  // 25BE
+        }
+
+
+    </style>
+
+    <script type="text/javascript">
+      var chart; 
+
+      function drawData(data, labelColumn) {
+        var labelColumns = [0, 1, 2];
+        labelColumns.splice(labelColumn, 1);
+
+        var view = new google.visualization.DataView(data);
+        view.hideColumns(labelColumns);
+
+        chart.draw(view, {
+            titleY: "Round time [s]",
+            
+        });
+      }
+
+      function visualize(jsonData, className) {
+        var data = new google.visualization.DataTable(jsonData);
+        
+        var table = new google.visualization.Table(document.getElementById('raw-data'));
+        table.draw(data, {
+            sort: "event",
+        });
+        
+        google.visualization.events.addListener(table, 'sort',
+         function(event) {
+           if (event.column >= 0 && event.column <= 2) {
+              drawData(data, event.column);
+           }
+         }
+        );
+        
+        chart = new google.visualization.LineChart(document.getElementById('chart'));
+        drawData(data, 01);
+      }
+
+      var data;
+      function receiveJsonpData(jsonpData) {
+        data = jsonpData;
+      }
+
+      google.setOnLoadCallback(function() {
+          visualize(data, "RangeBitmapBenchmarkTest");
+
+          $("#properties").click(function () {
+              $(this).toggleClass("expanded"); 
+              $("#proplist").slideToggle();
+          });
+      });
+
+
+    </script>
+</head>
+
+<body style="font-family: Arial; margin: 30px;">
+<div id="content">
+    <h1>Benchmark results for methods in class RangeBitmapBenchmarkTest</h1>
+
+    <div id="chart"></div>
+    <div id="raw-data"></div>
+
+    <div>
+        <ul class="expander">
+            <li id="properties"><a href="#">Properties</a></li>
+        </ul>
+        <pre id="proplist" style="display: none; background-color: #e0e0e0;">Shows historical runs: 20</pre>
+    </div>
+</div>
+
+<script src="RangeBitmapBenchmarkTest.jsonp"></script>
+</body>
+</html>

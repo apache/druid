@@ -19,7 +19,7 @@
 
 package io.druid.query.filter;
 
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 
 /**
  */

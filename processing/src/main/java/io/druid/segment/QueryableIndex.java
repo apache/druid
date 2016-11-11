@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import com.metamx.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 

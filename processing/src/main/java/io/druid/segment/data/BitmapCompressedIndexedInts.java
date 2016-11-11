@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.IntIteratorUtils;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 

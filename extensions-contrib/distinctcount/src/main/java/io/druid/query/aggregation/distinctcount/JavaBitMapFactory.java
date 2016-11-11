@@ -19,9 +19,9 @@
 
 package io.druid.query.aggregation.distinctcount;
 
-import com.metamx.collections.bitmap.BitSetBitmapFactory;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.BitSetBitmapFactory;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.MutableBitmap;
 
 public class JavaBitMapFactory implements BitMapFactory
 {

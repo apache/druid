@@ -36,3 +36,11 @@ This product contains a modified version of TestNG 6.8.7
     * http://testng.org/license/ (Apache License, Version 2.0)
   * HOMEPAGE:
     * http://testng.org/
+
+This product contains a modified version of Metamarkets bytebuffer-collections library
+  * LICENSE:
+    * https://github.com/metamx/bytebuffer-collections/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/metamx/bytebuffer-collections
+  * COMMIT TAG:
+    * https://github.com/metamx/bytebuffer-collections/commit/3d1e7c8

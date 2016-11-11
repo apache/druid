@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;

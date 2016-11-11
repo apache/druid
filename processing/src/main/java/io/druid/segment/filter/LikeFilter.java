@@ -20,7 +20,8 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Strings;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;

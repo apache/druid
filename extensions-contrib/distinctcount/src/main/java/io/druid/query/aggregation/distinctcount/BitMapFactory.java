@@ -21,7 +21,7 @@ package io.druid.query.aggregation.distinctcount;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 
 /**
  */

@@ -1,0 +1,22 @@
+receiveJsonpData({
+"cols": [
+{"label": "Run", "type": "string"},
+{"label": "Custom key", "type": "string"},
+{"label": "Timestamp", "type": "string"},
+{"label": "timeConciseUnion", "type": "string"} ,
+{"label": "timeGenericConciseIntersection", "type": "string"} ,
+{"label": "timeGenericConciseUnion", "type": "string"} ,
+{"label": "timeGenericRoaringIntersection", "type": "string"} ,
+{"label": "timeGenericRoaringUnion", "type": "string"} ,
+{"label": "timeImmutableRoaringUnion", "type": "string"} ,
+{"label": "timeOffheapConciseUnion", "type": "string"} ,
+{"label": "timeOffheapRoaringUnion", "type": "string"} ,
+{"label": "timeRoaringUnion", "type": "string"} ],
+"rows": [
+{"c": [{"v": "5"}, {"v": "0.00001"}, {"v": "2014-11-04 14:03:04.268"}, {"v": 80.304}, {"v": 79.758}, {"v": 65.896}, {"v": 0.008}, {"v": 0.278}, {"v": 0.596}, {"v": 70.89}, {"v": 0.275}, {"v": 0.202}]},
+{"c": [{"v": "1"}, {"v": "0.0001"}, {"v": "2014-11-04 13:32:21.752"}, {"v": 30.843}, {"v": 30.863}, {"v": 32.306}, {"v": 0.012}, {"v": 0.272}, {"v": 0.546}, {"v": 32.727}, {"v": 0.327}, {"v": 0.158}]},
+{"c": [{"v": "2"}, {"v": "0.0010"}, {"v": "2014-11-04 13:41:55.608"}, {"v": 3.801}, {"v": 3.441}, {"v": 3.421}, {"v": 0.019}, {"v": 0.272}, {"v": 0.524}, {"v": 3.76}, {"v": 0.271}, {"v": 0.171}]},
+{"c": [{"v": "3"}, {"v": "0.0100"}, {"v": "2014-11-04 13:45:36.077"}, {"v": 0.341}, {"v": 0.541}, {"v": 0.628}, {"v": 0.025}, {"v": 0.276}, {"v": 0.576}, {"v": 0.352}, {"v": 0.276}, {"v": 0.263}]},
+{"c": [{"v": "4"}, {"v": "0.1000"}, {"v": "2014-11-04 13:49:27.509"}, {"v": 0.051}, {"v": 0.062}, {"v": 0.046}, {"v": 0.039}, {"v": 0.295}, {"v": 0.47}, {"v": 0.045}, {"v": 0.299}, {"v": 0.181}]},
+{"c": [{"v": "38"}, {"v": "0.25000"}, {"v": "2014-11-04 15:22:42.446"}, {"v": 0.036}, {"v": 0.041}, {"v": 0.04}, {"v": 0.052}, {"v": 0.179}, {"v": 0.391}, {"v": 0.042}, {"v": 0.18}, {"v": 0.105}]}
+]});

@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation.distinctcount;
 
-import com.metamx.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
 
