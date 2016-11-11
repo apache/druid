@@ -246,7 +246,8 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<String, 
   @Override
   public void hashValues(DimensionSelector dimSelector, HyperLogLogCollector collector)
   {
-    for (final Integer index : dimSelector.getRow()) {
+    for (IntIterator rowIt = dimSelector.getRow().iterator(); rowIt.hasNext(); ) {
+      int index = rowIt.nextInt();
       final String value = dimSelector.lookupName(index);
       collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(convertValueForCardinalityAggregator(value)).asBytes());
     }

@@ -158,7 +158,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private List<QueryDimensionInfo> makeDimensionInfoList(final ColumnSelectorFactory columnSelectorFactory)
   {
-    List<QueryDimensionInfo> dimInfoList = new ArrayList(fields.size());
+    List<QueryDimensionInfo> dimInfoList = new ArrayList<>(fields.size());
     for (DimensionSpec dimSpec : fields) {
       DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(dimSpec.getDimension(), columnSelectorFactory, null);
       ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(dimSpec, columnSelectorFactory);
