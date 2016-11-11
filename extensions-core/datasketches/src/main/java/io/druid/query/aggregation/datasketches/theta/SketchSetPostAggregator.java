@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 import com.yahoo.sketches.Util;
-import com.yahoo.sketches.theta.Sketch;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.PostAggregator;
@@ -40,7 +39,7 @@ public class SketchSetPostAggregator implements PostAggregator
 
   private final String name;
   private final List<PostAggregator> fields;
-  private final SketchOperations.Func func;
+  private final SketchHolder.Func func;
   private final int maxSketchSize;
 
   @JsonCreator
@@ -53,7 +52,7 @@ public class SketchSetPostAggregator implements PostAggregator
   {
     this.name = name;
     this.fields = fields;
-    this.func = SketchOperations.Func.valueOf(func);
+    this.func = SketchHolder.Func.valueOf(func);
     this.maxSketchSize = maxSize == null ? SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE : maxSize;
     Util.checkIfPowerOf2(this.maxSketchSize, "size");
 
@@ -75,18 +74,18 @@ public class SketchSetPostAggregator implements PostAggregator
   @Override
   public Comparator<Object> getComparator()
   {
-    return SketchAggregatorFactory.COMPARATOR;
+    return SketchHolder.COMPARATOR;
   }
 
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
-    Sketch[] sketches = new Sketch[fields.size()];
+    Object[] sketches = new Object[fields.size()];
     for (int i = 0; i < sketches.length; i++) {
-      sketches[i] = SketchAggregatorFactory.toSketch(fields.get(i).compute(combinedAggregators));
+      sketches[i] = fields.get(i).compute(combinedAggregators);
     }
 
-    return SketchOperations.sketchSetOperation(func, maxSketchSize, sketches);
+    return SketchHolder.sketchSetOperation(func, maxSketchSize, sketches);
   }
 
   @Override

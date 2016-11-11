@@ -20,21 +20,17 @@
 package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.yahoo.sketches.memory.Memory;
 
 import java.io.IOException;
 
-/**
- */
-public class MemoryJsonSerializer extends JsonSerializer<Memory>
+public class SketchHolderJsonSerializer extends JsonSerializer<SketchHolder>
 {
   @Override
-  public void serialize(Memory mem, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException, JsonProcessingException
+  public void serialize(SketchHolder sketchHolder, JsonGenerator jgen, SerializerProvider provider)
+      throws IOException
   {
-    jgen.writeBinary(SketchOperations.deserializeFromMemory(mem).toByteArray());
+    jgen.writeBinary(sketchHolder.getSketch().toByteArray());
   }
 }

@@ -23,9 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.yahoo.sketches.memory.Memory;
-import com.yahoo.sketches.theta.Sketch;
-import com.yahoo.sketches.theta.Union;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.serde.ComplexMetrics;
 
@@ -69,13 +66,7 @@ public class SketchModule implements DruidModule
                 new NamedType(SketchSetPostAggregator.class, THETA_SKETCH_SET_OP_POST_AGG)
             )
             .addSerializer(
-                Sketch.class, new SketchJsonSerializer()
-            )
-            .addSerializer(
-                Memory.class, new MemoryJsonSerializer()
-            )
-            .addSerializer(
-                Union.class, new UnionJsonSerializer()
+                SketchHolder.class, new SketchHolderJsonSerializer()
             )
     );
   }

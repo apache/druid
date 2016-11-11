@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.data.input.InputRow;
 import io.druid.segment.column.ColumnBuilder;
@@ -49,17 +48,17 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
       @Override
       public Class<?> extractedClass()
       {
-        return Sketch.class;
+        return Object.class;
       }
 
       @Override
       public Object extractValue(InputRow inputRow, String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        if (object == null || object instanceof Sketch || object instanceof Memory) {
+        if (object == null) {
           return object;
         }
-        return SketchOperations.deserialize(object);
+        return SketchHolder.deserialize(object);
       }
     };
   }

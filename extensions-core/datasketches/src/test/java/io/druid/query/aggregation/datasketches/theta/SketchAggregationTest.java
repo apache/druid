@@ -206,7 +206,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeFinalization() throws Exception
   {
-    Sketch sketch = Sketches.updateSketchBuilder().build(128);
+    SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().build(128));
 
     SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
@@ -344,7 +344,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchAggregatorFactoryComparator()
   {
-    Comparator<Object> comparator = SketchAggregatorFactory.COMPARATOR;
+    Comparator<Object> comparator = SketchHolder.COMPARATOR;
     Assert.assertEquals(0, comparator.compare(null, null));
 
     Union union1 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
@@ -352,8 +352,8 @@ public class SketchAggregationTest
     union1.update("b");
     Sketch sketch1 = union1.getResult();
 
-    Assert.assertEquals(-1, comparator.compare(null, sketch1));
-    Assert.assertEquals(1, comparator.compare(sketch1, null));
+    Assert.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
 
     Union union2 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
     union2.update("a");
@@ -361,12 +361,12 @@ public class SketchAggregationTest
     union2.update("c");
     Sketch sketch2 = union2.getResult();
 
-    Assert.assertEquals(-1, comparator.compare(sketch1, sketch2));
-    Assert.assertEquals(-1, comparator.compare(sketch1, union2));
-    Assert.assertEquals(1, comparator.compare(sketch2, sketch1));
-    Assert.assertEquals(1, comparator.compare(sketch2, union1));
-    Assert.assertEquals(1, comparator.compare(union2, union1));
-    Assert.assertEquals(1, comparator.compare(union2, sketch1));
+    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(sketch2)));
+    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(union2)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(sketch1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(union1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(union1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(sketch1)));
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

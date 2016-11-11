@@ -20,13 +20,9 @@
 package io.druid.query.aggregation.datasketches.theta;
 
 import com.yahoo.sketches.Family;
-import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
-
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -34,8 +30,6 @@ import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
-  private static final Logger logger = new Logger(SketchAggregator.class);
-
   private final ObjectColumnSelector selector;
 
   private Union union;
@@ -71,7 +65,7 @@ public class SketchAggregator implements Aggregator
     //however, advantage of ordered sketch is that they are faster to "union" later
     //given that results from the aggregator will be combined further, it is better
     //to return the ordered sketch here
-    return union.getResult(true, null);
+    return SketchHolder.of(union.getResult(true, null));
   }
 
   @Override
@@ -100,12 +94,8 @@ public class SketchAggregator implements Aggregator
 
   static void updateUnion(Union union, Object update)
   {
-    if (update instanceof Memory) {
-      union.update((Memory) update);
-    } else if (update instanceof Sketch) {
-      union.update((Sketch) update);
-    } else if (update instanceof Union) {
-      union.update(((Union) update).getResult(false, null));
+    if (update instanceof SketchHolder) {
+      ((SketchHolder) update).updateUnion(union);
     } else if (update instanceof String) {
       union.update((String) update);
     } else if (update instanceof byte[]) {
