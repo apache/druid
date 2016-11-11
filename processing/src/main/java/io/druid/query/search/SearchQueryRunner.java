@@ -276,9 +276,9 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
             while (!cursor.isDone()) {
               for (QueryDimensionInfo dimInfo : dimInfoList) {
-                dimInfo.queryHelper.updateSearchResultSet(
-                    dimInfo.outputName,
-                    dimInfo.selector,
+                dimInfo.getQueryHelper().updateSearchResultSet(
+                    dimInfo.getOutputName(),
+                    dimInfo.getSelector(),
                     searchQuerySpec,
                     limit,
                     set

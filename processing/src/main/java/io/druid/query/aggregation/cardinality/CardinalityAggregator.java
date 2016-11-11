@@ -45,7 +45,7 @@ public class CardinalityAggregator implements Aggregator
       }
 
       QueryDimensionInfo dimInfo = dimInfoList.get(k);
-      dimInfo.queryHelper.hashRow(dimInfo.selector, hasher);
+      dimInfo.getQueryHelper().hashRow(dimInfo.getSelector(), hasher);
     }
     collector.add(hasher.hash().asBytes());
   }
@@ -53,7 +53,7 @@ public class CardinalityAggregator implements Aggregator
   protected static void hashValues(List<QueryDimensionInfo> dimInfoList, HyperLogLogCollector collector)
   {
     for (final QueryDimensionInfo dimInfo : dimInfoList) {
-      dimInfo.queryHelper.hashValues(dimInfo.selector, collector);
+      dimInfo.getQueryHelper().hashValues(dimInfo.getSelector(), collector);
     }
   }
 

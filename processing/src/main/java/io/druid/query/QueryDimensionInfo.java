@@ -33,37 +33,37 @@ public class QueryDimensionInfo
   /**
    * The DimensionSpec representing this QueryDimensionInfo's dimension, taken from the query being processed.
    */
-  public final DimensionSpec spec;
+  private final DimensionSpec spec;
 
   /**
    * Helper object that handles type-specific operations for this dimension within query processing engines.
    */
-  public final DimensionQueryHelper queryHelper;
+  private final DimensionQueryHelper queryHelper;
 
   /**
    * Internal name of the dimension.
    */
-  public final String name;
+  private final String name;
 
   /**
    * Name of the dimension to be returned in query results.
    */
-  public final String outputName;
+  private final String outputName;
 
   /**
    * Column value selector for this dimension, e.g. a DimensionSelector for String dimensions.
    */
-  public final ColumnValueSelector selector;
+  private final ColumnValueSelector selector;
 
   /**
    * Cardinality of the dimension's value set, taken from the queryHelper.
    */
-  public final int cardinality;
+  private final int cardinality;
 
   /**
    * Used by the GroupBy engines, indicates the offset of this dimension's value within the grouping key.
    */
-  public final int keyBufferPosition;
+  private final int keyBufferPosition;
 
 
   public QueryDimensionInfo(
@@ -80,5 +80,40 @@ public class QueryDimensionInfo
     this.selector = selector;
     this.cardinality = queryHelper.getCardinality(selector);
     this.keyBufferPosition = keyBufferPosition;
+  }
+
+  public DimensionSpec getSpec()
+  {
+    return spec;
+  }
+
+  public DimensionQueryHelper getQueryHelper()
+  {
+    return queryHelper;
+  }
+
+  public String getName()
+  {
+    return name;
+  }
+
+  public String getOutputName()
+  {
+    return outputName;
+  }
+
+  public ColumnValueSelector getSelector()
+  {
+    return selector;
+  }
+
+  public int getCardinality()
+  {
+    return cardinality;
+  }
+
+  public int getKeyBufferPosition()
+  {
+    return keyBufferPosition;
   }
 }

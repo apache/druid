@@ -39,7 +39,7 @@ public class TopNParams
   {
     this.dimInfo = dimInfo;
     this.cursor = cursor;
-    this.cardinality = dimInfo.cardinality;
+    this.cardinality = dimInfo.getCardinality();
     this.numValuesPerPass = numValuesPerPass;
 
     if (cardinality < 0) {
@@ -49,7 +49,7 @@ public class TopNParams
 
   public Object getDimSelector()
   {
-    return dimInfo.selector;
+    return dimInfo.getSelector();
   }
 
   public QueryDimensionInfo getDimInfo()

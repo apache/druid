@@ -65,7 +65,7 @@ public class PooledTopNAlgorithm
     ByteBuffer resultsBuf = resultsBufHolder.get();
     resultsBuf.clear();
 
-    final DimensionSelector dimSelector = (DimensionSelector) dimInfo.selector;
+    final DimensionSelector dimSelector = (DimensionSelector) dimInfo.getSelector();
     final int cardinality = dimSelector.getValueCardinality();
 
     if (cardinality < 0) {

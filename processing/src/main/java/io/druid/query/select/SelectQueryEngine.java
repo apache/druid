@@ -136,7 +136,7 @@ public class SelectQueryEngine
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
               for (QueryDimensionInfo dimInfo : dimInfoList) {
-                dimInfo.queryHelper.addRowValuesToSelectResult(dimInfo.outputName, dimInfo.selector, theEvent);
+                dimInfo.getQueryHelper().addRowValuesToSelectResult(dimInfo.getOutputName(), dimInfo.getSelector(), theEvent);
               }
 
               for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {

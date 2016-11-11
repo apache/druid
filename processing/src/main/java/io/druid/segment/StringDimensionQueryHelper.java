@@ -343,13 +343,13 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<String, 
   @Override
   public void processValueFromGroupingKeyV2(QueryDimensionInfo dimInfo, ByteBuffer key, Map<String, Object> resultMap)
   {
-    final int id = key.getInt(dimInfo.keyBufferPosition);
+    final int id = key.getInt(dimInfo.getKeyBufferPosition());
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
       resultMap.put(
-          dimInfo.spec.getOutputName(),
-          ((DimensionSelector) dimInfo.selector).lookupName(id)
+          dimInfo.getOutputName(),
+          ((DimensionSelector) dimInfo.getSelector()).lookupName(id)
       );
     }
   }

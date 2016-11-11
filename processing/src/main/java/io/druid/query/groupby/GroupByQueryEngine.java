@@ -78,8 +78,8 @@ public class GroupByQueryEngine
     final int[] keySizes = new int[maxDimIndex];
 
     for (int i = 0; i < maxDimIndex; i++) {
-      queryHelpers[i] = dimInfo.get(i).queryHelper;
-      keySizes[i] = dimInfo.get(i).queryHelper.getGroupingKeySize();
+      queryHelpers[i] = dimInfo.get(i).getQueryHelper();
+      keySizes[i] = queryHelpers[i].getGroupingKeySize();
     }
 
     return new Comparator<ByteBuffer>()
@@ -223,8 +223,8 @@ public class GroupByQueryEngine
         List<ByteBuffer> unaggregatedBuffers = null;
 
         final QueryDimensionInfo dimInfo = dims.get(curIdx);
-        final ColumnValueSelector selector = dimInfo.selector;
-        final DimensionQueryHelper queryHelper = dimInfo.queryHelper;
+        final ColumnValueSelector selector = dimInfo.getSelector();
+        final DimensionQueryHelper queryHelper = dimInfo.getQueryHelper();
         final Function<ByteBuffer, List<ByteBuffer>> updateValuesFn = new Function<ByteBuffer, List<ByteBuffer>>()
         {
           @Override
@@ -387,7 +387,7 @@ public class GroupByQueryEngine
     {
       int keySize = 0;
       for (QueryDimensionInfo info : dimInfoList) {
-        keySize += info.queryHelper.getGroupingKeySize();
+        keySize += info.getQueryHelper().getGroupingKeySize();
       }
       return keySize;
     }
@@ -453,9 +453,9 @@ public class GroupByQueryEngine
 
                   ByteBuffer keyBuffer = input.getKey().duplicate();
                   for (QueryDimensionInfo dimInfo : dimInfoList) {
-                    final ColumnValueSelector dimSelector = dimInfo.selector;
-                    dimInfo.queryHelper.processDimValueFromGroupingKey(
-                        dimInfo.outputName,
+                    final ColumnValueSelector dimSelector = dimInfo.getSelector();
+                    dimInfo.getQueryHelper().processDimValueFromGroupingKey(
+                        dimInfo.getOutputName(),
                         dimSelector,
                         keyBuffer,
                         theEvent

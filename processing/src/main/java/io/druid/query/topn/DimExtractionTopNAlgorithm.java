@@ -61,7 +61,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
     QueryDimensionInfo dimInfo = params.getDimInfo();
-    return dimInfo.queryHelper.getDimExtractionRowSelector(params, query, capabilities);
+    return dimInfo.getQueryHelper().getDimExtractionRowSelector(params, query, capabilities);
   }
 
   @Override
@@ -88,8 +88,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
     final QueryDimensionInfo dimInfo = params.getDimInfo();
 
     while (!cursor.isDone()) {
-      dimInfo.queryHelper.dimExtractionScanAndAggregate(
-          dimInfo.selector,
+      dimInfo.getQueryHelper().dimExtractionScanAndAggregate(
+          dimInfo.getSelector(),
           rowSelector,
           aggregatesStore,
           cursor,

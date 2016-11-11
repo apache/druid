@@ -59,6 +59,27 @@ import java.util.NoSuchElementException;
 
 public class GroupByQueryEngineV2
 {
+  private static QueryDimensionInfo[] getDimensionInfo(GroupByQuery query, StorageAdapter adapter, Cursor cursor)
+  {
+    int dimCount = query.getDimensions().size();
+    int curPos = 0;
+    QueryDimensionInfo[] dims = new QueryDimensionInfo[dimCount];
+
+    for (int i = 0; i < dimCount; i++) {
+      final DimensionSpec dimSpec = query.getDimensions().get(i);
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
+          dimSpec.getDimension(),
+          cursor,
+          Lists.newArrayList(adapter.getAvailableDimensions())
+      );
+      final ColumnValueSelector selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
+      final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, selector, curPos);
+      dims[i] = dimInfo;
+      curPos += queryHelper.getGroupingKeySize();
+    }
+    return dims;
+  }
+
   private GroupByQueryEngineV2()
   {
     // No instantiation
@@ -147,27 +168,6 @@ public class GroupByQueryEngineV2
     );
   }
 
-  private static QueryDimensionInfo[] getDimensionInfo(GroupByQuery query, StorageAdapter adapter, Cursor cursor)
-  {
-    int dimCount = query.getDimensions().size();
-    int curPos = 0;
-    QueryDimensionInfo[] dims = new QueryDimensionInfo[dimCount];
-
-    for (int i = 0; i < dimCount; i++) {
-      final DimensionSpec dimSpec = query.getDimensions().get(i);
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
-          dimSpec.getDimension(),
-          cursor,
-          Lists.newArrayList(adapter.getAvailableDimensions())
-      );
-      final ColumnValueSelector selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
-      final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, selector, curPos);
-      dims[i] = dimInfo;
-      curPos += queryHelper.getGroupingKeySize();
-    }
-    return dims;
-  }
-
   private static class GroupByEngineIterator implements Iterator<Row>, Closeable
   {
     private final GroupByQuery query;
@@ -245,10 +245,10 @@ outer:
           stackp = stack.length - 1;
 
           for (int i = 0; i < dims.length; i++) {
-            final DimensionQueryHelper queryHelper = dims[i].queryHelper;
-            valuess[i] = queryHelper.getRowFromDimSelector(dims[i].selector);
+            final DimensionQueryHelper queryHelper = dims[i].getQueryHelper();
+            valuess[i] = queryHelper.getRowFromDimSelector(dims[i].getSelector());
             int rowSize = queryHelper.getRowSize(valuess[i]);
-            queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
+            queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].getKeyBufferPosition());
             stack[i] = rowSize == 0 ? 0 : 1;
           }
         }
@@ -267,13 +267,13 @@ outer:
             doAggregate = false;
           }
 
-          if (stackp >= 0 && stack[stackp] < dims[stackp].queryHelper.getRowSize(valuess[stackp])) {
+          if (stackp >= 0 && stack[stackp] < dims[stackp].getQueryHelper().getRowSize(valuess[stackp])) {
             // Load next value for current slot
-            dims[stackp].queryHelper.addValueToGroupingKeyV2(valuess[stackp], stack[stackp], keyBuffer, dims[stackp].keyBufferPosition);
+            dims[stackp].getQueryHelper().addValueToGroupingKeyV2(valuess[stackp], stack[stackp], keyBuffer, dims[stackp].getKeyBufferPosition());
             stack[stackp]++;
             for (int i = stackp + 1; i < stack.length; i++) {
-              int rowSize = dims[i].queryHelper.getRowSize(valuess[i]);
-              dims[i].queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].keyBufferPosition);
+              int rowSize = dims[i].getQueryHelper().getRowSize(valuess[i]);
+              dims[i].getQueryHelper().initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].getKeyBufferPosition());
               stack[i] = rowSize == 0 ? 0 : 1;
             }
             stackp = stack.length - 1;
@@ -300,7 +300,7 @@ outer:
 
               // Add dimensions.
               for (QueryDimensionInfo dimInfo : dims) {
-                dimInfo.queryHelper.processValueFromGroupingKeyV2(dimInfo, entry.getKey(), theMap);
+                dimInfo.getQueryHelper().processValueFromGroupingKeyV2(dimInfo, entry.getKey(), theMap);
               }
 
               // Add aggregations.
@@ -353,7 +353,7 @@ outer:
     {
       int keySize = 0;
       for (QueryDimensionInfo dimInfo : dims) {
-        keySize += dimInfo.queryHelper.getGroupingKeySize();
+        keySize += dimInfo.getQueryHelper().getGroupingKeySize();
       }
       this.keySize = keySize;
     }
