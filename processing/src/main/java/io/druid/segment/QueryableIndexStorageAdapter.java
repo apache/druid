@@ -275,13 +275,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (preFilters.size() == 0) {
         offset = new NoFilterOffset(0, index.getNumRows(), descending);
       } else {
-        List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-        for (Filter prefilter : preFilters) {
-          bitmaps.add(prefilter.getBitmapIndex(selector));
-        }
+        // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
         offset = new BitmapOffset(
             selector.getBitmapFactory(),
-            selector.getBitmapFactory().intersection(bitmaps),
+            AndFilter.getBitmapIndex(selector, preFilters),
             descending
         );
       }
@@ -849,7 +846,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
                       }
                       final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                      return new NumericColumnSelector() {
+                      return new NumericColumnSelector()
+                      {
                         @Override
                         public Number get()
                         {
@@ -923,6 +921,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       );
 
                       final ValueMatcher filterMatcher;
+
                       {
                         if (postFilter instanceof BooleanFilter) {
                           filterMatcher = ((BooleanFilter) postFilter).makeMatcher(
@@ -1158,12 +1157,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     // Use an iterator-based implementation, ImmutableBitmap.get(index) works differently for Concise and Roaring.
     // ImmutableConciseSet.get(index) is also inefficient, it performs a linear scan on each call
     @Override
-    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap) {
+    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap)
+    {
       final IntIterator iter = descending ?
                                BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
                                rowBitmap.iterator();
 
-      if(!iter.hasNext()) {
+      if (!iter.hasNext()) {
         return new BooleanValueMatcher(false);
       }
 
@@ -1252,7 +1252,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public Offset clone() {
+    public Offset clone()
+    {
       throw new IllegalStateException("clone");
     }
   }
