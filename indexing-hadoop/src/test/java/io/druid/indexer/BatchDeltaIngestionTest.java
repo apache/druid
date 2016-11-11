@@ -392,8 +392,8 @@ public class BatchDeltaIngestionTest
     );
 
     config.setShardSpecs(
-        ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(
-            INTERVAL_FULL.getStart(),
+        ImmutableMap.<Long, List<HadoopyShardSpec>>of(
+            INTERVAL_FULL.getStartMillis(),
             ImmutableList.of(
                 new HadoopyShardSpec(
                     new HashBasedNumberedShardSpec(0, 1, null, HadoopDruidIndexerConfig.JSON_MAPPER),

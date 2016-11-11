@@ -215,8 +215,8 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
-  private final Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
-  private final Map<DateTime, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
+  private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
+  private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final QueryGranularity rollupGran;
 
   @JsonCreator
@@ -226,7 +226,7 @@ public class HadoopDruidIndexerConfig
   {
     this.schema = spec;
     this.pathSpec = JSON_MAPPER.convertValue(spec.getIOConfig().getPathSpec(), PathSpec.class);
-    for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : spec.getTuningConfig().getShardSpecs().entrySet()) {
+    for (Map.Entry<Long, List<HadoopyShardSpec>> entry : spec.getTuningConfig().getShardSpecs().entrySet()) {
       if (entry.getValue() == null || entry.getValue().isEmpty()) {
         continue;
       }
@@ -310,7 +310,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
-  public void setShardSpecs(Map<DateTime, List<HadoopyShardSpec>> shardSpecs)
+  public void setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
   {
     this.schema = schema.withTuningConfig(schema.getTuningConfig().withShardSpecs(shardSpecs));
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
@@ -363,12 +363,12 @@ public class HadoopDruidIndexerConfig
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)
   {
-    return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
+    return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).get(bucket.partitionNum);
   }
 
   public int getShardSpecCount(Bucket bucket)
   {
-    return schema.getTuningConfig().getShardSpecs().get(bucket.time).size();
+    return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).size();
   }
 
   public boolean isBuildV9Directly()
@@ -411,12 +411,12 @@ public class HadoopDruidIndexerConfig
       return Optional.absent();
     }
     final DateTime bucketStart = timeBucket.get().getStart();
-    final ShardSpec actualSpec = shardSpecLookups.get(bucketStart)
+    final ShardSpec actualSpec = shardSpecLookups.get(bucketStart.getMillis())
                                                  .getShardSpec(
                                                      rollupGran.truncate(inputRow.getTimestampFromEpoch()),
                                                      inputRow
                                                  );
-    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(bucketStart).get(actualSpec);
+    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(bucketStart.getMillis()).get(actualSpec);
 
     return Optional.of(
         new Bucket(
@@ -452,7 +452,7 @@ public class HadoopDruidIndexerConfig
                     public Iterable<Bucket> apply(Interval input)
                     {
                       final DateTime bucketTime = input.getStart();
-                      final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime);
+                      final List<HadoopyShardSpec> specs = schema.getTuningConfig().getShardSpecs().get(bucketTime.getMillis());
                       if (specs == null) {
                         return ImmutableList.of();
                       }

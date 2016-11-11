@@ -33,7 +33,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -175,13 +174,13 @@ public class DetermineHashedPartitionsJobTest
   public void testDetermineHashedPartitions(){
     DetermineHashedPartitionsJob determineHashedPartitionsJob = new DetermineHashedPartitionsJob(indexerConfig);
     determineHashedPartitionsJob.run();
-    Map<DateTime, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
     Assert.assertEquals(
         expectedNumTimeBuckets,
         shardSpecs.entrySet().size()
     );
     int i=0;
-    for(Map.Entry<DateTime, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {
+    for(Map.Entry<Long, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {
       Assert.assertEquals(
           expectedNumOfShards[i++],
           entry.getValue().size(),
