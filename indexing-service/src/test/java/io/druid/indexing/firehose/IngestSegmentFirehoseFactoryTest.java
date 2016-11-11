@@ -32,9 +32,7 @@ import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Module;
-import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -80,6 +78,7 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -533,21 +532,6 @@ public class IngestSegmentFirehoseFactoryTest
 
   private static ServiceEmitter newMockEmitter()
   {
-    return new ServiceEmitter(null, null, null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-
-      }
-
-      @Override
-      public void emit(ServiceEventBuilder builder)
-      {
-
-      }
-    };
-
-
+    return new NoopServiceEmitter();
   }
 }

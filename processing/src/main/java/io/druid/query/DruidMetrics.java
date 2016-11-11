@@ -41,7 +41,6 @@ public class DruidMetrics
   public final static String ID = "id";
   public final static String TASK_ID = "taskId";
   public final static String STATUS = "status";
-  public final static String VERSION = "version";
 
   // task metrics
   public final static String TASK_TYPE = "taskType";
@@ -65,7 +64,6 @@ public class DruidMetrics
   public static <T> ServiceMetricEvent.Builder makePartialQueryTimeMetric(Query<T> query)
   {
     return new ServiceMetricEvent.Builder()
-        .setDimension(VERSION, Strings.nullToEmpty(DruidMetrics.class.getPackage().getImplementationVersion()))
         .setDimension(DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
         .setDimension(TYPE, query.getType())
         .setDimension(
