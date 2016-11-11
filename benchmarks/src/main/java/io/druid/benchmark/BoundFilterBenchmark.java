@@ -19,25 +19,11 @@
 
 package io.druid.benchmark;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.collections.bitmap.RoaringBitmapFactory;
-import com.metamx.collections.spatial.ImmutableRTree;
-import io.druid.query.filter.BitmapIndexSelector;
-import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.ordering.StringComparators;
-import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.Indexed;
-import io.druid.segment.data.RoaringBitmapSerdeFactory;
-import io.druid.segment.filter.BoundFilter;
-import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
-import it.uniroma3.mat.extendedset.intset.ConciseSetUtils;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -50,10 +36,26 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
+
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.collections.spatial.ImmutableRTree;
+import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.ordering.StringComparators;
+import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.Indexed;
+import io.druid.segment.data.RoaringBitmapSerdeFactory;
+import io.druid.segment.filter.BoundFilter;
+import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
+import it.uniroma3.mat.extendedset.intset.ConciseSetUtils;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)

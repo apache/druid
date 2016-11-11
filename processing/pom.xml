@@ -36,8 +36,9 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.metamx</groupId>
+            <groupId>io.druid</groupId>
             <artifactId>bytebuffer-collections</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
