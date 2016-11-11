@@ -19,10 +19,10 @@
 
 package io.druid.segment;
 
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableRoaringBitmap;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
 import io.druid.segment.data.Offset;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.roaringbitmap.IntIterator;

@@ -20,8 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.spatial.ImmutableRTree;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.spatial.ImmutableRTree;
 
 import java.nio.ByteBuffer;
 
