@@ -19,7 +19,6 @@
 
 package io.druid.server.lookup.namespace;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.data.SearchableVersionedDataFinder;
@@ -99,14 +98,12 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
       );
 
       if (uri == null) {
-        throw new RuntimeException(
-            new FileNotFoundException(
-                String.format(
-                    "Could not find match for pattern `%s` in [%s] for %s",
-                    versionRegex,
-                    originalUri,
-                    extractionNamespace
-                )
+        throw new FileNotFoundException(
+            String.format(
+                "Could not find match for pattern `%s` in [%s] for %s",
+                versionRegex,
+                originalUri,
+                extractionNamespace
             )
         );
       }
@@ -116,71 +113,66 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
 
     final String uriPath = uri.getPath();
 
-    try {
-      return RetryUtils.retry(
-          new Callable<String>()
+    return RetryUtils.retry(
+        new Callable<String>()
+        {
+          @Override
+          public String call() throws Exception
           {
-            @Override
-            public String call() throws Exception
-            {
-              final String version = puller.getVersion(uri);
-              try {
-                // Important to call equals() against version because lastVersion could be null
-                if (version.equals(lastVersion)) {
-                  log.debug(
-                      "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
-                      "Skipping ",
-                      uri.toString(),
-                      id,
-                      version
-                  );
-                  return lastVersion;
-                }
+            final String version = puller.getVersion(uri);
+            try {
+              // Important to call equals() against version because lastVersion could be null
+              if (version.equals(lastVersion)) {
+                log.debug(
+                    "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
+                    "Skipping ",
+                    uri.toString(),
+                    id,
+                    version
+                );
+                return lastVersion;
               }
-              catch (NumberFormatException ex) {
-                log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
-              }
-              final ByteSource source;
-              if (CompressionUtils.isGz(uriPath)) {
-                // Simple gzip stream
-                log.debug("Loading gz");
-                source = new ByteSource()
-                {
-                  @Override
-                  public InputStream openStream() throws IOException
-                  {
-                    return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
-                  }
-                };
-              } else {
-                source = new ByteSource()
-                {
-                  @Override
-                  public InputStream openStream() throws IOException
-                  {
-                    return puller.getInputStream(uri);
-                  }
-                };
-              }
-              final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
-                  extractionNamespace.getNamespaceParseSpec()
-                                     .getParser()
-              ).populate(source, cache);
-              log.info(
-                  "Finished loading %,d values from %,d lines for namespace [%s]",
-                  populateResult.getEntries(),
-                  populateResult.getLines(),
-                  id
-              );
-              return version;
             }
-          },
-          puller.shouldRetryPredicate(),
-          DEFAULT_NUM_RETRIES
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+            catch (NumberFormatException ex) {
+              log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
+            }
+            final ByteSource source;
+            if (CompressionUtils.isGz(uriPath)) {
+              // Simple gzip stream
+              log.debug("Loading gz");
+              source = new ByteSource()
+              {
+                @Override
+                public InputStream openStream() throws IOException
+                {
+                  return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
+                }
+              };
+            } else {
+              source = new ByteSource()
+              {
+                @Override
+                public InputStream openStream() throws IOException
+                {
+                  return puller.getInputStream(uri);
+                }
+              };
+            }
+            final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
+                extractionNamespace.getNamespaceParseSpec()
+                                   .getParser()
+            ).populate(source, cache);
+            log.info(
+                "Finished loading %,d values from %,d lines for namespace [%s]",
+                populateResult.getEntries(),
+                populateResult.getLines(),
+                id
+            );
+            return version;
+          }
+        },
+        puller.shouldRetryPredicate(),
+        DEFAULT_NUM_RETRIES
+    );
   }
 }

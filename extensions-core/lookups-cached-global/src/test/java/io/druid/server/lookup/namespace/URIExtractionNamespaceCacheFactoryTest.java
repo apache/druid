@@ -40,15 +40,12 @@ import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManagersTe
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -279,8 +276,6 @@ public class URIExtractionNamespaceCacheFactoryTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private final String suffix;
   private final Function<File, OutputStream> outStreamSupplier;
@@ -413,7 +408,7 @@ public class URIExtractionNamespaceCacheFactoryTest
     Assert.assertEquals(null, map.get("baz"));
   }
 
-  @Test
+  @Test(expected = FileNotFoundException.class)
   public void testMissing() throws Exception
   {
     URIExtractionNamespace badNamespace = new URIExtractionNamespace(
@@ -425,18 +420,10 @@ public class URIExtractionNamespaceCacheFactoryTest
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    try {
-      factory.populateCache(id, badNamespace, null, map);
-    }
-    catch (RuntimeException e) {
-      Assert.assertNotNull(e.getCause());
-      Assert.assertEquals(FileNotFoundException.class, e.getCause().getClass());
-      return;
-    }
-    Assert.fail("Did not have exception");
+    factory.populateCache(id, badNamespace, null, map);
   }
 
-  @Test
+  @Test(expected = FileNotFoundException.class)
   public void testMissingRegex() throws Exception
   {
     String badId = "bad";
@@ -450,24 +437,6 @@ public class URIExtractionNamespaceCacheFactoryTest
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    expectedException.expect(new BaseMatcher<Throwable>()
-    {
-      @Override
-      public void describeTo(Description description)
-      {
-
-      }
-
-      @Override
-      public boolean matches(Object o)
-      {
-        if (!(o instanceof Throwable)) {
-          return false;
-        }
-        final Throwable t = (Throwable) o;
-        return t.getCause() != null && t.getCause() instanceof FileNotFoundException;
-      }
-    });
     factory.populateCache(badId, badNamespace, null, map);
   }
 
