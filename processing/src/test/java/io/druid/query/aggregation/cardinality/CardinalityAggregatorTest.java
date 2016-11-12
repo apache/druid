@@ -246,19 +246,19 @@ public class CardinalityAggregatorTest
     }
   }
 
-  List<QueryDimensionInfo> dimInfoList;
+  List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList;
   List<DimensionSelector> selectorList;
   CardinalityAggregatorFactory rowAggregatorFactory;
   CardinalityAggregatorFactory valueAggregatorFactory;
   final TestDimensionSelector dim1;
   final TestDimensionSelector dim2;
 
-  List<QueryDimensionInfo> dimInfoListWithExtraction;
+  List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoListWithExtraction;
   List<DimensionSelector> selectorListWithExtraction;
   final TestDimensionSelector dim1WithExtraction;
   final TestDimensionSelector dim2WithExtraction;
 
-  List<QueryDimensionInfo> dimInfoListConstantVal;
+  List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoListConstantVal;
   List<DimensionSelector> selectorListConstantVal;
   final TestDimensionSelector dim1ConstantVal;
   final TestDimensionSelector dim2ConstantVal;
@@ -272,8 +272,18 @@ public class CardinalityAggregatorTest
     dim2 = new TestDimensionSelector(values2, null);
 
     dimInfoList = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), dim1, 0),
-        new QueryDimensionInfo(dimSpec2, new StringDimensionQueryHelper("dim2"), dim2, 0)
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec1,
+            new StringDimensionQueryHelper("dim1"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim1
+        ),
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec2,
+            new StringDimensionQueryHelper("dim2"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim2
+        )
     );
 
     selectorList = Lists.newArrayList(
@@ -309,8 +319,18 @@ public class CardinalityAggregatorTest
         dim2WithExtraction
     );
     dimInfoListWithExtraction = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), dim1WithExtraction, 0),
-        new QueryDimensionInfo(dimSpec2, new StringDimensionQueryHelper("dim2"), dim2WithExtraction, 0)
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec1,
+            new StringDimensionQueryHelper("dim1"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim1WithExtraction
+        ),
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec2,
+            new StringDimensionQueryHelper("dim2"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim2WithExtraction
+        )
     );
 
     String helloJsFn = "function(str) { return 'hello' }";
@@ -322,8 +342,19 @@ public class CardinalityAggregatorTest
         dim2ConstantVal
     );
     dimInfoListConstantVal = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), dim1ConstantVal, 0),
-        new QueryDimensionInfo(dimSpec2, new StringDimensionQueryHelper("dim2"), dim2ConstantVal, 0)
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec1,
+            new StringDimensionQueryHelper("dim1"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim1ConstantVal
+        ),
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec2,
+            new StringDimensionQueryHelper(
+                "dim2"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim2ConstantVal
+        )
     );
 
   }
@@ -406,11 +437,21 @@ public class CardinalityAggregatorTest
   {
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
-    List<QueryDimensionInfo> dimInfo1 = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), dim1, 0)
+    List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfo1 = Lists.newArrayList(
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec1,
+            new StringDimensionQueryHelper("dim1"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim1
+        )
     );
-    List<QueryDimensionInfo> dimInfo2 = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec2, new StringDimensionQueryHelper("dim2"), dim2, 0)
+    List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfo2 = Lists.newArrayList(
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec2,
+            new StringDimensionQueryHelper("dim2"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim2
+        )
     );
 
     CardinalityAggregator agg1 = new CardinalityAggregator("billy", dimInfo1, true);
@@ -444,11 +485,21 @@ public class CardinalityAggregatorTest
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
 
-    List<QueryDimensionInfo> dimInfo1 = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), dim1, 0)
+    List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfo1 = Lists.newArrayList(
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec1,
+            new StringDimensionQueryHelper("dim1"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim1
+        )
     );
-    List<QueryDimensionInfo> dimInfo2 = Lists.newArrayList(
-        new QueryDimensionInfo(dimSpec2, new StringDimensionQueryHelper("dim2"), dim2, 0)
+    List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfo2 = Lists.newArrayList(
+        new QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>(
+            dimSpec2,
+            new StringDimensionQueryHelper("dim2"),
+            new CardinalityAggregatorFactory.StringCardinalityAggregatorTypeHelper(),
+            dim2
+        )
     );
 
     CardinalityAggregator agg1 = new CardinalityAggregator("billy", dimInfo1, false);

@@ -40,6 +40,8 @@ import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.QueryTypeHelper;
+import io.druid.query.dimension.QueryTypeHelperFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.filter.Filter;
@@ -50,7 +52,7 @@ import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.DimensionQueryHelper;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
@@ -58,6 +60,8 @@ import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
@@ -70,24 +74,82 @@ import java.util.Map;
  */
 public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
+  private static final SearchTypeHelperFactory TYPE_HELPER_FACTORY = new SearchTypeHelperFactory();
+
   private static final EmittingLogger log = new EmittingLogger(SearchQueryRunner.class);
   private final Segment segment;
+
+  private static class SearchTypeHelperFactory implements QueryTypeHelperFactory<SearchTypeHelper>
+  {
+    @Override
+    public SearchTypeHelper makeQueryTypeHelper(
+        String dimName, ColumnCapabilities capabilities
+    )
+    {
+      ValueType type = capabilities.getType();
+      switch(type) {
+        case STRING:
+          return new StringSearchTypeHelper();
+        default:
+          return null;
+      }
+    }
+  }
+
+  public interface SearchTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
+  {
+    /**
+     * Read the current row from dimSelector and update the search result set.
+     *
+     * For each row value:
+     * 1. Check if searchQuerySpec accept()s the value
+     * 2. If so, add the value to the result set and increment the counter for that value
+     * 3. If the size of the result set reaches the limit after adding a value, return early.
+     *
+     * @param outputName Output name for this dimension in the search query being served
+     * @param dimSelector Dimension value selector
+     * @param searchQuerySpec Spec for the search query
+     * @param set The result set of the search query
+     * @param limit The limit of the search query
+     */
+    void updateSearchResultSet(
+        String outputName,
+        ValueSelectorType dimSelector,
+        SearchQuerySpec searchQuerySpec,
+        int limit,
+        Object2IntRBTreeMap<SearchHit> set
+    );
+  }
+
+  public static class StringSearchTypeHelper implements SearchTypeHelper<DimensionSelector>
+  {
+    @Override
+    public void updateSearchResultSet(
+        String outputName,
+        DimensionSelector selector,
+        SearchQuerySpec searchQuerySpec,
+        int limit,
+        final Object2IntRBTreeMap<SearchHit> set
+    )
+    {
+      if (selector != null) {
+        final IndexedInts vals = selector.getRow();
+        for (int i = 0; i < vals.size(); ++i) {
+          final String dimVal = selector.lookupName(vals.get(i));
+          if (searchQuerySpec.accept(dimVal)) {
+            set.addTo(new SearchHit(outputName, dimVal), 1);
+            if (set.size() >= limit) {
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
 
   public SearchQueryRunner(Segment segment)
   {
     this.segment = segment;
-  }
-
-  private QueryDimensionInfo getDimInfoFromSpec(DimensionSpec dimSpec, StorageAdapter adapter, Cursor cursor)
-  {
-    final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
-        dimSpec.getDimension(),
-        cursor,
-        Lists.<String>newArrayList(adapter.getAvailableDimensions())
-    );
-    final ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
-    final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
-    return dimInfo;
   }
 
   @Override
@@ -269,14 +331,18 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
               return set;
             }
 
-            List<QueryDimensionInfo> dimInfoList = Lists.newArrayList();
-            for (DimensionSpec dim : nonBitmapDims) {
-              dimInfoList.add(getDimInfoFromSpec(dim, adapter, cursor));
-            }
+            List<QueryDimensionInfo<SearchTypeHelper>> dimInfoList = Arrays.asList(
+                DimensionHandlerUtils.getDimensionInfo(
+                    TYPE_HELPER_FACTORY,
+                    nonBitmapDims,
+                    adapter,
+                    cursor
+                )
+            );
 
             while (!cursor.isDone()) {
-              for (QueryDimensionInfo dimInfo : dimInfoList) {
-                dimInfo.getQueryHelper().updateSearchResultSet(
+              for (QueryDimensionInfo<SearchTypeHelper> dimInfo : dimInfoList) {
+                dimInfo.getQueryTypeHelper().updateSearchResultSet(
                     dimInfo.getOutputName(),
                     dimInfo.getSelector(),
                     searchQuerySpec,

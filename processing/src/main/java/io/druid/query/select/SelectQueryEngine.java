@@ -31,21 +31,28 @@ import io.druid.query.Result;
 import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.QueryTypeHelper;
+import io.druid.query.dimension.QueryTypeHelperFactory;
 import io.druid.query.filter.Filter;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.DimensionQueryHelper;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +60,67 @@ import java.util.Map;
  */
 public class SelectQueryEngine
 {
+  private static final SelectTypeHelperFactory TYPE_HELPER_FACTORY = new SelectTypeHelperFactory();
+
+  private static class SelectTypeHelperFactory implements QueryTypeHelperFactory<SelectTypeHelper>
+  {
+    @Override
+    public SelectTypeHelper makeQueryTypeHelper(
+        String dimName, ColumnCapabilities capabilities
+    )
+    {
+      ValueType type = capabilities.getType();
+      switch(type) {
+        case STRING:
+          return new StringSelectTypeHelper();
+        default:
+          return null;
+      }
+    }
+  }
+
+  public interface SelectTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
+  {
+    /**
+     * Read the current row from dimSelector and add the row values to the result map.
+     *
+     * Multi-valued rows should be added to the result as a List, single value rows should be added as a single object.
+     *
+     * @param outputName Output name for this dimension in the select query being served
+     * @param dimSelector Dimension value selector
+     * @param resultMap Output map of the select query being served
+     */
+    void addRowValuesToSelectResult(
+        String outputName,
+        ValueSelectorType dimSelector,
+        Map<String, Object> resultMap
+    );
+  }
+
+  public static class StringSelectTypeHelper implements SelectTypeHelper<DimensionSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(String outputName, DimensionSelector selector, Map<String, Object> theEvent)
+    {
+      if (selector == null) {
+        theEvent.put(outputName, null);
+      } else {
+        final IndexedInts vals = selector.getRow();
+
+        if (vals.size() == 1) {
+          final String dimVal = selector.lookupName(vals.get(0));
+          theEvent.put(outputName, dimVal);
+        } else {
+          List<String> dimVals = new ArrayList<>(vals.size());
+          for (int i = 0; i < vals.size(); ++i) {
+            dimVals.add(selector.lookupName(vals.get(i)));
+          }
+          theEvent.put(outputName, dimVals);
+        }
+      }
+    }
+  }
+
   public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
@@ -106,16 +174,16 @@ public class SelectQueryEngine
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-            final List<QueryDimensionInfo> dimInfoList = Lists.newArrayList();
+            final List<QueryDimensionInfo<SelectTypeHelper>> dimInfoList = Arrays.asList(
+                DimensionHandlerUtils.getDimensionInfo(
+                    TYPE_HELPER_FACTORY,
+                    Lists.newArrayList(dims),
+                    adapter,
+                    cursor
+                )
+            );
+
             for (DimensionSpec dimSpec : dims) {
-              final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
-                  dimSpec.getDimension(),
-                  cursor,
-                  Lists.<String>newArrayList(adapter.getAvailableDimensions())
-              );
-              final ColumnValueSelector dimSelector = queryHelper.getColumnValueSelector(dimSpec, cursor);
-              final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, dimSelector, 0);
-              dimInfoList.add(dimInfo);
               builder.addDimension(dimSpec.getOutputName());
             }
 
@@ -135,8 +203,8 @@ public class SelectQueryEngine
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
-              for (QueryDimensionInfo dimInfo : dimInfoList) {
-                dimInfo.getQueryHelper().addRowValuesToSelectResult(dimInfo.getOutputName(), dimInfo.getSelector(), theEvent);
+              for (QueryDimensionInfo<SelectTypeHelper> dimInfo : dimInfoList) {
+                dimInfo.getQueryTypeHelper().addRowValuesToSelectResult(dimInfo.getOutputName(), dimInfo.getSelector(), theEvent);
               }
 
               for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {

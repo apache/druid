@@ -223,7 +223,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         );
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(dimension, columnSelectorFactory, null);
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
+          dimension,
+          columnSelectorFactory.getColumnCapabilities(dimension),
+          null
+      );
+
       return queryHelper.getValueMatcher(columnSelectorFactory, value);
     }
 
@@ -234,7 +239,11 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(dimension, columnSelectorFactory, null);
+          final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
+              dimension,
+              columnSelectorFactory.getColumnCapabilities(dimension),
+              null
+          );
           return queryHelper.getValueMatcher(columnSelectorFactory, predicateFactory);
         default:
           return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));

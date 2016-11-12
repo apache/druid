@@ -28,13 +28,13 @@ import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
-  private final List<QueryDimensionInfo> dimInfoList;
+  private final List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList;
   private final boolean byRow;
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
   public CardinalityBufferAggregator(
-      List<QueryDimensionInfo> dimInfoList,
+      List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList,
       boolean byRow
   )
   {

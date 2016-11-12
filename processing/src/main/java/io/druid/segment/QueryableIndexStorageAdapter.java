@@ -1041,9 +1041,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
           dimension,
-          cursor,
+          cursor.getColumnCapabilities(dimension),
           Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
       );
       return queryHelper.getValueMatcher(cursor, value);
@@ -1058,9 +1058,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
+      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
           dimension,
-          cursor,
+          cursor.getColumnCapabilities(dimension),
           Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
       );
       return queryHelper.getValueMatcher(cursor, predicateFactory);

@@ -21,8 +21,8 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
@@ -36,15 +36,19 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.QueryDimensionInfo;
-import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.QueryTypeHelper;
+import io.druid.query.dimension.QueryTypeHelperFactory;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
-import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionQueryHelper;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -59,25 +63,41 @@ import java.util.NoSuchElementException;
 
 public class GroupByQueryEngineV2
 {
-  private static QueryDimensionInfo[] getDimensionInfo(GroupByQuery query, StorageAdapter adapter, Cursor cursor)
-  {
-    int dimCount = query.getDimensions().size();
-    int curPos = 0;
-    QueryDimensionInfo[] dims = new QueryDimensionInfo[dimCount];
+  private static final GroupByTypeHelperFactory TYPE_HELPER_FACTORY = new GroupByTypeHelperFactory();
 
-    for (int i = 0; i < dimCount; i++) {
-      final DimensionSpec dimSpec = query.getDimensions().get(i);
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeQueryHelper(
-          dimSpec.getDimension(),
-          cursor,
-          Lists.newArrayList(adapter.getAvailableDimensions())
-      );
-      final ColumnValueSelector selector = queryHelper.getColumnValueSelector(dimSpec, cursor);
-      final QueryDimensionInfo dimInfo = new QueryDimensionInfo(dimSpec, queryHelper, selector, curPos);
-      dims[i] = dimInfo;
-      curPos += queryHelper.getGroupingKeySize();
+  private static GroupByDimensionInfo[] getGroupByDimInfo(QueryDimensionInfo<GroupByTypeHelper>[] baseDimInfo)
+  {
+    GroupByDimensionInfo[] retInfo = new GroupByDimensionInfo[baseDimInfo.length];
+    int curPos = 0;
+    for (int i = 0; i < retInfo.length; i++) {
+      retInfo[i] = new GroupByDimensionInfo(baseDimInfo[i], curPos);
+      curPos += retInfo[i].getQueryTypeHelper().getGroupingKeySize();
     }
-    return dims;
+    return retInfo;
+  }
+
+  private static class GroupByDimensionInfo extends QueryDimensionInfo<GroupByTypeHelper>
+  {
+    /**
+     * Indicates the offset of this dimension's value within the grouping key.
+     */
+    private int keyBufferPosition;
+
+    public GroupByDimensionInfo(QueryDimensionInfo<GroupByTypeHelper> baseInfo, int keyBufferPosition)
+    {
+      super(
+          baseInfo.getSpec(),
+          baseInfo.getQueryHelper(),
+          baseInfo.getQueryTypeHelper(),
+          baseInfo.getSelector()
+      );
+      this.keyBufferPosition = keyBufferPosition;
+    }
+
+    public int getKeyBufferPosition()
+    {
+      return keyBufferPosition;
+    }
   }
 
   private GroupByQueryEngineV2()
@@ -136,13 +156,19 @@ public class GroupByQueryEngineV2
                           @Override
                           public GroupByEngineIterator make()
                           {
+                            QueryDimensionInfo<GroupByTypeHelper>[] dimInfo = DimensionHandlerUtils.getDimensionInfo(
+                                TYPE_HELPER_FACTORY,
+                                query.getDimensions(),
+                                storageAdapter,
+                                cursor
+                            );
                             return new GroupByEngineIterator(
                                 query,
                                 config,
                                 cursor,
                                 bufferHolder.get(),
                                 fudgeTimestamp,
-                                getDimensionInfo(query, storageAdapter, cursor)
+                                getGroupByDimInfo(dimInfo)
                             );
                           }
 
@@ -168,6 +194,150 @@ public class GroupByQueryEngineV2
     );
   }
 
+  private static class GroupByTypeHelperFactory implements QueryTypeHelperFactory<GroupByTypeHelper>
+  {
+    @Override
+    public GroupByTypeHelper makeQueryTypeHelper(
+        String dimName, ColumnCapabilities capabilities
+    )
+    {
+      ValueType type = capabilities.getType();
+      switch(type) {
+        case STRING:
+          return new StringGroupByTypeHelper();
+        default:
+          return null;
+      }
+    }
+  }
+
+  /**
+   * Contains a collection of query processing methods for type-specific operations used exclusively by
+   * GroupByQueryEngineV2.
+   *
+   * Each GroupByTypeHelper is associated with a single dimension.
+   *
+   * @param <RowValuesType> The type of the row values object for this dimension
+   */
+  private interface GroupByTypeHelper<RowValuesType> extends QueryTypeHelper
+  {
+    /**
+     * Return the size, in bytes, of this dimension's values in the grouping key.
+     *
+     * For example, a String implementation would return 4, the size of an int.
+     *
+     * @return size, in bytes, of this dimension's values in the grouping key.
+     */
+    int getGroupingKeySize();
+
+    /**
+     * Read the first value within a row values object (IndexedInts, IndexedLongs, etc.) and write that value
+     * to the keyBuffer at keyBufferPosition. If rowSize is 0, write GROUP_BY_MISSING_VALUE instead.
+     *
+     * @param valuesObj row values object
+     * @param keyBuffer grouping key
+     * @param keyBufferPosition offset within grouping key
+     */
+    void initializeGroupingKeyV2Dimension(
+        final RowValuesType valuesObj,
+        final ByteBuffer keyBuffer,
+        final int keyBufferPosition
+    );
+
+
+    /**
+     * Read the value at rowValueIdx from a row values object and write that value to the keyBuffer at keyBufferPosition.
+     *
+     * @param values row values object
+     * @param rowValueIdx index of the value to read
+     * @param keyBuffer grouping key
+     * @param keyBufferPosition offset within grouping key
+     */
+    void addValueToGroupingKeyV2(
+        RowValuesType values,
+        int rowValueIdx,
+        ByteBuffer keyBuffer,
+        final int keyBufferPosition
+    );
+
+
+    /**
+     * Read a value from a grouping key and add it to the group by query result map, using the output name specified
+     * in a DimensionSpec.
+     *
+     * An implementation may choose to not add anything to the result map
+     * (e.g., as the String implementation does for empty rows)
+     *
+     * dimInfo provides access to:
+     * - the keyBufferPosition offset from which to read the value
+     * - the dimension value selector
+     * - the DimensionSpec for this dimension from the query
+     *
+     * @param dimInfo dimension info containing the key offset, value selector, and dimension spec
+     * @param resultMap result map for the group by query being served
+     * @param key grouping key
+     */
+    void processValueFromGroupingKeyV2(
+        GroupByDimensionInfo dimInfo,
+        ByteBuffer key,
+        Map<String, Object> resultMap
+    );
+  }
+
+  private static class StringGroupByTypeHelper implements GroupByTypeHelper<IndexedInts>
+  {
+    private static final int GROUP_BY_MISSING_VALUE = -1;
+
+    @Override
+    public int getGroupingKeySize()
+    {
+      return Ints.BYTES;
+    }
+
+    @Override
+    public void initializeGroupingKeyV2Dimension(
+        final IndexedInts values,
+        final ByteBuffer keyBuffer,
+        final int keyBufferPosition
+    )
+    {
+      int rowSize = values.size();
+      if (rowSize == 0) {
+        keyBuffer.putInt(keyBufferPosition, GROUP_BY_MISSING_VALUE);
+      } else {
+        keyBuffer.putInt(keyBufferPosition, values.get(0));
+      }
+    }
+
+    @Override
+    public void addValueToGroupingKeyV2(
+        final IndexedInts values,
+        final int rowValueIdx,
+        final ByteBuffer keyBuffer,
+        final int keyBufferPosition
+    )
+    {
+      keyBuffer.putInt(
+          keyBufferPosition,
+          values.get(rowValueIdx)
+      );
+    }
+
+    @Override
+    public void processValueFromGroupingKeyV2(GroupByDimensionInfo dimInfo, ByteBuffer key, Map<String, Object> resultMap)
+    {
+      final int id = key.getInt(dimInfo.getKeyBufferPosition());
+
+      // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
+      if (id != GROUP_BY_MISSING_VALUE) {
+        resultMap.put(
+            dimInfo.getOutputName(),
+            ((DimensionSelector) dimInfo.getSelector()).lookupName(id)
+        );
+      }
+    }
+  }
+
   private static class GroupByEngineIterator implements Iterator<Row>, Closeable
   {
     private final GroupByQuery query;
@@ -179,7 +349,7 @@ public class GroupByQueryEngineV2
     private final ByteBuffer keyBuffer;
     private final int[] stack;
     private final Object[] valuess;
-    private final QueryDimensionInfo[] dims;
+    private final GroupByDimensionInfo[] dims;
 
     private int stackp = Integer.MIN_VALUE;
     private boolean currentRowWasPartiallyAggregated = false;
@@ -191,7 +361,7 @@ public class GroupByQueryEngineV2
         final Cursor cursor,
         final ByteBuffer buffer,
         final DateTime fudgeTimestamp,
-        final QueryDimensionInfo[] dims
+        final GroupByDimensionInfo[] dims
     )
     {
       final int dimCount = query.getDimensions().size();
@@ -248,7 +418,7 @@ outer:
             final DimensionQueryHelper queryHelper = dims[i].getQueryHelper();
             valuess[i] = queryHelper.getRowFromDimSelector(dims[i].getSelector());
             int rowSize = queryHelper.getRowSize(valuess[i]);
-            queryHelper.initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].getKeyBufferPosition());
+            dims[i].getQueryTypeHelper().initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].getKeyBufferPosition());
             stack[i] = rowSize == 0 ? 0 : 1;
           }
         }
@@ -269,11 +439,11 @@ outer:
 
           if (stackp >= 0 && stack[stackp] < dims[stackp].getQueryHelper().getRowSize(valuess[stackp])) {
             // Load next value for current slot
-            dims[stackp].getQueryHelper().addValueToGroupingKeyV2(valuess[stackp], stack[stackp], keyBuffer, dims[stackp].getKeyBufferPosition());
+            dims[stackp].getQueryTypeHelper().addValueToGroupingKeyV2(valuess[stackp], stack[stackp], keyBuffer, dims[stackp].getKeyBufferPosition());
             stack[stackp]++;
             for (int i = stackp + 1; i < stack.length; i++) {
               int rowSize = dims[i].getQueryHelper().getRowSize(valuess[i]);
-              dims[i].getQueryHelper().initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].getKeyBufferPosition());
+              dims[i].getQueryTypeHelper().initializeGroupingKeyV2Dimension(valuess[i], keyBuffer, dims[i].getKeyBufferPosition());
               stack[i] = rowSize == 0 ? 0 : 1;
             }
             stackp = stack.length - 1;
@@ -299,8 +469,12 @@ outer:
               Map<String, Object> theMap = Maps.newLinkedHashMap();
 
               // Add dimensions.
-              for (QueryDimensionInfo dimInfo : dims) {
-                dimInfo.getQueryHelper().processValueFromGroupingKeyV2(dimInfo, entry.getKey(), theMap);
+              for (GroupByDimensionInfo dimInfo : dims) {
+                dimInfo.getQueryTypeHelper().processValueFromGroupingKeyV2(
+                    dimInfo,
+                    entry.getKey(),
+                    theMap
+                );
               }
 
               // Add aggregations.
@@ -349,11 +523,11 @@ outer:
   {
     private final int keySize;
 
-    public GroupByEngineKeySerde(final QueryDimensionInfo dims[])
+    public GroupByEngineKeySerde(final GroupByDimensionInfo dims[])
     {
       int keySize = 0;
-      for (QueryDimensionInfo dimInfo : dims) {
-        keySize += dimInfo.getQueryHelper().getGroupingKeySize();
+      for (GroupByDimensionInfo dimInfo : dims) {
+        keySize += dimInfo.getQueryTypeHelper().getGroupingKeySize();
       }
       this.keySize = keySize;
     }

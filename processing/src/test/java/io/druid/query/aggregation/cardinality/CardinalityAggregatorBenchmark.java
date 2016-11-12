@@ -43,7 +43,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
-  List<QueryDimensionInfo> dimInfoList;
+  List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList;
   ByteBuffer buf;
   int pos;
 
@@ -81,7 +81,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
     final DimensionSpec dimSpec1 = new DefaultDimensionSpec("dim1", "dim1");
     final CardinalityAggregatorTest.TestDimensionSelector dim1 =
         new CardinalityAggregatorTest.TestDimensionSelector(values, null);
-    final QueryDimensionInfo dimInfo1 = new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), dim1, 0);
+    final QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper> dimInfo1 = new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), null, dim1);
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1

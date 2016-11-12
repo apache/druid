@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.QueryTypeHelper;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionQueryHelper;
 
@@ -28,7 +29,7 @@ import io.druid.segment.DimensionQueryHelper;
  *
  * Each QueryDimensionInfo is associated with a single dimension.
  */
-public class QueryDimensionInfo
+public class QueryDimensionInfo<QueryTypeHelperClass extends QueryTypeHelper>
 {
   /**
    * The DimensionSpec representing this QueryDimensionInfo's dimension, taken from the query being processed.
@@ -36,9 +37,15 @@ public class QueryDimensionInfo
   private final DimensionSpec spec;
 
   /**
-   * Helper object that handles type-specific operations for this dimension within query processing engines.
+   * Helper object that handles general type-specific operations for this dimension within query processing engines.
    */
   private final DimensionQueryHelper queryHelper;
+
+  /**
+   * Helper object that handles row value operations that pertain to a specific query type for this
+   * dimension within query processing engines.
+   */
+  private final QueryTypeHelperClass queryTypeHelper;
 
   /**
    * Internal name of the dimension.
@@ -60,26 +67,20 @@ public class QueryDimensionInfo
    */
   private final int cardinality;
 
-  /**
-   * Used by the GroupBy engines, indicates the offset of this dimension's value within the grouping key.
-   */
-  private final int keyBufferPosition;
-
-
   public QueryDimensionInfo(
       DimensionSpec spec,
       DimensionQueryHelper queryHelper,
-      ColumnValueSelector selector,
-      int keyBufferPosition
+      QueryTypeHelperClass queryTypeHelper,
+      ColumnValueSelector selector
   )
   {
     this.spec = spec;
     this.queryHelper = queryHelper;
+    this.queryTypeHelper = queryTypeHelper;
     this.name = spec.getDimension();
     this.outputName = spec.getOutputName();
     this.selector = selector;
     this.cardinality = queryHelper.getCardinality(selector);
-    this.keyBufferPosition = keyBufferPosition;
   }
 
   public DimensionSpec getSpec()
@@ -90,6 +91,11 @@ public class QueryDimensionInfo
   public DimensionQueryHelper getQueryHelper()
   {
     return queryHelper;
+  }
+
+  public QueryTypeHelperClass getQueryTypeHelper()
+  {
+    return queryTypeHelper;
   }
 
   public String getName()
@@ -110,10 +116,5 @@ public class QueryDimensionInfo
   public int getCardinality()
   {
     return cardinality;
-  }
-
-  public int getKeyBufferPosition()
-  {
-    return keyBufferPosition;
   }
 }
