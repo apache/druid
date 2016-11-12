@@ -25,13 +25,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Longs;
 
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -40,8 +39,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -65,38 +62,15 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   private final String dataSource;
   private final DateTime timestamp;
   private final QueryGranularity queryGranularity;
-  private final Granularity preferredSegmentGranularity;
+  private final SegmentGranularity preferredSegmentGranularity;
   private final String sequenceName;
   private final String previousSegmentId;
-
-  public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
-  {
-    final DateTime epoch = new DateTime(0);
-    final List<Granularity> retVal = Lists.newArrayList();
-    for (Granularity gran : Granularity.values()) {
-      if (gran.bucket(epoch).toDurationMillis() <= gran0.bucket(epoch).toDurationMillis()) {
-        retVal.add(gran);
-      }
-    }
-    Collections.sort(
-        retVal,
-        new Comparator<Granularity>()
-        {
-          @Override
-          public int compare(Granularity g1, Granularity g2)
-          {
-            return Longs.compare(g2.bucket(epoch).toDurationMillis(), g1.bucket(epoch).toDurationMillis());
-          }
-        }
-    );
-    return retVal;
-  }
 
   public SegmentAllocateAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("timestamp") DateTime timestamp,
       @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
-      @JsonProperty("preferredSegmentGranularity") Granularity preferredSegmentGranularity,
+      @JsonProperty("preferredSegmentGranularity") SegmentGranularity preferredSegmentGranularity,
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("previousSegmentId") String previousSegmentId
   )
@@ -131,7 +105,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   }
 
   @JsonProperty
-  public Granularity getPreferredSegmentGranularity()
+  public SegmentGranularity getPreferredSegmentGranularity()
   {
     return preferredSegmentGranularity;
   }
@@ -189,7 +163,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       if (usedSegmentsForRow.isEmpty()) {
         // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
         // segment granularity. Try that first, and then progressively smaller ones if it fails.
-        for (Granularity gran : granularitiesFinerThan(preferredSegmentGranularity)) {
+        for (SegmentGranularity gran : SegmentGranularity.granularitiesFinerThan(preferredSegmentGranularity)) {
           tryIntervals.add(gran.bucket(timestamp));
         }
       } else {

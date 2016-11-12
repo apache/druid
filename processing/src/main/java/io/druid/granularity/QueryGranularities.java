@@ -26,11 +26,11 @@ import java.util.Map;
 
 public class QueryGranularities
 {
-  static final Map<String, PeriodGranularity> CALENDRIC_GRANULARITIES = ImmutableMap.of(
-      "YEAR", new PeriodGranularity(new Period("P1Y"), null, null),
-      "MONTH", new PeriodGranularity(new Period("P1M"), null, null),
-      "QUARTER", new PeriodGranularity(new Period("P3M"), null, null),
-      "WEEK", new PeriodGranularity(new Period("P1W"), null, null)
+  static final Map<String, PeriodQueryGranularity> CALENDRIC_GRANULARITIES = ImmutableMap.of(
+      "YEAR", new PeriodQueryGranularity(new Period("P1Y"), null, null),
+      "MONTH", new PeriodQueryGranularity(new Period("P1M"), null, null),
+      "QUARTER", new PeriodQueryGranularity(new Period("P3M"), null, null),
+      "WEEK", new PeriodQueryGranularity(new Period("P1W"), null, null)
   );
   public static final QueryGranularity NONE = new NoneGranularity();
   public static final QueryGranularity ALL = new AllGranularity();

@@ -33,7 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodGranularity;
+import io.druid.granularity.PeriodQueryGranularity;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
@@ -1860,7 +1860,7 @@ public class GroupByQueryRunnerTest
                                          )
                                      )
                                      .setGranularity(
-                                         new PeriodGranularity(
+                                         new PeriodQueryGranularity(
                                              new Period("P1D"),
                                              null,
                                              tz
@@ -2052,7 +2052,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
     final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularities.ALL).build();
@@ -2133,7 +2133,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setLimit(limit);
 
     final GroupByQuery fullQuery = builder.build();
@@ -2251,7 +2251,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setLimit(-1);
 
     builder.build();
@@ -2330,7 +2330,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setLimitSpec(orderBySpec);
 
     final GroupByQuery fullQuery = builder.build();
@@ -2380,7 +2380,7 @@ public class GroupByQueryRunnerTest
         )
         .addOrderByColumn("rows")
         .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
 
@@ -2447,7 +2447,7 @@ public class GroupByQueryRunnerTest
         )
         .addOrderByColumn("rows", OrderByColumnSpec.Direction.DESCENDING)
         .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
 
@@ -2487,7 +2487,7 @@ public class GroupByQueryRunnerTest
         )
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING)
         .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     GroupByQuery query = builder.build();
 
@@ -2528,7 +2528,7 @@ public class GroupByQueryRunnerTest
         )
         .addOrderByColumn(new OrderByColumnSpec("rows", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
         .addOrderByColumn(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC))
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
 
@@ -3095,7 +3095,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(QueryRunnerTestHelper.addRowsIndexConstant))
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.<HavingSpec>of(
@@ -3260,7 +3260,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(QueryRunnerTestHelper.addRowsIndexConstant))
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.<HavingSpec>of(
@@ -3298,7 +3298,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.of(
@@ -3350,8 +3350,15 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setHavingSpec(havingSpec);
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(
+            new OrHavingSpec(
+                ImmutableList.of(
+                    new GreaterThanHavingSpec("rows", 2L),
+                    new EqualToHavingSpec("idx", 217L)
+                )
+            )
+        );
 
     final GroupByQuery fullQuery = builder.build();
     TestHelper.assertExpectedObjects(
@@ -3396,7 +3403,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setHavingSpec(havingSpec);
 
     final GroupByQuery fullQuery = builder.build();
@@ -3427,7 +3434,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.of(
@@ -3536,7 +3543,7 @@ public class GroupByQueryRunnerTest
                 )
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.of(
@@ -3616,7 +3623,7 @@ public class GroupByQueryRunnerTest
                 QueryRunnerTestHelper.rowsCount
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
 
@@ -3643,7 +3650,7 @@ public class GroupByQueryRunnerTest
                 QueryRunnerTestHelper.rowsCount
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
 
@@ -3702,7 +3709,7 @@ public class GroupByQueryRunnerTest
                 QueryRunnerTestHelper.rowsCount
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
 
@@ -6014,7 +6021,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
@@ -6090,7 +6097,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
@@ -6165,7 +6172,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
@@ -6595,7 +6602,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
         .setDimFilter(superFilter)
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();

@@ -27,7 +27,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
@@ -141,7 +141,7 @@ public class FlushingPlumber extends RealtimePlumber
 
   private void startFlushThread()
   {
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
     final long windowMillis = config.getWindowPeriod().toStandardDuration().getMillis();
 

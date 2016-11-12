@@ -36,7 +36,7 @@ import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
@@ -239,7 +239,7 @@ public class AppenderatorPlumber implements Plumber
       return null;
     }
 
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
     final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
@@ -331,7 +331,7 @@ public class AppenderatorPlumber implements Plumber
 
   private void startPersistThread()
   {
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
     final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
@@ -386,7 +386,7 @@ public class AppenderatorPlumber implements Plumber
 
   private void mergeAndPush()
   {
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();

@@ -24,12 +24,12 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -116,7 +116,7 @@ public class GranularityPathSpecTest
   @Test
   public void testSetDataGranularity()
   {
-    Granularity granularity = Granularity.DAY;
+    SegmentGranularity granularity = SegmentGranularity.DAY;
     granularityPathSpec.setDataGranularity(granularity);
     Assert.assertEquals(granularity, granularityPathSpec.getDataGranularity());
   }
@@ -124,13 +124,13 @@ public class GranularityPathSpecTest
   @Test
   public void testSerdeCustomInputFormat() throws Exception
   {
-    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, TextInputFormat.class);
+    testSerde("/test/path", "*.test", "pat_pat", SegmentGranularity.SECOND, TextInputFormat.class);
   }
 
   @Test
   public void testSerdeNoInputFormat() throws Exception
   {
-    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
+    testSerde("/test/path", "*.test", "pat_pat", SegmentGranularity.SECOND, null);
   }
 
   @Test
@@ -143,7 +143,7 @@ public class GranularityPathSpecTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.DAY,
+                SegmentGranularity.DAY,
                 QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
@@ -153,7 +153,7 @@ public class GranularityPathSpecTest
         DEFAULT_TUNING_CONFIG
     );
 
-    granularityPathSpec.setDataGranularity(Granularity.HOUR);
+    granularityPathSpec.setDataGranularity(SegmentGranularity.HOUR);
     granularityPathSpec.setFilePattern(".*");
     granularityPathSpec.setInputFormat(TextInputFormat.class);
 
@@ -194,7 +194,7 @@ public class GranularityPathSpecTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.DAY,
+                SegmentGranularity.DAY,
                 QueryGranularities.ALL,
                 ImmutableList.of(new Interval("2015-01-01T11Z/2015-01-02T05Z"))
             ),
@@ -204,7 +204,7 @@ public class GranularityPathSpecTest
         DEFAULT_TUNING_CONFIG
     );
 
-    granularityPathSpec.setDataGranularity(Granularity.HOUR);
+    granularityPathSpec.setDataGranularity(SegmentGranularity.HOUR);
     granularityPathSpec.setPathFormat("yyyy/MM/dd/HH");
     granularityPathSpec.setFilePattern(".*");
     granularityPathSpec.setInputFormat(TextInputFormat.class);
@@ -249,9 +249,8 @@ public class GranularityPathSpecTest
       String inputPath,
       String filePattern,
       String pathFormat,
-      Granularity granularity,
-      Class inputFormat
-  ) throws Exception
+      SegmentGranularity granularity,
+      Class inputFormat) throws Exception
   {
     StringBuilder sb = new StringBuilder();
     sb.append("{\"inputPath\" : \"");
@@ -263,11 +262,11 @@ public class GranularityPathSpecTest
     sb.append("\"pathFormat\" : \"");
     sb.append(pathFormat);
     sb.append("\",");
-    sb.append("\"dataGranularity\" : \"");
+    sb.append("\"dataGranularity\" : ");
     // Double-check Jackson's lower-case enum support
-    sb.append(granularity.toString().toLowerCase());
-    sb.append("\",");
-    if (inputFormat != null) {
+    sb.append(jsonMapper.writeValueAsString(granularity));
+    sb.append(",");
+    if(inputFormat != null) {
       sb.append("\"inputFormat\" : \"");
       sb.append(inputFormat.getName());
       sb.append("\",");

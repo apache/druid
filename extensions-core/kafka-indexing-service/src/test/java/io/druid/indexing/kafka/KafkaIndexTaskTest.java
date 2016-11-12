@@ -52,6 +52,7 @@ import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -73,7 +74,6 @@ import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.metadata.EntryExistsException;
@@ -199,7 +199,7 @@ public class KafkaIndexTaskTest
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(SegmentGranularity.DAY, QueryGranularities.NONE, null),
         objectMapper
     );
   }

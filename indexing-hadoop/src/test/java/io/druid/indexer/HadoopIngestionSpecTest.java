@@ -29,9 +29,12 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.PeriodSegmentGranularity;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,10 +81,44 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getSegmentGranularity",
-        "HOUR",
+        new PeriodSegmentGranularity(new Period("PT1H"), null, null).toString(),
         granularitySpec.getSegmentGranularity().toString()
     );
   }
+
+    @Test
+    public void testPeriodSegmentGranularitySpec()
+    {
+        final HadoopIngestionSpec schema;
+
+        try {
+            schema = jsonReadWriteRead(
+                    "{\n"
+                            + "    \"dataSchema\": {\n"
+                            + "     \"dataSource\": \"foo\",\n"
+                            + "     \"metricsSpec\": [],\n"
+                            + "        \"granularitySpec\": {\n"
+                            + "                \"type\": \"uniform\",\n"
+                            + "                \"segmentGranularity\": {\"type\": \"period\", \"period\":\"PT1H\", \"timeZone\":\"America/Los_Angeles\"},\n"
+                            + "                \"intervals\": [\"2012-01-01/P1D\"]\n"
+                            + "        }\n"
+                            + "    }\n"
+                            + "}",
+                    HadoopIngestionSpec.class
+            );
+        }
+        catch (Exception e) {
+            throw Throwables.propagate(e);
+        }
+
+        final UniformGranularitySpec granularitySpec = (UniformGranularitySpec) schema.getDataSchema().getGranularitySpec();
+
+        Assert.assertEquals(
+                "getSegmentGranularity",
+                new PeriodSegmentGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")).toString(),
+                granularitySpec.getSegmentGranularity().toString()
+        );
+    }
 
   @Test
   public void testPartitionsSpecAutoHashed()

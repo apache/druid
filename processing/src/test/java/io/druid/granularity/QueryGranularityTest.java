@@ -320,7 +320,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-05T00:00:00.000-08:00"),
             new DateTime("2012-11-06T00:00:00.000-08:00")
         ),
-        new PeriodGranularity(new Period("P1D"), null, tz)
+        new PeriodQueryGranularity(new Period("P1D"), null, tz)
             .iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
     );
 
@@ -332,11 +332,11 @@ public class QueryGranularityTest
             new DateTime("2012-11-04T02:00:00.000-08:00"),
             new DateTime("2012-11-04T03:00:00.000-08:00")
         ),
-        new PeriodGranularity(new Period("PT1H"), null, tz)
+        new PeriodQueryGranularity(new Period("PT1H"), null, tz)
             .iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(5)).getMillis())
     );
 
-    final QueryGranularity hour = new PeriodGranularity(new Period("PT1H"), null, tz);
+    final QueryGranularity hour = new PeriodQueryGranularity(new Period("PT1H"), null, tz);
     assertSame(
         Lists.newArrayList(
             new DateTime("2012-11-04T00:00:00.000-07:00"),
@@ -367,7 +367,7 @@ public class QueryGranularityTest
             new DateTime("2013-01-01T00:00:00.000-08:00"),
             new DateTime("2013-02-01T00:00:00.000-08:00")
         ),
-        new PeriodGranularity(new Period("P1M"), null, tz)
+        new PeriodQueryGranularity(new Period("P1M"), null, tz)
             .iterable(baseTime.getMillis(), baseTime.plus(Months.months(3)).getMillis())
     );
   }
@@ -384,7 +384,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-12T00:00:00.000-08:00"),
             new DateTime("2012-11-19T00:00:00.000-08:00")
         ),
-        new PeriodGranularity(new Period("P1W"), null, tz)
+        new PeriodQueryGranularity(new Period("P1W"), null, tz)
             .iterable(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis())
     );
 
@@ -394,7 +394,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-10T10:00:00.000-08:00"),
             new DateTime("2012-11-17T10:00:00.000-08:00")
         ),
-        new PeriodGranularity(new Period("P1W"), baseTime, tz)
+        new PeriodQueryGranularity(new Period("P1W"), baseTime, tz)
             .iterable(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis())
     );
   }
@@ -403,7 +403,7 @@ public class QueryGranularityTest
   public void testPeriodTruncateDays() throws Exception
   {
     final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
-    QueryGranularity periodOrigin = new PeriodGranularity(new Period("P2D"),
+    QueryGranularity periodOrigin = new PeriodQueryGranularity(new Period("P2D"),
                                                           origin,
                                                           DateTimeZone.forID("America/Los_Angeles"));
     assertSame(
@@ -420,7 +420,7 @@ public class QueryGranularityTest
         )
     );
 
-    QueryGranularity periodNoOrigin = new PeriodGranularity(new Period("P2D"),
+    QueryGranularity periodNoOrigin = new PeriodQueryGranularity(new Period("P2D"),
                                                             null,
                                                             DateTimeZone.forID("America/Los_Angeles"));
     assertSame(
@@ -442,7 +442,7 @@ public class QueryGranularityTest
   public void testPeriodTruncateMinutes() throws Exception
   {
     final DateTime origin = new DateTime("2012-01-02T00:05:00.000Z");
-    QueryGranularity periodOrigin = new PeriodGranularity(new Period("PT15M"), origin, null);
+    QueryGranularity periodOrigin = new PeriodQueryGranularity(new Period("PT15M"), origin, null);
     assertSame(
         Lists.newArrayList(
             new DateTime("2012-01-01T04:50:00.000Z"),
@@ -457,7 +457,7 @@ public class QueryGranularityTest
         )
     );
 
-    QueryGranularity periodNoOrigin = new PeriodGranularity(new Period("PT15M"), null, null);
+    QueryGranularity periodNoOrigin = new PeriodQueryGranularity(new Period("PT15M"), null, null);
     assertSame(
         Lists.newArrayList(
             new DateTime("2012-01-01T05:00:00.000Z"),
@@ -478,7 +478,7 @@ public class QueryGranularityTest
   {
     {
       final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
-      QueryGranularity periodOrigin = new PeriodGranularity(
+      QueryGranularity periodOrigin = new PeriodQueryGranularity(
           new Period("P1M2D"),
           origin,
           DateTimeZone.forID("America/Los_Angeles")
@@ -498,7 +498,7 @@ public class QueryGranularityTest
           )
       );
 
-      QueryGranularity periodNoOrigin = new PeriodGranularity(
+      QueryGranularity periodNoOrigin = new PeriodQueryGranularity(
           new Period("P1M2D"),
           null,
           DateTimeZone.forID("America/Los_Angeles")
@@ -522,7 +522,7 @@ public class QueryGranularityTest
 
     {
       final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
-      QueryGranularity periodOrigin = new PeriodGranularity(
+      QueryGranularity periodOrigin = new PeriodQueryGranularity(
           new Period("PT12H5M"),
           origin,
           DateTimeZone.forID("America/Los_Angeles")
@@ -549,7 +549,7 @@ public class QueryGranularityTest
   {
     {
       final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
-      QueryGranularity periodOrigin = new PeriodGranularity(
+      QueryGranularity periodOrigin = new PeriodQueryGranularity(
           new Period("PT12H5M"),
           origin,
           DateTimeZone.UTC
@@ -627,14 +627,14 @@ public class QueryGranularityTest
 
     String json = "{ \"type\": \"period\", \"period\": \"P1D\" }";
     QueryGranularity gran = mapper.readValue(json, QueryGranularity.class);
-    Assert.assertEquals(new PeriodGranularity(new Period("P1D"), null, null), gran);
+    Assert.assertEquals(new PeriodQueryGranularity(new Period("P1D"), null, null), gran);
 
     json =   "{ \"type\": \"period\", \"period\": \"P1D\","
            + "\"timeZone\": \"America/Los_Angeles\", \"origin\": \"1970-01-01T00:00:00Z\"}";
     gran = mapper.readValue(json, QueryGranularity.class);
-    Assert.assertEquals(new PeriodGranularity(new Period("P1D"), new DateTime(0L), DateTimeZone.forID("America/Los_Angeles")), gran);
+    Assert.assertEquals(new PeriodQueryGranularity(new Period("P1D"), new DateTime(0L), DateTimeZone.forID("America/Los_Angeles")), gran);
 
-    QueryGranularity expected = new PeriodGranularity(
+    QueryGranularity expected = new PeriodQueryGranularity(
         new Period("P1D"),
         new DateTime("2012-01-01"),
         DateTimeZone.forID("America/Los_Angeles")
