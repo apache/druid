@@ -21,10 +21,14 @@ package io.druid.query.groupby;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -33,8 +37,10 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -42,6 +48,7 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
@@ -88,13 +95,32 @@ public class GroupByQueryHelper
 
     final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
 
+    // All groupBy dimensions are strings, for now, as long as they don't conflict with any non-dimensions.
+    // This should get cleaned up if/when https://github.com/druid-io/druid/pull/3686 makes name conflicts impossible.
+    final Set<String> otherNames = Sets.newHashSet();
+    for (AggregatorFactory agg : aggs) {
+      otherNames.add(agg.getName());
+    }
+    for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+      otherNames.add(postAggregator.getName());
+    }
+    final List<DimensionSchema> dimensionSchemas = Lists.newArrayList();
+    for (DimensionSpec dimension : query.getDimensions()) {
+      if (!otherNames.contains(dimension.getOutputName())) {
+        dimensionSchemas.add(new StringDimensionSchema(dimension.getOutputName()));
+      }
+    }
+
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
+        .withMetrics(aggs.toArray(new AggregatorFactory[aggs.size()]))
+        .withQueryGranularity(gran)
+        .withMinTimestamp(granTimeStart)
+        .build();
+
     if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          indexSchema,
           false,
           true,
           sortResults,
@@ -103,11 +129,7 @@ public class GroupByQueryHelper
       );
     } else {
       index = new OnheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          indexSchema,
           false,
           true,
           sortResults,
