@@ -61,7 +61,7 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
-    Assert.assertEquals(false, config.getBuildV9Directly());
+    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
   }

@@ -47,7 +47,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = NoneShardSpec.instance();
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
-  private static final Boolean defaultBuildV9Directly = Boolean.FALSE;
+  private static final Boolean defaultBuildV9Directly = Boolean.TRUE;
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
   private static final long defaultHandoffConditionTimeout = 0;
 
