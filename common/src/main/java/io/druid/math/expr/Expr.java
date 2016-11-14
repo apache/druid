@@ -55,9 +55,9 @@ abstract class ConstantExpr implements Expr
 
 class LongExpr extends ConstantExpr
 {
-  private final long value;
+  private final Long value;
 
-  public LongExpr(long value)
+  public LongExpr(Long value)
   {
     this.value = value;
   }
@@ -71,7 +71,7 @@ class LongExpr extends ConstantExpr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.of(value);
+    return ExprEval.ofLong(value);
   }
 }
 
@@ -99,9 +99,9 @@ class StringExpr extends ConstantExpr
 
 class DoubleExpr extends ConstantExpr
 {
-  private final double value;
+  private final Double value;
 
-  public DoubleExpr(double value)
+  public DoubleExpr(Double value)
   {
     this.value = value;
   }
@@ -115,11 +115,11 @@ class DoubleExpr extends ConstantExpr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.of(value);
+    return ExprEval.ofDouble(value);
   }
 }
 
-class IdentifierExpr extends ConstantExpr
+class IdentifierExpr implements Expr
 {
   private final String value;
 
@@ -138,6 +138,12 @@ class IdentifierExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.bestEffortOf(bindings.get(value));
+  }
+
+  @Override
+  public void visit(Visitor visitor)
+  {
+    visitor.visit(this);
   }
 }
 
@@ -161,7 +167,7 @@ class FunctionExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return Parser.func.get(name.toLowerCase()).apply(args, bindings);
+    return Parser.getFunction(name).apply(args, bindings);
   }
 
   @Override
@@ -252,6 +258,8 @@ class UnaryNotExpr extends UnaryExpr
   }
 }
 
+// all concrete subclass of this should have constructor with the form of <init>(String, Expr, Expr)
+// if it's not possible, just be sure Evals.binaryOp() can handle that
 abstract class BinaryOpExprBase implements Expr
 {
   protected final String op;

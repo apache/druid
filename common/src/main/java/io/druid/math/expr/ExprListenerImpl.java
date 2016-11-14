@@ -285,7 +285,7 @@ public class ExprListenerImpl extends ExprBaseListener
   public void exitFunctionExpr(ExprParser.FunctionExprContext ctx)
   {
     String fnName = ctx.getChild(0).getText();
-    if (!Parser.func.containsKey(fnName)) {
+    if (!Parser.hasFunction(fnName)) {
       throw new RuntimeException("function " + fnName + " is not defined.");
     }
 

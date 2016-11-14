@@ -26,14 +26,24 @@ import io.druid.java.util.common.IAE;
  */
 public abstract class ExprEval<T>
 {
+  public static ExprEval ofLong(Number longValue)
+  {
+    return new LongExprEval(longValue);
+  }
+
   public static ExprEval of(long longValue)
   {
     return new LongExprEval(longValue);
   }
 
-  public static ExprEval of(double longValue)
+  public static ExprEval ofDouble(Number doubleValue)
   {
-    return new DoubleExprEval(longValue);
+    return new DoubleExprEval(doubleValue);
+  }
+
+  public static ExprEval of(double doubleValue)
+  {
+    return new DoubleExprEval(doubleValue);
   }
 
   public static ExprEval of(String stringValue)
@@ -108,6 +118,8 @@ public abstract class ExprEval<T>
 
   public abstract ExprEval castTo(ExprType castTo);
 
+  public abstract Expr toExpr();
+
   private static abstract class NumericExprEval extends ExprEval<Number> {
 
     private NumericExprEval(Number value)
@@ -166,6 +178,12 @@ public abstract class ExprEval<T>
       }
       throw new IAE("invalid type " + castTo);
     }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new DoubleExpr(value == null ? null : value.doubleValue());
+    }
   }
 
   private static class LongExprEval extends NumericExprEval
@@ -199,6 +217,12 @@ public abstract class ExprEval<T>
           return ExprEval.of(asString());
       }
       throw new IAE("invalid type " + castTo);
+    }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new LongExpr(value == null ? null : value.longValue());
     }
   }
 
@@ -257,6 +281,12 @@ public abstract class ExprEval<T>
           return this;
       }
       throw new IAE("invalid type " + castTo);
+    }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new StringExpr(value);
     }
   }
 }
