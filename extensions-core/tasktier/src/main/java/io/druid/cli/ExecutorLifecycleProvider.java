@@ -85,9 +85,8 @@ public class ExecutorLifecycleProvider implements Provider<ExecutorLifecycle>
           {
             return parentStream;
           }
-        }
-            .setStatusFile(statusFile)
-            .setTaskFile(taskFile),
+        }.setStatusFile(statusFile)
+         .setTaskFile(taskFile),
         taskConfig,
         taskActionClientFactory,
         taskRunner,

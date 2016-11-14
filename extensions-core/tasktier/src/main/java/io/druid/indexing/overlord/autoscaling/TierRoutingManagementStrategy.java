@@ -214,7 +214,9 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
     final long startingUpdates = numberOfUpdates.get();
     while (startingUpdates == numberOfUpdates.get()) {
       synchronized (numberOfUpdates) {
-        numberOfUpdates.wait();
+        if(startingUpdates == numberOfUpdates.get()) {
+          numberOfUpdates.wait();
+        }
       }
     }
   }
@@ -243,7 +245,7 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        LOG.error(e, "Interrupted");
+        throw Throwables.propagate(e);
       }
       final ConcurrentMap<String, TaskRunner> runnerMap = runner.getRunnerMap();
 

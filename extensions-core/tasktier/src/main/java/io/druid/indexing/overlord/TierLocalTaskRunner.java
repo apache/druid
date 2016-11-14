@@ -112,7 +112,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The TierLocalTaskRunner is a gateway between general cluster task information and forked stuff locally on a
- * single machine. It communicate existence via  PORT_FILE_NAME in the task attempt directory.
+ * single machine. It communicates existence via  PORT_FILE_NAME in the task attempt directory.
  * Using the PORT_FILE_NAME the TierLocalTaskRunner can identify peons on the local machine.
  * The TierLocalTaskRunner is able to restart without affecting the state of the peons.
  * The Peons run some special magic in io.druid.indexing.overlord.TierModule to expose an ability to shutdown the VMs
@@ -652,6 +652,7 @@ public class TierLocalTaskRunner implements TaskRunner, TaskLogStreamer
                               port,
                               DeadhandResource.DEADHAND_PATH
                           );
+                          log.trace("Starting deadhand probe to [%s]", url);
                           httpClient.go(
                               new Request(HttpMethod.POST, url),
                               new HttpResponseHandler<Object, Object>()
