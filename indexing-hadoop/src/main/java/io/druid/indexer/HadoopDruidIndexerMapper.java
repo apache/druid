@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.common.RE;
 import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
@@ -171,15 +172,9 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       private List<String> getMergedDims(MapBasedInputRow mapBasedInputRow)
       {
         if (mergedDims == null) {
-          List<String> orgDimensions = mapBasedInputRow.getDimensions();
-          Set<String> additionalDims = additionalDimValues.keySet();
-          mergedDims = Lists.newArrayListWithCapacity(orgDimensions.size() + additionalDims.size());
-          mergedDims.addAll(orgDimensions);
-          for (String partitionDimension : additionalDims) {
-            if (!mergedDims.contains(partitionDimension)) {
-              mergedDims.add(partitionDimension);
-            }
-          }
+          Set<String> merged = Sets.newHashSet(mapBasedInputRow.getDimensions());
+          merged.addAll(additionalDimValues.keySet());
+          mergedDims = Lists.newArrayList(merged);
         }
 
         return mergedDims;
