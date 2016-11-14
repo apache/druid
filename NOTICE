@@ -30,3 +30,9 @@ This product contains a modified version of Metamarkets java-util library
     * https://github.com/metamx/java-util
   * COMMIT TAG:
     * https://github.com/metamx/java-util/commit/826021f
+
+This product contains a modified version of TestNG 6.8.7
+  * LICENSE:
+    * http://testng.org/license/ (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * http://testng.org/

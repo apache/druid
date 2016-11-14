@@ -25,6 +25,7 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 
+import java.io.IOException;
 import java.util.Set;
 
 public class TestDataSegmentKiller implements DataSegmentKiller
@@ -40,5 +41,11 @@ public class TestDataSegmentKiller implements DataSegmentKiller
   public Set<DataSegment> getKilledSegments()
   {
     return ImmutableSet.copyOf(killedSegments);
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
   }
 }

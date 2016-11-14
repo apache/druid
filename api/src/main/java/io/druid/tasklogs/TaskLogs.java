@@ -19,6 +19,6 @@
 
 package io.druid.tasklogs;
 
-public interface TaskLogs extends TaskLogStreamer, TaskLogPusher
+public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller
 {
 }

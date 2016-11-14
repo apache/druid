@@ -152,12 +152,6 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return delegate.getMaxIntermediateSize();
   }
 
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return delegate.getAggregatorStartValue();
-  }
-
   @JsonProperty
   public AggregatorFactory getAggregator()
   {
@@ -180,7 +174,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public String toString()
   {
     return "FilteredAggregatorFactory{" +
-           ", delegate=" + delegate +
+           "delegate=" + delegate +
            ", filter=" + filter +
            '}';
   }

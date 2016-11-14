@@ -13,7 +13,7 @@ metadata store. Many clusters will also use additional extensions.
 
 ## Including extensions
 
-Please see [here](../operations/including-extensions.html). 
+Please see [here](../operations/including-extensions.html).
 
 ## Core extensions
 
@@ -39,12 +39,12 @@ Core extensions are maintained by Druid committers.
 # Community Extensions
 
 <div class="note caution">
-Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. They may not have been as extensively tested as the core extensions. 
+Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. They may not have been as extensively tested as the core extensions.
 </div>
 
-A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball.  
+A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball.
 If you'd like to take on maintenance for a community extension, please post on [druid-development group](https://groups.google.com/forum/#!forum/druid-development) to let us know!
-    
+
 All of these community extensions can be downloaded using *pull-deps* with the coordinate io.druid.extensions.contrib:EXTENSION_NAME:LATEST_DRUID_STABLE_VERSION.
 
 |Name|Description|Docs|
@@ -58,13 +58,14 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-contrib/parquet.html)|
 |druid-rabbitmq|RabbitMQ firehose.|[link](../development/extensions-contrib/rabbitmq.html)|
 |druid-rocketmq|RocketMQ firehose.|[link](../development/extensions-contrib/rocketmq.html)|
+|sqlserver-metadata-storage|Microsoft SqlServer deep storage.|[link](../development/extensions-contrib/sqlserver.html)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.html)|
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.html)|
 
 ## Promoting Community Extension to Core Extension
 
-Please [let us know](https://groups.google.com/forum/#!forum/druid-development) if you'd like an extension to be promoted to core. 
-If we see a community extension actively supported by the community, we can promote it to core based on community feedback. 
+Please [let us know](https://groups.google.com/forum/#!forum/druid-development) if you'd like an extension to be promoted to core.
+If we see a community extension actively supported by the community, we can promote it to core based on community feedback.
 
 # Creating your own Extensions
 

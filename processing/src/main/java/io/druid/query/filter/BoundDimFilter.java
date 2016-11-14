@@ -22,7 +22,6 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -274,6 +273,42 @@ public class BoundDimFilter implements DimFilter
     result = 31 * result + (getExtractionFn() != null ? getExtractionFn().hashCode() : 0);
     result = 31 * result + getOrdering().hashCode();
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    final StringBuilder builder = new StringBuilder();
+
+    if (lower != null) {
+      builder.append(lower);
+      if (lowerStrict) {
+        builder.append(" < ");
+      } else {
+        builder.append(" <= ");
+      }
+    }
+
+    if (extractionFn != null) {
+      builder.append(String.format("%s(%s)", extractionFn, dimension));
+    } else {
+      builder.append(dimension);
+    }
+
+    if (!ordering.equals(StringComparators.LEXICOGRAPHIC)) {
+      builder.append(String.format(" as %s", ordering.toString()));
+    }
+
+    if (upper != null) {
+      if (upperStrict) {
+        builder.append(" < ");
+      } else {
+        builder.append(" <= ");
+      }
+      builder.append(upper);
+    }
+
+    return builder.toString();
   }
 
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()

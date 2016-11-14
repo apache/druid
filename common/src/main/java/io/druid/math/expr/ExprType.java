@@ -17,24 +17,11 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.theta;
-
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.yahoo.sketches.memory.Memory;
-
-import java.io.IOException;
+package io.druid.math.expr;
 
 /**
  */
-public class MemoryJsonSerializer extends JsonSerializer<Memory>
+public enum ExprType
 {
-  @Override
-  public void serialize(Memory mem, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException, JsonProcessingException
-  {
-    jgen.writeBinary(SketchOperations.deserializeFromMemory(mem).toByteArray());
-  }
+  DOUBLE, LONG, STRING
 }

@@ -21,7 +21,6 @@ package io.druid.query.timeseries;
 
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.PostAggregator;
 import org.joda.time.DateTime;
 
 import java.util.HashMap;
@@ -42,15 +41,9 @@ public class TimeseriesResultBuilder
     this.timestamp = timestamp;
   }
 
-  public TimeseriesResultBuilder addMetric(Aggregator aggregator)
+  public TimeseriesResultBuilder addMetric(String name, Aggregator aggregator)
   {
-    metricValues.put(aggregator.getName(), aggregator.get());
-    return this;
-  }
-
-  public TimeseriesResultBuilder addMetric(PostAggregator postAggregator)
-  {
-    metricValues.put(postAggregator.getName(), postAggregator.compute(metricValues));
+    metricValues.put(name, aggregator.get());
     return this;
   }
 

@@ -530,8 +530,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         return null;
                       }
 
-                      Object dimVals = indexer.convertUnsortedEncodedArrayToActualArrayOrList(dims[dimensionIndex], false);
-                      return dimVals;
+                      return indexer.convertUnsortedEncodedArrayToActualArrayOrList(
+                          dims[dimensionIndex], DimensionIndexer.ARRAY
+                      );
                     }
                   };
                 }
@@ -589,7 +590,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   @Override
                   public Number get()
                   {
-                    return parsed.eval(binding);
+                    return parsed.eval(binding).numericValue();
                   }
                 };
               }

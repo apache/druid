@@ -17,41 +17,20 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.query.aggregation.datasketches.theta;
 
-import io.druid.segment.data.Indexed;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 
-/**
- */
-public class ComplexColumnImpl extends AbstractColumn
+import java.io.IOException;
+
+public class SketchHolderJsonSerializer extends JsonSerializer<SketchHolder>
 {
-  private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
-      .setType(ValueType.COMPLEX);
-
-  private final Indexed column;
-  private final String typeName;
-
-  public ComplexColumnImpl(String typeName, Indexed column)
-  {
-    this.column = column;
-    this.typeName = typeName;
-  }
-
   @Override
-  public ColumnCapabilities getCapabilities()
+  public void serialize(SketchHolder sketchHolder, JsonGenerator jgen, SerializerProvider provider)
+      throws IOException
   {
-    return CAPABILITIES;
-  }
-
-  @Override
-  public int getLength()
-  {
-    return column.size();
-  }
-
-  @Override
-  public ComplexColumn getComplexColumn()
-  {
-    return new IndexedComplexColumn(typeName, column);
+    jgen.writeBinary(sketchHolder.getSketch().toByteArray());
   }
 }

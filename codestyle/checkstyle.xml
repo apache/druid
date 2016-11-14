@@ -33,7 +33,9 @@
       <!--<property name="max" value="120"/>-->
     <!--</module>-->
     <module name="AvoidStarImport"/>
+    <module name="AvoidStaticImport"/>
     <module name="RedundantImport"/>
+    <module name="UnusedImports" />
     <module name="NeedBraces"/>
   </module>
 </module>

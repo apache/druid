@@ -74,7 +74,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
     final Granularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
 
-    Map<DateTime, Long> inputModifiedTimes = new TreeMap<>(
+    Map<Long, Long> inputModifiedTimes = new TreeMap<>(
         Comparators.inverse(Comparators.comparable())
     );
 
@@ -83,12 +83,12 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       final Long currVal = inputModifiedTimes.get(key);
       final long mTime = status.getModificationTime();
 
-      inputModifiedTimes.put(key, currVal == null ? mTime : Math.max(currVal, mTime));
+      inputModifiedTimes.put(key.getMillis(), currVal == null ? mTime : Math.max(currVal, mTime));
     }
 
     Set<Interval> bucketsToRun = Sets.newTreeSet(Comparators.intervals());
-    for (Map.Entry<DateTime, Long> entry : inputModifiedTimes.entrySet()) {
-      DateTime timeBucket = entry.getKey();
+    for (Map.Entry<Long, Long> entry : inputModifiedTimes.entrySet()) {
+      DateTime timeBucket = new DateTime(entry.getKey());
       long mTime = entry.getValue();
 
       String bucketOutput = String.format(

@@ -36,10 +36,8 @@ public class BucketExtractionFn implements ExtractionFn
 
   @JsonCreator
   public BucketExtractionFn(
-      @Nullable
-      @JsonProperty("size") Double size,
-      @Nullable
-      @JsonProperty("offset") Double offset
+      @Nullable @JsonProperty("size") Double size,
+      @Nullable @JsonProperty("offset") Double offset
   )
   {
     this.size = size == null ? 1 : size;
@@ -74,7 +72,8 @@ public class BucketExtractionFn implements ExtractionFn
   {
     try {
       return bucket(Double.parseDouble(value));
-    } catch (NumberFormatException | NullPointerException ex) {
+    }
+    catch (NumberFormatException | NullPointerException ex) {
       return null;
     }
   }
@@ -85,9 +84,10 @@ public class BucketExtractionFn implements ExtractionFn
     return bucket(value);
   }
 
-  private String bucket(double value) {
+  private String bucket(double value)
+  {
     double ret = Math.floor((value - offset) / size) * size + offset;
-    return ret == (long)ret ? String.valueOf((long)ret) : String.valueOf(ret);
+    return ret == (long) ret ? String.valueOf((long) ret) : String.valueOf(ret);
   }
 
   @Override
@@ -124,7 +124,28 @@ public class BucketExtractionFn implements ExtractionFn
 
     BucketExtractionFn that = (BucketExtractionFn) o;
 
-    return size == that.size && offset == that.offset;
+    if (Double.compare(that.size, size) != 0) {
+      return false;
+    }
+    return Double.compare(that.offset, offset) == 0;
 
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result;
+    long temp;
+    temp = Double.doubleToLongBits(size);
+    result = (int) (temp ^ (temp >>> 32));
+    temp = Double.doubleToLongBits(offset);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format("bucket(%f, %f)", size, offset);
   }
 }

@@ -21,17 +21,9 @@ package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import com.yahoo.sketches.Family;
 import com.yahoo.sketches.Util;
-import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
-import com.yahoo.sketches.theta.Sketches;
-import com.yahoo.sketches.theta.Union;
-
-import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -52,15 +44,6 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   protected final int size;
   private final byte cacheId;
 
-  public static final Comparator<Sketch> COMPARATOR = new Comparator<Sketch>()
-  {
-    @Override
-    public int compare(Sketch o, Sketch o1)
-    {
-      return Doubles.compare(o.getEstimate(), o1.getEstimate());
-    }
-  };
-
   public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -78,9 +61,9 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
     if (selector == null) {
-      return new EmptySketchAggregator(name);
+      return new EmptySketchAggregator();
     } else {
-      return new SketchAggregator(name, selector, size);
+      return new SketchAggregator(selector, size);
     }
   }
 
@@ -99,48 +82,19 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    return SketchOperations.deserialize(object);
+    return SketchHolder.deserialize(object);
   }
 
   @Override
-  public Comparator<Sketch> getComparator()
+  public Comparator<Object> getComparator()
   {
-    return COMPARATOR;
+    return SketchHolder.COMPARATOR;
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    final Union union;
-    if (lhs instanceof Union) {
-      union = (Union) lhs;
-      updateUnion(union, rhs);
-    } else if (rhs instanceof Union) {
-      union = (Union) rhs;
-      updateUnion(union, lhs);
-    } else {
-      union = (Union) SetOperation.builder().build(size, Family.UNION);
-      updateUnion(union, lhs);
-      updateUnion(union, rhs);
-    }
-
-
-    return union;
-  }
-
-  private void updateUnion(Union union, Object obj)
-  {
-    if (obj == null) {
-      return;
-    } else if (obj instanceof Memory) {
-      union.update((Memory) obj);
-    } else if (obj instanceof Sketch) {
-      union.update((Sketch) obj);
-    } else if (obj instanceof Union) {
-      union.update(((Union) obj).getResult(false, null));
-    } else {
-      throw new IAE("Object of type [%s] can not be unioned", obj.getClass().getName());
-    }
+    return SketchHolder.combine(lhs, rhs, size);
   }
 
   @Override
@@ -166,12 +120,6 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return SetOperation.getMaxUnionBytes(size);
-  }
-
-  @Override
-  public Object getAggregatorStartValue()
-  {
-    return Sketches.updateSketchBuilder().build(size);
   }
 
   @Override

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-
 import io.druid.common.utils.UUIDUtils;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -35,6 +34,7 @@ import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.HadoopFsWrapper;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
@@ -116,11 +116,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outDir.getParent());
-
-      if (!fs.rename(tmpFile.getParent(), outDir)) {
-        if (!fs.delete(tmpFile.getParent(), true)) {
-          log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
-        }
+      if (!HadoopFsWrapper.rename(fs, tmpFile.getParent(), outDir)) {
         if (fs.exists(outDir)) {
           log.info(
               "Unable to rename temp directory[%s] to segment directory[%s]. It is already pushed by a replica task.",
@@ -134,6 +130,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
               outDir
           ));
         }
+      }
+    } finally {
+      try {
+        if (fs.exists(tmpFile.getParent()) && !fs.delete(tmpFile.getParent(), true)) {
+          log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
+        }
+      } catch(IOException ex) {
+        log.error(ex, "Failed to delete temp directory[%s]", tmpFile.getParent());
       }
     }
 

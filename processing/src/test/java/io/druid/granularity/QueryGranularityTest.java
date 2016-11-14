@@ -19,6 +19,7 @@
 
 package io.druid.granularity;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -642,6 +643,13 @@ public class QueryGranularityTest
     String jsonOut = mapper.writeValueAsString(expected);
     Assert.assertEquals(expected, mapper.readValue(jsonOut, QueryGranularity.class));
 
+    String illegalJson = "{ \"type\": \"period\", \"period\": \"P0D\" }";
+    try {
+      mapper.readValue(illegalJson, QueryGranularity.class);
+      Assert.fail();
+    }
+    catch (JsonMappingException e) {
+    }
   }
 
   @Test
@@ -659,6 +667,14 @@ public class QueryGranularityTest
 
     DurationGranularity expected = new DurationGranularity(5, 2);
     Assert.assertEquals(expected, mapper.readValue(mapper.writeValueAsString(expected), QueryGranularity.class));
+
+    String illegalJson = "{ \"type\": \"duration\", \"duration\": \"0\" }";
+    try {
+      mapper.readValue(illegalJson, QueryGranularity.class);
+      Assert.fail();
+    }
+    catch (JsonMappingException e) {
+    }
   }
 
   @Test
