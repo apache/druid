@@ -146,7 +146,7 @@ public class S3TaskLogs implements TaskLogs
   }
 
   @Override
-  public void kill(long beforeTimestamp) throws IOException
+  public void killOlderThan(long timestamp) throws IOException
   {
     throw new UnsupportedOperationException("not implemented");
   }

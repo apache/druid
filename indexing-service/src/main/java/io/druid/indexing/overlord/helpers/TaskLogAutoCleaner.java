@@ -59,15 +59,15 @@ public class TaskLogAutoCleaner implements OverlordHelper
 
     ScheduledExecutors.scheduleWithFixedDelay(
         exec,
-        Duration.standardSeconds(config.getInitialDelay()),
-        Duration.standardSeconds(config.getDelay()),
+        Duration.millis(config.getInitialDelay()),
+        Duration.millis(config.getDelay()),
         new Runnable()
         {
           @Override
           public void run()
           {
             try {
-              taskLogKiller.kill(System.currentTimeMillis() - config.getDurationToRetain()*1000);
+              taskLogKiller.killOlderThan(System.currentTimeMillis() - config.getDurationToRetain());
             }
             catch (Exception ex) {
               log.error(ex, "Failed to clean-up the task logs");

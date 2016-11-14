@@ -92,7 +92,7 @@ public class FileTaskLogs implements TaskLogs
   }
 
   @Override
-  public void kill(final long beforeTimestamp) throws IOException
+  public void killOlderThan(final long timestamp) throws IOException
   {
     File taskLogDir = config.getDirectory();
     if (taskLogDir.exists()) {
@@ -102,7 +102,7 @@ public class FileTaskLogs implements TaskLogs
             @Override
             public boolean accept(File f)
             {
-              return f.lastModified() < beforeTimestamp;
+              return f.lastModified() < timestamp;
             }
           }
       );
@@ -111,8 +111,10 @@ public class FileTaskLogs implements TaskLogs
         log.info("Deleting local task log [%s].", file.getAbsolutePath());
         FileUtils.forceDelete(file);
 
-        if (Thread.interrupted()) {
-          throw new IOException("Thread interrupted. Couldn't delete all tasklogs.");
+        if (Thread.currentThread().isInterrupted()) {
+          throw new IOException(
+              new InterruptedException("Thread interrupted. Couldn't delete all tasklogs.")
+          );
         }
       }
     }

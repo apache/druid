@@ -27,6 +27,8 @@ import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -82,6 +84,9 @@ public class HdfsTaskLogsTest
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
 
+    final Path logDirPath = new Path(logDir.toString());
+    FileSystem fs = new Path(logDir.toString()).getFileSystem(new Configuration());
+
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
     Files.write("log1content", logFile, Charsets.UTF_8);
@@ -93,12 +98,14 @@ public class HdfsTaskLogsTest
     //of them getting deleted
     Thread.sleep(1500);
     long time = (System.currentTimeMillis()/1000)*1000;
+    Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log1")).getModificationTime() < time);
 
     Files.write("log2content", logFile, Charsets.UTF_8);
     taskLogs.pushTaskLog("log2", logFile);
     Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log2")).getModificationTime() >= time);
 
-    taskLogs.kill(time);
+    taskLogs.killOlderThan(time);
 
     Assert.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
     Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));

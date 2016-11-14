@@ -25,14 +25,15 @@ If you are running the indexing service in remote mode, the task logs must be st
 |--------|-----------|-------|
 |`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
 
-You can also configure the Overlord to automatically retain the task logs only for last x seconds by configuring following additional properties.
+You can also configure the Overlord to automatically retain the task logs only for last x milliseconds by configuring following additional properties.
+Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid nodes and backing store nodes might result in un-intended behavior.  
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In seconds, task logs to be retained created in last x seconds. |None|
-|`druid.indexer.logs.kill.initialDelay`| Optional. Number of seconds after overlord start when first auto kill is run. |random value less than 300 (5 mins)|
-|`druid.indexer.logs.kill.delay`|Optional. Number of seconds of delay between successive executions of auto kill run. |21600 (6 hours)|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
+|`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
 ##### File Task Logs
 

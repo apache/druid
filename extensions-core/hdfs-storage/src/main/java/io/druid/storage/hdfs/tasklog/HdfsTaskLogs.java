@@ -127,7 +127,7 @@ public class HdfsTaskLogs implements TaskLogs
   }
 
   @Override
-  public void kill(long beforeTimestamp) throws IOException
+  public void killOlderThan(long timestamp) throws IOException
   {
     Path taskLogDir = new Path(config.getDirectory());
     FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
@@ -135,14 +135,16 @@ public class HdfsTaskLogs implements TaskLogs
       RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(taskLogDir);
       while (iter.hasNext()) {
         LocatedFileStatus file = iter.next();
-        if (file.getModificationTime() < beforeTimestamp) {
+        if (file.getModificationTime() < timestamp) {
           Path p = file.getPath();
           log.info("Deleting hdfs task log [%s].", p.toUri().toString());
           fs.delete(p, true);
         }
 
-        if (Thread.interrupted()) {
-          throw new IOException("Thread interrupted. Couldn't delete all tasklogs.");
+        if (Thread.currentThread().isInterrupted()) {
+          throw new IOException(
+              new InterruptedException("Thread interrupted. Couldn't delete all tasklogs.")
+          );
         }
       }
     }

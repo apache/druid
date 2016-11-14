@@ -53,8 +53,8 @@ public class TaskLogAutoCleanerConfig
     }
 
     this.enabled = enabled;
-    this.initialDelay = initialDelay == null ? 60 + new Random().nextInt(4*60) : initialDelay.longValue();
-    this.delay = delay == null ? 6*60*60 : delay.longValue();
+    this.initialDelay = initialDelay == null ? 60000 + new Random().nextInt(4*60000) : initialDelay.longValue();
+    this.delay = delay == null ? 6*60*60*1000 : delay.longValue();
     this.durationToRetain = durationToRetain == null ? Long.MAX_VALUE : durationToRetain.longValue();
   }
 

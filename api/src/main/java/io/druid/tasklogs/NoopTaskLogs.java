@@ -50,7 +50,7 @@ public class NoopTaskLogs implements TaskLogs
   }
 
   @Override
-  public void kill(long beforeTimestamp) throws IOException
+  public void killOlderThan(long timestamp) throws IOException
   {
     log.info("Noop: No task logs are deleted.");
   }
