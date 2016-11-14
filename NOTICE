@@ -45,8 +45,18 @@ This product contains a modified version of Metamarkets bytebuffer-collections l
   * COMMIT TAG:
     * https://github.com/metamx/bytebuffer-collections/commit/3d1e7c8
 
+<<<<<<< Upstream, based on origin/master
 This product contains SQL query planning code adapted from Apache Calcite
   * LICENSE:
     * https://github.com/apache/calcite/blob/master/LICENSE (Apache License, Version 2.0)
   * HOMEPAGE:
     * https://calcite.apache.org/
+=======
+This product contains a modified version of Metamarkets extendedset library
+  * LICENSE:
+    * https://github.com/metamx/extendedset/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/metamx/extendedset
+  * COMMIT TAG:
+    * https://github.com/metamx/extendedset/commit/c9d647d
+>>>>>>> 65c2924 Migrating extendedset from Metamarkets.
