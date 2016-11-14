@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import io.druid.granularity.QueryGranularity;
-import io.druid.java.util.common.guava.ResourceClosingSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -78,7 +77,7 @@ public class QueryRunnerHelper
       @Override
       public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
       {
-        return new ResourceClosingSequence<>(runner.run(query, responseContext), closeable);
+        return Sequences.withBaggage(runner.run(query, responseContext), closeable);
       }
     };
   }

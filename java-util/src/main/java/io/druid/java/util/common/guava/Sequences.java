@@ -20,6 +20,7 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
@@ -27,6 +28,7 @@ import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -39,7 +41,22 @@ public class Sequences
 
   public static <T> Sequence<T> simple(final Iterable<T> iterable)
   {
-    return BaseSequence.simple(iterable);
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+        {
+          @Override
+          public Iterator<T> make()
+          {
+            return iterable.iterator();
+          }
+
+          @Override
+          public void cleanup(Iterator<T> iterFromMake)
+          {
+
+          }
+        }
+    );
   }
 
   @SuppressWarnings("unchecked")
@@ -78,9 +95,28 @@ public class Sequences
     return new LimitedSequence<>(sequence, limit);
   }
 
-  public static <T> Sequence<T> withBaggage(final Sequence<T> seq, Closeable baggage)
+  public static <T> Sequence<T> withBaggage(final Sequence<T> seq, final Closeable baggage)
   {
-    return new ResourceClosingSequence<>(seq, baggage);
+    Preconditions.checkNotNull(baggage, "baggage");
+    return wrap(seq, new SequenceWrapper()
+    {
+      @Override
+      public void after(boolean isDone, Throwable thrown) throws Exception
+      {
+        baggage.close();
+      }
+    });
+  }
+
+  /**
+   * Allows to execute something before, after or around the processing of the given sequence. See documentation to
+   * {@link SequenceWrapper} methods for some details.
+   */
+  public static <T> Sequence<T> wrap(Sequence<T> seq, SequenceWrapper wrapper)
+  {
+    Preconditions.checkNotNull(seq, "seq");
+    Preconditions.checkNotNull(wrapper, "wrapper");
+    return new WrappingSequence<>(seq, wrapper);
   }
 
   public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
@@ -108,7 +144,7 @@ public class Sequences
   {
     List<T> seqList = Sequences.toList(sequence, Lists.<T>newArrayList());
     Collections.sort(seqList, comparator);
-    return BaseSequence.simple(seqList);
+    return simple(seqList);
   }
 
   public static <T, ListType extends List<T>> ListType toList(Sequence<T> seq, ListType list)

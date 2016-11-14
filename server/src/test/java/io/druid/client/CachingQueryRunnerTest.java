@@ -25,18 +25,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.guava.ResourceClosingSequence;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.guava.Yielder;
-import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -168,20 +165,23 @@ public class CachingQueryRunnerTest
       throws Exception
   {
     final AssertingClosable closable = new AssertingClosable();
-    final Sequence resultSeq = new ResourceClosingSequence(
-        Sequences.simple(expectedRes), closable
-    )
-    {
-      @Override
-      public Yielder toYielder(Object initValue, YieldingAccumulator accumulator)
-      {
-        Assert.assertFalse(closable.isClosed());
-        return super.toYielder(
-            initValue,
-            accumulator
-        );
-      }
-    };
+    final Sequence resultSeq = Sequences.wrap(
+        Sequences.simple(expectedRes),
+        new SequenceWrapper()
+        {
+          @Override
+          public void before()
+          {
+            Assert.assertFalse(closable.isClosed());
+          }
+
+          @Override
+          public void after(boolean isDone, Throwable thrown) throws Exception
+          {
+            closable.close();
+          }
+        }
+    );
 
     Cache cache = MapCache.create(1024 * 1024);
 

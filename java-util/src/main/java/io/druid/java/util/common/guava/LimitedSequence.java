@@ -27,12 +27,12 @@ import java.io.IOException;
  * Limits the number of inputs from this sequence.  For example, if there are actually 100 things in the sequence
  * but the limit is set to 10, the Sequence will act as if it only had 10 things.
  */
-public class LimitedSequence<T> extends YieldingSequenceBase<T>
+final class LimitedSequence<T> extends YieldingSequenceBase<T>
 {
   private final Sequence<T> baseSequence;
   private final int limit;
 
-  public LimitedSequence(
+  LimitedSequence(
       Sequence<T> baseSequence,
       int limit
   )
@@ -59,7 +59,7 @@ public class LimitedSequence<T> extends YieldingSequenceBase<T>
     private final Yielder<OutType> subYielder;
     private final LimitedYieldingAccumulator<OutType, T> limitedAccumulator;
 
-    public LimitedYielder(
+    LimitedYielder(
         Yielder<OutType> subYielder,
         LimitedYieldingAccumulator<OutType, T> limitedAccumulator
     )
@@ -110,7 +110,7 @@ public class LimitedSequence<T> extends YieldingSequenceBase<T>
     int count;
     boolean interruptYield = false;
 
-    public LimitedYieldingAccumulator(YieldingAccumulator<OutType, T> accumulator)
+    LimitedYieldingAccumulator(YieldingAccumulator<OutType, T> accumulator)
     {
       super(accumulator);
       count = 0;
@@ -138,7 +138,7 @@ public class LimitedSequence<T> extends YieldingSequenceBase<T>
       return retVal;
     }
 
-    public boolean isInterruptYield()
+    boolean isInterruptYield()
     {
       return interruptYield;
     }
