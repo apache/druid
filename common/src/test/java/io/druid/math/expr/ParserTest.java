@@ -49,25 +49,11 @@ public class ParserTest
   @Test
   public void testSimpleUnaryOps2()
   {
-    String actual = Parser.parse("-1").toString();
-    String expected = "-1";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("--1").toString();
-    expected = "--1";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("-1+2").toString();
-    expected = "(+ -1 2)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("-1*2").toString();
-    expected = "(* -1 2)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("-1^2").toString();
-    expected = "(^ -1 2)";
-    Assert.assertEquals(expected, actual);
+    validate("-1", "-1", "-1");
+    validate("--1", "--1", "1");
+    validate("-1+2", "(+ -1 2)", "1");
+    validate("-1*2", "(* -1 2)", "-2");
+    validate("-1^2", "(^ -1 2)", "1");
   }
 
   private void validateParser(String expression, String expected, String identifiers)
@@ -103,6 +89,8 @@ public class ParserTest
     validateParser("x+y-z", "(- (+ x y) z)", "[x, y, z]");
     validateParser("x-y+z", "(+ (- x y) z)", "[x, y, z]");
     validateParser("x-y-z", "(- (- x y) z)", "[x, y, z]");
+
+    validateParser("x-y-x", "(- (- x y) x)", "[x, y]");
   }
 
   @Test
@@ -116,99 +104,68 @@ public class ParserTest
   @Test
   public void testSimpleMultiplicativeOp2()
   {
-    String actual = Parser.parse("1*2*3").toString();
-    String expected = "(* (* 1 2) 3)";
-    Assert.assertEquals(expected, actual);
+    validate("1*2*3", "(* (* 1 2) 3)", "6");
+    validate("1*2/3", "(/ (* 1 2) 3)", "0");
+    validate("1/2*3", "(* (/ 1 2) 3)", "0");
+    validate("1/2/3", "(/ (/ 1 2) 3)", "0");
 
-    actual = Parser.parse("1*2/3").toString();
-    expected = "(/ (* 1 2) 3)";
-    Assert.assertEquals(expected, actual);
+    validate("1.0*2*3", "(* (* 1.0 2) 3)", "6.0");
+    validate("1.0*2/3", "(/ (* 1.0 2) 3)", "0.6666666666666666");
+    validate("1.0/2*3", "(* (/ 1.0 2) 3)", "1.5");
+    validate("1.0/2/3", "(/ (/ 1.0 2) 3)", "0.16666666666666666");
 
-    actual = Parser.parse("1/2*3").toString();
-    expected = "(* (/ 1 2) 3)";
-    Assert.assertEquals(expected, actual);
+    // partial
+    validate("1.0*2*x", "(* (* 1.0 2) x)", "(* 2.0 x)");
+    validate("1.0*2/x", "(/ (* 1.0 2) x)", "(/ 2.0 x)");
+    validate("1.0/2*x", "(* (/ 1.0 2) x)", "(* 0.5 x)");
+    validate("1.0/2/x", "(/ (/ 1.0 2) x)", "(/ 0.5 x)");
 
-    actual = Parser.parse("1/2/3").toString();
-    expected = "(/ (/ 1 2) 3)";
-    Assert.assertEquals(expected, actual);
+    // not working yet
+    validate("1.0*x*3", "(* (* 1.0 x) 3)", "(* (* 1.0 x) 3)");
   }
 
   @Test
   public void testSimpleCarrot1()
   {
-    String actual = Parser.parse("1^2").toString();
-    String expected = "(^ 1 2)";
-    Assert.assertEquals(expected, actual);
+    validate("1^2", "(^ 1 2)", "1");
   }
 
   @Test
   public void testSimpleCarrot2()
   {
-    String actual = Parser.parse("1^2^3").toString();
-    String expected = "(^ 1 (^ 2 3))";
-    Assert.assertEquals(expected, actual);
+    validate("1^2^3", "(^ 1 (^ 2 3))", "1");
   }
 
   @Test
   public void testMixed()
   {
-    String actual = Parser.parse("1+2*3").toString();
-    String expected = "(+ 1 (* 2 3))";
-    Assert.assertEquals(expected, actual);
+    validate("1+2*3", "(+ 1 (* 2 3))", "7");
+    validate("1+(2*3)", "(+ 1 (* 2 3))", "7");
+    validate("(1+2)*3", "(* (+ 1 2) 3)", "9");
 
-    actual = Parser.parse("1+(2*3)").toString();
-    Assert.assertEquals(expected, actual);
+    validate("1*2+3", "(+ (* 1 2) 3)", "5");
+    validate("(1*2)+3", "(+ (* 1 2) 3)", "5");
+    validate("1*(2+3)", "(* 1 (+ 2 3))", "5");
 
-    actual = Parser.parse("(1+2)*3").toString();
-    expected = "(* (+ 1 2) 3)";
-    Assert.assertEquals(expected, actual);
+    validate("1+2^3", "(+ 1 (^ 2 3))", "9");
+    validate("1+(2^3)", "(+ 1 (^ 2 3))", "9");
+    validate("(1+2)^3", "(^ (+ 1 2) 3)", "27");
 
+    validate("1^2+3", "(+ (^ 1 2) 3)", "4");
+    validate("(1^2)+3", "(+ (^ 1 2) 3)", "4");
+    validate("1^(2+3)", "(^ 1 (+ 2 3))", "1");
 
-    actual = Parser.parse("1*2+3").toString();
-    expected = "(+ (* 1 2) 3)";
-    Assert.assertEquals(expected, actual);
+    validate("1^2*3+4", "(+ (* (^ 1 2) 3) 4)", "7");
+    validate("-1^2*-3+-4", "(+ (* (^ -1 2) -3) -4)", "-7");
 
-    actual = Parser.parse("(1*2)+3").toString();
-    Assert.assertEquals(expected, actual);
+    validate("max(3, 4)", "(max [3, 4])", "4");
+    validate("min(1, max(3, 4))", "(min [1, (max [3, 4])])", "1");
+  }
 
-    actual = Parser.parse("1*(2+3)").toString();
-    expected = "(* 1 (+ 2 3))";
-    Assert.assertEquals(expected, actual);
-
-
-    actual = Parser.parse("1+2^3").toString();
-    expected = "(+ 1 (^ 2 3))";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("1+(2^3)").toString();
-    expected = "(+ 1 (^ 2 3))";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("(1+2)^3").toString();
-    expected = "(^ (+ 1 2) 3)";
-    Assert.assertEquals(expected, actual);
-
-
-    actual = Parser.parse("1^2+3").toString();
-    expected = "(+ (^ 1 2) 3)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("(1^2)+3").toString();
-    expected = "(+ (^ 1 2) 3)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("1^(2+3)").toString();
-    expected = "(^ 1 (+ 2 3))";
-    Assert.assertEquals(expected, actual);
-
-
-    actual = Parser.parse("1^2*3+4").toString();
-    expected = "(+ (* (^ 1 2) 3) 4)";
-    Assert.assertEquals(expected, actual);
-
-    actual = Parser.parse("-1^-2*-3+-4").toString();
-    expected = "(+ (* (^ -1 -2) -3) -4)";
-    Assert.assertEquals(expected, actual);
+  private void validate(String expression, String withoutFlatten, String withFlatten)
+  {
+    Assert.assertEquals(withoutFlatten, Parser.parse(expression, false).toString());
+    Assert.assertEquals(withFlatten, Parser.parse(expression, true).toString());
   }
 
   @Test
