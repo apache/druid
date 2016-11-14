@@ -33,12 +33,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -172,4 +174,9 @@ public class GranularityPathSpec implements PathSpec
     return makeNew ? new Interval(start, end) : interval;
   }
 
+  @Override
+  public Map<String, String> additionalDimValues(Mapper.Context context) throws IOException
+  {
+    return null;
+  }
 }

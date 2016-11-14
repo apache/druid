@@ -28,17 +28,12 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.indexer.path.PartitionPathSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,8 +46,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   private InputRowParser parser;
   protected GranularitySpec granularitySpec;
   private boolean reportParseExceptions;
-  private Map<String, String> partitionDimValues = null;
-  private Set<String> partitionDims = null;
+  private AdditionalDimsMergerFactory.Merger dimsMerger;
 
   @Override
   protected void setup(Context context)
@@ -63,35 +57,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     granularitySpec = config.getGranularitySpec();
     reportParseExceptions = !config.isIgnoreInvalidRows();
 
-    if (config.getPathSpec() instanceof PartitionPathSpec) {
-      PartitionPathSpec partitionPathSpec = (PartitionPathSpec)config.getPathSpec();
-
-      InputSplit split = context.getInputSplit();
-      Class<? extends InputSplit> splitClass = split.getClass();
-
-      FileSplit fileSplit = null;
-      // to handle TaggedInputSplit case when MultipleInputs are used
-      if (splitClass.equals(FileSplit.class)) {
-        fileSplit = (FileSplit) split;
-      } else if (splitClass.getName().equals("org.apache.hadoop.mapreduce.lib.input.TaggedInputSplit")) {
-        try {
-          Method getInputSplitMethod = splitClass
-              .getDeclaredMethod("getInputSplit");
-          getInputSplitMethod.setAccessible(true);
-          fileSplit = (FileSplit) getInputSplitMethod.invoke(split);
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
-      }
-
-      Path filePath = fileSplit.getPath();
-      partitionDimValues = partitionPathSpec.getPartitionValues(filePath);
-      if (partitionDimValues.size() == 0) {
-        partitionDimValues = null;
-      } else {
-        partitionDims = partitionDimValues.keySet();
-      }
-    }
+    dimsMerger = new AdditionalDimsMergerFactory().create(config.getPathSpec().additionalDimValues(context));
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -112,8 +78,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     try {
       final InputRow inputRow;
       try {
-        inputRow = (partitionDimValues == null) ? parseInputRow(value, parser)
-                                             : mergePartitionDimValues(parseInputRow(value, parser));
+        inputRow = dimsMerger.merge(parseInputRow(value, parser));
       }
       catch (ParseException e) {
         if (reportParseExceptions) {
@@ -153,37 +118,79 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   abstract protected void innerMap(InputRow inputRow, Object value, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
-  private List<String> mergedDimensions = null;
-
-  private InputRow mergePartitionDimValues(InputRow inputRow)
+  private class AdditionalDimsMergerFactory
   {
-    InputRow merged = inputRow;
-
-    // only for raw data case
-    if (inputRow instanceof MapBasedInputRow) {
-      MapBasedInputRow mapBasedInputRow = (MapBasedInputRow)inputRow;
-
-      if (mergedDimensions == null) {
-        List<String> orgDimensions = mapBasedInputRow.getDimensions();
-        mergedDimensions = Lists.newArrayListWithCapacity(orgDimensions.size() + partitionDims.size());
-        mergedDimensions.addAll(orgDimensions);
-        for (String partitionDimension : partitionDims) {
-          if (!mergedDimensions.contains(partitionDimension)) {
-            mergedDimensions.add(partitionDimension);
+    public Merger create(
+        Map<String, String> additionalDimValues
+    )
+    {
+      if (additionalDimValues != null && additionalDimValues.size() > 0) {
+        return new Merger(additionalDimValues);
+      } else {
+        return new Merger(null) {
+          @Override
+          public InputRow merge(InputRow inputRow)
+          {
+            return inputRow;
           }
-        }
+        };
       }
-
-      Map<String, Object> eventMap = Maps.newHashMap(mapBasedInputRow.getEvent());
-      eventMap.putAll(partitionDimValues);
-
-      merged = new MapBasedInputRow(
-          mapBasedInputRow.getTimestamp(),
-          mergedDimensions,
-          eventMap
-      );
     }
 
-    return merged;
+    private class Merger
+    {
+      private final Map<String, String> additionalDimValues;
+      private List<String> mergedDims;
+
+      public Merger(
+          Map<String, String> additionalDimValues
+      )
+      {
+        this.additionalDimValues = additionalDimValues;
+      }
+
+      public InputRow merge(
+          InputRow inputRow
+      )
+      {
+        if (isMapBasedInputRow(inputRow)) {
+          MapBasedInputRow mapBasedInputRow = (MapBasedInputRow)inputRow;
+          Map<String, Object> eventMap = Maps.newHashMap(mapBasedInputRow.getEvent());
+          eventMap.putAll(additionalDimValues);
+
+          return new MapBasedInputRow(
+              mapBasedInputRow.getTimestamp(),
+              getMergedDims(mapBasedInputRow),
+              eventMap
+          );
+        }
+
+        return inputRow;
+      }
+
+      private List<String> getMergedDims(MapBasedInputRow mapBasedInputRow)
+      {
+        if (mergedDims == null) {
+          List<String> orgDimensions = mapBasedInputRow.getDimensions();
+          Set<String> additionalDims = additionalDimValues.keySet();
+          mergedDims = Lists.newArrayListWithCapacity(orgDimensions.size() + additionalDims.size());
+          mergedDims.addAll(orgDimensions);
+          for (String partitionDimension : additionalDims) {
+            if (!mergedDims.contains(partitionDimension)) {
+              mergedDims.add(partitionDimension);
+            }
+          }
+        }
+
+        return mergedDims;
+      }
+
+      private boolean isMapBasedInputRow(
+          InputRow inputRow
+      )
+      {
+        return inputRow instanceof MapBasedInputRow;
+      }
+    }
   }
 }

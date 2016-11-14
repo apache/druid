@@ -33,12 +33,15 @@ import io.druid.indexer.hadoop.FSSpideringIterator;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -138,6 +141,31 @@ public class PartitionPathSpec implements PathSpec
     return job;
   }
 
+  @Override
+  public Map<String, String> additionalDimValues(Mapper.Context context) throws IOException
+  {
+    InputSplit split = context.getInputSplit();
+    Class<? extends InputSplit> splitClass = split.getClass();
+
+    FileSplit fileSplit = null;
+    // to handle TaggedInputSplit case when MultipleInputs are used
+    if (splitClass.equals(FileSplit.class)) {
+      fileSplit = (FileSplit) split;
+    } else if (splitClass.getName().equals("org.apache.hadoop.mapreduce.lib.input.TaggedInputSplit")) {
+      try {
+        Method getInputSplitMethod = splitClass
+            .getDeclaredMethod("getInputSplit");
+        getInputSplitMethod.setAccessible(true);
+        fileSplit = (FileSplit) getInputSplitMethod.invoke(split);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+
+    Path filePath = fileSplit.getPath();
+    return getPartitionValues(filePath);
+  }
+
   public Map<String, String> getPartitionValues(Path path)
   {
     String dirPath = path.getParent().toUri().getPath();
@@ -151,7 +179,7 @@ public class PartitionPathSpec implements PathSpec
     Map<String, String> values = Maps.newHashMap();
     for (String partition: partitions) {
       String[] keyValue = partition.split("=");
-      if (keyValue.length == 2 && isPartitionColumn(keyValue[0])) {
+      if (keyValue.length == 2 && isPartitionedColumn(keyValue[0])) {
         values.put(keyValue[0], keyValue[1]);
       }
     }
@@ -172,7 +200,7 @@ public class PartitionPathSpec implements PathSpec
     return Pattern.compile(partitionPattern.append(".*").toString().replace("/","\\/"));
   }
 
-  private boolean isPartitionColumn(String columnName)
+  private boolean isPartitionedColumn(String columnName)
   {
     return partitionColumns == null || partitionColumns.contains(columnName);
   }

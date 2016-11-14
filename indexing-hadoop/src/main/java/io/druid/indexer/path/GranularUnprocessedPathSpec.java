@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -120,5 +121,11 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     );
 
     return super.addInputPaths(config, job);
+  }
+
+  @Override
+  public Map<String, String> additionalDimValues(Mapper.Context context) throws IOException
+  {
+    return null;
   }
 }

@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class MultiplePathSpec implements PathSpec
 {
@@ -54,6 +56,12 @@ public class MultiplePathSpec implements PathSpec
       spec.addInputPaths(config, job);
     }
     return job;
+  }
+
+  @Override
+  public Map<String, String> additionalDimValues(Mapper.Context context) throws IOException
+  {
+    return null;
   }
 
   @Override

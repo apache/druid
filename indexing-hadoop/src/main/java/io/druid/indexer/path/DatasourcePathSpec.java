@@ -38,10 +38,12 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DatasourcePathSpec implements PathSpec
@@ -164,6 +166,12 @@ public class DatasourcePathSpec implements PathSpec
     MultipleInputs.addInputPath(job, new Path("/dummy/tobe/ignored"), DatasourceInputFormat.class);
 
     return job;
+  }
+
+  @Override
+  public Map<String, String> additionalDimValues(Mapper.Context context) throws IOException
+  {
+    return null;
   }
 
   @Override
