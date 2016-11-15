@@ -473,9 +473,9 @@ The second kind where it is not possible to pass at query time due to their size
 
 ```json
 { 
-  "type":"lookup"
-  "dimension":"dimensionName"
-  "outputName":"dimensionOutputName"
+  "type":"lookup",
+  "dimension":"dimensionName",
+  "outputName":"dimensionOutputName",
   "name":"lookupName"
 }
 ```
