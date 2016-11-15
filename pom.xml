@@ -111,6 +111,7 @@
         <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
+        <module>extensions-contrib/time-min-max</module>
     </modules>
 
     <dependencyManagement>
