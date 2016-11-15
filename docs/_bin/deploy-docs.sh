@@ -108,7 +108,7 @@ if [ -z "$opt_dryrun" ]; then
 {
   "title" : "Update Documentation for $version",
   "head"  : "$updatebranch",
-  "base"  : "master"
+  "base"  : "src"
 }
 EOF
 
