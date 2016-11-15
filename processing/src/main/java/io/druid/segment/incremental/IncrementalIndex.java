@@ -20,6 +20,7 @@
 package io.druid.segment.incremental;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -172,13 +173,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           }
         };
 
-        if (!deserializeComplexMetrics) {
+        if ((Enums.getIfPresent(ValueType.class, typeName.toUpperCase()).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
+            || !deserializeComplexMetrics) {
           return rawColumnSelector;
         } else {
-          if (typeName.equals("float")) {
-            return rawColumnSelector;
-          }
-
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", typeName);
