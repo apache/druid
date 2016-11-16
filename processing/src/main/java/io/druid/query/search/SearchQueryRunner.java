@@ -63,6 +63,7 @@ import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
 
@@ -243,16 +244,17 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   )
   {
     Iterable<SearchHit> source = Iterables.transform(
-        retVal.entrySet(), new Function<Map.Entry<SearchHit, Integer>, SearchHit>()
+        retVal.object2IntEntrySet(), new Function<Object2IntMap.Entry<SearchHit>, SearchHit>()
         {
           @Override
-          public SearchHit apply(Map.Entry<SearchHit, Integer> input)
+          public SearchHit apply(Object2IntMap.Entry<SearchHit> input)
           {
             SearchHit hit = input.getKey();
-            return new SearchHit(hit.getDimension(), hit.getValue(), input.getValue().intValue());
+            return new SearchHit(hit.getDimension(), hit.getValue(), input.getIntValue());
           }
         }
     );
+
     return Sequences.simple(
         ImmutableList.of(
             new Result<SearchResultValue>(
@@ -434,5 +436,4 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       }
     }
   }
-
 }
