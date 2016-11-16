@@ -138,10 +138,12 @@ public class BrokerQueryResource extends QueryResource
       Set<String> found = Sets.newLinkedHashSet();
       for (DruidServer server : serverInventoryView.getInventory()) {
         for (DruidDataSource source : server.getDataSources()) {
-          for (Matcher matcher : matchers) {
-            if (matcher.reset(source.getName()).matches()) {
-              found.add(source.getName());
-              break;
+          if (!found.contains(source.getName())) {
+            for (Matcher matcher : matchers) {
+              if (matcher.reset(source.getName()).matches()){
+                found.add(source.getName());
+                break;
+              }
             }
           }
         }
