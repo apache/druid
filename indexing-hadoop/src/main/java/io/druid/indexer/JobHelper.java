@@ -420,10 +420,16 @@ public class JobHelper
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
-      case "gs":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
+        );
+        break;
+      case "gs":
+        loadSpec = ImmutableMap.<String, Object>of(
+            "type", "google",
+            "bucket", indexOutURI.getHost(),
+            "path", indexOutURI.getPath().substring(1) // remove the leading "/"
         );
         break;
       case "s3":
@@ -730,6 +736,8 @@ public class JobHelper
       segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
+    } else if ("google".equals(type)) {
+      segmentLocURI = URI.create(String.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path")));
     } else if ("local".equals(type)) {
       try {
         segmentLocURI = new URI("file", null, loadSpec.get("path").toString(), null, null);
