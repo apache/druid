@@ -334,6 +334,8 @@ public class GroupByQueryEngineV2
             dimInfo.getOutputName(),
             ((DimensionSelector) dimInfo.getSelector()).lookupName(id)
         );
+      } else {
+        resultMap.put(dimInfo.getOutputName(), "");
       }
     }
   }
