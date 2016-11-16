@@ -409,35 +409,54 @@ public class RowBasedGrouperHelper
       }
 
       if (fudgeTimestamp == null) {
-        return new Grouper.KeyComparator()
-        {
-          @Override
-          public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+        if (sortByDimsFirst) {
+          return new Grouper.KeyComparator()
           {
-            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              for (int i = 0; i < dimCount; i++) {
+                final int cmp = Ints.compare(
+                    sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
+                    sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+                );
 
-            if (!sortByDimsFirst && timeCompare != 0) {
-              return timeCompare;
-            }
-
-            for (int i = 0; i < dimCount; i++) {
-              final int cmp = Ints.compare(
-                  sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
-                  sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
-              );
-
-              if (cmp != 0) {
-                return cmp;
+                if (cmp != 0) {
+                  return cmp;
+                }
               }
-            }
 
-            if (sortByDimsFirst && timeCompare != 0) {
-              return timeCompare;
+              return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
             }
+          };
+        } else {
+          return new Grouper.KeyComparator()
+          {
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
 
-            return 0;
-          }
-        };
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              for (int i = 0; i < dimCount; i++) {
+                final int cmp = Ints.compare(
+                    sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
+                    sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+                );
+
+                if (cmp != 0) {
+                  return cmp;
+                }
+              }
+
+              return 0;
+            }
+          };
+        }
+
       } else {
         return new Grouper.KeyComparator()
         {

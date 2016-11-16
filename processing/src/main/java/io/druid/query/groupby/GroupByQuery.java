@@ -272,48 +272,77 @@ public class GroupByQuery extends BaseQuery<Row>
 
     final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
 
-    return Ordering.from(
-        new Comparator<Row>()
-        {
-          @Override
-          public int compare(Row lhs, Row rhs)
+    if (sortByDimsFirst) {
+      return Ordering.from(
+          new Comparator<Row>()
           {
-            final int timeCompare;
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              for (DimensionSpec dimension : dimensions) {
+                final int dimCompare = naturalNullsFirst.compare(
+                    lhs.getRaw(dimension.getOutputName()),
+                    rhs.getRaw(dimension.getOutputName())
+                );
+                if (dimCompare != 0) {
+                  return dimCompare;
+                }
+              }
 
-            if (granular) {
-              timeCompare = Longs.compare(
-                  granularity.truncate(lhs.getTimestampFromEpoch()),
-                  granularity.truncate(rhs.getTimestampFromEpoch())
-              );
-            } else {
-              timeCompare = Longs.compare(
-                  lhs.getTimestampFromEpoch(),
-                  rhs.getTimestampFromEpoch()
-              );
-            }
-
-            if (!sortByDimsFirst && timeCompare != 0) {
-              return timeCompare;
-            }
-
-            for (DimensionSpec dimension : dimensions) {
-              final int dimCompare = naturalNullsFirst.compare(
-                  lhs.getRaw(dimension.getOutputName()),
-                  rhs.getRaw(dimension.getOutputName())
-              );
-              if (dimCompare != 0) {
-                return dimCompare;
+              if (granular) {
+                return Longs.compare(
+                    granularity.truncate(lhs.getTimestampFromEpoch()),
+                    granularity.truncate(rhs.getTimestampFromEpoch())
+                );
+              } else {
+                return Longs.compare(
+                    lhs.getTimestampFromEpoch(),
+                    rhs.getTimestampFromEpoch()
+                );
               }
             }
-
-            if (sortByDimsFirst && timeCompare != 0) {
-              return timeCompare;
-            }
-
-            return 0;
           }
-        }
-    );
+      );
+    } else {
+      return Ordering.from(
+          new Comparator<Row>()
+          {
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              final int timeCompare;
+
+              if (granular) {
+                timeCompare = Longs.compare(
+                    granularity.truncate(lhs.getTimestampFromEpoch()),
+                    granularity.truncate(rhs.getTimestampFromEpoch())
+                );
+              } else {
+                timeCompare = Longs.compare(
+                    lhs.getTimestampFromEpoch(),
+                    rhs.getTimestampFromEpoch()
+                );
+              }
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              for (DimensionSpec dimension : dimensions) {
+                final int dimCompare = naturalNullsFirst.compare(
+                    lhs.getRaw(dimension.getOutputName()),
+                    rhs.getRaw(dimension.getOutputName())
+                );
+                if (dimCompare != 0) {
+                  return dimCompare;
+                }
+              }
+
+              return 0;
+            }
+          }
+      );
+    }
   }
 
   public Sequence<Row> applyLimit(Sequence<Row> results)
