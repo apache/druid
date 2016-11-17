@@ -62,6 +62,9 @@ This product contains a modified version of Metamarkets extendedset library
 This product contains a modified version of Alessandro Colantonio's CONCISE
 (COmpressed 'N' Composable Integer SEt) library, extending the functionality of
 ConciseSet to use IntBuffers.
- * (c) 2010 Alessandro Colantonio
- * <mailto:colanton@mat.uniroma3.it>
- * <http://ricerca.mat.uniroma3.it/users/colanton>
+  * (c) 2010 Alessandro Colantonio
+  * <mailto:colanton@mat.uniroma3.it>
+  * <http://ricerca.mat.uniroma3.it/users/colanton>
+  * LICENSE:Apache License, Version 2.0
+  * HOMEPAGE:
+    * https://sourceforge.net/projects/concise/
