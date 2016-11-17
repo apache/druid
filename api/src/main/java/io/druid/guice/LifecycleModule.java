@@ -38,6 +38,7 @@ import java.util.Set;
  */
 public class LifecycleModule implements Module
 {
+  private final LifecycleScope firstScope = new LifecycleScope(Lifecycle.Stage.FIRST);
   private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
   private final LifecycleScope lastScope = new LifecycleScope(Lifecycle.Stage.LAST);
 
@@ -136,6 +137,7 @@ public class LifecycleModule implements Module
   {
     getEagerBinder(binder); // Load up the eager binder so that it will inject the empty set at a minimum.
 
+    binder.bindScope(ManageLifecycleFirst.class, firstScope);
     binder.bindScope(ManageLifecycle.class, scope);
     binder.bindScope(ManageLifecycleLast.class, lastScope);
   }
@@ -156,6 +158,7 @@ public class LifecycleModule implements Module
         super.start();
       }
     };
+    firstScope.setLifecycle(lifecycle);
     scope.setLifecycle(lifecycle);
     lastScope.setLifecycle(lifecycle);
 

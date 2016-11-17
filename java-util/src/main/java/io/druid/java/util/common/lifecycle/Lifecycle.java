@@ -60,6 +60,7 @@ public class Lifecycle
 
   public static enum Stage
   {
+    FIRST,
     NORMAL,
     LAST
   }
@@ -257,6 +258,7 @@ public class Lifecycle
       if (!started.compareAndSet(false, true)) {
         throw new ISE("Already started");
       }
+
       for (Stage stage : stagesOrdered()) {
         currStage = stage;
         for (Handler handler : handlers.get(stage)) {
@@ -323,7 +325,7 @@ public class Lifecycle
 
   private static List<Stage> stagesOrdered()
   {
-    return Arrays.asList(Stage.NORMAL, Stage.LAST);
+    return Arrays.asList(Stage.FIRST, Stage.NORMAL, Stage.LAST);
   }
 
 
