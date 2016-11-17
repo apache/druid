@@ -20,19 +20,27 @@
 package io.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class ApproximateHistogramAggregationTest
 {
   private AggregationTestHelper helper;
@@ -40,14 +48,25 @@ public class ApproximateHistogramAggregationTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public ApproximateHistogramAggregationTest()
+  public ApproximateHistogramAggregationTest(final GroupByQueryConfig config)
   {
     ApproximateHistogramDruidModule module = new ApproximateHistogramDruidModule();
     module.configure(null);
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(module.getJacksonModules()),
+        config,
         tempFolder
     );
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
   }
 
   @Test

@@ -33,6 +33,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
@@ -45,7 +46,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
-import io.druid.query.ConcatQueryRunner;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
@@ -128,11 +128,12 @@ public class AggregationTestHelper
 
   public static final AggregationTestHelper createGroupByQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
+      GroupByQueryConfig config,
       TemporaryFolder tempFolder
   )
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig());
+    GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(mapper, config);
 
     IndexIO indexIO = new IndexIO(
         mapper,
@@ -479,29 +480,28 @@ public class AggregationTestHelper
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
-                    new ConcatQueryRunner(
-                        Sequences.simple(
-                            Lists.transform(
-                                segments,
-                                new Function<Segment, QueryRunner>()
-                                {
-                                  @Override
-                                  public QueryRunner apply(final Segment segment)
-                                  {
-                                    try {
-                                      return makeStringSerdeQueryRunner(
-                                          mapper,
-                                          toolChest,
-                                          query,
-                                          factory.createRunner(segment)
-                                      );
-                                    }
-                                    catch (Exception ex) {
-                                      throw Throwables.propagate(ex);
-                                    }
-                                  }
+                    factory.mergeRunners(
+                        MoreExecutors.sameThreadExecutor(),
+                        Lists.transform(
+                            segments,
+                            new Function<Segment, QueryRunner>()
+                            {
+                              @Override
+                              public QueryRunner apply(final Segment segment)
+                              {
+                                try {
+                                  return makeStringSerdeQueryRunner(
+                                      mapper,
+                                      toolChest,
+                                      query,
+                                      factory.createRunner(segment)
+                                  );
                                 }
-                            )
+                                catch (Exception ex) {
+                                  throw Throwables.propagate(ex);
+                                }
+                              }
+                            }
                         )
                     )
                 )

@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -140,78 +141,10 @@ public class GroupByQueryRunnerTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
-      final GroupByQueryConfig config
-  )
+  public static List<GroupByQueryConfig> testConfigs()
   {
-    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(10 * 1024 * 1024);
-          }
-        }
-    );
-    final BlockingPool<ByteBuffer> mergeBufferPool = new BlockingPool<>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(10 * 1024 * 1024);
-          }
-        },
-        2 // There are some tests that need to allocate two buffers (simulating two levels of merging)
-    );
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
-        configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
-        ),
-        new GroupByStrategyV2(
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                return 2;
-              }
-            },
-            configSupplier,
-            bufferPool,
-            mergeBufferPool,
-            new DefaultObjectMapper(new SmileFactory()),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
-    );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        configSupplier,
-        strategySelector,
-        bufferPool,
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    );
-    return new GroupByQueryRunnerFactory(
-        strategySelector,
-        toolChest
-    );
-  }
-
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
-  {
-    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig() {
+    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig()
+    {
       @Override
       public String toString()
       {
@@ -272,7 +205,7 @@ public class GroupByQueryRunnerTest
         return "v2SmallBuffer";
       }
     };
-    final GroupByQueryConfig epinephelinaeSmallDictionaryConfig = new GroupByQueryConfig()
+    final GroupByQueryConfig v2SmallDictionaryConfig = new GroupByQueryConfig()
     {
       @Override
       public String getDefaultStrategy()
@@ -295,23 +228,103 @@ public class GroupByQueryRunnerTest
       @Override
       public String toString()
       {
-        return "epinephelinaeSmallDictionary";
+        return "v2SmallDictionary";
       }
     };
 
     defaultConfig.setMaxIntermediateRows(10000);
     singleThreadedConfig.setMaxIntermediateRows(10000);
 
-    final List<Object[]> constructors = Lists.newArrayList();
-    final List<GroupByQueryConfig> configs = ImmutableList.of(
+    return ImmutableList.of(
         defaultConfig,
         singleThreadedConfig,
         v2Config,
         v2SmallBufferConfig,
-        epinephelinaeSmallDictionaryConfig
+        v2SmallDictionaryConfig
     );
+  }
 
-    for (GroupByQueryConfig config : configs) {
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final GroupByQueryConfig config
+  )
+  {
+    return makeQueryRunnerFactory(new DefaultObjectMapper(new SmileFactory()), config);
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final ObjectMapper mapper,
+      final GroupByQueryConfig config
+  )
+  {
+    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+        new Supplier<ByteBuffer>()
+        {
+          @Override
+          public ByteBuffer get()
+          {
+            return ByteBuffer.allocateDirect(10 * 1024 * 1024);
+          }
+        }
+    );
+    final BlockingPool<ByteBuffer> mergeBufferPool = new BlockingPool<>(
+        new Supplier<ByteBuffer>()
+        {
+          @Override
+          public ByteBuffer get()
+          {
+            return ByteBuffer.allocateDirect(10 * 1024 * 1024);
+          }
+        },
+        2 // There are some tests that need to allocate two buffers (simulating two levels of merging)
+    );
+    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+        configSupplier,
+        new GroupByStrategyV1(
+            configSupplier,
+            new GroupByQueryEngine(configSupplier, bufferPool),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+            bufferPool
+        ),
+        new GroupByStrategyV2(
+            new DruidProcessingConfig()
+            {
+              @Override
+              public String getFormatString()
+              {
+                return null;
+              }
+
+              @Override
+              public int getNumThreads()
+              {
+                return 2;
+              }
+            },
+            configSupplier,
+            bufferPool,
+            mergeBufferPool,
+            mapper,
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
+    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
+        configSupplier,
+        strategySelector,
+        bufferPool,
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+    return new GroupByQueryRunnerFactory(
+        strategySelector,
+        toolChest
+    );
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : testConfigs()) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = String.format(
