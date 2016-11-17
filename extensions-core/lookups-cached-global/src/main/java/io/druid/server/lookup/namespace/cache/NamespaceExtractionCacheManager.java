@@ -19,6 +19,7 @@
 
 package io.druid.server.lookup.namespace.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -85,7 +86,7 @@ public abstract class NamespaceExtractionCacheManager
     return scheduledExecutorService;
   }
 
-  /** For tests */
+  @VisibleForTesting
   boolean waitForServiceToEnd(long time, TimeUnit unit) throws InterruptedException
   {
     return scheduledExecutorService.awaitTermination(time, unit);

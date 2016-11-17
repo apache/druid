@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 public final class CacheHandler implements AutoCloseable
 {
 
-  private NamespaceExtractionCacheManager cacheManager;
+  private final NamespaceExtractionCacheManager cacheManager;
   private final ConcurrentMap<String, String> cache;
   final Object id;
 

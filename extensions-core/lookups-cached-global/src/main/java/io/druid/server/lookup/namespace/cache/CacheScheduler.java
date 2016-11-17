@@ -19,6 +19,7 @@
 
 package io.druid.server.lookup.namespace.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -90,7 +91,7 @@ public final class CacheScheduler
       }
     }
 
-    /** For tests */
+    @VisibleForTesting
     Future<?> getUpdaterFuture()
     {
       return impl.updaterFuture;
@@ -439,13 +440,13 @@ public final class CacheScheduler
     return new VersionedCache(cacheManager.createCache(), version);
   }
 
-  /** For tests */
+  @VisibleForTesting
   long updatesStarted()
   {
     return updatesStarted.get();
   }
 
-  /** For tests */
+  @VisibleForTesting
   public long getActiveEntries()
   {
     return activeEntries.get();
