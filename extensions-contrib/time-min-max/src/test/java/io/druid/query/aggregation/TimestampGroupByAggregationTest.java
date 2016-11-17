@@ -19,15 +19,15 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -39,7 +39,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.Timestamp;
 import java.util.List;
@@ -58,39 +57,49 @@ public class TimestampGroupByAggregationTest
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name="{index}: Test for {0}, config = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return Iterables.transform(
-        ImmutableList.of(
-            ImmutableList.of("timeMin", "tmin", "time_min", TimestampMinAggregatorFactory.class, DateTime.parse("2011-01-12T01:00:00.000Z")),
-            ImmutableList.of("timeMax", "tmax", "time_max", TimestampMaxAggregatorFactory.class, DateTime.parse("2011-01-31T01:00:00.000Z"))
-        ),
-        new Function<List<?>, Object[]>()
-        {
-          @Nullable
-          @Override
-          public Object[] apply(List<?> input)
-          {
-            return input.toArray();
-          }
-        }
+    final List<Object[]> constructors = Lists.newArrayList();
+
+    final List<List<Object>> partialConstructors = ImmutableList.<List<Object>>of(
+        ImmutableList.<Object>of("timeMin", "tmin", "time_min", TimestampMinAggregatorFactory.class, DateTime.parse("2011-01-12T01:00:00.000Z")),
+        ImmutableList.<Object>of("timeMax", "tmax", "time_max", TimestampMaxAggregatorFactory.class, DateTime.parse("2011-01-31T01:00:00.000Z"))
     );
+
+    for (final List<Object> partialConstructor : partialConstructors) {
+      for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+        final List<Object> constructor = Lists.newArrayList(partialConstructor);
+        constructor.add(config);
+        constructors.add(constructor.toArray());
+      }
+    }
+
+    return constructors;
   }
 
-  private String aggType;
-  private String aggField;
-  private String groupByField;
-  private Class<? extends TimestampAggregatorFactory> aggClass;
-  private DateTime expected;
+  private final String aggType;
+  private final String aggField;
+  private final String groupByField;
+  private final Class<? extends TimestampAggregatorFactory> aggClass;
+  private final DateTime expected;
+  private final GroupByQueryConfig config;
 
-  public TimestampGroupByAggregationTest(String aggType, String aggField, String groupByField, Class<? extends TimestampAggregatorFactory> aggClass, DateTime expected)
+  public TimestampGroupByAggregationTest(
+      String aggType,
+      String aggField,
+      String groupByField,
+      Class<? extends TimestampAggregatorFactory> aggClass,
+      DateTime expected,
+      GroupByQueryConfig config
+  )
   {
     this.aggType = aggType;
     this.aggField = aggField;
     this.groupByField = groupByField;
     this.aggClass = aggClass;
     this.expected = expected;
+    this.config = config;
   }
 
   @Before
@@ -98,6 +107,7 @@ public class TimestampGroupByAggregationTest
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),
+        config,
         temporaryFolder
     );
 

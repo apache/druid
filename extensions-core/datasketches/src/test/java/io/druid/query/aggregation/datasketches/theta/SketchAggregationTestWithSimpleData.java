@@ -31,6 +31,8 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregationTestHelper;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.select.SelectResultValue;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.DimensionAndMetricValueExtractor;
@@ -41,22 +43,43 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class SketchAggregationTestWithSimpleData
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private final GroupByQueryConfig config;
+
   private SketchModule sm;
   private File s1;
   private File s2;
+
+  public SketchAggregationTestWithSimpleData(GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
+  }
 
   @Before
   public void setup() throws Exception
@@ -65,6 +88,7 @@ public class SketchAggregationTestWithSimpleData
     sm.configure(null);
     AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         sm.getJacksonModules(),
+        config,
         tempFolder
     );
 
@@ -97,6 +121,7 @@ public class SketchAggregationTestWithSimpleData
   {
     AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         sm.getJacksonModules(),
+        config,
         tempFolder
     );
 
@@ -178,7 +203,7 @@ public class SketchAggregationTestWithSimpleData
         results
     );
   }
-  
+
   @Test
   public void testSimpleDataIngestAndTimeseriesQuery() throws Exception
   {
