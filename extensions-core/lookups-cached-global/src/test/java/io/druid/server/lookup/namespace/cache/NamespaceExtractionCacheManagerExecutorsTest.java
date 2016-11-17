@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
@@ -68,44 +67,32 @@ import java.util.concurrent.TimeoutException;
 @RunWith(Parameterized.class)
 public class NamespaceExtractionCacheManagerExecutorsTest
 {
+  public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_ON_HEAP_CACHE_MANAGER =
+      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      {
+        @Nullable
+        @Override
+        public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
+        {
+          return new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+        }
+      };
+  public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
+      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      {
+        @Nullable
+        @Override
+        public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
+        {
+          return new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+        }
+      };
+
   @Parameterized.Parameters
   public static Collection<Object[]> data()
   {
-    Lifecycle lifecycle1 = new Lifecycle();
-    Lifecycle lifecycle2 = new Lifecycle();
-    try {
-      lifecycle1.start();
-      lifecycle2.start();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    return Arrays.asList(new Object[][]{
-        {
-            new Function<Lifecycle, NamespaceExtractionCacheManager>()
-            {
-              @Nullable
-              @Override
-              public NamespaceExtractionCacheManager apply(@Nullable Lifecycle input)
-              {
-                return new OnHeapNamespaceExtractionCacheManager(input, new NoopServiceEmitter());
-              }
-            }
-        }, {
-            new Function<Lifecycle, NamespaceExtractionCacheManager>()
-            {
-              @Nullable
-              @Override
-              public NamespaceExtractionCacheManager apply(@Nullable Lifecycle input)
-              {
-                return new OffHeapNamespaceExtractionCacheManager(input, new NoopServiceEmitter());
-              }
-            }
-        }
-    });
+    return Arrays.asList(new Object[][]{{CREATE_ON_HEAP_CACHE_MANAGER}, {CREATE_OFF_HEAP_CACHE_MANAGER}});
   }
-
-  private static final Logger log = new Logger(NamespaceExtractionCacheManagerExecutorsTest.class);
 
   public static void waitFor(CacheScheduler.Entry entry) throws InterruptedException
   {
@@ -124,8 +111,9 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   private CacheScheduler scheduler;
   private File tmpFile;
 
-  public NamespaceExtractionCacheManagerExecutorsTest(Function<Lifecycle, NamespaceExtractionCacheManager>
-                                                          createCacheManager)
+  public NamespaceExtractionCacheManagerExecutorsTest(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  )
   {
     this.createCacheManager = createCacheManager;
   }

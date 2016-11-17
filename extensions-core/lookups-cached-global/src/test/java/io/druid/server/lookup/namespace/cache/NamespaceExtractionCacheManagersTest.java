@@ -19,6 +19,7 @@
 
 package io.druid.server.lookup.namespace.cache;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -26,8 +27,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.server.metrics.NoopServiceEmitter;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,24 +46,28 @@ public class NamespaceExtractionCacheManagersTest
   @Parameterized.Parameters
   public static Collection<Object[]> data()
   {
-    Lifecycle lifecycle = new Lifecycle();
-    try {
-      lifecycle.start();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    return Arrays.asList(new Object[][] {
-        { new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter()) },
-        { new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter()) }
+    return Arrays.asList(new Object[][]{
+        {NamespaceExtractionCacheManagerExecutorsTest.CREATE_ON_HEAP_CACHE_MANAGER},
+        {NamespaceExtractionCacheManagerExecutorsTest.CREATE_OFF_HEAP_CACHE_MANAGER}
     });
   }
 
-  private final NamespaceExtractionCacheManager manager;
+  private final Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
+  private Lifecycle lifecycle;
+  private NamespaceExtractionCacheManager manager;
 
-  public NamespaceExtractionCacheManagersTest(NamespaceExtractionCacheManager cacheManager)
+  public NamespaceExtractionCacheManagersTest(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager)
   {
-    this.manager = cacheManager;
+
+    this.createCacheManager = createCacheManager;
+  }
+
+  @Before
+  public void setUp() throws Exception
+  {
+    lifecycle = new Lifecycle();
+    lifecycle.start();
+    manager = createCacheManager.apply(lifecycle);
   }
 
   @Test(timeout = 30000L)
