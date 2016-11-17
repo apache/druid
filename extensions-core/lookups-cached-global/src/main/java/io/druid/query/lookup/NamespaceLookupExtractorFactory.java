@@ -208,7 +208,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       if (cacheState == CacheScheduler.NoCache.CACHE_NOT_INITIALIZED) {
         throw new ISE("%s not yet initialized cache, extractorID = %s", entry, extractorID);
       }
-      if (cacheState == CacheScheduler.NoCache.ENTRY_DISPOSED) {
+      if (cacheState == CacheScheduler.NoCache.ENTRY_CLOSED) {
         throw new ISE("%s disposed, extractorID = %s", entry, extractorID);
       }
       CacheScheduler.VersionedCache versionedCache = (CacheScheduler.VersionedCache) cacheState;

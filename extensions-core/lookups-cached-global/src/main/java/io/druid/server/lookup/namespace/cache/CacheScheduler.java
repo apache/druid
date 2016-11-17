@@ -204,7 +204,7 @@ public final class CacheScheduler
         startLatch.await();
 
         CacheState currentCacheState = cacheStateHolder.get();
-        if (!Thread.currentThread().isInterrupted() && currentCacheState != NoCache.ENTRY_DISPOSED) {
+        if (!Thread.currentThread().isInterrupted() && currentCacheState != NoCache.ENTRY_CLOSED) {
           final String currentVersion = currentVersionOrNull(currentCacheState);
           final VersionedCache newVersionedCache =
               cachePopulator.populateCache(namespace, entryId, currentVersion, CacheScheduler.this);
@@ -245,7 +245,7 @@ public final class CacheScheduler
       // CAS loop
       do {
         lastCacheState = cacheStateHolder.get();
-        if (lastCacheState == NoCache.ENTRY_DISPOSED) {
+        if (lastCacheState == NoCache.ENTRY_CLOSED) {
           newVersionedCache.close();
           log.debug("%s was disposed while the cache was being updated, discarding the update", entryId);
           return;
@@ -268,7 +268,7 @@ public final class CacheScheduler
       }
       // This Cleaner.clean() call effectively just removes the Cleaner from the internal linked list of all cleaners.
       // It will delegate to EntryDisposer.run() which will be a no-op because entryDisposer.cacheStateHolder is already
-      // set to ENTRY_DISPOSED.
+      // set to ENTRY_CLOSED.
       entryCleaner.clean();
     }
 
@@ -297,8 +297,8 @@ public final class CacheScheduler
      */
     private boolean doDispose(boolean calledManually)
     {
-      CacheState lastCacheState = cacheStateHolder.getAndSet(NoCache.ENTRY_DISPOSED);
-      if (lastCacheState != NoCache.ENTRY_DISPOSED) {
+      CacheState lastCacheState = cacheStateHolder.getAndSet(NoCache.ENTRY_CLOSED);
+      if (lastCacheState != NoCache.ENTRY_CLOSED) {
         try {
           log.info("Disposing %s", entryId);
           logExecutionError();
@@ -354,7 +354,7 @@ public final class CacheScheduler
   public enum NoCache implements CacheState
   {
     CACHE_NOT_INITIALIZED,
-    ENTRY_DISPOSED
+    ENTRY_CLOSED
   }
 
   public final class VersionedCache implements CacheState, AutoCloseable

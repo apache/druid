@@ -313,7 +313,7 @@ public class NamespaceLookupExtractorFactoryTest
       }
     };
     expectScheduleAndWaitOnce(extractionNamespace);
-    expectEntryGetCacheStateOnce(CacheScheduler.NoCache.ENTRY_DISPOSED);
+    expectEntryGetCacheStateOnce(CacheScheduler.NoCache.ENTRY_CLOSED);
 
     mockReplay();
 
