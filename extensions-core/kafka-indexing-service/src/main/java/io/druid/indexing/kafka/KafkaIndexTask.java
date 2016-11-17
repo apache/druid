@@ -385,59 +385,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             records = consumer.poll(POLL_TIMEOUT);
           }
           catch (OffsetOutOfRangeException e) {
-            // Reset consumer offset if resetOffsetAutomatically is set to true
-            // and the current message offset in the kafka partition is more than the
-            // next message offset that we are trying to fetch
-            if (tuningConfig.isResetOffsetAutomatically()) {
-              for (TopicPartition topicPartition : consumer.assignment()) {
-                final long currentOffset = consumer.position(topicPartition);
-                log.trace("Current consumer position is [%d]", currentOffset);
-                log.trace("Next offset required is [%d]", nextOffsets.get(topicPartition.partition()));
-                // seek to the beginning to get the least available offset
-                consumer.seekToBeginning(topicPartition);
-                final long leastAvailableOffset = consumer.position(topicPartition);
-                log.trace("Least consumer offset is [%d]", leastAvailableOffset);
-                // reset the seek
-                consumer.seek(topicPartition, currentOffset);
-
-                if (leastAvailableOffset > currentOffset) {
-                  if (ioConfig.isUseEarliestOffset()) {
-                    log.makeAlert("Got OffsetOutOfRangeException [%s], resetting to the earliest offset", e.getMessage());
-                    consumer.seekToBeginning(topicPartition);
-                    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
-                    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartition));
-                  } else {
-                    log.makeAlert("Got OffsetOutOfRangeException [%s], resetting to the latest offset", e.getMessage());
-                    consumer.seekToEnd(topicPartition);
-                    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
-                    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartition));
-                  }
-                  // check if we seeked passed the endOffset for this partition
-                  if (consumer.position(topicPartition) >= endOffsets.get(topicPartition.partition())
-                      && assignment.remove(topicPartition.partition())) {
-                    log.info(
-                        "Finished reading topic[%s], partition[%,d].",
-                        topicPartition.topic(),
-                        topicPartition.partition()
-                    );
-                    assignPartitions(consumer, topic, assignment);
-                    stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
-                  }
-                }
-              }
-            } else {
-              log.warn("OffsetOutOfRangeException with message [%s], retrying in %dms", e.getMessage(), POLL_RETRY_MS);
-              pollRetryLock.lockInterruptibly();
-              try {
-                long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
-                while (nanos > 0L && !pauseRequested && !stopRequested) {
-                  nanos = isAwaitingRetry.awaitNanos(nanos);
-                }
-              }
-              finally {
-                pollRetryLock.unlock();
-              }
-            }
+            log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
+            possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, assignment);
+            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
           }
 
           for (ConsumerRecord<byte[], byte[]> record : records) {
@@ -1040,5 +990,75 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     return false;
+  }
+
+  private void possiblyResetOffsetsOrWait(
+      Map<TopicPartition, Long> outOfRangePartitions,
+      KafkaConsumer<byte[], byte[]> consumer,
+      Set<Integer> assignment
+  ) throws InterruptedException
+  {
+    boolean shouldRetry = false;
+    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+      final TopicPartition topicPartition = outOfRangePartition.getKey();
+      final long nextOffset = outOfRangePartition.getValue();
+      // seek to the beginning to get the least available offset
+      consumer.seekToBeginning(topicPartition);
+      final long leastAvailableOffset = consumer.position(topicPartition);
+      // reset the seek
+      consumer.seek(topicPartition, nextOffset);
+      // Reset consumer offset if resetOffsetAutomatically is set to true
+      // and the current message offset in the kafka partition is more than the
+      // next message offset that we are trying to fetch
+      if (tuningConfig.isResetOffsetAutomatically() && leastAvailableOffset > nextOffset) {
+        resetOffset(consumer, assignment, topicPartition);
+      } else {
+        shouldRetry = true;
+      }
+    }
+    if (shouldRetry) {
+      log.warn("Retrying in %dms", POLL_RETRY_MS);
+      pollRetryLock.lockInterruptibly();
+      try {
+        long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
+        while (nanos > 0L && !pauseRequested && !stopRequested) {
+          nanos = isAwaitingRetry.awaitNanos(nanos);
+        }
+      }
+      finally {
+        pollRetryLock.unlock();
+      }
+    }
+  }
+
+  private void resetOffset(
+      KafkaConsumer<byte[], byte[]> consumer,
+      Set<Integer> assignment,
+      TopicPartition topicPartition
+  )
+  {
+    log.warn(
+        "Resetting consumer offset to [%s] for partition [%d]",
+        ioConfig.isUseEarliestOffset() ? "earliest" : "latest",
+        topicPartition.partition()
+    );
+    if (ioConfig.isUseEarliestOffset()) {
+      consumer.seekToBeginning(topicPartition);
+    } else {
+      consumer.seekToEnd(topicPartition);
+    }
+    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
+    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartition));
+    // check if we seeked passed the endOffset for this partition
+    if (consumer.position(topicPartition) >= endOffsets.get(topicPartition.partition())
+        && assignment.remove(topicPartition.partition())) {
+      log.info(
+          "Finished reading topic[%s], partition[%,d].",
+          topicPartition.topic(),
+          topicPartition.partition()
+      );
+    }
+    // update assignments if something changed
+    assignPartitions(consumer, topicPartition.topic(), assignment);
   }
 }
