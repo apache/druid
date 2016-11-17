@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -293,6 +294,7 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall();
 
@@ -338,6 +340,7 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall();
     PowerMock.replay(cacheManager, cacheHandler);
@@ -386,6 +389,7 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall().once();
     consumerConnector.shutdown();
@@ -427,6 +431,7 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall().once();
     consumerConnector.shutdown();
