@@ -22,7 +22,6 @@ package io.druid.query.aggregation.datasketches.theta.oldapi;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Sequence;
@@ -31,19 +30,25 @@ import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class OldApiSketchAggregationTest
 {
   private final AggregationTestHelper helper;
@@ -51,15 +56,26 @@ public class OldApiSketchAggregationTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public OldApiSketchAggregationTest()
+  public OldApiSketchAggregationTest(final GroupByQueryConfig config)
   {
     OldApiSketchModule sm = new OldApiSketchModule();
     sm.configure(null);
 
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         sm.getJacksonModules(),
+        config,
         tempFolder
     );
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
   }
 
   @Test

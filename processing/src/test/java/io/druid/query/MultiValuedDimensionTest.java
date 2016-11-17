@@ -43,6 +43,8 @@ import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.topn.TopNQuery;
@@ -64,15 +66,20 @@ import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class MultiValuedDimensionTest
 {
   private AggregationTestHelper helper;
@@ -82,11 +89,25 @@ public class MultiValuedDimensionTest
 
   private static File persistedSegmentDir;
 
-  public MultiValuedDimensionTest() throws Exception
+  public MultiValuedDimensionTest(
+      final GroupByQueryConfig config
+  ) throws Exception
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        ImmutableList.<Module>of(), null
+        ImmutableList.<Module>of(),
+        config,
+        null
     );
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
   }
 
   @BeforeClass
@@ -169,14 +190,6 @@ public class MultiValuedDimensionTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
-
-    result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.<Segment>of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
-        ),
-        query
-    );
   }
 
   @Test
