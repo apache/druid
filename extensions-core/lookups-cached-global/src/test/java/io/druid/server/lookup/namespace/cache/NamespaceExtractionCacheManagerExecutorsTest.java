@@ -91,7 +91,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   @Parameterized.Parameters
   public static Collection<Object[]> data()
   {
-    return Arrays.asList(new Object[][]{{CREATE_ON_HEAP_CACHE_MANAGER}, {CREATE_OFF_HEAP_CACHE_MANAGER}});
+    return Arrays.asList(new Object[][]{{CREATE_ON_HEAP_CACHE_MANAGER}});
   }
 
   public static void waitFor(CacheScheduler.Entry entry) throws InterruptedException

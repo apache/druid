@@ -89,14 +89,14 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   }
 
   @Override
-  public int cacheCount()
+  int cacheCount()
   {
     expungeCollectedCaches();
     return caches.size();
   }
 
   @Override
-  public void monitor(ServiceEmitter serviceEmitter)
+  void monitor(ServiceEmitter serviceEmitter)
   {
     long numEntries = 0;
     long size = 0;
