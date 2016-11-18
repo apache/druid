@@ -68,6 +68,20 @@ public class GroupByQuery extends BaseQuery<Row>
 {
   public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
+  private final static Comparator NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+
+  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = new Comparator<Row>()
+  {
+    @Override
+    public int compare(Row lhs, Row rhs)
+    {
+      return Longs.compare(
+          lhs.getTimestampFromEpoch(),
+          rhs.getTimestampFromEpoch()
+      );
+    }
+  };
+
   public static Builder builder()
   {
     return new Builder();
@@ -270,7 +284,7 @@ public class GroupByQuery extends BaseQuery<Row>
   {
     final boolean sortByDimsFirst = getContextSortByDimsFirst();
 
-    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
+    final Comparator<Row> timeComparator = getTimeComparator(granular);
 
     if (sortByDimsFirst) {
       return Ordering.from(
@@ -279,27 +293,12 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public int compare(Row lhs, Row rhs)
             {
-              for (DimensionSpec dimension : dimensions) {
-                final int dimCompare = naturalNullsFirst.compare(
-                    lhs.getRaw(dimension.getOutputName()),
-                    rhs.getRaw(dimension.getOutputName())
-                );
-                if (dimCompare != 0) {
-                  return dimCompare;
-                }
+              final int cmp = compareDims(NATURAL_NULLS_FIRST, dimensions, lhs, rhs);
+              if (cmp != 0) {
+                return cmp;
               }
 
-              if (granular) {
-                return Longs.compare(
-                    granularity.truncate(lhs.getTimestampFromEpoch()),
-                    granularity.truncate(rhs.getTimestampFromEpoch())
-                );
-              } else {
-                return Longs.compare(
-                    lhs.getTimestampFromEpoch(),
-                    rhs.getTimestampFromEpoch()
-                );
-              }
+              return timeComparator.compare(lhs, rhs);
             }
           }
       );
@@ -310,39 +309,51 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public int compare(Row lhs, Row rhs)
             {
-              final int timeCompare;
-
-              if (granular) {
-                timeCompare = Longs.compare(
-                    granularity.truncate(lhs.getTimestampFromEpoch()),
-                    granularity.truncate(rhs.getTimestampFromEpoch())
-                );
-              } else {
-                timeCompare = Longs.compare(
-                    lhs.getTimestampFromEpoch(),
-                    rhs.getTimestampFromEpoch()
-                );
-              }
+              final int timeCompare = timeComparator.compare(lhs, rhs);
 
               if (timeCompare != 0) {
                 return timeCompare;
               }
 
-              for (DimensionSpec dimension : dimensions) {
-                final int dimCompare = naturalNullsFirst.compare(
-                    lhs.getRaw(dimension.getOutputName()),
-                    rhs.getRaw(dimension.getOutputName())
-                );
-                if (dimCompare != 0) {
-                  return dimCompare;
-                }
-              }
-
-              return 0;
+              return compareDims(NATURAL_NULLS_FIRST, dimensions, lhs, rhs);
             }
           }
       );
     }
+  }
+
+  private Comparator<Row> getTimeComparator(boolean granular)
+  {
+    if (granular) {
+      return new Comparator<Row>()
+      {
+        @Override
+        public int compare(Row lhs, Row rhs)
+        {
+          return Longs.compare(
+              granularity.truncate(lhs.getTimestampFromEpoch()),
+              granularity.truncate(rhs.getTimestampFromEpoch())
+          );
+        }
+      };
+    } else {
+      return NON_GRANULAR_TIME_COMP;
+    }
+  }
+
+  private static int compareDims(Comparator naturalNullsFirst, List<DimensionSpec> dimensions, Row lhs, Row rhs)
+  {
+    for (DimensionSpec dimension : dimensions) {
+      final int dimCompare = naturalNullsFirst.compare(
+          lhs.getRaw(dimension.getOutputName()),
+          rhs.getRaw(dimension.getOutputName())
+      );
+      if (dimCompare != 0) {
+        return dimCompare;
+      }
+    }
+
+    return 0;
   }
 
   public Sequence<Row> applyLimit(Sequence<Row> results)
