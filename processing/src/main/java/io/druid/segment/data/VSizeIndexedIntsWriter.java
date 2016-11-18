@@ -88,7 +88,8 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
     long numBytesWritten = valuesOut.getCount();
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray((int) numBytesWritten)));
-    final ReadableByteChannel from = Channels.newChannel(ioPeon.makeInputStream(valueFileName));
-    ByteStreams.copy(from, channel);
+    try (final ReadableByteChannel from = Channels.newChannel(ioPeon.makeInputStream(valueFileName))) {
+      ByteStreams.copy(from, channel);
+    }
   }
 }

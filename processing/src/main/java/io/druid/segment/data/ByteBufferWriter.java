@@ -119,7 +119,8 @@ public class ByteBufferWriter<T> implements Closeable
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput());
-    ByteStreams.copy(from, channel);
+    try (final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput())) {
+      ByteStreams.copy(from, channel);
+    }
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -137,14 +138,15 @@ public class NoopTask extends AbstractTask
   {
     if (firehoseFactory != null) {
       log.info("Connecting firehose");
-      firehoseFactory.connect(null);
     }
+    try (Firehose firehose = firehoseFactory != null ? firehoseFactory.connect(null) : null) {
 
-    log.info("Running noop task[%s]", getId());
-    log.info("Sleeping for %,d millis.", runTime);
-    Thread.sleep(runTime);
-    log.info("Woke up!");
-    return TaskStatus.success(getId());
+      log.info("Running noop task[%s]", getId());
+      log.info("Sleeping for %,d millis.", runTime);
+      Thread.sleep(runTime);
+      log.info("Woke up!");
+      return TaskStatus.success(getId());
+    }
   }
 
   public static NoopTask create()
