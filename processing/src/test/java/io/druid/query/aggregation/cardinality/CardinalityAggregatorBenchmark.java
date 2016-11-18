@@ -29,6 +29,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.DimensionSelector;
@@ -43,7 +44,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
-  List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList;
+  List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList;
   ByteBuffer buf;
   int pos;
 
@@ -81,7 +82,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
     final DimensionSpec dimSpec1 = new DefaultDimensionSpec("dim1", "dim1");
     final CardinalityAggregatorTest.TestDimensionSelector dim1 =
         new CardinalityAggregatorTest.TestDimensionSelector(values, null);
-    final QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper> dimInfo1 = new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), null, dim1);
+    final QueryDimensionInfo<CardinalityAggregatorTypeHelper> dimInfo1 = new QueryDimensionInfo(dimSpec1, new StringDimensionQueryHelper("dim1"), null, dim1);
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1

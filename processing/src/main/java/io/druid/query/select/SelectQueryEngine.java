@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
@@ -74,7 +75,7 @@ public class SelectQueryEngine
         case STRING:
           return new StringSelectTypeHelper();
         default:
-          return null;
+          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
   }
@@ -82,13 +83,13 @@ public class SelectQueryEngine
   public interface SelectTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
   {
     /**
-     * Read the current row from dimSelector and add the row values to the result map.
+     * Read the current row from dimSelector and add the row values for a dimension to the result map.
      *
      * Multi-valued rows should be added to the result as a List, single value rows should be added as a single object.
      *
      * @param outputName Output name for this dimension in the select query being served
      * @param dimSelector Dimension value selector
-     * @param resultMap Output map of the select query being served
+     * @param resultMap Row value map for the current row being retrieved by the select query
      */
     void addRowValuesToSelectResult(
         String outputName,
@@ -100,22 +101,22 @@ public class SelectQueryEngine
   public static class StringSelectTypeHelper implements SelectTypeHelper<DimensionSelector>
   {
     @Override
-    public void addRowValuesToSelectResult(String outputName, DimensionSelector selector, Map<String, Object> theEvent)
+    public void addRowValuesToSelectResult(String outputName, DimensionSelector selector, Map<String, Object> resultMap)
     {
       if (selector == null) {
-        theEvent.put(outputName, null);
+        resultMap.put(outputName, null);
       } else {
         final IndexedInts vals = selector.getRow();
 
         if (vals.size() == 1) {
           final String dimVal = selector.lookupName(vals.get(0));
-          theEvent.put(outputName, dimVal);
+          resultMap.put(outputName, dimVal);
         } else {
           List<String> dimVals = new ArrayList<>(vals.size());
           for (int i = 0; i < vals.size(); ++i) {
             dimVals.add(selector.lookupName(vals.get(i)));
           }
-          theEvent.put(outputName, dimVals);
+          resultMap.put(outputName, dimVals);
         }
       }
     }

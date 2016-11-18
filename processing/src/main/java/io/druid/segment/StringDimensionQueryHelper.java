@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.primitives.Ints;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -30,23 +29,11 @@ import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.IndexedInts;
 
 import java.util.BitSet;
-import java.util.Comparator;
 import java.util.Objects;
 
 public class StringDimensionQueryHelper implements DimensionQueryHelper<String, IndexedInts, DimensionSelector>
 {
   private final String dimensionName;
-
-  private static Comparator<byte[]> GROUPING_KEY_COMPARATOR = new Comparator<byte[]>()
-  {
-    @Override
-    public int compare(byte[] o1, byte[] o2)
-    {
-      int intLhs = Ints.fromByteArray(o1);
-      int intRhs = Ints.fromByteArray(o2);
-      return Ints.compare(intLhs, intRhs);
-    }
-  };
 
   public StringDimensionQueryHelper(String dimensionName) {
     this.dimensionName = dimensionName;

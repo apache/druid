@@ -76,30 +76,6 @@ public class GroupByQueryEngineV2
     return retInfo;
   }
 
-  private static class GroupByDimensionInfo extends QueryDimensionInfo<GroupByTypeHelper>
-  {
-    /**
-     * Indicates the offset of this dimension's value within the grouping key.
-     */
-    private int keyBufferPosition;
-
-    public GroupByDimensionInfo(QueryDimensionInfo<GroupByTypeHelper> baseInfo, int keyBufferPosition)
-    {
-      super(
-          baseInfo.getSpec(),
-          baseInfo.getQueryHelper(),
-          baseInfo.getQueryTypeHelper(),
-          baseInfo.getSelector()
-      );
-      this.keyBufferPosition = keyBufferPosition;
-    }
-
-    public int getKeyBufferPosition()
-    {
-      return keyBufferPosition;
-    }
-  }
-
   private GroupByQueryEngineV2()
   {
     // No instantiation
@@ -206,7 +182,7 @@ public class GroupByQueryEngineV2
         case STRING:
           return new StringGroupByTypeHelper();
         default:
-          return null;
+          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
   }
@@ -571,6 +547,30 @@ outer:
     public void reset()
     {
       // No state, nothing to reset
+    }
+  }
+
+  private static class GroupByDimensionInfo extends QueryDimensionInfo<GroupByTypeHelper>
+  {
+    /**
+     * Indicates the offset of this dimension's value within the grouping key.
+     */
+    private int keyBufferPosition;
+
+    public GroupByDimensionInfo(QueryDimensionInfo<GroupByTypeHelper> baseInfo, int keyBufferPosition)
+    {
+      super(
+          baseInfo.getSpec(),
+          baseInfo.getQueryHelper(),
+          baseInfo.getQueryTypeHelper(),
+          baseInfo.getSelector()
+      );
+      this.keyBufferPosition = keyBufferPosition;
+    }
+
+    public int getKeyBufferPosition()
+    {
+      return keyBufferPosition;
     }
   }
 }

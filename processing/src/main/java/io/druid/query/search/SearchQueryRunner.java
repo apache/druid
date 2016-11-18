@@ -92,7 +92,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         case STRING:
           return new StringSearchTypeHelper();
         default:
-          return null;
+          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
   }

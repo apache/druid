@@ -24,6 +24,7 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.util.List;
@@ -31,12 +32,15 @@ import java.util.List;
 public class CardinalityAggregator implements Aggregator
 {
   private final String name;
-  private final List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList;
+  private final List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList;
   private final boolean byRow;
 
   public static final HashFunction hashFn = Hashing.murmur3_128();
 
-  protected static void hashRow(List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList, HyperLogLogCollector collector)
+  protected static void hashRow(
+      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
+      HyperLogLogCollector collector
+  )
   {
     final Hasher hasher = hashFn.newHasher();
     for (int k = 0; k < dimInfoList.size(); ++k) {
@@ -44,15 +48,18 @@ public class CardinalityAggregator implements Aggregator
         hasher.putByte((byte) 0);
       }
 
-      QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper> dimInfo = dimInfoList.get(k);
+      QueryDimensionInfo<CardinalityAggregatorTypeHelper> dimInfo = dimInfoList.get(k);
       dimInfo.getQueryTypeHelper().hashRow(dimInfo.getSelector(), hasher);
     }
     collector.add(hasher.hash().asBytes());
   }
 
-  protected static void hashValues(List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList, HyperLogLogCollector collector)
+  protected static void hashValues(
+      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
+      HyperLogLogCollector collector
+  )
   {
-    for (final QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper> dimInfo : dimInfoList) {
+    for (final QueryDimensionInfo<CardinalityAggregatorTypeHelper> dimInfo : dimInfoList) {
       dimInfo.getQueryTypeHelper().hashValues(dimInfo.getSelector(), collector);
     }
   }
@@ -61,7 +68,7 @@ public class CardinalityAggregator implements Aggregator
 
   public CardinalityAggregator(
       String name,
-      List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList,
+      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
       boolean byRow
   )
   {

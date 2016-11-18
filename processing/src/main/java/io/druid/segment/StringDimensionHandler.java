@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.segment.column.Column;
@@ -33,7 +32,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
@@ -221,35 +219,4 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   {
     return new StringDimensionQueryHelper(dimensionName);
   }
-
-  public static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
-  {
-    @Override
-    public String apply(final Object o)
-    {
-      if (o == null) {
-        return null;
-      }
-      if (o instanceof String) {
-        return (String) o;
-      }
-      return o.toString();
-    }
-  };
-
-  public static final Comparator<Integer> ENCODED_COMPARATOR = new Comparator<Integer>()
-  {
-    @Override
-    public int compare(Integer o1, Integer o2)
-    {
-      if (o1 == null) {
-        return o2 == null ? 0 : -1;
-      }
-      if (o2 == null) {
-        return 1;
-      }
-      return o1.compareTo(o2);
-    }
-  };
-
 }

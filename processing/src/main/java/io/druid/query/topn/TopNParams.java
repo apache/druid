@@ -20,6 +20,7 @@
 package io.druid.query.topn;
 
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.topn.types.TopNTypeHelper;
 import io.druid.segment.Cursor;
 
 /**
@@ -29,10 +30,10 @@ public class TopNParams
   private final Cursor cursor;
   private final int cardinality;
   private final int numValuesPerPass;
-  private final QueryDimensionInfo dimInfo;
+  private final QueryDimensionInfo<TopNTypeHelper> dimInfo;
 
   protected TopNParams(
-      QueryDimensionInfo dimInfo,
+      QueryDimensionInfo<TopNTypeHelper> dimInfo,
       Cursor cursor,
       int numValuesPerPass
   )
@@ -52,7 +53,7 @@ public class TopNParams
     return dimInfo.getSelector();
   }
 
-  public QueryDimensionInfo getDimInfo()
+  public QueryDimensionInfo<TopNTypeHelper> getDimInfo()
   {
     return dimInfo;
   }

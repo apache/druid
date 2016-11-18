@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.topn.types.TopNTypeHelper;
 import io.druid.segment.Cursor;
 
 /**
@@ -31,7 +32,7 @@ public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
   public static final int INIT_POSITION_VALUE = -1;
   public static final int SKIP_POSITION_VALUE = -2;
 
-  public TopNParams makeInitParams(QueryDimensionInfo dimInfo, Cursor cursor);
+  public TopNParams makeInitParams(QueryDimensionInfo<TopNTypeHelper> dimInfo, Cursor cursor);
 
   public void run(
       Parameters params,

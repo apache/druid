@@ -22,6 +22,7 @@ package io.druid.query.topn;
 import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.topn.types.TopNTypeHelper;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 
@@ -46,7 +47,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
 
   @Override
   public TopNParams makeInitParams(
-      final QueryDimensionInfo dimInfo,
+      final QueryDimensionInfo<TopNTypeHelper> dimInfo,
       final Cursor cursor
   )
   {
@@ -60,8 +61,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
-    QueryDimensionInfo<TopNMapFn.TopNTypeHelper> dimInfo = params.getDimInfo();
-    return dimInfo.getQueryTypeHelper().getDimExtractionRowSelector(params, query, capabilities);
+    QueryDimensionInfo<TopNTypeHelper> dimInfo = params.getDimInfo();
+    return dimInfo.getQueryTypeHelper().getDimExtractionRowSelector(query, params, capabilities);
   }
 
   @Override
@@ -85,15 +86,15 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   )
   {
     final Cursor cursor = params.getCursor();
-    final QueryDimensionInfo<TopNMapFn.TopNTypeHelper> dimInfo = params.getDimInfo();
+    final QueryDimensionInfo<TopNTypeHelper> dimInfo = params.getDimInfo();
 
     while (!cursor.isDone()) {
       dimInfo.getQueryTypeHelper().dimExtractionScanAndAggregate(
+          query,
           dimInfo.getSelector(),
-          rowSelector,
-          aggregatesStore,
           cursor,
-          query
+          rowSelector,
+          aggregatesStore
       );
       cursor.advance();
     }

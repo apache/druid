@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hasher;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -33,20 +32,14 @@ import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelperFactory;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.QueryTypeHelper;
-import io.druid.query.dimension.QueryTypeHelperFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -103,101 +96,12 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private static final byte CACHE_TYPE_ID = (byte) 0x8;
   private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
-  private static final CardinalityAggregatorTypeHelperFactory TYPE_HELPER_FACTORY = new CardinalityAggregatorTypeHelperFactory();
-
+  private static final CardinalityAggregatorTypeHelperFactory TYPE_HELPER_FACTORY =
+      new CardinalityAggregatorTypeHelperFactory();
 
   private final String name;
   private final List<DimensionSpec> fields;
   private final boolean byRow;
-
-  private static class CardinalityAggregatorTypeHelperFactory implements QueryTypeHelperFactory<CardinalityAggregatorTypeHelper>
-  {
-    @Override
-    public CardinalityAggregatorTypeHelper makeQueryTypeHelper(
-        String dimName, ColumnCapabilities capabilities
-    )
-    {
-      ValueType type = capabilities.getType();
-      switch(type) {
-        case STRING:
-          return new StringCardinalityAggregatorTypeHelper();
-        default:
-          return null;
-      }
-    }
-  }
-
-  public interface CardinalityAggregatorTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
-  {
-    /**
-     * Used by CardinalityAggregator.
-     *
-     * Retrieve the current row from dimSelector and add the row values to the hasher.
-     *
-     * @param dimSelector Dimension value selector
-     * @param hasher Hasher used for cardinality aggregator calculations
-     */
-    void hashRow(ValueSelectorType dimSelector, Hasher hasher);
-
-
-    /**
-     * Used by CardinalityAggregator.
-     *
-     * Retrieve the current row from dimSelector and add the row values to the hasher.
-     * @param dimSelector Dimension value selector
-     * @param collector HLL collector used for cardinality aggregator calculations
-     */
-    void hashValues(ValueSelectorType dimSelector, HyperLogLogCollector collector);
-  }
-
-  public static class StringCardinalityAggregatorTypeHelper implements CardinalityAggregatorTypeHelper<DimensionSelector>
-  {
-    public static final String CARDINALITY_AGG_NULL_STRING = "\u0000";
-    public static final char CARDINALITY_AGG_SEPARATOR = '\u0001';
-
-    @Override
-    public void hashRow(DimensionSelector dimSelector, Hasher hasher)
-    {
-      final IndexedInts row = dimSelector.getRow();
-      final int size = row.size();
-      // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
-      if (size == 1) {
-        final String value = dimSelector.lookupName(row.get(0));
-        hasher.putUnencodedChars(convertValueForCardinalityAggregator(value));
-      } else if (size != 0) {
-        final String[] values = new String[size];
-        for (int i = 0; i < size; ++i) {
-          final String value = dimSelector.lookupName(row.get(i));
-          values[i] = convertValueForCardinalityAggregator(value);
-        }
-        // Values need to be sorted to ensure consistent multi-value ordering across different segments
-        Arrays.sort(values);
-        for (int i = 0; i < size; ++i) {
-          if (i != 0) {
-            hasher.putChar(CARDINALITY_AGG_SEPARATOR);
-          }
-          hasher.putUnencodedChars(values[i]);
-        }
-      }
-    }
-
-    @Override
-    public void hashValues(DimensionSelector dimSelector, HyperLogLogCollector collector)
-    {
-      for (IntIterator rowIt = dimSelector.getRow().iterator(); rowIt.hasNext(); ) {
-        int index = rowIt.nextInt();
-        final String value = dimSelector.lookupName(index);
-        collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(convertValueForCardinalityAggregator(value)).asBytes());
-      }
-    }
-
-    // CardinalityAggregator has a special representation for nulls
-    private String convertValueForCardinalityAggregator(String value)
-    {
-      return value == null ? CARDINALITY_AGG_NULL_STRING : value;
-    }
-  }
-
 
   @JsonCreator
   public CardinalityAggregatorFactory(

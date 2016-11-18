@@ -17,11 +17,26 @@
  * under the License.
  */
 
-package io.druid.query.dimension;
+package io.druid.query.topn.types;
 
-/**
- * Base type for helper objects that handle value type operations pertaining to a specific query type
- */
-public interface QueryTypeHelper
+import io.druid.java.util.common.IAE;
+import io.druid.query.dimension.QueryTypeHelperFactory;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
+
+public class TopNTypeHelperFactory implements QueryTypeHelperFactory<TopNTypeHelper>
 {
+  @Override
+  public TopNTypeHelper makeQueryTypeHelper(
+      String dimName, ColumnCapabilities capabilities
+  )
+  {
+    ValueType type = capabilities.getType();
+    switch(type) {
+      case STRING:
+        return new StringTopNTypeHelper();
+      default:
+        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+    }
+  }
 }

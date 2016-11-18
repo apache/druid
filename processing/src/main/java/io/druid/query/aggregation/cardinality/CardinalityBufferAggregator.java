@@ -21,6 +21,7 @@ package io.druid.query.aggregation.cardinality;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.QueryDimensionInfo;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.nio.ByteBuffer;
@@ -28,13 +29,13 @@ import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
-  private final List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList;
+  private final List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList;
   private final boolean byRow;
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
   public CardinalityBufferAggregator(
-      List<QueryDimensionInfo<CardinalityAggregatorFactory.CardinalityAggregatorTypeHelper>> dimInfoList,
+      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
       boolean byRow
   )
   {

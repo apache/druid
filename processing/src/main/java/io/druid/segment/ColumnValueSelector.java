@@ -19,6 +19,9 @@
 
 package io.druid.segment;
 
+/**
+ * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
+ */
 public interface ColumnValueSelector
 {
 }
