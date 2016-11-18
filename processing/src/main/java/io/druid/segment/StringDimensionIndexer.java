@@ -147,12 +147,16 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     public String getMinValue()
     {
-      return minValue;
+      synchronized (lock) {
+        return minValue;
+      }
     }
 
     public String getMaxValue()
     {
-      return maxValue;
+      synchronized (lock) {
+        return maxValue;
+      }
     }
 
     public SortedDimensionDictionary sort()
