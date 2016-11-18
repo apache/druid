@@ -75,7 +75,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return new Path(config.getStorageDirectory()).toUri().toString();
+    return new Path(HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig)).toUri().toString();
   }
 
   @Override
@@ -86,13 +86,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getIdentifier(),
-        config.getStorageDirectory(),
+        HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig),
         storageDir
     );
 
     Path tmpFile = new Path(String.format(
         "%s/%s/index.zip",
-        config.getStorageDirectory(),
+        HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig),
         UUIDUtils.generateUuid()
     ));
     FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
@@ -104,7 +104,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
-      final Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
+      final Path outFile = new Path(String.format(
+          "%s/%s/index.zip",
+          HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig),
+          storageDir
+      ));
       final Path outDir = outFile.getParent();
       dataSegment = createDescriptorFile(
           segment.withLoadSpec(makeLoadSpec(outFile))
@@ -131,12 +135,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           ));
         }
       }
-    } finally {
+    }
+    finally {
       try {
         if (fs.exists(tmpFile.getParent()) && !fs.delete(tmpFile.getParent(), true)) {
           log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
         }
-      } catch(IOException ex) {
+      }
+      catch (IOException ex) {
         log.error(ex, "Failed to delete temp directory[%s]", tmpFile.getParent());
       }
     }

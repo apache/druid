@@ -115,7 +115,7 @@ public class HdfsDataSegmentPusherTest
         "path",
         String.format(
             "%s/%s/index.zip",
-            config.getStorageDirectory(),
+            HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), conf),
             DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
         )
     ), segment.getLoadSpec());
@@ -127,7 +127,7 @@ public class HdfsDataSegmentPusherTest
     Assert.assertTrue(descriptorFile.exists());
 
     // push twice will fail and temp dir cleaned
-    File outDir = new File(String.format("%s/%s", config.getStorageDirectory(), segmentPath));
+    File outDir = new File(String.format("%s/%s", HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), conf), segmentPath));
     outDir.setReadOnly();
     try {
       pusher.push(segmentDir, segmentToPush);
