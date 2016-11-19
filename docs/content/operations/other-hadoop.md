@@ -37,6 +37,29 @@ These properties can be set in either one of the following ways:
 - Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [batch ingestion documentation](../ingestion/batch-ingestion.html)).
 - Using system properties, e.g. on the middleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true`.
 
+### Overriding specific classes
+
+When `mapreduce.job.classloader = true`, it is also possible to specifically define which classes should be loaded from the hadoop system classpath and which should be loaded from job-supplied JARs.
+
+This is controlled by defining class inclusion/exclusion patterns in the `mapreduce.job.classloader.system.classes` property in the `jobProperties` of `tuningConfig`.
+
+For example, some community members have reported version incompatibility errors with the Validator class:
+
+```
+Error: java.lang.ClassNotFoundException: javax.validation.Validator
+```
+
+The following `jobProperties` excludes `javax.validation.` classes from being loaded from the system classpath, while including those from `java.,javax.,org.apache.commons.logging.,org.apache.log4j.,org.apache.hadoop.`.
+
+```
+"jobProperties": {
+  "mapreduce.job.classloader": "true",
+  "mapreduce.job.classloader.system.classes": "-javax.validation.,java.,javax.,org.apache.commons.logging.,org.apache.log4j.,org.apache.hadoop."
+}
+```
+
+[mapred-default.xml](https://hadoop.apache.org/docs/current/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) documentation contains more information about this property.
+
 ## Tip #3: Use specific versions of Hadoop libraries
 
 Druid loads Hadoop client libraries from two different locations. Each set of libraries is loaded in an isolated
