@@ -21,23 +21,25 @@ package io.druid.query.scan;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Set;
+
 public class ScanResultValue implements Comparable<ScanResultValue>
 {
   public static final String timestampKey = "timestamp";
 
   private final String segmentId;
-  private final int offset;
+  private final Set<String> columns;
   private final Object events;
 
   @JsonCreator
   public ScanResultValue(
       @JsonProperty("segmentId") String segmentId,
-      @JsonProperty("offset") int offset,
+      @JsonProperty("columns") Set<String> columns,
       @JsonProperty("events") Object events
   )
   {
     this.segmentId = segmentId;
-    this.offset = offset;
+    this.columns = columns;
     this.events = events;
   }
 
@@ -48,9 +50,9 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   }
 
   @JsonProperty
-  public int getOffset()
+  public Set<String> getColumns()
   {
-    return offset;
+    return columns;
   }
 
   @JsonProperty
@@ -60,7 +62,8 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(Object o)
+  {
     if (this == o) {
       return true;
     }
@@ -70,19 +73,20 @@ public class ScanResultValue implements Comparable<ScanResultValue>
 
     ScanResultValue that = (ScanResultValue) o;
 
-    if (offset != that.offset) {
+    if (segmentId != null ? !segmentId.equals(that.segmentId) : that.segmentId != null) {
       return false;
     }
-    if (segmentId != null ? !segmentId.equals(that.segmentId) : that.segmentId != null) {
+    if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
       return false;
     }
     return events != null ? events.equals(that.events) : that.events == null;
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     int result = segmentId != null ? segmentId.hashCode() : 0;
-    result = 31 * result + offset;
+    result = 31 * result + (columns != null ? columns.hashCode() : 0);
     result = 31 * result + (events != null ? events.hashCode() : 0);
     return result;
   }
@@ -92,7 +96,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   {
     return "ScanResultValue{" +
            "segmentId='" + segmentId + '\'' +
-           ", offset=" + offset +
+           ", columns=" + columns +
            ", events=" + events +
            '}';
   }
@@ -102,9 +106,6 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   {
     if (that == null) {
       return 1;
-    }
-    if (segmentId == null && that.segmentId == null) {
-      return Integer.compare(offset, that.offset);
     }
     if (segmentId != null && that.segmentId != null) {
       return segmentId.compareTo(that.segmentId);

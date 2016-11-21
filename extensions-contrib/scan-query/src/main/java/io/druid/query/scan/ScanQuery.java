@@ -21,13 +21,20 @@ package io.druid.query.scan;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
-import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.TableDataSource;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Interval;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -57,9 +64,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   )
   {
     super(dataSource, querySegmentSpec, false, context);
-    this.resultFormat = resultFormat;
+    this.resultFormat = resultFormat == null ? RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
     this.limit = (limit == 0) ? Integer.MAX_VALUE : limit;
+    Preconditions.checkArgument(this.batchSize > 0, "batchSize must be greater than 0");
+    Preconditions.checkArgument(this.limit > 0, "limit must be greater than 0");
     this.dimFilter = dimFilter;
     this.columns = columns;
   }
@@ -226,5 +235,155 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
            '}';
+  }
+
+  /**
+   * A Builder for ScanQuery.
+   * <p/>
+   * Required: dataSource(), intervals() must be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   ScanQuery query = new ScanQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .interval("2010/2013")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see io.druid.query.scan.ScanQuery
+   */
+  public static class ScanQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private Map<String, Object> context;
+    private String resultFormat;
+    private int batchSize;
+    private int limit;
+    private DimFilter dimFilter;
+    private List<String> columns;
+
+    public ScanQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      context = null;
+      resultFormat = null;
+      batchSize = 0;
+      limit = 0;
+      dimFilter = null;
+      columns = Lists.newArrayList();
+    }
+
+    public ScanQuery build()
+    {
+      return new ScanQuery(
+          dataSource,
+          querySegmentSpec,
+          resultFormat,
+          batchSize,
+          limit,
+          dimFilter,
+          columns,
+          context
+      );
+    }
+
+    public ScanQueryBuilder copy(ScanQueryBuilder builder)
+    {
+      return new ScanQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .context(builder.context);
+    }
+
+    public ScanQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public ScanQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public ScanQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public ScanQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public ScanQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public ScanQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+
+    public ScanQueryBuilder resultFormat(String r)
+    {
+      resultFormat = r;
+      return this;
+    }
+
+    public ScanQueryBuilder batchSize(int b)
+    {
+      batchSize = b;
+      return this;
+    }
+
+    public ScanQueryBuilder limit(int l)
+    {
+      limit = l;
+      return this;
+    }
+
+    public ScanQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
+      return this;
+    }
+
+    public ScanQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      return this;
+    }
+
+    public ScanQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
+      return this;
+    }
+
+    public ScanQueryBuilder columns(List<String> c)
+    {
+      columns = c;
+      return this;
+    }
+
+    public ScanQueryBuilder columns(String... c)
+    {
+      columns = Arrays.asList(c);
+      return this;
+    }
+  }
+
+  public static ScanQueryBuilder newScanQueryBuilder()
+  {
+    return new ScanQueryBuilder();
   }
 }

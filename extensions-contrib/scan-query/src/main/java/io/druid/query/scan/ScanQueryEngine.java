@@ -23,8 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.ISE;
+import com.google.common.collect.Sets;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -46,6 +47,7 @@ import org.joda.time.Interval;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ScanQueryEngine
 {
@@ -112,18 +114,21 @@ public class ScanQueryEngine
                       @Override
                       public Iterator<ScanResultValue> make()
                       {
+                        final Set<String> columns = Sets.newHashSet();
                         final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
                         final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                         for (DimensionSpec dim : dims) {
                           final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
                           dimSelectors.put(dim.getOutputName(), dimSelector);
+                          columns.add(dim.getOutputName());
                         }
 
                         final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
                         for (String metric : metrics) {
                           final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
                           metSelectors.put(metric, metricSelector);
+                          columns.add(metric);
                         }
                         final int batchSize = query.getBatchSize();
                         return new Iterator<ScanResultValue>()
@@ -148,7 +153,7 @@ public class ScanQueryEngine
                               events = rowsToList();
                             }
                             responseContext.put("count", (int) responseContext.get("count") + (offset - lastOffset));
-                            return new ScanResultValue(segmentId, lastOffset, events);
+                            return new ScanResultValue(segmentId, columns, events);
                           }
 
                           @Override

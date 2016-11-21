@@ -20,7 +20,7 @@ package io.druid.query.scan;
 
 import com.google.common.base.Function;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
