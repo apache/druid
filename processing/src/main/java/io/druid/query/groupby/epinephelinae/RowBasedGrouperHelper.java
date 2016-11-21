@@ -311,6 +311,57 @@ public class RowBasedGrouperHelper
     {
       return new RowBasedKeySerde(fudgeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize);
     }
+
+    @Override
+    public Comparator<RowBasedKey> objectComparator()
+    {
+      if (sortByDimsFirst) {
+        return new Comparator<RowBasedKey>()
+        {
+          @Override
+          public int compare(
+              RowBasedKey row1, RowBasedKey row2
+          )
+          {
+            final int cmp = compareDimsInRows(row1, row2);
+            if (cmp != 0) {
+              return cmp;
+            }
+
+            return Longs.compare(row1.getTimestamp(), row2.getTimestamp());
+          }
+        };
+      } else {
+        return new Comparator<RowBasedKey>()
+        {
+          @Override
+          public int compare(
+              RowBasedKey row1, RowBasedKey row2
+          )
+          {
+            final int timeCompare = Longs.compare(row1.getTimestamp(), row2.getTimestamp());
+
+            if (timeCompare != 0) {
+              return timeCompare;
+            }
+
+            return compareDimsInRows(row1, row2);
+          }
+        };
+      }
+    }
+
+    private static int compareDimsInRows(RowBasedKey row1, RowBasedKey row2)
+    {
+      for (int i = 0; i < row1.getDimensions().length; i++) {
+        final int cmp = row1.getDimensions()[i].compareTo(row2.getDimensions()[i]);
+        if (cmp != 0) {
+          return cmp;
+        }
+      }
+
+      return 0;
+    };
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedKey>
@@ -394,7 +445,7 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public Grouper.KeyComparator comparator()
+    public Grouper.KeyComparator bufferComparator()
     {
       if (sortableIds == null) {
         Map<String, Integer> sortedMap = Maps.newTreeMap();
@@ -500,63 +551,6 @@ public class RowBasedGrouperHelper
 
       return 0;
     }
-
-    @Override
-    public Comparator<Grouper.Entry<RowBasedKey>> entryComparator()
-    {
-      if (sortByDimsFirst) {
-        return new Comparator<Grouper.Entry<RowBasedKey>>()
-        {
-          @Override
-          public int compare(
-              Grouper.Entry<RowBasedKey> o1, Grouper.Entry<RowBasedKey> o2
-          )
-          {
-            RowBasedKey row1 = o1.getKey();
-            RowBasedKey row2 = o2.getKey();
-
-            final int cmp = compareDimsInRows(row1, row2);
-            if (cmp != 0) {
-              return cmp;
-            }
-
-            return Longs.compare(row1.getTimestamp(), row2.getTimestamp());
-          }
-        };
-      } else {
-        return new Comparator<Grouper.Entry<RowBasedKey>>()
-        {
-          @Override
-          public int compare(
-              Grouper.Entry<RowBasedKey> o1, Grouper.Entry<RowBasedKey> o2
-          )
-          {
-            RowBasedKey row1 = o1.getKey();
-            RowBasedKey row2 = o2.getKey();
-
-            final int timeCompare = Longs.compare(row1.getTimestamp(), row2.getTimestamp());
-
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            return compareDimsInRows(row1, row2);
-          }
-        };
-      }
-    }
-
-    private static int compareDimsInRows(RowBasedKey row1, RowBasedKey row2)
-    {
-      for (int i = 0; i < row1.getDimensions().length; i++) {
-        final int cmp = row1.getDimensions()[i].compareTo(row2.getDimensions()[i]);
-        if (cmp != 0) {
-          return cmp;
-        }
-      }
-
-      return 0;
-    };
 
     @Override
     public void reset()

@@ -265,7 +265,7 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
         }
       };
 
-      final KeyComparator comparator = keySerde.comparator();
+      final KeyComparator comparator = keySerde.bufferComparator();
 
       // Sort offsets in-place.
       Collections.sort(

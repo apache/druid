@@ -40,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -57,6 +58,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
   private final AggregatorFactory[] aggregatorFactories;
+  private final Comparator<KeyType> keyObjComparator;
 
   private final List<File> files = Lists.newArrayList();
   private final List<Closeable> closeables = Lists.newArrayList();
@@ -77,6 +79,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   )
   {
     this.keySerde = keySerdeFactory.factorize();
+    this.keyObjComparator = keySerdeFactory.objectComparator();
     this.grouper = new BufferGrouper<>(
         buffer,
         keySerde,
@@ -172,7 +175,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       closeables.add(fileIterator);
     }
 
-    return Groupers.mergeIterators(iterators, sorted ? keySerde.entryComparator() : null);
+    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
   }
 
   private void spill() throws IOException

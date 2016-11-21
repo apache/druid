@@ -41,11 +41,21 @@ public class Groupers
 
   public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
       final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final Comparator<Grouper.Entry<KeyType>> comparator
+      final Comparator<KeyType> keyTypeComparator
   )
   {
-    if (comparator != null) {
-      return Iterators.mergeSorted(iterators, comparator);
+    if (keyTypeComparator != null) {
+      return Iterators.mergeSorted(
+          iterators,
+          new Comparator<Grouper.Entry<KeyType>>()
+          {
+            @Override
+            public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
+            {
+              return keyTypeComparator.compare(lhs.getKey(), rhs.getKey());
+            }
+          }
+      );
     } else {
       return Iterators.concat(iterators.iterator());
     }

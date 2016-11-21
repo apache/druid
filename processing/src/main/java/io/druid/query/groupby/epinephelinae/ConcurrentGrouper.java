@@ -48,7 +48,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final AtomicInteger threadNumber = new AtomicInteger();
   private volatile boolean spilling = false;
   private volatile boolean closed = false;
-  private final Comparator<Entry<KeyType>> entryComparator;
+  private final Comparator<KeyType> keyObjComparator;
 
   public ConcurrentGrouper(
       final ByteBuffer buffer,
@@ -97,7 +97,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       );
     }
 
-    this.entryComparator = keySerdeFactory.factorize().entryComparator();
+    this.keyObjComparator = keySerdeFactory.objectComparator();
   }
 
   @Override
@@ -165,7 +165,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       }
     }
 
-    return Groupers.mergeIterators(iterators, sorted ? entryComparator : null);
+    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
   }
 
   @Override

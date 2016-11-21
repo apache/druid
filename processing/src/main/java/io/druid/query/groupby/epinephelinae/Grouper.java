@@ -160,6 +160,14 @@ public interface Grouper<KeyType> extends Closeable
      * Create a new KeySerde, which may be stateful.
      */
     KeySerde<T> factorize();
+
+    /**
+     * Return an object that knows how to compare two serialized key instances. Will be called by the
+     * {@link #iterator(boolean)} method if sorting is enabled.
+     *
+     * @return comparator for keys
+     */
+    Comparator<T> objectComparator();
   }
 
   /**
@@ -207,17 +215,11 @@ public interface Grouper<KeyType> extends Closeable
      *
      * @return comparator for keys
      */
-    KeyComparator comparator();
-
-    /**
-     *
-     * @return
-     */
-    Comparator<Entry<T>> entryComparator();
+    KeyComparator bufferComparator();
 
     /**
      * Reset the keySerde to its initial state. After this method is called, {@link #fromByteBuffer(ByteBuffer, int)}
-     * and {@link #comparator()} may no longer work properly on previously-serialized keys.
+     * and {@link #bufferComparator()} may no longer work properly on previously-serialized keys.
      */
     void reset();
   }

@@ -80,15 +80,9 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   }
 
   @Override
-  public Grouper.KeyComparator comparator()
+  public Grouper.KeyComparator bufferComparator()
   {
     return KEY_COMPARATOR;
-  }
-
-  @Override
-  public Comparator<Grouper.Entry<Integer>> entryComparator()
-  {
-    return ENTRY_COMPARATOR;
   }
 
   @Override

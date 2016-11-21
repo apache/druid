@@ -50,7 +50,6 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -387,14 +386,7 @@ outer:
     }
 
     @Override
-    public Grouper.KeyComparator comparator()
-    {
-      // No sorting, let mergeRunners handle that
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Comparator<Grouper.Entry<ByteBuffer>> entryComparator()
+    public Grouper.KeyComparator bufferComparator()
     {
       // No sorting, let mergeRunners handle that
       throw new UnsupportedOperationException();
