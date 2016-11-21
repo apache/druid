@@ -176,6 +176,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         true,
         false,
         null,
+        null,
         numThreads,
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
@@ -1698,7 +1699,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.<String, String>of(),
             true,
             false,
-            minimumMessageTime
+            minimumMessageTime,
+            null
         ),
         ImmutableMap.<String, Object>of(),
         null

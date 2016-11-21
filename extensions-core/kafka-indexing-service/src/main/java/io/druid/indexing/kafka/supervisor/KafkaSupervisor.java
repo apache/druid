@@ -1261,7 +1261,8 @@ public class KafkaSupervisor implements Supervisor
         consumerProperties,
         true,
         false,
-        minimumMessageTime
+        minimumMessageTime,
+        ioConfig.isUseEarliestOffset()
     );
 
     for (int i = 0; i < replicas; i++) {

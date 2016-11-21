@@ -38,7 +38,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-
+import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -52,7 +52,6 @@ import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
@@ -116,7 +115,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     PUBLISHING
   }
 
-  private static final Logger log = new Logger(KafkaIndexTask.class);
+  private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
   private static final String TYPE = "index_kafka";
   private static final Random RANDOM = new Random();
   private static final long POLL_TIMEOUT = 100;
@@ -386,17 +385,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             records = consumer.poll(POLL_TIMEOUT);
           }
           catch (OffsetOutOfRangeException e) {
-            log.warn("OffsetOutOfRangeException with message [%s], retrying in %dms", e.getMessage(), POLL_RETRY_MS);
-            pollRetryLock.lockInterruptibly();
-            try {
-              long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
-              while (nanos > 0L && !pauseRequested && !stopRequested) {
-                nanos = isAwaitingRetry.awaitNanos(nanos);
-              }
-            }
-            finally {
-              pollRetryLock.unlock();
-            }
+            log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
+            possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, assignment);
+            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
           }
 
           for (ConsumerRecord<byte[], byte[]> record : records) {
@@ -999,5 +990,79 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     return false;
+  }
+
+  private void possiblyResetOffsetsOrWait(
+      Map<TopicPartition, Long> outOfRangePartitions,
+      KafkaConsumer<byte[], byte[]> consumer,
+      Set<Integer> assignment
+  ) throws InterruptedException
+  {
+    boolean shouldRetry = false;
+    if(tuningConfig.isResetOffsetAutomatically()) {
+      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+        final TopicPartition topicPartition = outOfRangePartition.getKey();
+        final long nextOffset = outOfRangePartition.getValue();
+        // seek to the beginning to get the least available offset
+        consumer.seekToBeginning(topicPartition);
+        final long leastAvailableOffset = consumer.position(topicPartition);
+        // reset the seek
+        consumer.seek(topicPartition, nextOffset);
+        // Reset consumer offset if resetOffsetAutomatically is set to true
+        // and the current message offset in the kafka partition is more than the
+        // next message offset that we are trying to fetch
+        if (leastAvailableOffset > nextOffset) {
+          resetOffset(consumer, assignment, topicPartition);
+        } else {
+          shouldRetry = true;
+        }
+      }
+    } else {
+      shouldRetry = true;
+    }
+    if (shouldRetry) {
+      log.warn("Retrying in %dms", POLL_RETRY_MS);
+      pollRetryLock.lockInterruptibly();
+      try {
+        long nanos = TimeUnit.MILLISECONDS.toNanos(POLL_RETRY_MS);
+        while (nanos > 0L && !pauseRequested && !stopRequested) {
+          nanos = isAwaitingRetry.awaitNanos(nanos);
+        }
+      }
+      finally {
+        pollRetryLock.unlock();
+      }
+    }
+  }
+
+  private void resetOffset(
+      KafkaConsumer<byte[], byte[]> consumer,
+      Set<Integer> assignment,
+      TopicPartition topicPartition
+  )
+  {
+    log.warn(
+        "Resetting consumer offset to [%s] for partition [%d]",
+        ioConfig.isUseEarliestOffset() ? "earliest" : "latest",
+        topicPartition.partition()
+    );
+    if (ioConfig.isUseEarliestOffset()) {
+      consumer.seekToBeginning(topicPartition);
+    } else {
+      consumer.seekToEnd(topicPartition);
+    }
+    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
+    log.warn("Consumer is now at offset [%d]", nextOffsets.get(topicPartition.partition()));
+    // check if we seeked passed the endOffset for this partition
+    if (nextOffsets.get(topicPartition.partition()) >= endOffsets.get(topicPartition.partition())
+        && assignment.remove(topicPartition.partition())) {
+      log.info(
+          "Finished reading topic[%s], partition[%,d].",
+          topicPartition.topic(),
+          topicPartition.partition()
+      );
+    }
+    // update assignments if something changed
+    assignPartitions(consumer, topicPartition.topic(), assignment);
   }
 }
