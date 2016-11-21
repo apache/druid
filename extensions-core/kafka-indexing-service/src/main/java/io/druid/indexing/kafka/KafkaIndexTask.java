@@ -999,22 +999,26 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   ) throws InterruptedException
   {
     boolean shouldRetry = false;
-    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
-      final TopicPartition topicPartition = outOfRangePartition.getKey();
-      final long nextOffset = outOfRangePartition.getValue();
-      // seek to the beginning to get the least available offset
-      consumer.seekToBeginning(topicPartition);
-      final long leastAvailableOffset = consumer.position(topicPartition);
-      // reset the seek
-      consumer.seek(topicPartition, nextOffset);
-      // Reset consumer offset if resetOffsetAutomatically is set to true
-      // and the current message offset in the kafka partition is more than the
-      // next message offset that we are trying to fetch
-      if (tuningConfig.isResetOffsetAutomatically() && leastAvailableOffset > nextOffset) {
-        resetOffset(consumer, assignment, topicPartition);
-      } else {
-        shouldRetry = true;
+    if(tuningConfig.isResetOffsetAutomatically()) {
+      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+        final TopicPartition topicPartition = outOfRangePartition.getKey();
+        final long nextOffset = outOfRangePartition.getValue();
+        // seek to the beginning to get the least available offset
+        consumer.seekToBeginning(topicPartition);
+        final long leastAvailableOffset = consumer.position(topicPartition);
+        // reset the seek
+        consumer.seek(topicPartition, nextOffset);
+        // Reset consumer offset if resetOffsetAutomatically is set to true
+        // and the current message offset in the kafka partition is more than the
+        // next message offset that we are trying to fetch
+        if (leastAvailableOffset > nextOffset) {
+          resetOffset(consumer, assignment, topicPartition);
+        } else {
+          shouldRetry = true;
+        }
       }
+    } else {
+      shouldRetry = true;
     }
     if (shouldRetry) {
       log.warn("Retrying in %dms", POLL_RETRY_MS);
