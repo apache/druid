@@ -77,11 +77,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -156,9 +153,15 @@ public class IndexGeneratorJob implements Jobby
   public boolean run()
   {
     try {
+      long startTime = System.currentTimeMillis();
       Job job = Job.getInstance(
           new Configuration(),
-          String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
+              String.format("druid-%s-indexing-%s",
+                      config.getDataSource(),
+                      new SimpleDateFormat("yyyyMMdd").format(
+                              new Date(config.getIntervals().or(Collections.singletonList(new Interval(startTime, startTime))).get(0).getStartMillis())
+                      )
+              )
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");

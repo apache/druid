@@ -56,9 +56,8 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.text.SimpleDateFormat;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining approximate cardinality of data set using HyperLogLog
@@ -85,7 +84,12 @@ public class DetermineHashedPartitionsJob implements Jobby
       long startTime = System.currentTimeMillis();
       final Job groupByJob = Job.getInstance(
           new Configuration(),
-          String.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
+          String.format("druid-%s-partitioning-%s",
+                  config.getDataSource(),
+                  new SimpleDateFormat("yyyyMMdd").format(
+                          new Date(config.getIntervals().or(Collections.singletonList(new Interval(startTime, startTime))).get(0).getStartMillis())
+                  )
+          )
       );
 
       JobHelper.injectSystemProperties(groupByJob);
