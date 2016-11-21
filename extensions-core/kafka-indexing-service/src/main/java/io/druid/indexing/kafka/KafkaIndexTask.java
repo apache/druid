@@ -1052,9 +1052,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       consumer.seekToEnd(topicPartition);
     }
     nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
-    log.warn("Consumer is now at offset [%d]", consumer.position(topicPartition));
+    log.warn("Consumer is now at offset [%d]", nextOffsets.get(topicPartition.partition()));
     // check if we seeked passed the endOffset for this partition
-    if (consumer.position(topicPartition) >= endOffsets.get(topicPartition.partition())
+    if (nextOffsets.get(topicPartition.partition()) >= endOffsets.get(topicPartition.partition())
         && assignment.remove(topicPartition.partition())) {
       log.info(
           "Finished reading topic[%s], partition[%,d].",
