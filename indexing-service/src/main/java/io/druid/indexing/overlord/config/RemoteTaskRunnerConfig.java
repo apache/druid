@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.curator.CuratorUtils;
 import org.joda.time.Period;
 
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
@@ -55,11 +56,16 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 
   @JsonProperty
   @NotNull
-  private Period taskBlackListBackoffTime = new Period("PT15M");
+  private Period workerBlackListBackoffTime = new Period("PT15M");
 
   @JsonProperty
   @NotNull
-  private Period taskBlackListCleanupPeriod = new Period("PT5M");
+  private Period workerBlackListCleanupPeriod = new Period("PT5M");
+
+  @JsonProperty
+  @Max(100)
+  @Min(0)
+  private int maxPercentageBlacklistWorkers = 20;
 
   public Period getTaskAssignmentTimeout()
   {
@@ -95,20 +101,28 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
   }
 
-  public Period getTaskBlackListBackoffTime() {
-    return taskBlackListBackoffTime;
+  public Period getWorkerBlackListBackoffTime() {
+    return workerBlackListBackoffTime;
   }
 
   public void setTaskBlackListBackoffTimeMillis(Period taskBlackListBackoffTime) {
-    this.taskBlackListBackoffTime = taskBlackListBackoffTime;
+    this.workerBlackListBackoffTime = taskBlackListBackoffTime;
   }
 
-  public Period getTaskBlackListCleanupPeriod() {
-    return taskBlackListCleanupPeriod;
+  public Period getWorkerBlackListCleanupPeriod() {
+    return workerBlackListCleanupPeriod;
   }
 
-  public void setTaskBlackListCleanupPeriod(Period taskBlackListCleanupPeriod) {
-    this.taskBlackListCleanupPeriod = taskBlackListCleanupPeriod;
+  public void setWorkerBlackListCleanupPeriod(Period workerBlackListCleanupPeriod) {
+    this.workerBlackListCleanupPeriod = workerBlackListCleanupPeriod;
+  }
+
+  public int getMaxPercentageBlacklistWorkers() {
+    return maxPercentageBlacklistWorkers;
+  }
+
+  public void setMaxPercentageBlacklistWorkers(int maxPercentageBlacklistWorkers) {
+    this.maxPercentageBlacklistWorkers = maxPercentageBlacklistWorkers;
   }
 
   @Override
@@ -144,10 +158,13 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     if (maxRetriesBeforeBlacklist != that.maxRetriesBeforeBlacklist) {
       return false;
     }
-    if (!taskBlackListBackoffTime.equals(that.getTaskBlackListBackoffTime())) {
+    if (!workerBlackListBackoffTime.equals(that.getWorkerBlackListBackoffTime())) {
       return false;
     }
-    return taskBlackListCleanupPeriod.equals(that.taskBlackListCleanupPeriod);
+    if (maxPercentageBlacklistWorkers != that.maxPercentageBlacklistWorkers) {
+      return false;
+    }
+    return workerBlackListCleanupPeriod.equals(that.workerBlackListCleanupPeriod);
 
   }
 
@@ -161,8 +178,9 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
     result = 31 * result + maxRetriesBeforeBlacklist;
-    result = 31 * result + taskBlackListBackoffTime.hashCode();
-    result = 31 * result + taskBlackListCleanupPeriod.hashCode();
+    result = 31 * result + workerBlackListBackoffTime.hashCode();
+    result = 31 * result + workerBlackListCleanupPeriod.hashCode();
+    result = 31 * result + maxPercentageBlacklistWorkers;
     return result;
   }
 
@@ -177,8 +195,9 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
            ", taskShutdownLinkTimeout=" + taskShutdownLinkTimeout +
            ", pendingTasksRunnerNumThreads=" + pendingTasksRunnerNumThreads +
            ", maxRetriesBeforeBlacklist=" + maxRetriesBeforeBlacklist +
-           ", taskBlackListBackoffTimeMillis=" + taskBlackListBackoffTime +
-           ", taskBlackListCleanupPeriod=" + taskBlackListCleanupPeriod +
+           ", taskBlackListBackoffTimeMillis=" + workerBlackListBackoffTime +
+           ", taskBlackListCleanupPeriod=" + workerBlackListCleanupPeriod +
+           ", maxPercentageBlacklistWorkers= " + maxPercentageBlacklistWorkers +
            '}';
   }
 }

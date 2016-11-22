@@ -75,8 +75,9 @@ The following vairables can be used to set the threshold and blacklist timeouts.
 
 ```
 druid.indexer.runner.maxRetriesBeforeBlacklist
-druid.indexer.runner.taskBlackListBackoffTime
-druid.indexer.runner.taskBlackListCleanupPeriod
+druid.indexer.runner.workerBlackListBackoffTime
+druid.indexer.runner.workerBlackListCleanupPeriod
+druid.indexer.runner.maxPercentageBlacklistWorkers
 ```
 
 #### Autoscaling

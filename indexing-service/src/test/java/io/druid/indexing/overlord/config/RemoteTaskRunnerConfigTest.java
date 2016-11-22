@@ -181,7 +181,7 @@ public class RemoteTaskRunnerConfigTest
   }
 
   @Test
-  public void testGettaskBlackListBackoffTime() throws Exception
+  public void testGetWorkerBlackListBackoffTime() throws Exception
   {
     final Period taskBlackListBackoffTime = new Period("PT1M");
     Assert.assertEquals(
@@ -196,7 +196,7 @@ public class RemoteTaskRunnerConfigTest
                     DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST,
                     taskBlackListBackoffTime,
                     DEFAULT_BLACKLIST_CLEANUP_PERIOD
-            )).getTaskBlackListBackoffTime()
+            )).getWorkerBlackListBackoffTime()
     );
   }
 
@@ -216,7 +216,7 @@ public class RemoteTaskRunnerConfigTest
                     DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST,
                     DEFAULT_TASK_BACKOFF,
                     taskBlackListCleanupPeriod
-            )).getTaskBlackListCleanupPeriod()
+            )).getWorkerBlackListCleanupPeriod()
     );
   }
 
@@ -811,8 +811,8 @@ public class RemoteTaskRunnerConfigTest
     objectMap.put("taskShutdownLinkTimeout", taskShutdownLinkTimeout);
     objectMap.put("pendingTasksRunnerNumThreads", pendingTasksRunnerNumThreads);
     objectMap.put("maxRetriesBeforeBlacklist", maxRetriesBeforeBlacklist);
-    objectMap.put("taskBlackListBackoffTime", taskBlackListBackoffTime);
-    objectMap.put("taskBlackListCleanupPeriod", taskBlackListCleanupPeriod);
+    objectMap.put("workerBlackListBackoffTime", taskBlackListBackoffTime);
+    objectMap.put("workerBlackListCleanupPeriod", taskBlackListCleanupPeriod);
     return mapper.convertValue(objectMap, RemoteTaskRunnerConfig.class);
   }
 }

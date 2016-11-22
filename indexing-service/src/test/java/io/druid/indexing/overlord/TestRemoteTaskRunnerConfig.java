@@ -71,13 +71,13 @@ public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   }
 
   @Override
-  public Period getTaskBlackListBackoffTime()
+  public Period getWorkerBlackListBackoffTime()
   {
     return timeout;
   }
 
   @Override
-  public Period getTaskBlackListCleanupPeriod()
+  public Period getWorkerBlackListCleanupPeriod()
   {
     return timeout;
   }

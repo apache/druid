@@ -1066,7 +1066,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     ScheduledExecutors.scheduleAtFixedRate(
             cleanupExec,
             Period.ZERO.toStandardDuration(),
-            config.getTaskBlackListCleanupPeriod().toStandardDuration(),
+            config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
             new Runnable()
             {
               @Override
@@ -1083,9 +1083,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     // Clean blacklisted workers if blacklisted time has elapsed
     if(System.currentTimeMillis() - zkWorker.getLastCompletedTaskTime().getMillis() >
-            config.getTaskBlackListBackoffTime().toStandardDuration().getMillis()){
+            config.getWorkerBlackListBackoffTime().toStandardDuration().getMillis()){
       // White listing node
-      log.debug( "Whitelisting worker [%s]. ", zkWorker);
+      log.info("Whitelisting worker [%s]. ", zkWorker);
       blackListedWorkers.remove(zkWorker);
     }
   }
@@ -1199,9 +1199,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       zkWorker.incrementCountinouslyFailedTasksCount();
     }
 
-    // BlackList node if there are too many failures. Also ensure that at most 20% of zkWorkers can be blacklisted
+    // BlackList node if there are too many failures.
     if(zkWorker.getCountinouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
-            blackListedWorkers.size() <= zkWorkers.size()/5){
+            blackListedWorkers.size() <=
+                    zkWorkers.size()*((double)config.getMaxPercentageBlacklistWorkers()/100)){
       blackListedWorkers.add(zkWorker);
     }
 
