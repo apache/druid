@@ -463,7 +463,6 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    System.out.println(results);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
