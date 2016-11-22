@@ -145,7 +145,7 @@ Details can be found in Schema Registry [documentation](http://docs.confluent.io
 
 ### Avro Hadoop Parser
 
-This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.path.input.value": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "io.druid.extensions:druid-avro-extensions" as an extension.
+This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "io.druid.extensions:druid-avro-extensions" as an extension.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -180,7 +180,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
     },
     "tuningConfig" : {
        "jobProperties" : {
-          "avro.schema.path.input.value" : "/path/to/my/schema.avsc"
+          "avro.schema.input.value.path" : "/path/to/my/schema.avsc"
       }
     }
   }
