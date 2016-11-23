@@ -65,7 +65,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   @JsonProperty
   @Max(100)
   @Min(0)
-  private int maxPercentageBlacklistWorkers = 20;
+  private double maxPercentageBlacklistWorkers = 20;
 
   public Period getTaskAssignmentTimeout()
   {
@@ -117,7 +117,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     this.workerBlackListCleanupPeriod = workerBlackListCleanupPeriod;
   }
 
-  public int getMaxPercentageBlacklistWorkers() {
+  public double getMaxPercentageBlacklistWorkers() {
     return maxPercentageBlacklistWorkers;
   }
 
@@ -180,7 +180,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     result = 31 * result + maxRetriesBeforeBlacklist;
     result = 31 * result + workerBlackListBackoffTime.hashCode();
     result = 31 * result + workerBlackListCleanupPeriod.hashCode();
-    result = 31 * result + maxPercentageBlacklistWorkers;
+    result = 31 * result + (int)maxPercentageBlacklistWorkers;
     return result;
   }
 
