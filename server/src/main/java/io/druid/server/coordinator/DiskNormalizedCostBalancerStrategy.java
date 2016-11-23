@@ -43,6 +43,11 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
     super(exec);
   }
 
+  /**
+   * Averages the cost obtained from CostBalancerStrategy. Also the costs are weighted according to their usage ratios.
+   * This ensures that all the hosts will have the same % disk utilization.
+   * 
+   */
   @Override
   protected double computeCost(
       final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer
