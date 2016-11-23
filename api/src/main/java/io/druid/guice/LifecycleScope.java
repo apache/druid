@@ -50,7 +50,7 @@ public class LifecycleScope implements Scope
     synchronized (instances) {
       this.lifecycle = lifecycle;
       for (Object instance : instances) {
-        lifecycle.addManagedInstance(instance, stage);
+        lifecycle.addManagedInstance(instance);
       }
     }
   }

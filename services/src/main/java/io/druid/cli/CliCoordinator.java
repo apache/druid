@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
@@ -38,7 +39,6 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.ManageLifecycleFirst;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
@@ -123,8 +123,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class)
                   .toProvider(MetadataStorageProvider.class)
-                  .in(ManageLifecycleFirst.class);
-            LifecycleModule.register(binder, MetadataStorage.class);
+                  .in(ManageLifecycle.class);
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
