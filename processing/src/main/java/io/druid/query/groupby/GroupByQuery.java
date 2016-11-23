@@ -260,7 +260,6 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public Ordering getResultOrdering()
   {
-    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
     final Ordering<Row> rowOrdering = getRowOrdering(false);
 
     return Ordering.from(
@@ -273,7 +272,7 @@ public class GroupByQuery extends BaseQuery<Row>
               return rowOrdering.compare((Row) lhs, (Row) rhs);
             } else {
               // Probably bySegment queries
-              return naturalNullsFirst.compare(lhs, rhs);
+              return NATURAL_NULLS_FIRST.compare(lhs, rhs);
             }
           }
         }
@@ -293,7 +292,7 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public int compare(Row lhs, Row rhs)
             {
-              final int cmp = compareDims(NATURAL_NULLS_FIRST, dimensions, lhs, rhs);
+              final int cmp = compareDims(dimensions, lhs, rhs);
               if (cmp != 0) {
                 return cmp;
               }
@@ -315,7 +314,7 @@ public class GroupByQuery extends BaseQuery<Row>
                 return timeCompare;
               }
 
-              return compareDims(NATURAL_NULLS_FIRST, dimensions, lhs, rhs);
+              return compareDims(dimensions, lhs, rhs);
             }
           }
       );
@@ -341,10 +340,10 @@ public class GroupByQuery extends BaseQuery<Row>
     }
   }
 
-  private static int compareDims(Comparator naturalNullsFirst, List<DimensionSpec> dimensions, Row lhs, Row rhs)
+  private static int compareDims(List<DimensionSpec> dimensions, Row lhs, Row rhs)
   {
     for (DimensionSpec dimension : dimensions) {
-      final int dimCompare = naturalNullsFirst.compare(
+      final int dimCompare = NATURAL_NULLS_FIRST.compare(
           lhs.getRaw(dimension.getOutputName()),
           rhs.getRaw(dimension.getOutputName())
       );
