@@ -1071,18 +1071,19 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             {
               @Override
               public void run() {
+                long currentTimeStamp = System.currentTimeMillis();
                 for(ZkWorker zkWorker : blackListedWorkers){
-                  cleanBlackListedNode(zkWorker);
+                  cleanBlackListedNode(zkWorker, currentTimeStamp);
                 }
               }
             }
     );
   }
 
-  public void cleanBlackListedNode(ZkWorker zkWorker)
+  public void cleanBlackListedNode(ZkWorker zkWorker, long currentTimeStamp)
   {
     // Clean blacklisted workers if blacklisted time has elapsed
-    if(System.currentTimeMillis() - zkWorker.getLastCompletedTaskTime().getMillis() >
+    if(currentTimeStamp - zkWorker.getLastCompletedTaskTime().getMillis() >
             config.getWorkerBlackListBackoffTime().toStandardDuration().getMillis()){
       // White listing node
       log.info("Whitelisting worker [%s]. ", zkWorker);
@@ -1202,7 +1203,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     // BlackList node if there are too many failures.
     if(zkWorker.getCountinouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
             blackListedWorkers.size() <=
-                    zkWorkers.size()*((double)config.getMaxPercentageBlacklistWorkers()/100)){
+                    zkWorkers.size()*(config.getMaxPercentageBlacklistWorkers()/100)){
       blackListedWorkers.add(zkWorker);
     }
 

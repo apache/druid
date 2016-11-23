@@ -653,11 +653,10 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(2,
             remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
 
-    remoteTaskRunner.cleanBlackListedNode(remoteTaskRunner.findWorkerRunningTask(task2.getId()));
+    remoteTaskRunner.cleanBlackListedNode(remoteTaskRunner.findWorkerRunningTask(task2.getId()),
+            System.currentTimeMillis() + 2*timeoutPeriod.toStandardDuration().getMillis());
 
     // After backOffTime the nodes are whitelisted
-    System.out.println("Sleeping for " + timeoutPeriod.toStandardDuration().getMillis());
-    Thread.sleep(2*timeoutPeriod.toStandardDuration().getMillis());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
     Assert.assertEquals(2,
             remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
