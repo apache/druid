@@ -19,22 +19,8 @@
 
 package io.druid.server.coordinator;
 
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.java.util.common.Pair;
 import io.druid.timeline.DataSegment;
-import org.apache.commons.math3.util.FastMath;
-import org.joda.time.Interval;
-
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
@@ -46,7 +32,6 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
   /**
    * Averages the cost obtained from CostBalancerStrategy. Also the costs are weighted according to their usage ratios.
    * This ensures that all the hosts will have the same % disk utilization.
-   * 
    */
   @Override
   protected double computeCost(

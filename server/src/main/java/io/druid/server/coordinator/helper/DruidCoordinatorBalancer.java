@@ -34,7 +34,6 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 
 import java.util.Comparator;
 import java.util.List;

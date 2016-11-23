@@ -33,7 +33,6 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;

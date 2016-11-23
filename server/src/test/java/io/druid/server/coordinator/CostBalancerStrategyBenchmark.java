@@ -23,7 +23,6 @@ import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

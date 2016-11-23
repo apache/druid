@@ -19,9 +19,6 @@
 package io.druid.server.coordinator;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import org.joda.time.DateTime;
-
-import java.io.IOException;
 
 public class RandomBalancerStrategyFactory implements BalancerStrategyFactory
 {
