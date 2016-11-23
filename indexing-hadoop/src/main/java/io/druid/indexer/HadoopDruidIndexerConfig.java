@@ -213,8 +213,8 @@ public class HadoopDruidIndexerConfig
     return retVal;
   }
 
-  private volatile HadoopIngestionSpec schema;
-  private volatile PathSpec pathSpec;
+  private HadoopIngestionSpec schema;
+  private PathSpec pathSpec;
   private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final QueryGranularity rollupGran;

@@ -23,37 +23,66 @@ import io.druid.common.utils.JodaUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+
 public class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
 {
   @Override
   public RejectionPolicy create(final Period windowPeriod)
   {
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
+    return new MessageTimeRejectionPolicy(windowMillis, windowPeriod);
+  }
 
-    return new RejectionPolicy()
+  private static class MessageTimeRejectionPolicy implements RejectionPolicy
+  {
+    private static final AtomicLongFieldUpdater<MessageTimeRejectionPolicy> maxTimestampUpdater =
+        AtomicLongFieldUpdater.newUpdater(MessageTimeRejectionPolicy.class, "maxTimestamp");
+    private final long windowMillis;
+    private final Period windowPeriod;
+    private volatile long maxTimestamp;
+
+    public MessageTimeRejectionPolicy(long windowMillis, Period windowPeriod)
     {
-      private volatile long maxTimestamp = JodaUtils.MIN_INSTANT;
+      this.windowMillis = windowMillis;
+      this.windowPeriod = windowPeriod;
+      this.maxTimestamp = JodaUtils.MIN_INSTANT;
+    }
 
-      @Override
-      public DateTime getCurrMaxTime()
-      {
-        return new DateTime(maxTimestamp);
+    @Override
+    public DateTime getCurrMaxTime()
+    {
+      return new DateTime(maxTimestamp);
+    }
+
+    @Override
+    public boolean accept(long timestamp)
+    {
+      long maxTimestamp = this.maxTimestamp;
+      if (timestamp > maxTimestamp) {
+        maxTimestamp = tryUpdateMaxTimestamp(timestamp);
       }
 
-      @Override
-      public boolean accept(long timestamp)
-      {
-        maxTimestamp = Math.max(maxTimestamp, timestamp);
+      return timestamp >= (maxTimestamp - windowMillis);
+    }
 
-        return timestamp >= (maxTimestamp - windowMillis);
-      }
+    private long tryUpdateMaxTimestamp(long timestamp)
+    {
+      long currentMaxTimestamp;
+      do {
+        currentMaxTimestamp = maxTimestamp;
+        if (timestamp <= currentMaxTimestamp) {
+          return currentMaxTimestamp;
+        }
+      } while (!maxTimestampUpdater.compareAndSet(this, currentMaxTimestamp, timestamp));
+      return timestamp;
+    }
 
-      @Override
-      public String toString()
-      {
-        return String.format("messageTime-%s", windowPeriod);
-      }
-    };
+    @Override
+    public String toString()
+    {
+      return String.format("messageTime-%s", windowPeriod);
+    }
   }
 }
 

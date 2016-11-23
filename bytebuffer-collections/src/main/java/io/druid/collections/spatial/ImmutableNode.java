@@ -169,7 +169,7 @@ public class ImmutableNode
       {
         return new Iterator<ImmutableNode>()
         {
-          private volatile int count = 0;
+          private int count = 0;
 
           @Override
           public boolean hasNext()
