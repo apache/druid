@@ -67,6 +67,7 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -548,7 +549,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         if (terminated) {
           log.info("Finished stopping in %,dms.", elapsed);
         } else {
-          final Set<String> stillRunning = ImmutableSet.copyOf(tasks.keySet());
+          final Set<String> stillRunning;
+          synchronized (tasks) {
+            stillRunning = ImmutableSet.copyOf(tasks.keySet());
+          }
 
           log.makeAlert("Failed to stop forked tasks")
              .addData("stillRunning", stillRunning)
@@ -670,6 +674,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
   // Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
   // occur while saving.
+  @GuardedBy("tasks")
   private void saveRunningTasks()
   {
     final File restoreFile = getRestoreFile();

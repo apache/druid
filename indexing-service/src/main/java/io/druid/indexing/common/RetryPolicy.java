@@ -31,8 +31,8 @@ public class RetryPolicy
   private final long maxNumRetries;
   private final Duration maxRetryDelay;
 
-  private volatile Duration currRetryDelay;
-  private volatile int retryCount;
+  private Duration currRetryDelay;
+  private int retryCount;
 
   public RetryPolicy(RetryPolicyConfig config)
   {

@@ -38,7 +38,7 @@ public class LifecycleScope implements Scope
   private final Lifecycle.Stage stage;
 
   private Lifecycle lifecycle;
-  private List<Object> instances = Lists.newLinkedList();
+  private final List<Object> instances = Lists.newLinkedList();
 
   public LifecycleScope(Lifecycle.Stage stage)
   {
@@ -47,8 +47,8 @@ public class LifecycleScope implements Scope
 
   public void setLifecycle(Lifecycle lifecycle)
   {
-    this.lifecycle = lifecycle;
     synchronized (instances) {
+      this.lifecycle = lifecycle;
       for (Object instance : instances) {
         lifecycle.addManagedInstance(instance);
       }
