@@ -23,8 +23,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.parsers.Parser;
-import org.apache.commons.collections.keyvalue.MultiKey;
 
 import java.io.IOException;
 import java.util.Map;
@@ -38,16 +38,38 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class MultiMapsPopulator<K, V>
 {
-  private final Parser<MultiKey, Map<K, V>> parser;
-  private Function<MultiKey, Map<K, V>> mapAllocator;
+  private final Parser<Pair, Map<K, V>> parser;
+  private Function<Pair, Map<K, V>> mapAllocator;
 
   public MultiMapsPopulator(
-      Parser<MultiKey, Map<K, V>> parser,
-      Function<MultiKey, Map<K, V>> mapAllocator
+      Parser<Pair, Map<K, V>> parser,
+      Function<Pair, Map<K, V>> mapAllocator
   )
   {
     this.parser = parser;
     this.mapAllocator = mapAllocator;
+  }
+
+  public static class PopulateResult
+  {
+    private final int lines;
+    private final int entries;
+
+    public PopulateResult(int lines, int entries)
+    {
+      this.lines = lines;
+      this.entries = entries;
+    }
+
+    public int getLines()
+    {
+      return lines;
+    }
+
+    public int getEntries()
+    {
+      return entries;
+    }
   }
 
   /**
@@ -60,10 +82,10 @@ public class MultiMapsPopulator<K, V>
    *
    * @throws IOException
    */
-  public MapPopulator.PopulateResult populate(final ByteSource source, final ConcurrentMap<MultiKey, Map<K, V>> maps) throws IOException
+  public PopulateResult populate(final ByteSource source, final ConcurrentMap<Pair, Map<K, V>> maps) throws IOException
   {
     return source.asCharSource(Charsets.UTF_8).readLines(
-        new LineProcessor<MapPopulator.PopulateResult>()
+        new LineProcessor<PopulateResult>()
         {
           private int lines = 0;
           private int entries = 0;
@@ -71,8 +93,8 @@ public class MultiMapsPopulator<K, V>
           @Override
           public boolean processLine(String line) throws IOException
           {
-            Map<MultiKey, Map<K, V>> parseResult = parser.parse(line);
-            for (Map.Entry<MultiKey, Map<K, V>> entry: parseResult.entrySet()) {
+            Map<Pair, Map<K, V>> parseResult = parser.parse(line);
+            for (Map.Entry<Pair, Map<K, V>> entry: parseResult.entrySet()) {
               Map<K, V> map = maps.get(entry.getKey());
               if (map == null)
               {
@@ -88,9 +110,9 @@ public class MultiMapsPopulator<K, V>
           }
 
           @Override
-          public MapPopulator.PopulateResult getResult()
+          public PopulateResult getResult()
           {
-            return new MapPopulator.PopulateResult(lines, entries);
+            return new PopulateResult(lines, entries);
           }
         }
     );

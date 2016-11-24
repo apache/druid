@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
@@ -38,7 +39,6 @@ import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
 import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.server.lookup.namespace.JDBCExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -97,10 +97,10 @@ public class JDBCExtractionNamespaceTest
       "how about that", "how",
       "empty string", "empty"
   );
-  private static final Map<MultiKey, Map<String, String>> mapOfMap = ImmutableMap.of(
-      new MultiKey(namespace, KeyValueMap.DEFAULT_MAPNAME), renames,
-      new MultiKey(namespace, "appends"), appends,
-      new MultiKey(namespace, "get1st"), get1stWord
+  private static final Map<Pair, Map<String, String>> mapOfMap = ImmutableMap.of(
+      new Pair(namespace, KeyValueMap.DEFAULT_MAPNAME), renames,
+      new Pair(namespace, "appends"), appends,
+      new Pair(namespace, "get1st"), get1stWord
   );
 
   private static final List<KeyValueMap> DEFAULT_ONLY_MAP = ImmutableList.of (
@@ -156,7 +156,7 @@ public class JDBCExtractionNamespaceTest
                 0,
                 handle.createStatement(
                     String.format(
-                        "CREATE TABLE %s (\"%s\" TIMESTAMP, \"%s\" VARCHAR(64), \"%s\" VARCHAR(64), \"%s\" VARCHAR(64), \"%s\" VARCHAR(64))",
+                        "CREATE TABLE \"%s\" (\"%s\" TIMESTAMP, \"%s\" VARCHAR(64), \"%s\" VARCHAR(64), \"%s\" VARCHAR(64), \"%s\" VARCHAR(64))",
                         tableName,
                         tsColumn_,
                         keyName,
@@ -166,14 +166,14 @@ public class JDBCExtractionNamespaceTest
                     )
                 ).setQueryTimeout(1).execute()
             );
-            handle.createStatement(String.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
+            handle.createStatement(String.format("TRUNCATE TABLE \"%s\"", tableName)).setQueryTimeout(1).execute();
             handle.commit();
             closer.register(new Closeable()
             {
               @Override
               public void close() throws IOException
               {
-                handle.createStatement("DROP TABLE " + tableName).setQueryTimeout(1).execute();
+                handle.createStatement("DROP TABLE \"" + tableName + "\"").setQueryTimeout(1).execute();
                 final ListenableFuture future = setupTeardownService.submit(new Runnable()
                 {
                   @Override
@@ -235,8 +235,8 @@ public class JDBCExtractionNamespaceTest
                           final String id,
                           final JDBCExtractionNamespace namespace,
                           final String lastVersion,
-                          final ConcurrentMap<MultiKey, Map<String, String>> cache,
-                          final Function<MultiKey, Map<String, String>> mapAllocator
+                          final ConcurrentMap<Pair, Map<String, String>> cache,
+                          final Function<Pair, Map<String, String>> mapAllocator
                       ) throws Exception
                       {
                         updateLock.lockInterruptibly();
@@ -371,17 +371,17 @@ public class JDBCExtractionNamespaceTest
     final String query;
     if (tsColumn == null) {
       handle.createStatement(
-          String.format("DELETE FROM %s WHERE \"%s\"='%s'", tableName, keyName, key)
+          String.format("DELETE FROM \"%s\" WHERE \"%s\"='%s'", tableName, keyName, key)
       ).setQueryTimeout(1).execute();
       query = String.format(
-          "INSERT INTO %s (\"%s\", \"%s\", \"%s\", \"%s\") VALUES ('%s', '%s', '%s', '%s')",
+          "INSERT INTO \"%s\" (\"%s\", \"%s\", \"%s\", \"%s\") VALUES ('%s', '%s', '%s', '%s')",
           tableName,
           keyName, valName1, valName2, valName3,
           key, val1, val2, val3
       );
     } else {
       query = String.format(
-          "INSERT INTO %s (\"%s\", \"%s\", \"%s\", \"%s\", \"%s\") VALUES ('%s', '%s', '%s', '%s', '%s')",
+          "INSERT INTO \"%s\" (\"%s\", \"%s\", \"%s\", \"%s\", \"%s\") VALUES ('%s', '%s', '%s', '%s', '%s')",
           tableName,
           tsColumn, keyName, valName1, valName2, valName3,
           updateTs, key, val1, val2, val3
@@ -500,7 +500,7 @@ public class JDBCExtractionNamespaceTest
   {
     for (KeyValueMap keyValueMap: namespace.getMaps())
     {
-      MultiKey mapKey = new MultiKey(id, keyValueMap.getMapName());
+      Pair mapKey = new Pair(id, keyValueMap.getMapName());
       Map<String, String> map = extractionCacheManager.getCacheMap(id).get(mapKey);
 
       for (Map.Entry<String, String> entry : mapOfMap.get(mapKey).entrySet()) {
@@ -528,7 +528,7 @@ public class JDBCExtractionNamespaceTest
 
     waitForUpdates(1_000L, 2L);
 
-    MultiKey mapKey = new MultiKey(namespace, KeyValueMap.DEFAULT_MAPNAME);
+    Pair mapKey = new Pair(namespace, KeyValueMap.DEFAULT_MAPNAME);
     Assert.assertEquals(
         "sanity check not correct",
         "bar",
@@ -568,7 +568,7 @@ public class JDBCExtractionNamespaceTest
   {
     waitForUpdates(1_000L, 2L);
 
-    Map<String, String> map = extractionCacheManager.getCacheMap(namespace).get(new MultiKey(namespace, mapName));
+    Map<String, String> map = extractionCacheManager.getCacheMap(namespace).get(new Pair(namespace, mapName));
 
     // rely on test timeout to break out of this loop
     while (!expected.equals(map.get(key))) {

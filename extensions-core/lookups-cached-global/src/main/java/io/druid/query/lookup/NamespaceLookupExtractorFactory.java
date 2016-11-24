@@ -26,15 +26,14 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
-import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -222,7 +221,7 @@ public class NamespaceLookupExtractorFactory extends LookupExtractorFactory
         if (preVersion == null) {
           throw new ISE("Namespace vanished for [%s]", extractorID);
         }
-        map = manager.getCacheMap(extractorID).get(new MultiKey(extractorID, mapName));
+        map = manager.getCacheMap(extractorID).get(new Pair<String, String>(extractorID, mapName));
         if (map == null) {
           throw new ISE("map [%s] does not exists in [%s]", mapName, extractorID);
         }
@@ -255,7 +254,7 @@ public class NamespaceLookupExtractorFactory extends LookupExtractorFactory
     }
   }
 
-  public Map<MultiKey, Map<String, String>> getAllMaps()
+  public Map<Pair, Map<String, String>> getAllMaps()
   {
     final Lock readLock = startStopSync.readLock();
     readLock.lock();
@@ -264,7 +263,7 @@ public class NamespaceLookupExtractorFactory extends LookupExtractorFactory
         throw new ISE("Factory [%s] not started", extractorID);
       }
       String preVersion = null, postVersion = null;
-      Map<MultiKey, Map<String, String>> mapMap = null;
+      Map<Pair, Map<String, String>> mapMap = null;
       // Make sure we absolutely know what version of map we grabbed (for caching purposes)
       do {
         preVersion = manager.getVersion(extractorID);

@@ -20,20 +20,18 @@
 package io.druid.server.lookup.namespace;
 
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.data.SearchableVersionedDataFinder;
-import io.druid.data.input.MapPopulator;
 import io.druid.data.input.MultiMapsPopulator;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
-import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
@@ -67,8 +65,8 @@ public class URIExtractionNamespaceCacheFactory extends ExtractionNamespaceCache
       final String id,
       final URIExtractionNamespace extractionNamespace,
       @Nullable final String lastVersion,
-      final ConcurrentMap<MultiKey, Map<String, String>> cache,
-      final Function<MultiKey, Map<String, String>> mapAllocator
+      final ConcurrentMap<Pair, Map<String, String>> cache,
+      final Function<Pair, Map<String, String>> mapAllocator
   ) throws Exception
   {
     final boolean doSearch = extractionNamespace.getUriPrefix() != null;
@@ -164,11 +162,8 @@ public class URIExtractionNamespaceCacheFactory extends ExtractionNamespaceCache
                 }
               };
             }
-            final MapPopulator.PopulateResult populateResult = new MultiMapsPopulator<>(
-                extractionNamespace.getParser(
-                    extractionNamespace.getNamespaceParseSpec().getParser(),
-                    id
-                ),
+            final MultiMapsPopulator.PopulateResult populateResult = new MultiMapsPopulator<>(
+                extractionNamespace.getParser().withID(id),
                 mapAllocator
             ).populate(source, cache);
             log.info(

@@ -32,7 +32,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Json;
@@ -41,7 +40,6 @@ import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -98,7 +96,6 @@ public class NamespaceLookupExtractorFactoryTest
         temporaryFolder.newFolder().toURI(),
         null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
-        KeyValueMap.DEFAULT_MAPS,
         Period.millis(0),
         null
     );
@@ -546,7 +543,7 @@ public class NamespaceLookupExtractorFactoryTest
     );
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
-    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
+    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"maps\":[{\"mapName\":\"__default\",\"keyColumn\":\"someKey\", \"valueColumn\":\"someVal\"}]}, \"pollPeriod\": \"PT5M\" } } }";
     final LookupExtractorFactory factory = mapper.readValue(str, LookupExtractorFactory.class);
     Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = (NamespaceLookupExtractorFactory) factory;
@@ -598,14 +595,14 @@ public class NamespaceLookupExtractorFactoryTest
       Assert.assertNotNull(handler);
       final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
       Assert.assertNotNull(clazz.getMethod("getVersion").invoke(handler));
-      Assert.assertEquals(ImmutableSet.of(KeyValueMap.DEFAULT_MAPNAME), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
+      Assert.assertEquals(ImmutableSet.of("foo"), ((Response) clazz.getMethod("getDefaultKeys").invoke(handler)).getEntity());
       Assert.assertEquals(
-          ImmutableList.of(ImmutableMap.of("foo", "bar")),
-          Lists.newArrayList((Collection<String>) ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity())
+          ImmutableList.of("bar"),
+          Lists.newArrayList((Collection<String>) ((Response) clazz.getMethod("getDefaultValues").invoke(handler)).getEntity())
       );
       Assert.assertEquals(
-          ImmutableList.of(ImmutableMap.of(KeyValueMap.DEFAULT_MAPNAME, ImmutableMap.of("foo", "bar"))),
-          Lists.newArrayList((Map<String, Map<String, String>>) ((Response) clazz.getMethod("getMap").invoke(handler)).getEntity())
+          ImmutableList.of(ImmutableMap.of("foo", "bar")),
+          Lists.newArrayList((Map<String, Map<String, String>>) ((Response) clazz.getMethod("getDefault").invoke(handler)).getEntity())
       );
     }
     finally {
@@ -645,7 +642,7 @@ public class NamespaceLookupExtractorFactoryTest
     validateCode(
         new ISE("some exception"),
         404,
-        "getKeys",
+        "getDefaultKeys",
         handler,
         manager,
         clazz
@@ -654,7 +651,7 @@ public class NamespaceLookupExtractorFactoryTest
     validateCode(
         new ISE("some exception"),
         404,
-        "getValues",
+        "getDefaultValues",
         handler,
         manager,
         clazz
@@ -663,7 +660,7 @@ public class NamespaceLookupExtractorFactoryTest
     validateCode(
         new ISE("some exception"),
         404,
-        "getMap",
+        "getDefault",
         handler,
         manager,
         clazz

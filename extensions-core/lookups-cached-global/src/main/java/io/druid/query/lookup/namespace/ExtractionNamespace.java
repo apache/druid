@@ -22,8 +22,6 @@ package io.druid.query.lookup.namespace;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.util.List;
-
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "jdbc", value = JDBCExtractionNamespace.class),
@@ -37,10 +35,5 @@ import java.util.List;
  */
 public abstract class ExtractionNamespace
 {
-  List<KeyValueMap> getMaps()
-  {
-    return KeyValueMap.DEFAULT_MAPS;
-  }
-
   public abstract long getPollMs();
 }

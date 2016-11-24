@@ -19,24 +19,20 @@
 
 package io.druid.query.lookup;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import io.druid.common.utils.ServletResourceUtils;
-import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
+import io.druid.query.lookup.namespace.KeyValueMap;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
-import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
 {
@@ -52,38 +48,96 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
     this.extractorID = extractorID;
     this.manager = manager;
   }
+
+  @GET
+  @Path("/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getDefault()
+  {
+    return getMap(KeyValueMap.DEFAULT_MAPNAME);
+  }
+
   @GET
   @Path("/keys")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getKeys()
+  public Response getDefaultKeys()
   {
-    try {
-      Set<MultiKey> keySet = getLatest().keySet();
-      List<String> cleanedKeyList = Lists.transform(
-          Lists.newArrayList(keySet),
-          new Function<MultiKey, String>() {
-            @Override
-            public String apply(MultiKey key) {
-              return (String) key.getKey(1);
-            }
-          }
-      );
-      return Response.ok(Sets.newHashSet(cleanedKeyList)).build();
-    }
-    catch (ISE e) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
-    }
+    return getKeys(KeyValueMap.DEFAULT_MAPNAME);
   }
 
   @GET
   @Path("/values")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getValues()
+  public Response getDefaultValues()
+  {
+    return getValues(KeyValueMap.DEFAULT_MAPNAME);
+  }
+
+  @GET
+  @Path("/maps")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getMaps(
+  )
   {
     try {
-      return Response.ok(getLatest().values()).build();
+      return Response.ok(getIdCleanedMaps().keySet()).build();
     }
-    catch (ISE e) {
+    catch (Exception e) {
+      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @GET
+  @Path("/maps/{mapName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getMap(
+      @PathParam("mapName") final String mapName
+  )
+  {
+    try {
+      return Response.ok(getIdCleanedMaps().get(mapName)).build();
+    }
+    catch (Exception e) {
+      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @GET
+  @Path("/maps/{mapName}/keys")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getKeys(
+      @PathParam("mapName") final String mapName
+  )
+  {
+    try {
+      Map<String, String> map = getIdCleanedMaps().get(mapName);
+      if (map == null) {
+        return Response.noContent().build();
+      }
+
+      return Response.ok(map.keySet()).build();
+    }
+    catch (Exception e) {
+      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @GET
+  @Path("/maps/{mapName}/values")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getValues(
+      @PathParam("mapName") final String mapName
+  )
+  {
+    try {
+      Map<String, String> map = getIdCleanedMaps().get(mapName);
+      if (map == null) {
+        return Response.noContent().build();
+      }
+
+      return Response.ok(map.values()).build();
+    }
+    catch (Exception e) {
       return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
     }
   }
@@ -102,26 +156,14 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
     }
   }
 
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getMap()
+  private Map<String, Map<String, String>> getIdCleanedMaps()
   {
-    try {
-      Map<MultiKey, Map<String, String>> mapMap = getLatest();
-      Map<String, Map<String, String>> retMap = Maps.newHashMap();
-      for (MultiKey key :mapMap.keySet()) {
-        String mapName = (String) key.getKey(1);
-        retMap.put(mapName, mapMap.get(key));
-      }
-      return Response.ok(retMap).build();
+    Map<Pair, Map<String, String>> mapMap = factory.getAllMaps();
+    Map<String, Map<String, String>> retMap = Maps.newHashMap();
+    for (Pair key :mapMap.keySet()) {
+      String mapName = (String) key.rhs;
+      retMap.put(mapName, mapMap.get(key));
     }
-    catch (ISE e) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
-    }
-  }
-
-  private Map<MultiKey, Map<String, String>> getLatest()
-  {
-    return factory.getAllMaps();
+    return retMap;
   }
 }

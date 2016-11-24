@@ -30,10 +30,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharSink;
 import com.google.common.io.Files;
-import io.druid.data.input.MapPopulator;
 import io.druid.data.input.MultiMapsPopulator;
 import io.druid.jackson.DefaultObjectMapper;
-import org.apache.commons.collections.keyvalue.MultiKey;
+import io.druid.java.util.common.Pair;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,13 +40,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class JSONFlatDataParserTest
@@ -104,29 +100,14 @@ public class JSONFlatDataParserTest
         null,
         null,
         new URIExtractionNamespace.JSONFlatDataParser(
-            MAPPER
+            MAPPER,
+            ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val"))
         ),
-        ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val")),
         null,
         null
     );
-    final ConcurrentMap<MultiKey, Map<String, String>> map = Maps.newConcurrentMap();
-    new MultiMapsPopulator<>(extractionNamespace.getParser(extractionNamespace.getNamespaceParseSpec().getParser(), "test"),
-        new Function<MultiKey, Map<String, String>>()
-        {
-          @Override
-          public Map<String, String> apply(MultiKey key)
-          {
-            Map<String, String> inner = map.get(key);
-            if (inner == null) {
-              map.putIfAbsent(key, Maps.<String, String>newHashMap());
-              inner = map.get(key);
-            }
-            return inner;
-          }
-        })
-        .populate(Files.asByteSource(tmpFile), map);
-    final Map<String, String> resultMap = map.get(new MultiKey("test", KeyValueMap.DEFAULT_MAPNAME));
+    final ConcurrentMap<Pair, Map<String, String>> map = populateMap(extractionNamespace, "test");
+    final Map<String, String> resultMap = map.get(new Pair("test", KeyValueMap.DEFAULT_MAPNAME));
     Assert.assertEquals(VAL1, resultMap.get(KEY1));
     Assert.assertEquals(VAL2, resultMap.get(KEY2));
   }
@@ -139,29 +120,14 @@ public class JSONFlatDataParserTest
         null,
         null,
         new URIExtractionNamespace.JSONFlatDataParser(
-            MAPPER
+            MAPPER,
+            ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "otherVal"))
         ),
-        ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "otherVal")),
         null,
         null
     );
-    final ConcurrentMap<MultiKey, Map<String, String>> map = Maps.newConcurrentMap();
-    new MultiMapsPopulator<>(extractionNamespace.getParser(extractionNamespace.getNamespaceParseSpec().getParser(), "test2"),
-        new Function<MultiKey, Map<String, String>>()
-        {
-          @Override
-          public Map<String, String> apply(MultiKey key)
-          {
-            Map<String, String> inner = map.get(key);
-            if (inner == null) {
-              map.putIfAbsent(key, Maps.<String, String>newHashMap());
-              inner = map.get(key);
-            }
-            return inner;
-          }
-        })
-        .populate(Files.asByteSource(tmpFile), map);
-    final Map<String, String> resultMap = map.get(new MultiKey("test2", KeyValueMap.DEFAULT_MAPNAME));
+    final ConcurrentMap<Pair, Map<String, String>> map = populateMap(extractionNamespace, "test2");
+    final Map<String, String> resultMap = map.get(new Pair("test2", KeyValueMap.DEFAULT_MAPNAME));
     Assert.assertEquals(OTHERVAL1, resultMap.get(KEY1));
     Assert.assertEquals(OTHERVAL2, resultMap.get(KEY2));
   }
@@ -174,18 +140,52 @@ public class JSONFlatDataParserTest
         null,
         null,
         new URIExtractionNamespace.JSONFlatDataParser(
-            MAPPER
+            MAPPER,
+            ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "canBeEmpty"))
         ),
-        ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "canBeEmpty")),
         null,
         null
     );
-    final ConcurrentMap<MultiKey, Map<String, String>> map = Maps.newConcurrentMap();
-    new MultiMapsPopulator<>(extractionNamespace.getParser(extractionNamespace.getNamespaceParseSpec().getParser(), "test3"),
-        new Function<MultiKey, Map<String, String>>()
+    final ConcurrentMap<Pair, Map<String, String>> map = populateMap(extractionNamespace, "test3");
+    final Map<String, String> resultMap = map.get(new Pair("test3", KeyValueMap.DEFAULT_MAPNAME));
+    Assert.assertEquals(CANBEEMPTY1, resultMap.get(KEY1));
+    Assert.assertEquals(CANBEEMPTY2, resultMap.get(KEY2));
+  }
+
+  @Test
+  public void testFailParseOnKeyMissing() throws Exception
+  {
+    final URIExtractionNamespace extractionNamespace = new URIExtractionNamespace(
+        new URI("dummy"),
+        null,
+        null,
+        new URIExtractionNamespace.JSONFlatDataParser(
+            MAPPER,
+            ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "keyWHOOPS", "val"))
+        ),
+        null,
+        null
+    );
+    expectedException.expect(NullPointerException.class);
+    expectedException.expectMessage("Key column [keyWHOOPS] missing data in line");
+
+    final ConcurrentMap<Pair, Map<String, String>> map = populateMap(extractionNamespace, "test4");
+    final Map<String, String> resultMap = map.get(new Pair("test4", KeyValueMap.DEFAULT_MAPNAME));
+    Assert.assertEquals(null, resultMap.get(KEY1));
+  }
+
+  private ConcurrentMap<Pair, Map<String, String>> populateMap(
+      URIExtractionNamespace extractionNamespace,
+      String id
+  ) throws Exception
+  {
+    final ConcurrentMap<Pair, Map<String, String>> map = Maps.newConcurrentMap();
+
+    new MultiMapsPopulator<>(extractionNamespace.getParser().withID(id),
+        new Function<Pair, Map<String, String>>()
         {
           @Override
-          public Map<String, String> apply(MultiKey key)
+          public Map<String, String> apply(Pair key)
           {
             Map<String, String> inner = map.get(key);
             if (inner == null) {
@@ -196,21 +196,7 @@ public class JSONFlatDataParserTest
           }
         })
         .populate(Files.asByteSource(tmpFile), map);
-    final Map<String, String> resultMap = map.get(new MultiKey("test3", KeyValueMap.DEFAULT_MAPNAME));
-    Assert.assertEquals(CANBEEMPTY1, resultMap.get(KEY1));
-    Assert.assertEquals(CANBEEMPTY2, resultMap.get(KEY2));
-  }
 
-  @Test
-  public void testNonExistingParse() throws Exception
-  {
-    final URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
-        MAPPER
-    );
-    final Map<String, Object> map = new HashMap<>();
-    final Map<String, Object> resultMap = new HashMap<>();
-    new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
-    resultMap.put((String)map.get("keyWHOOPS"), map.get("val"));
-    Assert.assertEquals(null, resultMap.get(KEY1));
+    return map;
   }
 }

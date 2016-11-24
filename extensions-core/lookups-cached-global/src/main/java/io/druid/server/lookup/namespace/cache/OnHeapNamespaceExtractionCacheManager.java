@@ -23,11 +23,11 @@ import com.google.common.primitives.Chars;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import org.apache.commons.collections.keyvalue.MultiKey;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentMap;
 public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
   private static final Logger LOG = new Logger(OnHeapNamespaceExtractionCacheManager.class);
-  private final ConcurrentMap<MultiKey, ConcurrentMap<String, String>> mapMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Pair, ConcurrentMap<String, String>> mapMap = new ConcurrentHashMap<>();
 
   @Inject
   public OnHeapNamespaceExtractionCacheManager(
@@ -52,7 +52,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   }
 
   @Override
-  public ConcurrentMap<String, String> getOrAllocateInnerCacheMap(MultiKey key)
+  public ConcurrentMap<String, String> getOrAllocateInnerCacheMap(Pair key)
   {
     ConcurrentMap<String, String> map = mapMap.get(key);
     if (map == null) {
@@ -63,7 +63,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   }
 
   @Override
-  protected boolean deleteInnerCacheMaps(final ConcurrentMap<MultiKey, Map<String, String>> map)
+  protected boolean deleteInnerCacheMaps(final ConcurrentMap<Pair, Map<String, String>> map)
   {
     // do nothing because references to maps will be removed by NamesapceExtractionCacheManager after the return of this method
     // and GC will clean maps eventually
@@ -75,11 +75,11 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   {
     long numEntries = 0;
     long size = 0;
-    for (Map.Entry<MultiKey, ConcurrentMap<String, String>> entry : mapMap.entrySet()) {
+    for (Map.Entry<Pair, ConcurrentMap<String, String>> entry : mapMap.entrySet()) {
       final ConcurrentMap<String, String> map = entry.getValue();
-      final MultiKey cacheKey = entry.getKey();
+      final Pair cacheKey = entry.getKey();
       if (map == null) {
-        LOG.debug("missing cache key for reporting [%s of %s]", cacheKey.getKey(1), cacheKey.getKey(0));
+        LOG.debug("missing cache key for reporting [%s of %s]", cacheKey.rhs, cacheKey.lhs);
         continue;
       }
       numEntries += map.size();
@@ -87,7 +87,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
         final String key = sEntry.getKey();
         final String value = sEntry.getValue();
         if (key == null || value == null) {
-          LOG.debug("Missing entries for cache key [%s of %s]", cacheKey.getKey(1), cacheKey.getKey(0));
+          LOG.debug("Missing entries for cache key [%s of %s]", cacheKey.rhs, cacheKey.lhs);
           continue;
         }
         size += key.length() + value.length();

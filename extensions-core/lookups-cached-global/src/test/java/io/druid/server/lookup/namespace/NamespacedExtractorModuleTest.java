@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
@@ -34,7 +35,6 @@ import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -103,13 +103,12 @@ public class NamespacedExtractorModuleTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
-    ConcurrentMap<MultiKey, Map<String, String>> mapMap = new ConcurrentHashMap<>();
+    ConcurrentMap<Pair, Map<String, String>> mapMap = new ConcurrentHashMap<>();
     factory.populateCache(namespaceID, namespace, null, mapMap, NamespaceExtractionCacheManager.getMapAllocator(cacheManager));
-    Map<String, String> map = mapMap.get(new MultiKey(namespaceID, KeyValueMap.DEFAULT_MAPNAME));
+    Map<String, String> map = mapMap.get(new Pair(namespaceID, KeyValueMap.DEFAULT_MAPNAME));
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
     cacheManager.delete(namespaceID);
@@ -127,7 +126,6 @@ public class NamespacedExtractorModuleTest
         tmpFile.toURI(),
         null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -155,7 +153,6 @@ public class NamespacedExtractorModuleTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -177,7 +174,6 @@ public class NamespacedExtractorModuleTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );

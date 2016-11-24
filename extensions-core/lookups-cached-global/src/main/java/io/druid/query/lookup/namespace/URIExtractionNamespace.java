@@ -27,19 +27,24 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.parsers.CSVParser;
 import io.druid.java.util.common.parsers.DelimitedParser;
 import io.druid.java.util.common.parsers.JSONParser;
 import io.druid.java.util.common.parsers.Parser;
-import org.apache.commons.collections.keyvalue.MultiKey;
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.Period;
 
@@ -50,6 +55,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -66,8 +72,6 @@ public class URIExtractionNamespace extends ExtractionNamespace
   @JsonProperty
   private final FlatDataParser namespaceParseSpec;
   @JsonProperty
-  private final List<KeyValueMap> maps;
-  @JsonProperty
   private final Period pollPeriod;
   @JsonProperty
   private final String fileRegex;
@@ -82,8 +86,6 @@ public class URIExtractionNamespace extends ExtractionNamespace
           String fileRegex,
       @JsonProperty(value = "namespaceParseSpec", required = true)
           FlatDataParser namespaceParseSpec,
-      @JsonProperty(value = "maps", required = false)
-          List<KeyValueMap> maps,
       @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false)
           Period pollPeriod,
       @Deprecated
@@ -115,12 +117,6 @@ public class URIExtractionNamespace extends ExtractionNamespace
         throw new IAE(ex, "Could not parse `fileRegex` [%s]", this.fileRegex);
       }
     }
-    this.maps = maps == null ? KeyValueMap.DEFAULT_MAPS: maps;
-  }
-
-  public List<KeyValueMap> getMaps()
-  {
-    return maps;
   }
 
   public String getFileRegex()
@@ -156,7 +152,6 @@ public class URIExtractionNamespace extends ExtractionNamespace
            "uri=" + uri +
            ", uriPrefix=" + uriPrefix +
            ", namespaceParseSpec=" + namespaceParseSpec +
-           ", maps = [" + StringUtils.join(maps, ',') + "]" +
            ", fileRegex='" + fileRegex + '\'' +
            ", pollPeriod=" + pollPeriod +
            '}';
@@ -186,9 +181,7 @@ public class URIExtractionNamespace extends ExtractionNamespace
     if (getFileRegex() != null ? !getFileRegex().equals(that.getFileRegex()) : that.getFileRegex() != null) {
       return false;
     }
-    if (!getMaps().equals(that.getMaps())) {
-      return false;
-    }
+
     return pollPeriod.equals(that.pollPeriod);
 
   }
@@ -199,61 +192,78 @@ public class URIExtractionNamespace extends ExtractionNamespace
     int result = getUri() != null ? getUri().hashCode() : 0;
     result = 31 * result + (getUriPrefix() != null ? getUriPrefix().hashCode() : 0);
     result = 31 * result + getNamespaceParseSpec().hashCode();
-    result = 31 * result + maps.hashCode();
     result = 31 * result + (getFileRegex() != null ? getFileRegex().hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();
     return result;
   }
 
-  public DelegateParser getParser(Parser<String, Object> delegate, String id)
+  public FlatDataParser getParser()
   {
-    return new DelegateParser(delegate, id);
+    return namespaceParseSpec;
   }
 
-  private class DelegateParser implements Parser<MultiKey, Map<String, String>>
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
+  @JsonSubTypes(value = {
+      @JsonSubTypes.Type(name = "csv", value = CSVFlatDataParser.class),
+      @JsonSubTypes.Type(name = "tsv", value = TSVFlatDataParser.class),
+      @JsonSubTypes.Type(name = "customJson", value = JSONFlatDataParser.class),
+      @JsonSubTypes.Type(name = "simpleJson", value = ObjectMapperFlatDataParser.class)
+  })
+  public static abstract class FlatDataParser implements Parser<Pair, Map<String, String>>
   {
-    private final Parser<String, Object> delegate;
-    private final String id;
+    protected String id = null;
 
-    private DelegateParser(
-        Parser<String, Object> delegate,
-        String id
-    )
+    public FlatDataParser withID(String id)
     {
-      this.delegate = delegate;
       this.id = id;
+      return this;
     }
 
     @Override
-    public Map<MultiKey, Map<String, String>> parse(String input)
+    public Map<Pair, Map<String, String>> parse(String input)
+    {
+      Preconditions.checkArgument(id != null, "ID should be set before parse().");
+      return parseInternal(input);
+    }
+
+    public abstract Map<Pair, Map<String, String>> parseInternal(String input);
+  }
+
+  public static class MultiMapFlatDataParser extends FlatDataParser
+  {
+    protected final List<KeyValueMap> maps;
+    protected final Parser<String, Object> delegate;
+
+    public MultiMapFlatDataParser(
+        Parser<String, Object> delegate,
+        List<KeyValueMap> maps
+    )
+    {
+      this.delegate = delegate;
+      this.maps = maps;
+    }
+
+    @Override
+    public Map<Pair, Map<String, String>> parseInternal(String input)
     {
       final Map<String, Object> inner = delegate.parse(input);
-      ImmutableMap.Builder<MultiKey, Map<String, String>> builder = new ImmutableMap.Builder<>();
+      ImmutableMap.Builder<Pair, Map<String, String>> builder = new ImmutableMap.Builder<>();
 
-      // somewhat dizzy to support simple json case
-      if (inner.values().iterator().next() instanceof Map)
+      for (KeyValueMap map: maps)
       {
-        for (Map.Entry<String, Object> entry: inner.entrySet())
-        {
-          builder.put(new MultiKey(id, entry.getKey()), (Map <String, String>)entry.getValue());
-        }
-      } else {
-
-        for (KeyValueMap map: maps)
-        {
-          final String k = Preconditions.checkNotNull(
-              inner.get(map.getKeyColumn()),
-              "Key column [%s] missing data in line [%s]",
-              map.getKeyColumn(),
-              input
-          ).toString(); // Just in case is long
-          final Object val = inner.get(map.getValueColumn());
-          // Skip null or missing values, treat them as if there were no row at all.
-          if (val != null) {
-            builder.put(new MultiKey(id, map.getMapName()), ImmutableMap.of(k, val.toString()));
-          }
+        final String k = Preconditions.checkNotNull(
+            inner.get(map.getKeyColumn()),
+            "Key column [%s] missing data in line [%s]",
+            map.getKeyColumn(),
+            input
+        ).toString();// Just in case is long
+        final Object val = inner.get(map.getValueColumn());
+        // Skip null or missing values, treat them as if there were no row at all.
+        if (val != null) {
+          builder.put(new Pair(id, map.getMapName()), ImmutableMap.of(k, val.toString()));
         }
       }
+
       return builder.build();
     }
 
@@ -268,51 +278,37 @@ public class URIExtractionNamespace extends ExtractionNamespace
     {
       return delegate.getFieldNames();
     }
-  }
 
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
-  @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = "csv", value = CSVFlatDataParser.class),
-      @JsonSubTypes.Type(name = "tsv", value = TSVFlatDataParser.class),
-      @JsonSubTypes.Type(name = "customJson", value = JSONFlatDataParser.class),
-      @JsonSubTypes.Type(name = "simpleJson", value = ObjectMapperFlatDataParser.class)
-  })
-  public interface FlatDataParser
-  {
-    Parser<String, Object> getParser();
+    @JsonProperty
+    public List<KeyValueMap> getMaps()
+    {
+      return maps;
+    }
   }
 
   @JsonTypeName("csv")
-  public static class CSVFlatDataParser implements FlatDataParser
+  public static class CSVFlatDataParser extends MultiMapFlatDataParser
   {
-    private final Parser<String, Object> parser;
     private final List<String> columns;
 
     @JsonCreator
     public CSVFlatDataParser(
-        @JsonProperty("columns") List<String> columns
+        @JsonProperty("columns") List<String> columns,
+        @JsonProperty("maps") List<KeyValueMap> maps
     )
     {
-      Preconditions.checkArgument(
-          Preconditions.checkNotNull(columns, "`columns` list required").size() > 1,
-          "Must specify more than one column to have a key value pair"
+      super(
+          new CSVParser(Optional.<String>absent(), columns),
+          URIExtractionNamespace.getOrCreateKeyVauleMaps(maps, columns)
       );
 
       this.columns = columns;
-
-      this.parser = new CSVParser(Optional.<String>absent(), columns);
     }
 
     @JsonProperty
     public List<String> getColumns()
     {
       return columns;
-    }
-
-    @Override
-    public Parser<String, Object> getParser()
-    {
-      return parser;
     }
 
     @Override
@@ -327,6 +323,10 @@ public class URIExtractionNamespace extends ExtractionNamespace
 
       CSVFlatDataParser that = (CSVFlatDataParser) o;
 
+      if (!getMaps().containsAll(that.getMaps()) || !that.getMaps().containsAll(getMaps())) {
+        return false;
+      }
+
       return getColumns().equals(that.getColumns());
     }
 
@@ -334,16 +334,18 @@ public class URIExtractionNamespace extends ExtractionNamespace
     public String toString()
     {
       return String.format(
-          "CSVFlatDataParser = { columns = %s }",
+          "CSVFlatDataParser = { " +
+              "columns = %s " +
+              ", maps = [" + StringUtils.join(maps, ',') + "]" +
+              "}",
           Arrays.toString(columns.toArray())
       );
     }
   }
 
   @JsonTypeName("tsv")
-  public static class TSVFlatDataParser implements FlatDataParser
+  public static class TSVFlatDataParser extends MultiMapFlatDataParser
   {
-    private final Parser<String, Object> parser;
     private final List<String> columns;
     private final String delimiter;
     private final String listDelimiter;
@@ -352,23 +354,22 @@ public class URIExtractionNamespace extends ExtractionNamespace
     public TSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("delimiter") String delimiter,
-        @JsonProperty("listDelimiter") String listDelimiter
+        @JsonProperty("listDelimiter") String listDelimiter,
+        @JsonProperty("maps") List<KeyValueMap> maps
     )
     {
-      Preconditions.checkArgument(
-          Preconditions.checkNotNull(columns, "`columns` list required").size() > 1,
-          "Must specify more than one column to have a key value pair"
+      super(
+          new DelimitedParser(
+              Optional.fromNullable(Strings.emptyToNull(delimiter)),
+              Optional.fromNullable(Strings.emptyToNull(listDelimiter)),
+              columns
+          ),
+          URIExtractionNamespace.getOrCreateKeyVauleMaps(maps, columns)
       );
-      final DelimitedParser delegate = new DelimitedParser(
-          Optional.fromNullable(Strings.emptyToNull(delimiter)),
-          Optional.fromNullable(Strings.emptyToNull(listDelimiter))
-      );
-      delegate.setFieldNames(columns);
+
       this.columns = columns;
       this.delimiter = delimiter;
       this.listDelimiter = listDelimiter;
-
-      this.parser = delegate;
     }
 
     @JsonProperty
@@ -390,12 +391,6 @@ public class URIExtractionNamespace extends ExtractionNamespace
     }
 
     @Override
-    public Parser<String, Object> getParser()
-    {
-      return parser;
-    }
-
-    @Override
     public boolean equals(Object o)
     {
       if (this == o) {
@@ -406,6 +401,10 @@ public class URIExtractionNamespace extends ExtractionNamespace
       }
 
       TSVFlatDataParser that = (TSVFlatDataParser) o;
+
+      if (!getMaps().containsAll(that.getMaps()) || !that.getMaps().containsAll(getMaps())) {
+        return false;
+      }
 
       if (!getColumns().equals(that.getColumns())) {
         return false;
@@ -420,7 +419,12 @@ public class URIExtractionNamespace extends ExtractionNamespace
     public String toString()
     {
       return String.format(
-          "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s'}",
+          "TSVFlatDataParser = { " +
+              "columns = %s" +
+              ", delimiter = '%s'" +
+              ", listDelimiter = '%s'" +
+              ", maps = [" + StringUtils.join(maps, ',') + "]" +
+              "}",
           Arrays.toString(columns.toArray()),
           delimiter,
           listDelimiter
@@ -429,22 +433,18 @@ public class URIExtractionNamespace extends ExtractionNamespace
   }
 
   @JsonTypeName("customJson")
-  public static class JSONFlatDataParser implements FlatDataParser
+  public static class JSONFlatDataParser extends MultiMapFlatDataParser
   {
-    private final Parser<String, Object> parser;
-
     @JsonCreator
     public JSONFlatDataParser(
-        @JacksonInject @Json ObjectMapper jsonMapper
+        @JacksonInject @Json ObjectMapper jsonMapper,
+        @JsonProperty("maps") List<KeyValueMap> maps
     )
     {
-      this.parser = new JSONParser(jsonMapper, null);
-    }
-
-    @Override
-    public Parser<String, Object> getParser()
-    {
-      return this.parser;
+      super(
+          new JSONParser(jsonMapper, getNeededColumns(maps)),
+          maps
+      );
     }
 
     @Override
@@ -457,65 +457,77 @@ public class URIExtractionNamespace extends ExtractionNamespace
         return false;
       }
 
-      return true;
+      JSONFlatDataParser that = (JSONFlatDataParser)o;
+
+      return (getMaps().containsAll(that.getMaps()) && that.getMaps().containsAll(getMaps()));
     }
 
     @Override
     public String toString()
     {
       return String.format(
-          "JSONFlatDataParser = { }"
+          "JSONFlatDataParser = { " +
+              "maps = [" + StringUtils.join(maps, ',') + "]" +
+              "}"
       );
+    }
+
+    private static Set<String> getNeededColumns(List<KeyValueMap> maps)
+    {
+      Set<String> neededColumns = Sets.newHashSet();
+      Preconditions.checkArgument(maps != null, "key/value map should be specified");
+      for (KeyValueMap map: maps) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(map.getKeyColumn()), "key cannot be empty");
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(map.getValueColumn()), "value cannot be empty");
+        neededColumns.add(map.getKeyColumn());
+        neededColumns.add(map.getValueColumn());
+      }
+
+      return neededColumns;
     }
   }
 
   @JsonTypeName("simpleJson")
-  public static class ObjectMapperFlatDataParser implements FlatDataParser
+  public static class ObjectMapperFlatDataParser extends FlatDataParser
   {
-
-    private final Parser<String, Object> parser;
+    private final ObjectMapper jsonMapper;
 
     @JsonCreator
     public ObjectMapperFlatDataParser(
         final @JacksonInject @Json ObjectMapper jsonMapper
     )
     {
-      parser = new Parser<String, Object>()
-      {
-        @Override
-        public Map<String, Object> parse(String input)
-        {
-          try {
-            Map<String, String> map = jsonMapper.readValue(
-                input, new TypeReference<Map<String, String>>()
-                {
-                });
-
-            return new ImmutableMap.Builder<String, Object>().put(KeyValueMap.DEFAULT_MAPNAME, map).build();
-          }
-          catch (IOException e) {
-            throw Throwables.propagate(e);
-          }
-        }
-
-        @Override
-        public void setFieldNames(Iterable<String> fieldNames)
-        {
-          throw new UOE("No field names available");
-        }
-
-        @Override
-        public List<String> getFieldNames()
-        {
-          throw new UOE("No field names available");
-        }
-      };
+      this.jsonMapper = jsonMapper;
     }
 
     @Override
-    public Parser<String, Object> getParser()
+    public Map<Pair, Map<String, String>> parseInternal(String input)
     {
-      return parser;
+      Preconditions.checkArgument(id != null, "ID should be set before.");
+
+      try {
+        Map<String, String> kvMap = jsonMapper.readValue(
+            input, new TypeReference<Map<String, String>>() {}
+        );
+        return ImmutableMap.of(
+            new Pair(id, KeyValueMap.DEFAULT_MAPNAME),
+            kvMap
+        );
+      } catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
+    @Override
+    public void setFieldNames(Iterable<String> fieldNames)
+    {
+      throw new UOE("No field names available");
+    }
+
+    @Override
+    public List<String> getFieldNames()
+    {
+      throw new UOE("No field names available");
     }
 
     @Override
@@ -536,5 +548,52 @@ public class URIExtractionNamespace extends ExtractionNamespace
     {
       return "ObjectMapperFlatDataParser = { }";
     }
+  }
+
+  private static List<KeyValueMap> getOrCreateKeyVauleMaps(List<KeyValueMap> maps, List<String> columns)
+  {
+    Preconditions.checkArgument(
+        Preconditions.checkNotNull(columns, "`columns` list required").size() > 1,
+        "Must specify more than one column to have a key value pair"
+    );
+
+    if (maps == null) {
+      return ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, columns.get(0), columns.get(1)));
+    }
+
+    Set<String> neededColumns = FluentIterable
+        .from(maps)
+        .transformAndConcat(
+            new Function<KeyValueMap, List<String>>()
+            {
+              @Override
+              public List<String> apply(KeyValueMap input)
+              {
+                return ImmutableList.of(input.getKeyColumn(), input.getValueColumn());
+              }
+            }
+        )
+        .toSet();
+    Preconditions.checkArgument(
+        columns.containsAll(neededColumns),
+        "columns should contains all the key/value columns specified in keyValueMaps: columns[%s], keyValueMaps[%s]",
+        StringUtils.join(columns, ","), StringUtils.join(maps, ",")
+    );
+
+    List<KeyValueMap> defaultFilledMaps = Lists.newArrayListWithCapacity(maps.size());
+    for (KeyValueMap map: maps) {
+      String key = map.getKeyColumn();
+      String value = map.getValueColumn();
+      if (Strings.isNullOrEmpty(key)) {
+        key = columns.get(0);
+      }
+      if (Strings.isNullOrEmpty(value)) {
+        value = columns.get(1);
+      }
+
+      defaultFilledMaps.add(new KeyValueMap(map.getMapName(), key, value));
+    }
+
+    return defaultFilledMaps;
   }
 }

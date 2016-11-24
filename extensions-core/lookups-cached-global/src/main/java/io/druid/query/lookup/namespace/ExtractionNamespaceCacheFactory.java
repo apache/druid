@@ -20,7 +20,7 @@
 package io.druid.query.lookup.namespace;
 
 import com.google.common.base.Function;
-import org.apache.commons.collections.keyvalue.MultiKey;
+import io.druid.java.util.common.Pair;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -41,9 +41,9 @@ public class ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
    * If the returned version is the same as what is passed in as lastVersion, then no swap takes place, and the swap
    * is discarded.
    *
-   * This method is used to support previously implemented {@link #populateCache(String, ExtractionNamespace, String, Map) getCachePopulator()}
+   * This method is used to support previously implemented {@link #populateCache(String, ExtractionNamespace, String, Map) populateCache()}
    * that did not support multiple maps in one lookup.
-   * This method injects the result of that getCachePopulator() as a default map of lookup.
+   * This method injects the result of that populateCache() as a default map of lookup.
    * If you want to support multiple maps in one lookup, you should override this method as onheap and offheap factories do.
    *
    * @param id                  The ID of ExtractionNamespace
@@ -60,11 +60,11 @@ public class ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
       String id,
       T extractionNamespace,
       String lastVersion,
-      ConcurrentMap<MultiKey, Map<String, String>> swap,
-      Function<MultiKey, Map<String, String>> mapAllocator
+      ConcurrentMap<Pair, Map<String, String>> swap,
+      Function<Pair, Map<String, String>> mapAllocator
       ) throws Exception
   {
-    MultiKey key = new MultiKey(id, KeyValueMap.DEFAULT_MAPNAME);
+    Pair key = new Pair(id, KeyValueMap.DEFAULT_MAPNAME);
     Map<String, String> cache = swap.get(key);
     if (cache == null)
     {
@@ -75,11 +75,11 @@ public class ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
   }
 
   /**
-   * For minimal changes of other extensions that already defined getCachePopulator()
+   * For minimal changes of other extensions that already defined populateCache()
    * based on the previous implementation of globally cached lookup
    *
-   * {@link #populateCache(String, ExtractionNamespace, String, ConcurrentMap, Function) getMapCachePopulator}
-   * will wrap this method to make mapName support lookup.
+   * {@link #populateCache(String, ExtractionNamespace, String, ConcurrentMap, Function) populateCache()}
+   * will wrap this method to enable mapName support.
    *
    * @param id                  The ID of ExtractionNamespace
    * @param extractionNamespace The ExtractionNamespace for which to populate data.
@@ -90,7 +90,7 @@ public class ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
    *                            a proper Function.
    * @return return the (new) version string used in the populating
    */
-  public String populateCache(String id, T extractionNamespace, String lastVersion, Map<String, String> swap)
+  protected String populateCache(String id, T extractionNamespace, String lastVersion, Map<String, String> swap)
   {
     return null;
   }

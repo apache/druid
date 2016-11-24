@@ -20,12 +20,23 @@
 package io.druid.server.lookup.namespace;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.querydsl.sql.DB2Templates;
+import com.querydsl.sql.DerbyTemplates;
+import com.querydsl.sql.HSQLDBTemplates;
+import com.querydsl.sql.MySQLTemplates;
+import com.querydsl.sql.OracleTemplates;
+import com.querydsl.sql.PostgreSQLTemplates;
+import com.querydsl.sql.SQLServerTemplates;
+import com.querydsl.sql.SQLTemplates;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
 import io.druid.query.lookup.namespace.KeyValueMap;
-import org.apache.commons.collections.keyvalue.MultiKey;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -57,8 +68,8 @@ public class JDBCExtractionNamespaceCacheFactory
       final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
-      final ConcurrentMap<MultiKey, Map<String, String>> cache,
-      final Function<MultiKey, Map<String, String>> mapAllocator
+      final ConcurrentMap<Pair, Map<String, String>> cache,
+      final Function<Pair, Map<String, String>> mapAllocator
   ) throws Exception
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
@@ -85,11 +96,7 @@ public class JDBCExtractionNamespaceCacheFactory
           @Override
           public List<String[]> withHandle(Handle handle) throws Exception
           {
-            final String query;
-            query = String.format(
-                makeQueryString(requiredFields),
-                table
-            );
+            final String query = makeQueryString(namespace.getConnectorConfig().getConnectURI(), requiredFields, table);
             return handle
                 .createQuery(
                     query
@@ -122,7 +129,7 @@ public class JDBCExtractionNamespaceCacheFactory
       for (KeyValueMap keyValueMap: namespace.getMaps())
       {
         String mapName = keyValueMap.getMapName();
-        MultiKey key = new MultiKey(id, mapName);
+        Pair key = new Pair(id, mapName);
         Map<String, String> innerMap = cache.get(key);
         if (innerMap == null)
         {
@@ -140,13 +147,67 @@ public class JDBCExtractionNamespaceCacheFactory
     }
   }
 
-  private String makeQueryString(List<String> requiredFields)
+  private String makeQueryString(String url, List<String> requiredFields, String table)
   {
-    String query = "SELECT \"";
-    query += StringUtils.join(requiredFields, "\", \"");
-    query += "\" from %s";
+    final SQLTemplates dialect = Preconditions.checkNotNull(getSQLTemplates(getDBType(url)), "unknown JDBC type: %s", url);
+
+    List<String> escapedFields = Lists.transform(
+        requiredFields,
+        new Function<String, String>()
+        {
+          @Override
+          public String apply(String field)
+          {
+            return StringEscapeUtils.escapeJava(dialect.quoteIdentifier(dialect.escapeLiteral(field)));
+          }
+        }
+    );
+
+    String query = "SELECT ";
+    query += StringUtils.join(escapedFields, ", ");
+    query += " from " + StringEscapeUtils.escapeJava(dialect.quoteIdentifier(dialect.escapeLiteral(table)));
 
     return query;
+  }
+
+  private String getDBType(String url)
+  {
+    String[] tokens = url.split(":");
+    Preconditions.checkArgument((tokens.length > 2) && ("jdbc".equals(tokens[0])), "malformed JDBC url %s", url);
+
+    return tokens[1];
+  }
+
+  private SQLTemplates getSQLTemplates(String type)
+  {
+    switch(type.toLowerCase()) {
+      case "db2":
+        return new DB2Templates(true);
+
+      case "derby":
+        return new DerbyTemplates(true);
+
+      case "hsqldb":
+        return new HSQLDBTemplates(true);
+
+      case "jtds":
+      case "microsoft":
+      case "sqlserver":
+        return new SQLServerTemplates(true);
+
+      case "mariadb":
+      case "mysql":
+        return new MySQLTemplates(true);
+
+      case "oracle":
+        return new OracleTemplates(true);
+
+      case "postgresql":
+        return new PostgreSQLTemplates(true);
+    }
+    LOG.warn("Unsupported DB type :%s - try MySQL", type);
+    // default - mysql template
+    return new MySQLTemplates(true);
   }
 
   private DBI ensureDBI(String id, JDBCExtractionNamespace namespace)
@@ -184,7 +245,7 @@ public class JDBCExtractionNamespaceCacheFactory
           public Timestamp withHandle(Handle handle) throws Exception
           {
             final String query = String.format(
-                "SELECT MAX(\"%s\") FROM %s",
+                "SELECT MAX(\"%s\") FROM \"%s\"",
                 tsColumn, table
             );
             return handle

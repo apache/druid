@@ -32,12 +32,12 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ExecutorServices;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import org.apache.commons.collections.keyvalue.MultiKey;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -88,16 +88,16 @@ public abstract class NamespaceExtractionCacheManager
   protected final AtomicLong tasksStarted = new AtomicLong(0);
   protected final ServiceEmitter serviceEmitter;
   private final ConcurrentHashMap<String, String> lastVersion = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, ConcurrentMap<MultiKey, Map<String, String>>> mapMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, ConcurrentMap<Pair, Map<String, String>>> mapMap = new ConcurrentHashMap<>();
   private final Striped<Lock> nsLocks = Striped.lock(32);
   private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap;
 
-  public static Function<MultiKey, Map<String, String>> getMapAllocator(final NamespaceExtractionCacheManager manager)
+  public static Function<Pair, Map<String, String>> getMapAllocator(final NamespaceExtractionCacheManager manager)
   {
-    return new Function<MultiKey, Map<String, String>>() {
+    return new Function<Pair, Map<String, String>>() {
       @Nullable
       @Override
-      public Map<String, String> apply(@Nullable MultiKey key) {
+      public Map<String, String> apply(@Nullable Pair key) {
         return manager.getOrAllocateInnerCacheMap(key);
       }
     };
@@ -372,7 +372,7 @@ public abstract class NamespaceExtractionCacheManager
               // should never happen
               throw new NullPointerException(String.format("No data for namespace [%s]", id));
             }
-            final ConcurrentMap<MultiKey, Map<String, String>> cache = getCacheMap(cacheId);
+            final ConcurrentMap<Pair, Map<String, String>> cache = getCacheMap(cacheId);
             final String preVersion = implData.latestVersion;
 
             tasksStarted.incrementAndGet();
@@ -448,11 +448,11 @@ public abstract class NamespaceExtractionCacheManager
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      ConcurrentMap<MultiKey, Map<String, String>> cacheMap = mapMap.get(cacheKey);
+      ConcurrentMap<Pair, Map<String, String>> cacheMap = mapMap.get(cacheKey);
       if (cacheMap == null) {
         throw new IAE("Extraction Cache [%s] does not exist", cacheKey);
       }
-      ConcurrentMap<MultiKey, Map<String, String>> prior = mapMap.put(namespaceKey, cacheMap);
+      ConcurrentMap<Pair, Map<String, String>> prior = mapMap.put(namespaceKey, cacheMap);
       mapMap.remove(cacheKey);
       if (prior != null) {
         // Old map will get GC'd when it is not used anymore
@@ -475,12 +475,12 @@ public abstract class NamespaceExtractionCacheManager
    *
    * @return A ConcurrentMap<String, Map<String, String>>
    */
-  public ConcurrentMap<MultiKey, Map<String, String>> getCacheMap(String namespaceOrCacheKey)
+  public ConcurrentMap<Pair, Map<String, String>> getCacheMap(String namespaceOrCacheKey)
   {
-    ConcurrentMap<MultiKey, Map<String, String>> map = mapMap.get(namespaceOrCacheKey);
+    ConcurrentMap<Pair, Map<String, String>> map = mapMap.get(namespaceOrCacheKey);
 
     if (map == null) {
-      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<MultiKey, Map<String, String>>());
+      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<Pair, Map<String, String>>());
       map = mapMap.get(namespaceOrCacheKey);
     }
     return map;
@@ -498,11 +498,11 @@ public abstract class NamespaceExtractionCacheManager
    */
   public Map<String, String> getInnerCacheMap(String id, String mapName)
   {
-    ConcurrentMap<MultiKey, Map<String, String>> maps = getCacheMap(id);
+    ConcurrentMap<Pair, Map<String, String>> maps = getCacheMap(id);
 
     // Cannot use mapName as a key for inner cache lookup
     // due to mapName collision when multiple namespace use the same mapName
-    MultiKey key = new MultiKey(id, mapName);
+    Pair key = new Pair(id, mapName);
     Map<String, String> map = maps.get(key);
     if (map == null)
     {
@@ -540,7 +540,7 @@ public abstract class NamespaceExtractionCacheManager
         final Lock lock = nsLocks.get(ns);
         lock.lock();
         try {
-          ConcurrentMap<MultiKey, Map<String, String>> map = mapMap.get(ns);
+          ConcurrentMap<Pair, Map<String, String>> map = mapMap.get(ns);
           if (map != null) {
             deleteInnerCacheMaps(map);
             mapMap.remove(ns);
@@ -564,17 +564,17 @@ public abstract class NamespaceExtractionCacheManager
    * @param map outer map that contains all the inner maps to delete
    * @return True if success, false if fail
    */
-  protected abstract boolean deleteInnerCacheMaps(final ConcurrentMap<MultiKey, Map<String, String>> map);
+  protected abstract boolean deleteInnerCacheMaps(final ConcurrentMap<Pair, Map<String, String>> map);
 
   /**
    * Get the map associated with the given key
    *
    * Implementation of this method should return non-null Map.
    *
-   * @param key key represented by MultiKey(namespace, mapName)
+   * @param key key represented by Pair(namespace, mapName)
    * @return A ConcurrentMap<String, String>
    */
-  public abstract ConcurrentMap<String, String> getOrAllocateInnerCacheMap(MultiKey key);
+  public abstract ConcurrentMap<String, String> getOrAllocateInnerCacheMap(Pair key);
 
   public String getVersion(String namespace)
   {

@@ -24,12 +24,11 @@ import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import org.apache.commons.collections.keyvalue.MultiKey;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
@@ -104,11 +103,11 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
-  protected boolean deleteInnerCacheMaps(final ConcurrentMap<MultiKey, Map<String, String>> map)
+  protected boolean deleteInnerCacheMaps(final ConcurrentMap<Pair, Map<String, String>> map)
   {
     if (map != null) {
-      for (MultiKey key: map.keySet()) {
-        log.debug("deleting map[%s] of namespace[%s]", key.getKey(1), key.getKey(0));
+      for (Pair key: map.keySet()) {
+        log.debug("deleting map[%s] of namespace[%s]", key.rhs, key.lhs);
         deleteSingleMap(key.toString());
       }
       return true;
@@ -137,7 +136,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
-  public ConcurrentMap<String, String> getOrAllocateInnerCacheMap(MultiKey key)
+  public ConcurrentMap<String, String> getOrAllocateInnerCacheMap(Pair key)
   {
     final Lock lock = nsLocks.get(key);
     lock.lock();

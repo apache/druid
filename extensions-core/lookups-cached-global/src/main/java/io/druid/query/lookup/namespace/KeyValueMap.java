@@ -36,12 +36,6 @@ public class KeyValueMap
   private final String valueColumn;
 
   public static String DEFAULT_MAPNAME = "__default";
-  public static String DEFAULT_KEYNAME = "key";
-  public static String DEFAULT_VALUENAME = "value";
-
-  public static List<KeyValueMap> DEFAULT_MAPS = ImmutableList.of(
-      new KeyValueMap(DEFAULT_MAPNAME, DEFAULT_KEYNAME, DEFAULT_VALUENAME)
-  );
 
   @JsonCreator
   public KeyValueMap(

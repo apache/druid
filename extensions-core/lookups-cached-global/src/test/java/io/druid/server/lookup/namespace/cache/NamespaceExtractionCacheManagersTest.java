@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
@@ -36,7 +36,6 @@ import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,10 +114,10 @@ public class NamespaceExtractionCacheManagersTest
   {
     // prepopulate caches
     for (String ns : nsList) {
-      final ConcurrentMap<MultiKey, Map<String, String>> map = extractionCacheManager.getCacheMap(ns);
+      final ConcurrentMap<Pair, Map<String, String>> map = extractionCacheManager.getCacheMap(ns);
       ConcurrentMap<String, String> mapEntry = new ConcurrentHashMap<>();
       mapEntry.put("oldNameSeed1", "oldNameSeed2");
-      map.put(new MultiKey(ns, TEST_MAP_NAME), mapEntry);
+      map.put(new Pair(ns, TEST_MAP_NAME), mapEntry);
     }
   }
 
@@ -129,7 +128,7 @@ public class NamespaceExtractionCacheManagersTest
       Map<String, String> map = extractionCacheManager.getInnerCacheMap(ns, TEST_MAP_NAME);
       map.put("key", "val");
       Assert.assertEquals("val", map.get("key"));
-      MultiKey mapKey = new MultiKey(ns, TEST_MAP_NAME);
+      Pair mapKey = new Pair(ns, TEST_MAP_NAME);
       Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
     }
   }
@@ -148,14 +147,14 @@ public class NamespaceExtractionCacheManagersTest
       map.put("key", "val");
       extractionCacheManager.swapAndClearCache(ns, ns + "old_cache");
       Assert.assertEquals("val", map.get("key"));
-      MultiKey mapKey = new MultiKey(ns + "old_cache", TEST_MAP_NAME);
+      Pair mapKey = new Pair(ns + "old_cache", TEST_MAP_NAME);
       Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
 
       Map<String, String> map2 = extractionCacheManager.getInnerCacheMap(ns + "cache", TEST_MAP_NAME);
       map2.put("key", "val2");
       Assert.assertTrue(extractionCacheManager.swapAndClearCache(ns, ns + "cache"));
       Assert.assertEquals("val2", map2.get("key"));
-      mapKey = new MultiKey(ns + "cache", TEST_MAP_NAME);
+      mapKey = new Pair(ns + "cache", TEST_MAP_NAME);
       Assert.assertEquals("val2", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
     }
   }
@@ -167,7 +166,7 @@ public class NamespaceExtractionCacheManagersTest
       Map<String, String> map = extractionCacheManager.getInnerCacheMap(ns, TEST_MAP_NAME);
       map.put("key", "val");
       Assert.assertEquals("val", map.get("key"));
-      MultiKey mapKey = new MultiKey(ns, TEST_MAP_NAME);
+      Pair mapKey = new Pair(ns, TEST_MAP_NAME);
       Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get(mapKey).get("key"));
       Assert.assertFalse(extractionCacheManager.swapAndClearCache(ns, "I don't exist"));
     }
@@ -204,9 +203,9 @@ public class NamespaceExtractionCacheManagersTest
             null,
             null,
             new URIExtractionNamespace.JSONFlatDataParser(
-                new DefaultObjectMapper()
+                new DefaultObjectMapper(),
+                ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val"))
             ),
-            ImmutableList.of(new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val")),
             Period.millis(10000),
             null
         ),

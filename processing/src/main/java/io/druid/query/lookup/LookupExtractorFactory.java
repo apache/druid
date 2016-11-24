@@ -65,7 +65,7 @@ public abstract class LookupExtractorFactory
 
   /**
    * Some LookupExtractorFactories have multiple maps in one namespace.
-   * For those factories, mapNmae should be additionally given to get LookupExtractor
+   * For those factories, mapName should be additionally given to get LookupExtractor
    * @param mapName name of map in the namespace
    * @return LookupExtractor for the given mapName
    */

@@ -115,10 +115,12 @@ public class NamespaceLookupReferenceManagerTest
     ExtractionNamespace uriExtractionNamespace = new URIExtractionNamespace(
         tmpFile.toURI(),
         null, null,
-        new URIExtractionNamespace.CSVFlatDataParser(ImmutableList.of("key", "val1", "val2")),
-        ImmutableList.of (
-            new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val1"),
-            new KeyValueMap("another", "key", "val2")
+        new URIExtractionNamespace.CSVFlatDataParser(
+            ImmutableList.of("key", "val1", "val2"),
+            ImmutableList.of (
+                new KeyValueMap(KeyValueMap.DEFAULT_MAPNAME, "key", "val1"),
+                new KeyValueMap("another", "key", "val2")
+            )
         ),
         new Period(0),
         null

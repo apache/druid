@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
@@ -39,7 +40,6 @@ import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
-import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -99,14 +99,14 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           final String id,
           final URIExtractionNamespace extractionNamespace,
           final String lastVersion,
-          final ConcurrentMap<MultiKey, Map<String, String>> cache,
-          final Function<MultiKey, Map<String, String>> mapAllocator
+          final ConcurrentMap<Pair, Map<String, String>> cache,
+          final Function<Pair, Map<String, String>> mapAllocator
       ) throws Exception
       {
         Map<String, String> keyValue = new ConcurrentHashMap<>();
         keyValue.put(KEY, VALUE);
         // Don't actually read off disk because TravisCI doesn't like that
-        cache.put(new MultiKey(id, KeyValueMap.DEFAULT_MAPNAME), keyValue);
+        cache.put(new Pair(id, KeyValueMap.DEFAULT_MAPNAME), keyValue);
         Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
         return Long.toString(System.currentTimeMillis());
       }
@@ -162,7 +162,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -188,7 +187,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(0),
         null
     );
@@ -210,7 +208,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
-          KeyValueMap.DEFAULT_MAPS,
           new Period(delay),
           null
       );
@@ -343,7 +340,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
-        KeyValueMap.DEFAULT_MAPS,
         new Period(period),
         null
     );
@@ -422,7 +418,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
-          KeyValueMap.DEFAULT_MAPS,
           new Period(period),
           null
       );
@@ -472,7 +467,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
-          KeyValueMap.DEFAULT_MAPS,
           new Period(5L),
           null
       );
