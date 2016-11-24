@@ -15,10 +15,6 @@ import java.util.UUID;
 public class MMapDirectoryTest
 {
 
-  public MMapDirectoryTest()
-  {
-
-  }
 
   private MMapDirectory creatMMapDir() throws IOException
   {
@@ -89,7 +85,7 @@ public class MMapDirectoryTest
       Path current = mMapDirectory.getDirectory();
       //to write
       IndexOutput indexOutput = mMapDirectory.createOutput(indexFileName);
-      long inputLong1 = 1l;
+      long inputLong1 = 1L;
       indexOutput.writeLong(inputLong1);
       indexOutput.close();
       //to read
