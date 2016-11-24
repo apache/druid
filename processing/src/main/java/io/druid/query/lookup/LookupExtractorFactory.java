@@ -64,14 +64,14 @@ public abstract class LookupExtractorFactory
   public abstract LookupExtractor get();
 
   /**
-   * Some LookupExtractorFactories have multiple maps in one namespace.
-   * For those factories, mapName should be additionally given to get LookupExtractor
-   * @param mapName name of map in the namespace
+   * Some LookupExtractorFactories have multiple inner maps in one namespace.
+   * For those factories, innerMapName should be additionally given to get LookupExtractor
+   * @param innerMapName name of map in the namespace
    * @return LookupExtractor for the given mapName
    */
-  public LookupExtractor get(String mapName)
+  public LookupExtractor get(String innerMapName)
   {
-    throw new ISE("mapName not supported");
+    throw new ISE("innerMapName not supported");
   }
 
   /**

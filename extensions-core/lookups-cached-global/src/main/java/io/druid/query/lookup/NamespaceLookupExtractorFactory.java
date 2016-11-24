@@ -200,7 +200,7 @@ public class NamespaceLookupExtractorFactory extends LookupExtractorFactory
 
   // Grab the latest snapshot from the cache manager
   @Override
-  public LookupExtractor get(String mapName)
+  public LookupExtractor get(String innerMapName)
   {
     final Lock readLock = startStopSync.readLock();
     try {
@@ -221,9 +221,9 @@ public class NamespaceLookupExtractorFactory extends LookupExtractorFactory
         if (preVersion == null) {
           throw new ISE("Namespace vanished for [%s]", extractorID);
         }
-        map = manager.getCacheMap(extractorID).get(new Pair<String, String>(extractorID, mapName));
+        map = manager.getCacheMap(extractorID).get(new Pair<String, String>(extractorID, innerMapName));
         if (map == null) {
-          throw new ISE("map [%s] does not exists in [%s]", mapName, extractorID);
+          throw new ISE("map [%s] does not exists in [%s]", innerMapName, extractorID);
         }
         postVersion = manager.getVersion(extractorID);
         if (postVersion == null) {

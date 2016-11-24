@@ -347,12 +347,12 @@ public class RegisteredLookupExtractionFnTest
       }
 
       @Override
-      public LookupExtractor get(String mapName)
+      public LookupExtractor get(String innerMapName)
       {
-        if (mapName.equals("map1")) {
+        if (innerMapName.equals("map1")) {
           return LOOKUP_EXTRACTOR;
         }
-        if (mapName.equals("map2")) {
+        if (innerMapName.equals("map2")) {
           return LOOKUP_EXTRACTOR2;
         }
         return null;

@@ -260,20 +260,20 @@ public class NamespaceLookupReferenceManagerTest
     Assert.assertEquals(
         0,
         handle.createStatement(
-            String.format("CREATE TABLE %s (\"lookupKey\" VARCHAR(10), \"val1\" VARCHAR(10), \"val2\" VARCHAR(10))", name)
+            String.format("CREATE TABLE \"%s\" (\"lookupKey\" VARCHAR(10), \"val1\" VARCHAR(10), \"val2\" VARCHAR(10))", name)
         ).setQueryTimeout(1).execute()
     );
     handle.commit();
-    handle.createStatement(String.format("TRUNCATE TABLE %s", name)).setQueryTimeout(1).execute();
-    handle.createStatement(String.format("INSERT INTO %s (\"lookupKey\", \"val1\", \"val2\") VALUES ('foo', 'bar', 'baz')", name)).setQueryTimeout(1).execute();
-    handle.createStatement(String.format("INSERT INTO %s (\"lookupKey\", \"val1\", \"val2\") VALUES ('work', 'bad', 'good')", name)).setQueryTimeout(1).execute();
+    handle.createStatement(String.format("TRUNCATE TABLE \"%s\"", name)).setQueryTimeout(1).execute();
+    handle.createStatement(String.format("INSERT INTO \"%s\" (\"lookupKey\", \"val1\", \"val2\") VALUES ('foo', 'bar', 'baz')", name)).setQueryTimeout(1).execute();
+    handle.createStatement(String.format("INSERT INTO \"%s\" (\"lookupKey\", \"val1\", \"val2\") VALUES ('work', 'bad', 'good')", name)).setQueryTimeout(1).execute();
     handle.close();
   }
 
   private void dropTable(String name)
   {
     Handle handle = derbyConnectorRule.getConnector().getDBI().open();
-    handle.createStatement(String.format("DROP TABLE %s", name)).setQueryTimeout(1).execute();
+    handle.createStatement(String.format("DROP TABLE \"%s\"", name)).setQueryTimeout(1).execute();
     handle.close();
   }
 }
