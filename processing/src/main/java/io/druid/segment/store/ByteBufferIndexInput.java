@@ -28,12 +28,12 @@ import java.nio.ByteBuffer;
  * Expert: as Druid index has an file size of Interger.MAX_SIZE,
  * we now can safety transfer long to int ,though it's a tricky
  */
-class ByteBufferIndexInput extends IndexInput
+public class ByteBufferIndexInput extends IndexInput
 {
 
   protected ByteBuffer byteBuffer;
 
-  ByteBufferIndexInput(
+  public ByteBufferIndexInput(
       ByteBuffer buffer
   )
   {
@@ -100,6 +100,10 @@ class ByteBufferIndexInput extends IndexInput
 
   /**
    * Creates a slice of this index input, with the given offset, and length.
+   * The sliced part will be independent to the origin one.
+   *
+   * @param offset file point where to slice the input
+   * @param length number of bytes to be sliced to the new IndexInput
    */
   @Override
   public final ByteBufferIndexInput slice(long offset, long length)
@@ -118,6 +122,20 @@ class ByteBufferIndexInput extends IndexInput
     }
 
     return buildSlice(offset, length);
+  }
+
+  /**
+   * Creats a copy of this index input,which have the same content 、file point position .
+   * but the file point is independent
+   * somehow
+   *
+   * @return
+   */
+  @Override
+  public IndexInput duplicate()
+  {
+    ByteBuffer duplicated = byteBuffer.duplicate();
+    return new ByteBufferIndexInput(duplicated);
   }
 
   /**

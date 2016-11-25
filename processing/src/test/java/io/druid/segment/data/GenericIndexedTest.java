@@ -20,6 +20,9 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Maps;
+import io.druid.segment.store.ByteBufferIndexInput;
+import io.druid.segment.store.IndexInput;
+import io.druid.segment.store.IndexInputUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,6 +45,12 @@ public class GenericIndexedTest
   }
 
   @Test(expected = UnsupportedOperationException.class)
+  public void testNotSortedNoIndexOfV1() throws Exception
+  {
+    GenericIndexed.fromArrayV1(new String[]{"a", "c", "b"}, GenericIndexed.STRING_STRATEGY).indexOf("a");
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
   public void testSerializationNotSortedNoIndexOf() throws Exception
   {
     serializeAndDeserialize(
@@ -51,11 +60,35 @@ public class GenericIndexedTest
     ).indexOf("a");
   }
 
+  @Test(expected = UnsupportedOperationException.class)
+  public void testSerializationNotSortedNoIndexOfV1() throws Exception
+  {
+    serializeAndDeserializeV1(
+        GenericIndexed.fromArrayV1(
+            new String[]{"a", "c", "b"}, GenericIndexed.STRING_STRATEGY
+        )
+    ).indexOf("a");
+  }
+
+
   @Test
   public void testSanity() throws Exception
   {
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
     Indexed<String> indexed = GenericIndexed.fromArray(strings, GenericIndexed.STRING_STRATEGY);
+
+    checkBasicAPIs(strings, indexed, true);
+
+    Assert.assertEquals(-13, indexed.indexOf("q"));
+    Assert.assertEquals(-9, indexed.indexOf("howdydo"));
+    Assert.assertEquals(-1, indexed.indexOf("1111"));
+  }
+
+  @Test
+  public void testSanityV1() throws Exception
+  {
+    final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
+    Indexed<String> indexed = GenericIndexed.fromArrayV1(strings, GenericIndexed.STRING_STRATEGY);
 
     checkBasicAPIs(strings, indexed, true);
 
@@ -83,12 +116,43 @@ public class GenericIndexedTest
   }
 
   @Test
+  public void testSortedSerializationV1() throws Exception
+  {
+    final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
+
+    GenericIndexed<String> deserialized = serializeAndDeserializeV1(
+        GenericIndexed.fromArrayV1(
+            strings, GenericIndexed.STRING_STRATEGY
+        )
+    );
+
+    checkBasicAPIs(strings, deserialized, true);
+
+    Assert.assertEquals(-13, deserialized.indexOf("q"));
+    Assert.assertEquals(-9, deserialized.indexOf("howdydo"));
+    Assert.assertEquals(-1, deserialized.indexOf("1111"));
+  }
+
+  @Test
   public void testNotSortedSerialization() throws Exception
   {
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "k", "j", "l"};
 
     GenericIndexed<String> deserialized = serializeAndDeserialize(
         GenericIndexed.fromArray(
+            strings, GenericIndexed.STRING_STRATEGY
+        )
+    );
+    checkBasicAPIs(strings, deserialized, false);
+  }
+
+  @Test
+  public void testNotSortedSerializationV1() throws Exception
+  {
+    final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "k", "j", "l"};
+
+    GenericIndexed<String> deserialized = serializeAndDeserializeV1(
+        GenericIndexed.fromArrayV1(
             strings, GenericIndexed.STRING_STRATEGY
         )
     );
@@ -134,6 +198,35 @@ public class GenericIndexedTest
         byteBuffer, GenericIndexed.STRING_STRATEGY
     );
     Assert.assertEquals(0, byteBuffer.remaining());
+    return deserialized;
+  }
+
+  /**
+   * test serize  and deserialize for IndexInput
+   *
+   * @param indexed
+   *
+   * @return
+   *
+   * @throws IOException
+   */
+  private GenericIndexed<String> serializeAndDeserializeV1(GenericIndexed<String> indexed) throws IOException
+  {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final WritableByteChannel channel = Channels.newChannel(baos);
+    indexed.writeToChannelV1(channel);
+    channel.close();
+
+    ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
+    final IndexInput indexInput = new ByteBufferIndexInput(byteBuffer);
+    long remaining = IndexInputUtil.remaining(indexInput);
+
+
+    Assert.assertEquals(indexed.getSerializedSizeV1(), remaining);
+    GenericIndexed<String> deserialized = GenericIndexed.read(
+        indexInput, GenericIndexed.STRING_STRATEGY
+    );
+    Assert.assertEquals(0, IndexInputUtil.remaining(indexInput));
     return deserialized;
   }
 }

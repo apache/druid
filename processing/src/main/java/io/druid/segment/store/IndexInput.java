@@ -55,13 +55,22 @@ public abstract class IndexInput extends DataInput implements Closeable
    */
   public abstract long length();
 
+
   /**
-   * Creates a slice of this index input, with the given  offset, and length.
+   * Creates a slice of this index input, with the given offset, and length.
+   * The sliced part will be independent to the origin one.
    * @param offset file point where to slice the input
    * @param length number of bytes to be sliced to the new IndexInput
-   *
    */
   public abstract IndexInput slice(long offset, long length) throws IOException;
+
+  /**
+   * Creats a copy of this index input,which have the same content 、file point position .
+   * but the file point is independent
+   * somehow
+   * @return
+   */
+  public abstract IndexInput duplicate();
 
   /**
    * to test whether the end of the file has been reached
