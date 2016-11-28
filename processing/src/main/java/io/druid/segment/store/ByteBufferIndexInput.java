@@ -75,7 +75,7 @@ public class ByteBufferIndexInput extends IndexInput
   }
 
   @Override
-  public long getFilePointer()
+  public long getFilePointer() throws IOException
   {
     return byteBuffer.position();
   }
@@ -88,13 +88,13 @@ public class ByteBufferIndexInput extends IndexInput
 
 
   @Override
-  public final long length()
+  public final long length() throws IOException
   {
     return byteBuffer.capacity();
   }
 
   @Override
-  public boolean hasRemaining()
+  public boolean hasRemaining() throws IOException
   {
     return byteBuffer.hasRemaining();
   }
@@ -108,7 +108,7 @@ public class ByteBufferIndexInput extends IndexInput
    * @param length number of bytes to be sliced to the new IndexInput
    */
   @Override
-  public final ByteBufferIndexInput slice(long offset, long length)
+  public final ByteBufferIndexInput slice(long offset, long length) throws IOException
   {
     long size = this.length();
     if (offset < 0 || length < 0 || offset + length > size) {
@@ -134,7 +134,7 @@ public class ByteBufferIndexInput extends IndexInput
    * @return
    */
   @Override
-  public IndexInput duplicate()
+  public IndexInput duplicate() throws IOException
   {
     ByteBuffer duplicated = byteBuffer.duplicate();
     return new ByteBufferIndexInput(duplicated);

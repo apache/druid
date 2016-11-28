@@ -18,7 +18,7 @@ public class IndexInputUtil
    *
    * @return
    */
-  public static long remaining(IndexInput indexInput)
+  public static long remaining(IndexInput indexInput) throws IOException
   {
     long currentPositoin = indexInput.getFilePointer();
     long length = indexInput.length();

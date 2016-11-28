@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.store.ByteBufferIndexInput;
 import io.druid.segment.store.IndexInput;
@@ -38,9 +39,9 @@ import java.util.Iterator;
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
  * is sorted, supports binary search index lookups.  If input is not sorted, only supports array-like index lookups.
- *
+ * <p>
  * V1 Storage Format:
- *
+ * <p>
  * byte 1: version (0x1)
  * byte 2 == 0x1 =&gt; allowReverseLookup
  * bytes 3-6 =&gt; numBytesUsed
@@ -217,6 +218,7 @@ public class GenericIndexed<T> implements Indexed<T>
    * that values-not-found will return some negative number.
    *
    * @param value value to search for
+   *
    * @return index of value, or negative number equal to (-(insertion point) - 1).
    */
   @Override
@@ -346,9 +348,11 @@ public class GenericIndexed<T> implements Indexed<T>
 
     /**
      * This method makes no guarantees with respect to thread safety
+     *
      * @return the size in bytes of the last value read
      */
-    public int getLastValueSize() {
+    public int getLastValueSize()
+    {
       return lastReadSize;
     }
 
@@ -411,7 +415,12 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public T get(final int index)
     {
-      return _get(indexInput.duplicate(), index);
+      try {
+        IndexInput duplicated = indexInput.duplicate();
+        return _get(duplicated, index);
+      }catch (IOException e){
+        throw new IOE("occured exception", e);
+      }
     }
 
     protected T _get(final IndexInput indexInput, final int index)
@@ -514,12 +523,15 @@ public class GenericIndexed<T> implements Indexed<T>
    */
   public long getSerializedSizeV1()
   {
-
-    long remaining = remaining() + 2 + 4 + 4;
-    return remaining;
+    try {
+      long remaining = remaining() + 2 + 4 + 4;
+      return remaining;
+    }catch (IOException e){
+      throw new IOE("occured exception",e);
+    }
   }
 
-  private long remaining()
+  private long remaining() throws IOException
   {
     return IndexInputUtil.remaining(indexInput);
   }
@@ -557,7 +569,8 @@ public class GenericIndexed<T> implements Indexed<T>
   public GenericIndexed<T>.BufferIndexed singleThreaded()
   {
     final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
-    return new BufferIndexed() {
+    return new BufferIndexed()
+    {
       @Override
       public T get(int index)
       {
@@ -573,15 +586,19 @@ public class GenericIndexed<T> implements Indexed<T>
    */
   public GenericIndexed<T>.IndexInputIndexed singleThreadedV1()
   {
-    final IndexInput copyed = indexInput.duplicate();
-    return new IndexInputIndexed()
-    {
-      @Override
-      public T get(int index)
+    try {
+      final IndexInput copyed = indexInput.duplicate();
+      return new IndexInputIndexed()
       {
-        return _get(copyed, index);
-      }
-    };
+        @Override
+        public T get(int index)
+        {
+          return _get(copyed, index);
+        }
+      };
+    }catch (IOException e){
+      throw new IOE("occured exception",e);
+    }
   }
 
   public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)

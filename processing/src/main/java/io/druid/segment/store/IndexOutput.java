@@ -58,5 +58,7 @@ public abstract class IndexOutput extends DataOutput implements Closeable
    * Returns the current position in this file, where the next write will
    * occur.
    */
-  public abstract long getFilePointer();
+  public abstract long getFilePointer() throws IOException;
+
+  ;
 }

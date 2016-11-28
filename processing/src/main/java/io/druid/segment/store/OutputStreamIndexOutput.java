@@ -68,7 +68,7 @@ public class OutputStreamIndexOutput extends IndexOutput
   }
 
   @Override
-  public final long getFilePointer()
+  public final long getFilePointer() throws IOException
   {
     return bytesWritten;
   }

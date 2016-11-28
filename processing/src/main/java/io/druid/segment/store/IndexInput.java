@@ -42,7 +42,7 @@ public abstract class IndexInput extends DataInput implements Closeable
    *
    * @see #seek(long)
    */
-  public abstract long getFilePointer();
+  public abstract long getFilePointer() throws IOException;
 
   /**
    * Sets current position in this file, where the next read will occur
@@ -54,12 +54,13 @@ public abstract class IndexInput extends DataInput implements Closeable
   /**
    * The number of bytes in the file.
    */
-  public abstract long length();
+  public abstract long length() throws IOException;
 
 
   /**
    * Creates a slice of this index input, with the given offset, and length.
    * The sliced part will be independent to the origin one.
+   *
    * @param offset file point where to slice the input
    * @param length number of bytes to be sliced to the new IndexInput
    */
@@ -69,15 +70,16 @@ public abstract class IndexInput extends DataInput implements Closeable
    * Creats a copy of this index input,which have the same content 、file point position .
    * but the file point is independent
    * somehow
+   *
    * @return
    */
-  public abstract IndexInput duplicate();
+  public abstract IndexInput duplicate() throws IOException;
 
   /**
    * to test whether the end of the file has been reached
    *
    * @return
    */
-  public abstract boolean hasRemaining();
+  public abstract boolean hasRemaining() throws IOException;
 
 }
