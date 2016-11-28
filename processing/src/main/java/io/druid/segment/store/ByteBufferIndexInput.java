@@ -32,6 +32,8 @@ public class ByteBufferIndexInput extends IndexInput
 {
 
   protected ByteBuffer byteBuffer;
+  //indicate wherer this IndexInput is cloned ,default is false, the slice and duplicate operations will affect its value
+  protected boolean isClone = false;
 
   public ByteBufferIndexInput(
       ByteBuffer buffer
@@ -155,6 +157,9 @@ public class ByteBufferIndexInput extends IndexInput
   @Override
   public final void close() throws IOException
   {
+    if (isClone) {
+      return;
+    }
     if (byteBuffer == null) {
       return;
     }

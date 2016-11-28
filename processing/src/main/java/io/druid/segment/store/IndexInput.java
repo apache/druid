@@ -31,6 +31,7 @@ public abstract class IndexInput extends DataInput implements Closeable
 
   /**
    * Closes the stream to further operations.
+   * Expert: slice and duplicate operations must not close the original IndexInput.
    */
   @Override
   public abstract void close() throws IOException;
