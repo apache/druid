@@ -29,15 +29,18 @@ public class SpatialDimensionSchema
 {
   private final String dimName;
   private final List<String> dims;
+  private final String delimiter;
 
   @JsonCreator
   public SpatialDimensionSchema(
       @JsonProperty("dimName") String dimName,
-      @JsonProperty("dims") List<String> dims
+      @JsonProperty("dims") List<String> dims,
+      @JsonProperty("delimiter") String delimiter
   )
   {
     this.dimName = dimName;
     this.dims = dims;
+    this.delimiter = delimiter == null ? NewSpatialDimensionSchema.DEFAULT_DELIMITER : delimiter;
   }
 
   @JsonProperty
@@ -50,6 +53,11 @@ public class SpatialDimensionSchema
   public List<String> getDims()
   {
     return dims;
+  }
+
+  @JsonProperty
+  public String getDelimiter() {
+    return delimiter;
   }
 
   @Override
@@ -67,8 +75,12 @@ public class SpatialDimensionSchema
     if (dimName != null ? !dimName.equals(that.dimName) : that.dimName != null) {
       return false;
     }
-    return dims != null ? dims.equals(that.dims) : that.dims == null;
 
+    if (dims != null ? !dims.equals(that.dims) : that.dims != null) {
+      return false;
+    }
+
+    return this.delimiter.equals(that.delimiter);
   }
 
   @Override
@@ -76,6 +88,7 @@ public class SpatialDimensionSchema
   {
     int result = dimName != null ? dimName.hashCode() : 0;
     result = 31 * result + (dims != null ? dims.hashCode() : 0);
+    result = 31 * result + delimiter.hashCode();
     return result;
   }
 }

@@ -66,10 +66,7 @@ public abstract class ParseSpec
     // do nothing
   }
 
-  public Parser<String, Object> makeParser()
-  {
-    return null;
-  }
+  public abstract Parser<String, Object> makeParser();
 
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {

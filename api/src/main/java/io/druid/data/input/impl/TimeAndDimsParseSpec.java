@@ -43,6 +43,7 @@ public class TimeAndDimsParseSpec extends ParseSpec
     );
   }
 
+  @Override
   public Parser<String, Object> makeParser()
   {
     return new Parser<String, Object>()

@@ -20,6 +20,7 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -36,14 +37,17 @@ public class SpatialFilter implements Filter
 {
   private final String dimension;
   private final Bound bound;
+  private final Splitter splitter;
 
   public SpatialFilter(
       String dimension,
+      String delimiter,
       Bound bound
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.bound = Preconditions.checkNotNull(bound, "bound");
+    this.splitter = Splitter.on(Preconditions.checkNotNull(delimiter, "delimiter"));
   }
 
   @Override
@@ -71,7 +75,7 @@ public class SpatialFilter implements Filter
                 if (input == null) {
                   return false;
                 }
-                final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
+                final float[] coordinate = SpatialDimensionRowTransformer.decode(splitter, input);
                 return bound.contains(coordinate);
               }
             };

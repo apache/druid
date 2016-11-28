@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import io.druid.collections.spatial.search.Bound;
+import io.druid.data.input.impl.NewSpatialDimensionSchema;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.filter.SpatialFilter;
 
@@ -33,11 +34,13 @@ import java.nio.ByteBuffer;
 public class SpatialDimFilter implements DimFilter
 {
   private final String dimension;
+  private final String delimiter;
   private final Bound bound;
 
   @JsonCreator
   public SpatialDimFilter(
       @JsonProperty("dimension") String dimension,
+      @JsonProperty("delimiter") String delimiter,
       @JsonProperty("bound") Bound bound
   )
   {
@@ -46,6 +49,7 @@ public class SpatialDimFilter implements DimFilter
 
     this.dimension = dimension;
     this.bound = bound;
+    this.delimiter = delimiter == null ? NewSpatialDimensionSchema.DEFAULT_DELIMITER : delimiter;
   }
 
   @Override
@@ -83,7 +87,7 @@ public class SpatialDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new SpatialFilter(dimension, bound);
+    return new SpatialFilter(dimension, delimiter, bound);
   }
 
   @Override

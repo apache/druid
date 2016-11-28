@@ -33,22 +33,31 @@ import java.util.List;
  */
 public class NewSpatialDimensionSchema extends DimensionSchema
 {
+  public static final String DEFAULT_DELIMITER = ",";
   private final List<String> dims;
+  private final String delimiter;
 
   @JsonCreator
   public NewSpatialDimensionSchema(
       @JsonProperty("name") String name,
-      @JsonProperty("dims") List<String> dims
+      @JsonProperty("dims") List<String> dims,
+      @JsonProperty("delimiter") String delimiter
   )
   {
     super(name, null);
     this.dims = dims;
+    this.delimiter = delimiter == null ? DEFAULT_DELIMITER : delimiter;
   }
 
   @JsonProperty
   public List<String> getDims()
   {
     return dims;
+  }
+
+  @JsonProperty
+  public String getDelimiter() {
+    return delimiter;
   }
 
   @Override
@@ -76,13 +85,20 @@ public class NewSpatialDimensionSchema extends DimensionSchema
 
     NewSpatialDimensionSchema that = (NewSpatialDimensionSchema) o;
 
-    return dims != null ? dims.equals(that.dims) : that.dims == null;
+    if (dims != null ? dims.equals(that.dims) : that.dims == null) {
+      return true;
+    }
+
+    return this.delimiter.equals(that.delimiter);
 
   }
 
   @Override
   public int hashCode()
   {
-    return dims != null ? dims.hashCode() : 0;
+    int result = super.hashCode();
+    result = 31 * result + (dims != null ? dims.hashCode() : 0);
+    result = 31 * result + delimiter.hashCode();
+    return result;
   }
 }

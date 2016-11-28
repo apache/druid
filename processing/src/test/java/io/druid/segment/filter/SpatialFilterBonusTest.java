@@ -127,7 +127,8 @@ public class SpatialFilterBonusTest
                                                     Arrays.asList(
                                                         new SpatialDimensionSchema(
                                                             "dim.geo",
-                                                            Lists.<String>newArrayList()
+                                                            Lists.<String>newArrayList(),
+                                                            null
                                                         )
                                                     )
                                                 )
@@ -266,7 +267,8 @@ public class SpatialFilterBonusTest
                                                       Arrays.asList(
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
-                                                              Lists.<String>newArrayList()
+                                                              Lists.<String>newArrayList(),
+                                                              null
                                                           )
                                                       )
                                                   )
@@ -286,7 +288,8 @@ public class SpatialFilterBonusTest
                                                       Arrays.asList(
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
-                                                              Lists.<String>newArrayList()
+                                                              Lists.<String>newArrayList(),
+                                                              null
                                                           )
                                                       )
                                                   )
@@ -306,6 +309,7 @@ public class SpatialFilterBonusTest
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
                                                               Lists.<String>newArrayList()
+                                                              ,null
                                                           )
                                                       )
                                                   )
@@ -463,6 +467,7 @@ public class SpatialFilterBonusTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
+                                          null,
                                           new RadiusBound(new float[]{0.0f, 0.0f}, 5)
                                       )
                                   )
@@ -515,6 +520,7 @@ public class SpatialFilterBonusTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
+                                          null,
                                           new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
                                       )
                                   )
@@ -607,6 +613,7 @@ public class SpatialFilterBonusTest
                                               new LongSumAggregatorFactory("valFiltered", "val"),
                                               new SpatialDimFilter(
                                                   "dim.geo",
+                                                  null,
                                                   new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
                                               )
                                           ),
