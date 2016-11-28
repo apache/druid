@@ -125,7 +125,6 @@ public class RemoteTaskRunnerFactoryTest
         jsonMapper,
         httpClient,
         workerBehaviorConfig,
-        executorFactory,
         provisioningSchedulerConfig,
         new SimpleWorkerProvisioningStrategy(
             provisioningConfig,

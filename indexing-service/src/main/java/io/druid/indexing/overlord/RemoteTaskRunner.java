@@ -65,12 +65,12 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -108,7 +108,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -190,7 +189,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      ScheduledExecutorService cleanupExec,
       ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
   )
   {
@@ -207,7 +205,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         .build();
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
-    this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
+    this.cleanupExec = MoreExecutors.listeningDecorator(
+        ScheduledExecutors.fixed(1, "RemoteTaskRunner-Scheduled-Cleanup--%d")
+    );
     this.provisioningStrategy = provisioningStrategy;
     this.runPendingTasksExec = Execs.multiThreaded(
         config.getPendingTasksRunnerNumThreads(),
@@ -364,6 +364,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       if (runPendingTasksExec != null) {
         runPendingTasksExec.shutdown();
+      }
+
+      if (cleanupExec != null) {
+        cleanupExec.shutdown();
       }
     }
     catch (Exception e) {

@@ -37,7 +37,6 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -130,7 +129,6 @@ public class RemoteTaskRunnerTestUtils
         new PathChildrenCacheFactory.Builder(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
-        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
         provisioningStrategy
     );
 
