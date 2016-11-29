@@ -28,9 +28,11 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -57,6 +59,7 @@ import org.joda.time.Interval;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -105,6 +108,11 @@ public class GroupByQuery extends BaseQuery<Row>
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
+
+    // Verify no duplicate names between dimensions, aggregators, and postAggregators.
+    // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
+    // We're not counting __time, even though that name is problematic. See: https://github.com/druid-io/druid/pull/3684
+    verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     Function<Sequence<Row>, Sequence<Row>> postProcFn =
         this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
@@ -434,6 +442,32 @@ public class GroupByQuery extends BaseQuery<Row>
         limitFn,
         getContext()
     );
+  }
+
+  private static void verifyOutputNames(
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggregators,
+      List<PostAggregator> postAggregators
+  )
+  {
+    final Set<String> outputNames = Sets.newHashSet();
+    for (DimensionSpec dimension : dimensions) {
+      if (!outputNames.add(dimension.getOutputName())) {
+        throw new IAE("Duplicate output name[%s]", dimension.getOutputName());
+      }
+    }
+
+    for (AggregatorFactory aggregator : aggregators) {
+      if (!outputNames.add(aggregator.getName())) {
+        throw new IAE("Duplicate output name[%s]", aggregator.getName());
+      }
+    }
+
+    for (PostAggregator postAggregator : postAggregators) {
+      if (!outputNames.add(postAggregator.getName())) {
+        throw new IAE("Duplicate output name[%s]", postAggregator.getName());
+      }
+    }
   }
 
   public static class Builder

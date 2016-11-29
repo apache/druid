@@ -41,6 +41,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
@@ -135,8 +136,21 @@ public class GroupByStrategyV1 implements GroupByStrategy
     // multiple columns of the same name using different aggregator types and will fail. Here, we permit multiple
     // aggregators of the same type referencing the same fieldName (and skip creating identical columns for the
     // subsequent ones) and return an error if the aggregator types are different.
+    final Set<String> dimensionNames = Sets.newHashSet();
+    for (DimensionSpec dimension : subquery.getDimensions()) {
+      dimensionNames.add(dimension.getOutputName());
+    }
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
       for (final AggregatorFactory transferAgg : aggregatorFactory.getRequiredColumns()) {
+        if (dimensionNames.contains(transferAgg.getName())) {
+          // This transferAgg is already represented in the subquery's dimensions. Assume that the outer aggregator
+          // *probably* wants the dimension and just ignore it. This is a gross workaround for cases like having
+          // a cardinality aggregator in the outer query. It is necessary because what this block of code is trying to
+          // do is use aggregators to "transfer" values from the inner results to an incremental index, but aggregators
+          // can't transfer all kinds of values (strings are a common one). If you don't like it, use groupBy v2, which
+          // doesn't have this problem.
+          continue;
+        }
         if (Iterables.any(aggs, new Predicate<AggregatorFactory>()
         {
           @Override

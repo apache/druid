@@ -21,7 +21,6 @@ package io.druid.query.groupby;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
@@ -37,7 +36,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -48,7 +46,6 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
@@ -95,20 +92,10 @@ public class GroupByQueryHelper
 
     final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
 
-    // All groupBy dimensions are strings, for now, as long as they don't conflict with any non-dimensions.
-    // This should get cleaned up if/when https://github.com/druid-io/druid/pull/3686 makes name conflicts impossible.
-    final Set<String> otherNames = Sets.newHashSet();
-    for (AggregatorFactory agg : aggs) {
-      otherNames.add(agg.getName());
-    }
-    for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-      otherNames.add(postAggregator.getName());
-    }
+    // All groupBy dimensions are strings, for now.
     final List<DimensionSchema> dimensionSchemas = Lists.newArrayList();
     for (DimensionSpec dimension : query.getDimensions()) {
-      if (!otherNames.contains(dimension.getOutputName())) {
-        dimensionSchemas.add(new StringDimensionSchema(dimension.getOutputName()));
-      }
+      dimensionSchemas.add(new StringDimensionSchema(dimension.getOutputName()));
     }
 
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
