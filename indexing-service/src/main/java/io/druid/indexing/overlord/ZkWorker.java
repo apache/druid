@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -51,6 +52,7 @@ public class ZkWorker implements Closeable
 
   private AtomicReference<Worker> worker;
   private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
+  private AtomicInteger countinouslyFailedTasksCount = new AtomicInteger(0);
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
@@ -166,6 +168,18 @@ public class ZkWorker implements Closeable
   public void close() throws IOException
   {
     statusCache.close();
+  }
+
+  public int getCountinouslyFailedTasksCount() {
+    return countinouslyFailedTasksCount.get();
+  }
+
+  public void resetCountinouslyFailedTasksCount() {
+    this.countinouslyFailedTasksCount.set(0);
+  }
+
+  public void incrementCountinouslyFailedTasksCount() {
+    this.countinouslyFailedTasksCount.incrementAndGet();
   }
 
   @Override
