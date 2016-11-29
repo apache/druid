@@ -173,6 +173,12 @@ public class RemoteTaskRunnerTestUtils
     cf.setData().forPath(joiner.join(statusPath, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 
+  void mockWorkerCompleteFailedTask(final String workerId, final Task task) throws Exception
+  {
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.failure(task.getId()), DUMMY_LOCATION);
+    cf.setData().forPath(joiner.join(statusPath, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+  }
+
   boolean workerRunningTask(final String workerId, final String taskId)
   {
     return pathExists(joiner.join(statusPath, workerId, taskId));
