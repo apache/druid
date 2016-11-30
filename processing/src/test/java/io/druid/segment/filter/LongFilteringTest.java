@@ -103,10 +103,11 @@ public class LongFilteringTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -263,15 +264,6 @@ public class LongFilteringTest extends BaseFilterTest
     );
   }
 
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
-  }
-
   private void assertFilterMatchesMultithreaded(
       final DimFilter filter,
       final List<String> expectedRows
@@ -290,8 +282,7 @@ public class LongFilteringTest extends BaseFilterTest
       @Override
       public void run()
       {
-        Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-        Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
+        assertFilterMatches(filter, expectedRows);
       }
     };
   }

@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularities;
@@ -34,8 +35,11 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexBuilder;
@@ -52,6 +56,7 @@ import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -76,6 +81,7 @@ public abstract class BaseFilterTest
   protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
   protected StorageAdapter adapter;
   protected Closeable closeable;
+  protected boolean cnf;
   protected boolean optimize;
   protected final String testName;
 
@@ -85,19 +91,20 @@ public abstract class BaseFilterTest
   // Each thread gets its own map.
   protected static ThreadLocal<Map<String, Map<String, Pair<StorageAdapter, Closeable>>>> adapterCache =
       new ThreadLocal<Map<String, Map<String, Pair<StorageAdapter, Closeable>>>>()
-  {
-    @Override
-    protected Map<String, Map<String, Pair<StorageAdapter, Closeable>>> initialValue()
-    {
-      return new HashMap<>();
-    }
-  };
+      {
+        @Override
+        protected Map<String, Map<String, Pair<StorageAdapter, Closeable>>> initialValue()
+        {
+          return new HashMap<>();
+        }
+      };
 
   public BaseFilterTest(
       String testName,
       List<InputRow> rows,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
@@ -105,6 +112,7 @@ public abstract class BaseFilterTest
     this.rows = rows;
     this.indexBuilder = indexBuilder;
     this.finisher = finisher;
+    this.cnf = cnf;
     this.optimize = optimize;
   }
 
@@ -227,24 +235,26 @@ public abstract class BaseFilterTest
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, IndexMerger> indexMergerEntry : indexMergers.entrySet()) {
         for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry : finishers.entrySet()) {
-          for (boolean optimize : ImmutableList.of(false, true)) {
-            final String testName = String.format(
-                "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
-                bitmapSerdeFactoryEntry.getKey(),
-                indexMergerEntry.getKey(),
-                finisherEntry.getKey(),
-                optimize
-            );
-            final IndexBuilder indexBuilder = IndexBuilder.create()
-                                                          .indexSpec(new IndexSpec(
-                                                              bitmapSerdeFactoryEntry.getValue(),
-                                                              null,
-                                                              null,
-                                                              null
-                                                          ))
-                                                          .indexMerger(indexMergerEntry.getValue());
+          for (boolean cnf : ImmutableList.of(false, true)) {
+            for (boolean optimize : ImmutableList.of(false, true)) {
+              final String testName = String.format(
+                  "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
+                  bitmapSerdeFactoryEntry.getKey(),
+                  indexMergerEntry.getKey(),
+                  finisherEntry.getKey(),
+                  optimize
+              );
+              final IndexBuilder indexBuilder = IndexBuilder.create()
+                                                            .indexSpec(new IndexSpec(
+                                                                bitmapSerdeFactoryEntry.getValue(),
+                                                                null,
+                                                                null,
+                                                                null
+                                                            ))
+                                                            .indexMerger(indexMergerEntry.getValue());
 
-            constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), optimize});
+              constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+            }
           }
         }
       }
@@ -253,7 +263,18 @@ public abstract class BaseFilterTest
     return constructors;
   }
 
-  protected DimFilter maybeOptimize(final DimFilter dimFilter)
+  private Filter makeFilter(final DimFilter dimFilter)
+  {
+    if (dimFilter == null) {
+      return null;
+    }
+
+    final DimFilter maybeOptimized = optimize ? dimFilter.optimize() : dimFilter;
+    final Filter filter = maybeOptimized.toFilter();
+    return cnf ? Filters.convertToCNF(filter) : filter;
+  }
+
+  private DimFilter maybeOptimize(final DimFilter dimFilter)
   {
     if (dimFilter == null) {
       return null;
@@ -261,7 +282,7 @@ public abstract class BaseFilterTest
     return optimize ? dimFilter.optimize() : dimFilter;
   }
 
-  protected Sequence<Cursor> makeCursorSequence(final Filter filter)
+  private Sequence<Cursor> makeCursorSequence(final Filter filter)
   {
     final Sequence<Cursor> cursors = adapter.makeCursors(
         filter,
@@ -276,9 +297,9 @@ public abstract class BaseFilterTest
   /**
    * Selects elements from "selectColumn" from rows matching a filter. selectColumn must be a single valued dimension.
    */
-  protected List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
+  private List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(Filters.toFilter(maybeOptimize(filter)));
+    final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
     Sequence<List<String>> seq = Sequences.map(
         cursors,
         new Function<Cursor, List<String>>()
@@ -306,9 +327,9 @@ public abstract class BaseFilterTest
     return Sequences.toList(seq, new ArrayList<List<String>>()).get(0);
   }
 
-  protected long selectCountUsingFilteredAggregator(final DimFilter filter)
+  private long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(Filters.toFilter(maybeOptimize(filter)));
+    final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
     Sequence<Aggregator> aggSeq = Sequences.map(
         cursors,
         new Function<Cursor, Aggregator>()
@@ -330,5 +351,78 @@ public abstract class BaseFilterTest
         }
     );
     return Sequences.toList(aggSeq, new ArrayList<Aggregator>()).get(0).getLong();
+  }
+
+  private List<String> selectColumnValuesMatchingFilterUsingPostFiltering(
+      final DimFilter filter,
+      final String selectColumn
+  )
+  {
+    final Filter theFilter = makeFilter(filter);
+    final Filter postFilteringFilter = new Filter()
+    {
+      @Override
+      public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+      {
+        return theFilter.makeMatcher(factory);
+      }
+
+      @Override
+      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+      {
+        return false;
+      }
+    };
+
+    final Sequence<Cursor> cursors = makeCursorSequence(postFilteringFilter);
+    Sequence<List<String>> seq = Sequences.map(
+        cursors,
+        new Function<Cursor, List<String>>()
+        {
+          @Override
+          public List<String> apply(Cursor input)
+          {
+            final DimensionSelector selector = input.makeDimensionSelector(
+                new DefaultDimensionSpec(selectColumn, selectColumn)
+            );
+
+            final List<String> values = Lists.newArrayList();
+
+            while (!input.isDone()) {
+              IndexedInts row = selector.getRow();
+              Preconditions.checkState(row.size() == 1);
+              values.add(selector.lookupName(row.get(0)));
+              input.advance();
+            }
+
+            return values;
+          }
+        }
+    );
+    return Sequences.toList(seq, new ArrayList<List<String>>()).get(0);
+  }
+
+  protected void assertFilterMatches(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    Assert.assertEquals("Cursor: " + filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
+    Assert.assertEquals(
+        "Cursor with postFiltering: " + filter.toString(),
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
+    );
+    Assert.assertEquals(
+        "Filtered aggregator: " + filter.toString(),
+        expectedRows.size(),
+        selectCountUsingFilteredAggregator(filter)
+    );
   }
 }
