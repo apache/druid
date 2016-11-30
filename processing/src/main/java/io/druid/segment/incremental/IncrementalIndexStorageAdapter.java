@@ -600,14 +600,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     );
   }
 
-  private boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
   private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor, final EntryHolder holder)
   {
     return filter == null
@@ -656,7 +648,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Comparable originalValue)
+    public ValueMatcher makeValueMatcher(String dimension, final String originalValue)
     {
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
@@ -668,10 +660,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             case LONG:
               return Filters.getLongValueMatcher(cursor.makeLongColumnSelector(dimension), originalValue);
             default:
-              return new BooleanValueMatcher(isComparableNullOrEmpty(originalValue));
+              return new BooleanValueMatcher(Strings.isNullOrEmpty(originalValue));
           }
         } else {
-          return new BooleanValueMatcher(isComparableNullOrEmpty(originalValue));
+          return new BooleanValueMatcher(Strings.isNullOrEmpty(originalValue));
         }
       } else {
         final DimensionIndexer indexer = dimensionDesc.getIndexer();

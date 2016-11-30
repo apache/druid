@@ -40,6 +40,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.query.groupby.RowBasedValueMatcherFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexBuilder;
@@ -129,7 +130,7 @@ public abstract class BaseFilterTest
     Pair<StorageAdapter, Closeable> pair = adaptersForClass.get(testName);
     if (pair == null) {
       pair = finisher.apply(
-          indexBuilder.tmpDir(temporaryFolder.newFolder()).add(rows)
+          indexBuilder.tmpDir(temporaryFolder.newFolder()).rows(rows)
       );
       adaptersForClass.put(testName, pair);
     }
@@ -408,12 +409,33 @@ public abstract class BaseFilterTest
     return Sequences.toList(seq, new ArrayList<List<String>>()).get(0);
   }
 
+  private List<String> selectColumnValuesMatchingFilterUsingRowBasedValueMatcherFactory(
+      final DimFilter filter,
+      final String selectColumn
+  )
+  {
+    final RowBasedValueMatcherFactory matcherFactory = new RowBasedValueMatcherFactory();
+    final ValueMatcher matcher = makeFilter(filter).makeMatcher(matcherFactory);
+    final List<String> values = Lists.newArrayList();
+    for (InputRow row : rows) {
+      matcherFactory.setRow(row);
+      if (matcher.matches()) {
+        values.add((String) row.getRaw(selectColumn));
+      }
+    }
+    return values;
+  }
+
   protected void assertFilterMatches(
       final DimFilter filter,
       final List<String> expectedRows
   )
   {
-    Assert.assertEquals("Cursor: " + filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
+    Assert.assertEquals(
+        "Cursor: " + filter.toString(),
+        expectedRows,
+        selectColumnValuesMatchingFilter(filter, "dim0")
+    );
     Assert.assertEquals(
         "Cursor with postFiltering: " + filter.toString(),
         expectedRows,
@@ -423,6 +445,11 @@ public abstract class BaseFilterTest
         "Filtered aggregator: " + filter.toString(),
         expectedRows.size(),
         selectCountUsingFilteredAggregator(filter)
+    );
+    Assert.assertEquals(
+        "RowBasedValueMatcherFactory: " + filter.toString(),
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingRowBasedValueMatcherFactory(filter, "dim0")
     );
   }
 }
