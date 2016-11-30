@@ -43,6 +43,7 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TaskDataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -85,9 +86,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
-      ObjectMapper jsonMapper,
-      MetadataStorageTablesConfig dbTables,
-      SQLMetadataConnector connector
+          ObjectMapper jsonMapper,
+          MetadataStorageTablesConfig dbTables,
+          SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
@@ -112,8 +113,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Override
   public List<DataSegment> getUsedSegmentsForInterval(
-      final String dataSource,
-      final Interval interval
+          final String dataSource,
+          final Interval interval
   ) throws IOException
   {
     return getUsedSegmentsForIntervals(dataSource, ImmutableList.of(interval));
@@ -121,75 +122,75 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
-      final String dataSource, final List<Interval> intervals
+          final String dataSource, final List<Interval> intervals
   ) throws IOException
   {
     return connector.retryWithHandle(
-        new HandleCallback<List<DataSegment>>()
-        {
-          @Override
-          public List<DataSegment> withHandle(Handle handle) throws Exception
-          {
-            final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
-                handle,
-                dataSource,
-                intervals
-            );
+            new HandleCallback<List<DataSegment>>()
+            {
+              @Override
+              public List<DataSegment> withHandle(Handle handle) throws Exception
+              {
+                final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
+                        handle,
+                        dataSource,
+                        intervals
+                );
 
-            Set<DataSegment> segments = Sets.newHashSet(
-                Iterables.concat(
-                    Iterables.transform(
+                Set<DataSegment> segments = Sets.newHashSet(
                         Iterables.concat(
-                            Iterables.transform(
-                                intervals,
-                                new Function<Interval, Iterable<TimelineObjectHolder<String, DataSegment>>>()
-                                {
-                                  @Override
-                                  public Iterable<TimelineObjectHolder<String, DataSegment>> apply(Interval interval)
-                                  {
-                                    return timeline.lookup(interval);
-                                  }
-                                }
-                            )
-                        ),
-                        new Function<TimelineObjectHolder<String, DataSegment>, Iterable<DataSegment>>()
-                        {
-                          @Override
-                          public Iterable<DataSegment> apply(TimelineObjectHolder<String, DataSegment> input)
-                          {
-                            return input.getObject().payloads();
-                          }
-                        }
-                    )
-                )
-            );
+                                Iterables.transform(
+                                        Iterables.concat(
+                                                Iterables.transform(
+                                                        intervals,
+                                                        new Function<Interval, Iterable<TimelineObjectHolder<String, DataSegment>>>()
+                                                        {
+                                                          @Override
+                                                          public Iterable<TimelineObjectHolder<String, DataSegment>> apply(Interval interval)
+                                                          {
+                                                            return timeline.lookup(interval);
+                                                          }
+                                                        }
+                                                )
+                                        ),
+                                        new Function<TimelineObjectHolder<String, DataSegment>, Iterable<DataSegment>>()
+                                        {
+                                          @Override
+                                          public Iterable<DataSegment> apply(TimelineObjectHolder<String, DataSegment> input)
+                                          {
+                                            return input.getObject().payloads();
+                                          }
+                                        }
+                                )
+                        )
+                );
 
-            return new ArrayList<>(segments);
-          }
-        }
+                return new ArrayList<>(segments);
+              }
+            }
     );
   }
 
   private List<SegmentIdentifier> getPendingSegmentsForIntervalWithHandle(
-      final Handle handle,
-      final String dataSource,
-      final Interval interval
+          final Handle handle,
+          final String dataSource,
+          final Interval interval
   ) throws IOException
   {
     final List<SegmentIdentifier> identifiers = Lists.newArrayList();
 
     final ResultIterator<byte[]> dbSegments =
-        handle.createQuery(
-            String.format(
-                "SELECT payload FROM %s WHERE dataSource = :dataSource AND start <= :end and \"end\" >= :start",
-                dbTables.getPendingSegmentsTable()
+            handle.createQuery(
+                    String.format(
+                            "SELECT payload FROM %s WHERE dataSource = :dataSource AND start <= :end and \"end\" >= :start",
+                            dbTables.getPendingSegmentsTable()
+                    )
             )
-        )
-              .bind("dataSource", dataSource)
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString())
-              .map(ByteArrayMapper.FIRST)
-              .iterator();
+                    .bind("dataSource", dataSource)
+                    .bind("start", interval.getStart().toString())
+                    .bind("end", interval.getEnd().toString())
+                    .map(ByteArrayMapper.FIRST)
+                    .iterator();
 
     while (dbSegments.hasNext()) {
       final byte[] payload = dbSegments.next();
@@ -206,9 +207,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   private VersionedIntervalTimeline<String, DataSegment> getTimelineForIntervalsWithHandle(
-      final Handle handle,
-      final String dataSource,
-      final List<Interval> intervals
+          final Handle handle,
+          final String dataSource,
+          final List<Interval> intervals
   ) throws IOException
   {
     if (intervals == null || intervals.isEmpty()) {
@@ -219,7 +220,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
-          "(start <= ? AND \"end\" >= ?)"
+              "(start <= ? AND \"end\" >= ?)"
       );
       if (i == intervals.size() - 1) {
         sb.append(")");
@@ -229,33 +230,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     Query<Map<String, Object>> sql = handle.createQuery(
-        String.format(
-            sb.toString(),
-            dbTables.getSegmentsTable()
-        )
+            String.format(
+                    sb.toString(),
+                    dbTables.getSegmentsTable()
+            )
     ).bind(0, dataSource);
 
     for (int i = 0; i < intervals.size(); i++) {
       Interval interval = intervals.get(i);
       sql = sql
-          .bind(2 * i + 1, interval.getEnd().toString())
-          .bind(2 * i + 2, interval.getStart().toString());
+              .bind(2 * i + 1, interval.getEnd().toString())
+              .bind(2 * i + 2, interval.getStart().toString());
     }
 
     final ResultIterator<byte[]> dbSegments = sql
-        .map(ByteArrayMapper.FIRST)
-        .iterator();
+            .map(ByteArrayMapper.FIRST)
+            .iterator();
 
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        Ordering.natural()
+            Ordering.natural()
     );
 
     while (dbSegments.hasNext()) {
       final byte[] payload = dbSegments.next();
 
       DataSegment segment = jsonMapper.readValue(
-          payload,
-          DataSegment.class
+              payload,
+              DataSegment.class
       );
 
       timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
@@ -292,9 +293,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    */
   @Override
   public SegmentPublishResult announceHistoricalSegments(
-      final Set<DataSegment> segments,
-      final DataSourceMetadata startMetadata,
-      final DataSourceMetadata endMetadata
+          final Set<DataSegment> segments,
+          final DataSourceMetadata startMetadata,
+          final DataSourceMetadata endMetadata
   ) throws IOException
   {
     if (segments.isEmpty()) {
@@ -315,7 +316,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = Sets.newHashSet();
     for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
-                                                                                     .lookup(JodaUtils.ETERNITY)) {
+            .lookup(JodaUtils.ETERNITY)) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         usedSegments.add(chunk.getObject());
       }
@@ -325,6 +326,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     try {
       return connector.retryTransaction(
+<<<<<<< HEAD
           new TransactionCallback<SegmentPublishResult>()
           {
             @Override
@@ -354,18 +356,44 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   }
                 }
               }
+=======
+              new TransactionCallback<SegmentPublishResult>()
+              {
+                @Override
+                public SegmentPublishResult inTransaction(
+                        final Handle handle,
+                        final TransactionStatus transactionStatus
+                ) throws Exception
+                {
+                  final Set<DataSegment> inserted = Sets.newHashSet();
 
-              for (final DataSegment segment : segments) {
-                if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
-                  inserted.add(segment);
+                  if (startMetadata != null) {
+                    final boolean success = updateDataSourceMetadataWithHandle(
+                            handle,
+                            dataSource,
+                            startMetadata,
+                            endMetadata
+                    );
+
+                    if (!success) {
+                      transactionStatus.setRollbackOnly();
+                      txnFailure.set(true);
+                      throw new RuntimeException("Aborting transaction!");
+                    }
+                  }
+
+                  for (final DataSegment segment : segments) {
+                    if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
+                      inserted.add(segment);
+                    }
+                  }
+>>>>>>> d135fbd... finished the interface to delete unused pendingSeglments, add TaskDataSegment.java to struct the task table’s data, add getNotActiveTask and deletePendingSegments in IndexerSQLMetadataStorageCoordinator.java to finish the delete logic, add test in TestIndexerMetadataStorageCoordinator.java.
+
+                  return new SegmentPublishResult(ImmutableSet.copyOf(inserted), true);
                 }
-              }
-
-              return new SegmentPublishResult(ImmutableSet.copyOf(inserted), true);
-            }
-          },
-          3,
-          SQLMetadataConnector.DEFAULT_MAX_TRIES
+              },
+              3,
+              SQLMetadataConnector.DEFAULT_MAX_TRIES
       );
     }
     catch (CallbackFailedException e) {
@@ -379,11 +407,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Override
   public SegmentIdentifier allocatePendingSegment(
-      final String dataSource,
-      final String sequenceName,
-      final String previousSegmentId,
-      final Interval interval,
-      final String maxVersion
+          final String dataSource,
+          final String sequenceName,
+          final String previousSegmentId,
+          final Interval interval,
+          final String maxVersion
   ) throws IOException
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -394,200 +422,200 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String previousSegmentIdNotNull = previousSegmentId == null ? "" : previousSegmentId;
 
     return connector.retryTransaction(
-        new TransactionCallback<SegmentIdentifier>()
-        {
-          @Override
-          public SegmentIdentifier inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            final List<byte[]> existingBytes = handle
-                .createQuery(
-                    String.format(
-                        "SELECT payload FROM %s WHERE "
-                        + "dataSource = :dataSource AND "
-                        + "sequence_name = :sequence_name AND "
-                        + "sequence_prev_id = :sequence_prev_id",
-                        dbTables.getPendingSegmentsTable()
-                    )
-                ).bind("dataSource", dataSource)
-                .bind("sequence_name", sequenceName)
-                .bind("sequence_prev_id", previousSegmentIdNotNull)
-                .map(ByteArrayMapper.FIRST)
-                .list();
+            new TransactionCallback<SegmentIdentifier>()
+            {
+              @Override
+              public SegmentIdentifier inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+              {
+                final List<byte[]> existingBytes = handle
+                        .createQuery(
+                                String.format(
+                                        "SELECT payload FROM %s WHERE "
+                                                + "dataSource = :dataSource AND "
+                                                + "sequence_name = :sequence_name AND "
+                                                + "sequence_prev_id = :sequence_prev_id",
+                                        dbTables.getPendingSegmentsTable()
+                                )
+                        ).bind("dataSource", dataSource)
+                        .bind("sequence_name", sequenceName)
+                        .bind("sequence_prev_id", previousSegmentIdNotNull)
+                        .map(ByteArrayMapper.FIRST)
+                        .list();
 
-            if (!existingBytes.isEmpty()) {
-              final SegmentIdentifier existingIdentifier = jsonMapper.readValue(
-                  Iterables.getOnlyElement(existingBytes),
-                  SegmentIdentifier.class
-              );
+                if (!existingBytes.isEmpty()) {
+                  final SegmentIdentifier existingIdentifier = jsonMapper.readValue(
+                          Iterables.getOnlyElement(existingBytes),
+                          SegmentIdentifier.class
+                  );
 
-              if (existingIdentifier.getInterval().getStartMillis() == interval.getStartMillis()
-                  && existingIdentifier.getInterval().getEndMillis() == interval.getEndMillis()) {
-                log.info(
-                    "Found existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
-                    existingIdentifier.getIdentifierAsString(),
-                    sequenceName,
-                    previousSegmentIdNotNull
-                );
+                  if (existingIdentifier.getInterval().getStartMillis() == interval.getStartMillis()
+                          && existingIdentifier.getInterval().getEndMillis() == interval.getEndMillis()) {
+                    log.info(
+                            "Found existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
+                            existingIdentifier.getIdentifierAsString(),
+                            sequenceName,
+                            previousSegmentIdNotNull
+                    );
 
-                return existingIdentifier;
-              } else {
-                log.warn(
-                    "Cannot use existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB, "
-                    + "does not match requested interval[%s]",
-                    existingIdentifier.getIdentifierAsString(),
-                    sequenceName,
-                    previousSegmentIdNotNull,
-                    interval
-                );
+                    return existingIdentifier;
+                  } else {
+                    log.warn(
+                            "Cannot use existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB, "
+                                    + "does not match requested interval[%s]",
+                            existingIdentifier.getIdentifierAsString(),
+                            sequenceName,
+                            previousSegmentIdNotNull,
+                            interval
+                    );
 
-                return null;
-              }
-            }
-
-            // Make up a pending segment based on existing segments and pending segments in the DB. This works
-            // assuming that all tasks inserting segments at a particular point in time are going through the
-            // allocatePendingSegment flow. This should be assured through some other mechanism (like task locks).
-
-            final SegmentIdentifier newIdentifier;
-
-            final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
-                handle,
-                dataSource,
-                ImmutableList.of(interval)
-            ).lookup(interval);
-
-            if (existingChunks.size() > 1) {
-              // Not possible to expand more than one chunk with a single segment.
-              log.warn(
-                  "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: already have [%,d] chunks.",
-                  dataSource,
-                  interval,
-                  maxVersion,
-                  existingChunks.size()
-              );
-              return null;
-            } else {
-              SegmentIdentifier max = null;
-
-              if (!existingChunks.isEmpty()) {
-                TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
-                for (PartitionChunk<DataSegment> existing : existingHolder.getObject()) {
-                  if (max == null || max.getShardSpec().getPartitionNum() < existing.getObject()
-                                                                                    .getShardSpec()
-                                                                                    .getPartitionNum()) {
-                    max = SegmentIdentifier.fromDataSegment(existing.getObject());
+                    return null;
                   }
                 }
-              }
 
-              final List<SegmentIdentifier> pendings = getPendingSegmentsForIntervalWithHandle(
-                  handle,
-                  dataSource,
-                  interval
-              );
+                // Make up a pending segment based on existing segments and pending segments in the DB. This works
+                // assuming that all tasks inserting segments at a particular point in time are going through the
+                // allocatePendingSegment flow. This should be assured through some other mechanism (like task locks).
 
-              for (SegmentIdentifier pending : pendings) {
-                if (max == null ||
-                    pending.getVersion().compareTo(max.getVersion()) > 0 ||
-                    (pending.getVersion().equals(max.getVersion())
-                     && pending.getShardSpec().getPartitionNum() > max.getShardSpec().getPartitionNum())) {
-                  max = pending;
+                final SegmentIdentifier newIdentifier;
+
+                final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
+                        handle,
+                        dataSource,
+                        ImmutableList.of(interval)
+                ).lookup(interval);
+
+                if (existingChunks.size() > 1) {
+                  // Not possible to expand more than one chunk with a single segment.
+                  log.warn(
+                          "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: already have [%,d] chunks.",
+                          dataSource,
+                          interval,
+                          maxVersion,
+                          existingChunks.size()
+                  );
+                  return null;
+                } else {
+                  SegmentIdentifier max = null;
+
+                  if (!existingChunks.isEmpty()) {
+                    TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
+                    for (PartitionChunk<DataSegment> existing : existingHolder.getObject()) {
+                      if (max == null || max.getShardSpec().getPartitionNum() < existing.getObject()
+                              .getShardSpec()
+                              .getPartitionNum()) {
+                        max = SegmentIdentifier.fromDataSegment(existing.getObject());
+                      }
+                    }
+                  }
+
+                  final List<SegmentIdentifier> pendings = getPendingSegmentsForIntervalWithHandle(
+                          handle,
+                          dataSource,
+                          interval
+                  );
+
+                  for (SegmentIdentifier pending : pendings) {
+                    if (max == null ||
+                            pending.getVersion().compareTo(max.getVersion()) > 0 ||
+                            (pending.getVersion().equals(max.getVersion())
+                                    && pending.getShardSpec().getPartitionNum() > max.getShardSpec().getPartitionNum())) {
+                      max = pending;
+                    }
+                  }
+
+                  if (max == null) {
+                    newIdentifier = new SegmentIdentifier(
+                            dataSource,
+                            interval,
+                            maxVersion,
+                            new NumberedShardSpec(0, 0)
+                    );
+                  } else if (!max.getInterval().equals(interval) || max.getVersion().compareTo(maxVersion) > 0) {
+                    log.warn(
+                            "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: conflicting segment[%s].",
+                            dataSource,
+                            interval,
+                            maxVersion,
+                            max.getIdentifierAsString()
+                    );
+                    return null;
+                  } else if (max.getShardSpec() instanceof LinearShardSpec) {
+                    newIdentifier = new SegmentIdentifier(
+                            dataSource,
+                            max.getInterval(),
+                            max.getVersion(),
+                            new LinearShardSpec(max.getShardSpec().getPartitionNum() + 1)
+                    );
+                  } else if (max.getShardSpec() instanceof NumberedShardSpec) {
+                    newIdentifier = new SegmentIdentifier(
+                            dataSource,
+                            max.getInterval(),
+                            max.getVersion(),
+                            new NumberedShardSpec(
+                                    max.getShardSpec().getPartitionNum() + 1,
+                                    ((NumberedShardSpec) max.getShardSpec()).getPartitions()
+                            )
+                    );
+                  } else {
+                    log.warn(
+                            "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: ShardSpec class[%s] used by [%s].",
+                            dataSource,
+                            interval,
+                            maxVersion,
+                            max.getShardSpec().getClass(),
+                            max.getIdentifierAsString()
+                    );
+                    return null;
+                  }
                 }
-              }
 
-              if (max == null) {
-                newIdentifier = new SegmentIdentifier(
-                    dataSource,
-                    interval,
-                    maxVersion,
-                    new NumberedShardSpec(0, 0)
-                );
-              } else if (!max.getInterval().equals(interval) || max.getVersion().compareTo(maxVersion) > 0) {
-                log.warn(
-                    "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: conflicting segment[%s].",
-                    dataSource,
-                    interval,
-                    maxVersion,
-                    max.getIdentifierAsString()
-                );
-                return null;
-              } else if (max.getShardSpec() instanceof LinearShardSpec) {
-                newIdentifier = new SegmentIdentifier(
-                    dataSource,
-                    max.getInterval(),
-                    max.getVersion(),
-                    new LinearShardSpec(max.getShardSpec().getPartitionNum() + 1)
-                );
-              } else if (max.getShardSpec() instanceof NumberedShardSpec) {
-                newIdentifier = new SegmentIdentifier(
-                    dataSource,
-                    max.getInterval(),
-                    max.getVersion(),
-                    new NumberedShardSpec(
-                        max.getShardSpec().getPartitionNum() + 1,
-                        ((NumberedShardSpec) max.getShardSpec()).getPartitions()
-                    )
-                );
-              } else {
-                log.warn(
-                    "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: ShardSpec class[%s] used by [%s].",
-                    dataSource,
-                    interval,
-                    maxVersion,
-                    max.getShardSpec().getClass(),
-                    max.getIdentifierAsString()
-                );
-                return null;
-              }
-            }
+                // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
+                // Avoiding ON DUPLICATE KEY since it's not portable.
+                // Avoiding try/catch since it may cause inadvertent transaction-splitting.
 
-            // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
-            // Avoiding ON DUPLICATE KEY since it's not portable.
-            // Avoiding try/catch since it may cause inadvertent transaction-splitting.
+                // UNIQUE key for the row, ensuring sequences do not fork in two directions.
+                // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
+                // have difficulty with large unique keys (see https://github.com/druid-io/druid/issues/2319)
+                final String sequenceNamePrevIdSha1 = BaseEncoding.base16().encode(
+                        Hashing.sha1()
+                                .newHasher()
+                                .putBytes(StringUtils.toUtf8(sequenceName))
+                                .putByte((byte) 0xff)
+                                .putBytes(StringUtils.toUtf8(previousSegmentIdNotNull))
+                                .hash()
+                                .asBytes()
+                );
 
-            // UNIQUE key for the row, ensuring sequences do not fork in two directions.
-            // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
-            // have difficulty with large unique keys (see https://github.com/druid-io/druid/issues/2319)
-            final String sequenceNamePrevIdSha1 = BaseEncoding.base16().encode(
-                Hashing.sha1()
-                       .newHasher()
-                       .putBytes(StringUtils.toUtf8(sequenceName))
-                       .putByte((byte) 0xff)
-                       .putBytes(StringUtils.toUtf8(previousSegmentIdNotNull))
-                       .hash()
-                       .asBytes()
-            );
-
-            handle.createStatement(
-                String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
-                    dbTables.getPendingSegmentsTable()
+                handle.createStatement(
+                        String.format(
+                                "INSERT INTO %s (id, dataSource, created_date, start, \"end\", sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
+                                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
+                                dbTables.getPendingSegmentsTable()
+                        )
                 )
-            )
-                  .bind("id", newIdentifier.getIdentifierAsString())
-                  .bind("dataSource", dataSource)
-                  .bind("created_date", new DateTime().toString())
-                  .bind("start", interval.getStart().toString())
-                  .bind("end", interval.getEnd().toString())
-                  .bind("sequence_name", sequenceName)
-                  .bind("sequence_prev_id", previousSegmentIdNotNull)
-                  .bind("sequence_name_prev_id_sha1", sequenceNamePrevIdSha1)
-                  .bind("payload", jsonMapper.writeValueAsBytes(newIdentifier))
-                  .execute();
+                        .bind("id", newIdentifier.getIdentifierAsString())
+                        .bind("dataSource", dataSource)
+                        .bind("created_date", new DateTime().toString())
+                        .bind("start", interval.getStart().toString())
+                        .bind("end", interval.getEnd().toString())
+                        .bind("sequence_name", sequenceName)
+                        .bind("sequence_prev_id", previousSegmentIdNotNull)
+                        .bind("sequence_name_prev_id_sha1", sequenceNamePrevIdSha1)
+                        .bind("payload", jsonMapper.writeValueAsBytes(newIdentifier))
+                        .execute();
 
-            log.info(
-                "Allocated pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
-                newIdentifier.getIdentifierAsString(),
-                sequenceName,
-                previousSegmentIdNotNull
-            );
+                log.info(
+                        "Allocated pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
+                        newIdentifier.getIdentifierAsString(),
+                        sequenceName,
+                        previousSegmentIdNotNull
+                );
 
-            return newIdentifier;
-          }
-        },
-        ALLOCATE_SEGMENT_QUIET_TRIES,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+                return newIdentifier;
+              }
+            },
+            ALLOCATE_SEGMENT_QUIET_TRIES,
+            SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
 
@@ -598,9 +626,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * @return true if the segment was added, false if it already existed
    */
   private boolean announceHistoricalSegment(
-      final Handle handle,
-      final DataSegment segment,
-      final boolean used
+          final Handle handle,
+          final DataSegment segment,
+          final boolean used
   ) throws IOException
   {
     try {
@@ -613,22 +641,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Avoiding ON DUPLICATE KEY since it's not portable.
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
       handle.createStatement(
-          String.format(
-              "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable()
-          )
+              String.format(
+                      "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                      dbTables.getSegmentsTable()
+              )
       )
-            .bind("id", segment.getIdentifier())
-            .bind("dataSource", segment.getDataSource())
-            .bind("created_date", new DateTime().toString())
-            .bind("start", segment.getInterval().getStart().toString())
-            .bind("end", segment.getInterval().getEnd().toString())
-            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-            .bind("version", segment.getVersion())
-            .bind("used", used)
-            .bind("payload", jsonMapper.writeValueAsBytes(segment))
-            .execute();
+              .bind("id", segment.getIdentifier())
+              .bind("dataSource", segment.getDataSource())
+              .bind("created_date", new DateTime().toString())
+              .bind("start", segment.getInterval().getStart().toString())
+              .bind("end", segment.getInterval().getEnd().toString())
+              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+              .bind("version", segment.getVersion())
+              .bind("used", used)
+              .bind("payload", jsonMapper.writeValueAsBytes(segment))
+              .execute();
 
       log.info("Published segment [%s] to DB", segment.getIdentifier());
     }
@@ -643,15 +671,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private boolean segmentExists(final Handle handle, final DataSegment segment)
   {
     return !handle
-        .createQuery(
-            String.format(
-                "SELECT id FROM %s WHERE id = :identifier",
-                dbTables.getSegmentsTable()
-            )
-        ).bind("identifier", segment.getIdentifier())
-        .map(StringMapper.FIRST)
-        .list()
-        .isEmpty();
+            .createQuery(
+                    String.format(
+                            "SELECT id FROM %s WHERE id = :identifier",
+                            dbTables.getSegmentsTable()
+                    )
+            ).bind("identifier", segment.getIdentifier())
+            .map(StringMapper.FIRST)
+            .list()
+            .isEmpty();
   }
 
   /**
@@ -660,10 +688,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public DataSourceMetadata getDataSourceMetadata(final String dataSource)
   {
     final byte[] bytes = connector.lookup(
-        dbTables.getDataSourceTable(),
-        "dataSource",
-        "commit_metadata_payload",
-        dataSource
+            dbTables.getDataSourceTable(),
+            "dataSource",
+            "commit_metadata_payload",
+            dataSource
     );
 
     if (bytes == null) {
@@ -682,16 +710,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
    */
   private byte[] getDataSourceMetadataWithHandleAsBytes(
-      final Handle handle,
-      final String dataSource
+          final Handle handle,
+          final String dataSource
   )
   {
     return connector.lookupWithHandle(
-        handle,
-        dbTables.getDataSourceTable(),
-        "dataSource",
-        "commit_metadata_payload",
-        dataSource
+            handle,
+            dbTables.getDataSourceTable(),
+            "dataSource",
+            "commit_metadata_payload",
+            dataSource
     );
   }
 
@@ -709,11 +737,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return true if dataSource metadata was updated from matching startMetadata to matching endMetadata
    */
+<<<<<<< HEAD
   protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
       final Handle handle,
       final String dataSource,
       final DataSourceMetadata startMetadata,
       final DataSourceMetadata endMetadata
+=======
+  private boolean updateDataSourceMetadataWithHandle(
+          final Handle handle,
+          final String dataSource,
+          final DataSourceMetadata startMetadata,
+          final DataSourceMetadata endMetadata
+>>>>>>> d135fbd... finished the interface to delete unused pendingSeglments, add TaskDataSegment.java to struct the task table’s data, add getNotActiveTask and deletePendingSegments in IndexerSQLMetadataStorageCoordinator.java to finish the delete logic, add test in TestIndexerMetadataStorageCoordinator.java.
   ) throws IOException
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -729,14 +765,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       oldCommitMetadataFromDb = null;
     } else {
       oldCommitMetadataSha1FromDb = BaseEncoding.base16().encode(
-          Hashing.sha1().hashBytes(oldCommitMetadataBytesFromDb).asBytes()
+              Hashing.sha1().hashBytes(oldCommitMetadataBytesFromDb).asBytes()
       );
       oldCommitMetadataFromDb = jsonMapper.readValue(oldCommitMetadataBytesFromDb, DataSourceMetadata.class);
     }
 
     final boolean startMetadataMatchesExisting = oldCommitMetadataFromDb == null
-                                                 ? startMetadata.isValidStart()
-                                                 : startMetadata.matches(oldCommitMetadataFromDb);
+            ? startMetadata.isValidStart()
+            : startMetadata.matches(oldCommitMetadataFromDb);
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
@@ -745,46 +781,46 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final DataSourceMetadata newCommitMetadata = oldCommitMetadataFromDb == null
-                                                 ? endMetadata
-                                                 : oldCommitMetadataFromDb.plus(endMetadata);
+            ? endMetadata
+            : oldCommitMetadataFromDb.plus(endMetadata);
     final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(newCommitMetadata);
     final String newCommitMetadataSha1 = BaseEncoding.base16().encode(
-        Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
+            Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
     );
 
     final DataSourceMetadataUpdateResult retVal;
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = handle.createStatement(
-          String.format(
-              "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
-              + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
-              dbTables.getDataSourceTable()
-          )
+              String.format(
+                      "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
+                              + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+                      dbTables.getDataSourceTable()
+              )
       )
-                                .bind("dataSource", dataSource)
-                                .bind("created_date", new DateTime().toString())
-                                .bind("commit_metadata_payload", newCommitMetadataBytes)
-                                .bind("commit_metadata_sha1", newCommitMetadataSha1)
-                                .execute();
+              .bind("dataSource", dataSource)
+              .bind("created_date", new DateTime().toString())
+              .bind("commit_metadata_payload", newCommitMetadataBytes)
+              .bind("commit_metadata_sha1", newCommitMetadataSha1)
+              .execute();
 
       retVal = numRows == 1 ? DataSourceMetadataUpdateResult.SUCCESS : DataSourceMetadataUpdateResult.TRY_AGAIN;
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
-          String.format(
-              "UPDATE %s SET "
-              + "commit_metadata_payload = :new_commit_metadata_payload, "
-              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-              + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
-              dbTables.getDataSourceTable()
-          )
+              String.format(
+                      "UPDATE %s SET "
+                              + "commit_metadata_payload = :new_commit_metadata_payload, "
+                              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+                              + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
+                      dbTables.getDataSourceTable()
+              )
       )
-                                .bind("dataSource", dataSource)
-                                .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
-                                .bind("new_commit_metadata_payload", newCommitMetadataBytes)
-                                .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
-                                .execute();
+              .bind("dataSource", dataSource)
+              .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
+              .bind("new_commit_metadata_payload", newCommitMetadataBytes)
+              .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
+              .execute();
 
       retVal = numRows == 1 ? DataSourceMetadataUpdateResult.SUCCESS : DataSourceMetadataUpdateResult.TRY_AGAIN;
     }
@@ -801,77 +837,77 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public boolean deleteDataSourceMetadata(final String dataSource)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
-        {
-          @Override
-          public Boolean withHandle(Handle handle) throws Exception
-          {
-            int rows = handle.createStatement(
-                String.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
-            )
-                             .bind("dataSource", dataSource)
-                             .execute();
+            new HandleCallback<Boolean>()
+            {
+              @Override
+              public Boolean withHandle(Handle handle) throws Exception
+              {
+                int rows = handle.createStatement(
+                        String.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+                )
+                        .bind("dataSource", dataSource)
+                        .execute();
 
-            return rows > 0;
-          }
-        }
+                return rows > 0;
+              }
+            }
     );
   }
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            for (final DataSegment segment : segments) {
-              updatePayload(handle, segment);
-            }
+            new TransactionCallback<Void>()
+            {
+              @Override
+              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+              {
+                for (final DataSegment segment : segments) {
+                  updatePayload(handle, segment);
+                }
 
-            return null;
-          }
-        }
+                return null;
+              }
+            }
     );
   }
 
   public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
-          {
-            for (final DataSegment segment : segments) {
-              deleteSegment(handle, segment);
-            }
+            new TransactionCallback<Void>()
+            {
+              @Override
+              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+              {
+                for (final DataSegment segment : segments) {
+                  deleteSegment(handle, segment);
+                }
 
-            return null;
-          }
-        }
+                return null;
+              }
+            }
     );
   }
 
   private void deleteSegment(final Handle handle, final DataSegment segment)
   {
     handle.createStatement(
-        String.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
+            String.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
     )
-          .bind("id", segment.getIdentifier())
-          .execute();
+            .bind("id", segment.getIdentifier())
+            .execute();
   }
 
   private void updatePayload(final Handle handle, final DataSegment segment) throws IOException
   {
     try {
       handle.createStatement(
-          String.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
+              String.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
       )
-            .bind("id", segment.getIdentifier())
-            .bind("payload", jsonMapper.writeValueAsBytes(segment))
-            .execute();
+              .bind("id", segment.getIdentifier())
+              .bind("payload", jsonMapper.writeValueAsBytes(segment))
+              .execute();
     }
     catch (IOException e) {
       log.error(e, "Exception inserting into DB");
@@ -879,54 +915,148 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  public boolean deletePendingSegments(final List<TaskDataSegment> segments) throws IOException
+  {
+    return connector.getDBI().inTransaction(
+            new TransactionCallback<Boolean>()
+            {
+              int res = 0;
+              @Override
+              public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+              {
+                for (final TaskDataSegment segment : segments) {
+                  if(deletePendingSegment(segment))
+                  {
+                    res +=1;
+                  }
+                }
+
+                return res == segments.size();
+              }
+            }
+    );
+  }
+
+
+  public boolean deletePendingSegment(final TaskDataSegment taskDataSegment)
+  {
+    return connector.retryWithHandle(
+            new HandleCallback<Boolean>()
+            {
+              @Override
+              public Boolean withHandle(Handle handle) throws Exception
+              {
+                int rows = handle.createStatement(
+                        String.format("DELETE from %s WHERE sequence_name = :sequence_name", dbTables.getPendingSegmentsTable())
+                )
+                        .bind("sequence_name", taskDataSegment.getIoConfig().get("baseSequenceName"))
+                        .execute();
+                log.info("HHHHHHHHHHHHHHHHHHHHHHHHHH:"+taskDataSegment.getIoConfig().get("baseSequenceName"));
+
+                return rows > 0;
+              }
+            }
+    );
+  }
+
   @Override
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
     List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
-        new TransactionCallback<List<DataSegment>>()
-        {
-          @Override
-          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
-          {
-            return handle
-                .createQuery(
-                    String.format(
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
-                        dbTables.getSegmentsTable()
-                    )
-                )
-                .setFetchSize(connector.getStreamingFetchSize())
-                .bind("dataSource", dataSource)
-                .bind("start", interval.getStart().toString())
-                .bind("end", interval.getEnd().toString())
-                .map(ByteArrayMapper.FIRST)
-                .fold(
-                    Lists.<DataSegment>newArrayList(),
-                    new Folder3<List<DataSegment>, byte[]>()
-                    {
-                      @Override
-                      public List<DataSegment> fold(
-                          List<DataSegment> accumulator,
-                          byte[] payload,
-                          FoldController foldController,
-                          StatementContext statementContext
-                      ) throws SQLException
-                      {
-                        try {
-                          accumulator.add(jsonMapper.readValue(payload, DataSegment.class));
-                          return accumulator;
-                        }
-                        catch (Exception e) {
-                          throw Throwables.propagate(e);
-                        }
-                      }
-                    }
-                );
-          }
-        }
+            new TransactionCallback<List<DataSegment>>()
+            {
+              @Override
+              public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
+              {
+                return handle
+                        .createQuery(
+                                String.format(
+                                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
+                                        dbTables.getSegmentsTable()
+                                )
+                        )
+                        .setFetchSize(connector.getStreamingFetchSize())
+                        .bind("dataSource", dataSource)
+                        .bind("start", interval.getStart().toString())
+                        .bind("end", interval.getEnd().toString())
+                        .map(ByteArrayMapper.FIRST)
+                        .fold(
+                                Lists.<DataSegment>newArrayList(),
+                                new Folder3<List<DataSegment>, byte[]>()
+                                {
+                                  @Override
+                                  public List<DataSegment> fold(
+                                          List<DataSegment> accumulator,
+                                          byte[] payload,
+                                          FoldController foldController,
+                                          StatementContext statementContext
+                                  ) throws SQLException
+                                  {
+                                    try {
+                                      accumulator.add(jsonMapper.readValue(payload, DataSegment.class));
+                                      return accumulator;
+                                    }
+                                    catch (Exception e) {
+                                      throw Throwables.propagate(e);
+                                    }
+                                  }
+                                }
+                        );
+              }
+            }
     );
 
     log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
     return matchingSegments;
   }
+
+  @Override
+  public List<TaskDataSegment> getNotActiveTask(final Interval interval)
+  {
+    List<TaskDataSegment> notActiveTasks = connector.inReadOnlyTransaction(
+            new TransactionCallback<List<TaskDataSegment>>()
+            {
+              @Override
+              public List<TaskDataSegment> inTransaction(Handle handle, TransactionStatus transactionStatus)
+                      throws Exception
+              {
+                return handle.createQuery(
+                        String.format(
+                                "SELECT payload FROM %s WHERE active = :active",
+                                dbTables.getTasksTable()
+                        )
+                )
+                        .bind("active", 0)
+                        .map(ByteArrayMapper.FIRST)
+                        .fold(
+                                Lists.<TaskDataSegment>newArrayList(),
+                                new Folder3<List<TaskDataSegment>, byte[]>()
+                                {
+                                  @Override
+                                  public List<TaskDataSegment> fold(
+                                          List<TaskDataSegment> accumulator,
+                                          byte[] payload,
+                                          FoldController foldController,
+                                          StatementContext statementContext
+                                  ) throws SQLException
+                                  {
+                                    try {
+                                      accumulator.add(jsonMapper.readValue(payload, TaskDataSegment.class));
+                                      return accumulator;
+                                    }
+                                    catch (Exception e) {
+                                      throw Throwables.propagate(e);
+                                    }
+                                  }
+                                }
+                        );
+
+              }
+            }
+    );
+
+    log.info("Found %,d tasks for interval %s.", notActiveTasks.size(), interval);
+    return notActiveTasks;
+  }
+
 }

@@ -28,6 +28,7 @@ import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TaskDataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -39,10 +40,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   final private Set<DataSegment> published = Sets.newConcurrentHashSet();
   final private Set<DataSegment> nuked = Sets.newConcurrentHashSet();
   final private List<DataSegment> unusedSegments;
+  final private List<TaskDataSegment> taskDataSegments;
 
   public TestIndexerMetadataStorageCoordinator()
   {
     unusedSegments = Lists.newArrayList();
+    taskDataSegments = Lists.newArrayList();
   }
 
   @Override
@@ -65,7 +68,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
-      String dataSource, List<Interval> intervals
+          String dataSource, List<Interval> intervals
   ) throws IOException
   {
     return ImmutableList.of();
@@ -93,9 +96,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public SegmentPublishResult announceHistoricalSegments(
-      Set<DataSegment> segments,
-      DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+          Set<DataSegment> segments,
+          DataSourceMetadata oldCommitMetadata,
+          DataSourceMetadata newCommitMetadata
   ) throws IOException
   {
     // Don't actually compare metadata, just do it!
@@ -104,11 +107,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public SegmentIdentifier allocatePendingSegment(
-      String dataSource,
-      String sequenceName,
-      String previousSegmentId,
-      Interval interval,
-      String maxVersion
+          String dataSource,
+          String sequenceName,
+          String previousSegmentId,
+          Interval interval,
+          String maxVersion
   ) throws IOException
   {
     throw new UnsupportedOperationException();
@@ -118,6 +121,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public void deleteSegments(Set<DataSegment> segments)
   {
     nuked.addAll(segments);
+  }
+
+  @Override
+  public List<TaskDataSegment> getNotActiveTask(final Interval interval){
+
+    return ImmutableList.copyOf(taskDataSegments);
   }
 
   @Override
