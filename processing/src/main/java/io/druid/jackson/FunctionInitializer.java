@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.jsontype.SubtypeResolver;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -35,6 +36,7 @@ import io.druid.math.expr.Function;
 import io.druid.math.expr.Parser;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -45,14 +47,26 @@ public class FunctionInitializer implements Module
   @Inject
   public static void init(ObjectMapper mapper)
   {
-    log.info("finding expression functions..");
-    for (NamedType subType : resolveSubtypes(mapper, Function.Library.class)) {
-      Parser.register(subType.getType());
+    List<Class<?>> libraries = Lists.transform(
+        resolveSubtypes(Function.Library.class, mapper),
+        new com.google.common.base.Function<NamedType, Class<?>>()
+        {
+          @Override
+          public Class<?> apply(NamedType input)
+          {
+            return input.getType();
+          }
+        }
+    );
+    log.info("finding expression functions in libraries [%s]..", libraries);
+    for (Class<?> library : libraries) {
+      Parser.register(library);
     }
   }
 
-  private static List<NamedType> resolveSubtypes(ObjectMapper mapper, Class<?> clazz)
+  private static List<NamedType> resolveSubtypes(Class<?> clazz, ObjectMapper mapper, Class<?>... excludes)
   {
+    Set<Class<?>> excludeList = Sets.newHashSet(excludes);
     JavaType type = mapper.getTypeFactory().constructType(clazz);
 
     DeserializationConfig config = mapper.getDeserializationConfig();
@@ -63,7 +77,7 @@ public class FunctionInitializer implements Module
 
     List<NamedType> found = Lists.newArrayList();
     for (NamedType resolved : resolver.collectAndResolveSubtypes(annotated, config, inspector)) {
-      if (resolved.getType() != clazz) {  // filter self
+      if (resolved.getType() != clazz && !excludeList.contains(resolved.getType())) {  // filter self and excludes
         found.add(resolved);
       }
     }

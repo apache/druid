@@ -24,12 +24,16 @@ import com.google.common.base.Supplier;
 import java.util.List;
 
 /**
+ * public, evolving
+ * <p/>
+ * function for expression. must provide default constructor
  */
 public interface Function
 {
   // name of function. regarded as case-insensitive
   String name();
 
+  // evaluate result from arguments and binding
   ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
 
   // optional interface to be used when function should be created per reference in expression

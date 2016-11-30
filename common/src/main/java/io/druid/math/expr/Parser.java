@@ -57,17 +57,18 @@ public class Parser
           Function function = (Function) clazz.newInstance();
           String name = function.name().toLowerCase();
           if (functions.containsKey(name)) {
-            throw new IllegalArgumentException("function '" + name + "' should not be overridden");
+            log.warn("function '%s' [%s] cannot override existing function.. ignoring", name, clazz.getName());
+            continue;
           }
           Supplier<Function> supplier = function instanceof FunctionFactory ? (FunctionFactory) function
                                                                             : Suppliers.ofInstance(function);
           functions.put(name, supplier);
           if (parent != BuiltinFunctions.class) {
-            log.info("user defined function '" + name + "' is registered with class " + clazz.getName());
+            log.info("user defined function '%s' is registered with class %s", name, clazz.getName());
           }
         }
         catch (Exception e) {
-          log.info(e, "failed to instantiate " + clazz.getName() + ".. ignoring");
+          log.info(e, "failed to instantiate '%s'.. ignoring", clazz.getName());
         }
       }
     }
