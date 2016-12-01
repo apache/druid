@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
@@ -175,14 +176,14 @@ public class Filters
 
   public static ValueMatcher getLongValueMatcher(
       final LongColumnSelector longSelector,
-      Comparable value
+      final String value
   )
   {
-    if (value == null) {
+    if (Strings.isNullOrEmpty(value)) {
       return new BooleanValueMatcher(false);
     }
 
-    final Long longValue = GuavaUtils.tryParseLong(value.toString());
+    final Long longValue = GuavaUtils.tryParseLong(value);
     if (longValue == null) {
       return new BooleanValueMatcher(false);
     }
@@ -190,7 +191,7 @@ public class Filters
     return new ValueMatcher()
     {
       // store the primitive, so we don't unbox for every comparison
-      final long unboxedLong = longValue.longValue();
+      final long unboxedLong = longValue;
 
       @Override
       public boolean matches()

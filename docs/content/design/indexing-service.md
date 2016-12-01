@@ -68,6 +68,18 @@ The overlord console can be used to view pending tasks, running tasks, available
 http://<OVERLORD_IP>:<port>/console.html
 ```
 
+#### Blacklisted Workers
+If the workers fail tasks above a threshold, the overlord will blacklist these workers. No more than 20% of the nodes can be blacklisted. Blacklisted nodes will be periodically whitelisted.
+
+The following vairables can be used to set the threshold and blacklist timeouts.
+
+```
+druid.indexer.runner.maxRetriesBeforeBlacklist
+druid.indexer.runner.workerBlackListBackoffTime
+druid.indexer.runner.workerBlackListCleanupPeriod
+druid.indexer.runner.maxPercentageBlacklistWorkers
+```
+
 #### Autoscaling
 
 The Autoscaling mechanisms currently in place are tightly coupled with our deployment infrastructure but the framework should be in place for other implementations. We are highly open to new implementations or extensions of the existing mechanisms. In our own deployments, middle manager nodes are Amazon AWS EC2 nodes and they are provisioned to register themselves in a [galaxy](https://github.com/ning/galaxy) environment.
