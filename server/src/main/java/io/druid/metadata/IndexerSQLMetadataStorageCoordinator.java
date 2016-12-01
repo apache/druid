@@ -32,7 +32,6 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
-
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -94,6 +93,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
+  }
+
+  enum DataSourceMetadataUpdateResult
+  {
+    SUCCESS,
+    FAILURE,
+    TRY_AGAIN
   }
 
   @LifecycleStart
@@ -330,17 +336,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               final Set<DataSegment> inserted = Sets.newHashSet();
 
               if (startMetadata != null) {
-                final boolean success = updateDataSourceMetadataWithHandle(
+                final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
                     handle,
                     dataSource,
                     startMetadata,
                     endMetadata
                 );
 
-                if (!success) {
+                if (result != DataSourceMetadataUpdateResult.SUCCESS) {
                   transactionStatus.setRollbackOnly();
                   txnFailure.set(true);
-                  throw new RuntimeException("Aborting transaction!");
+
+                  if (result == DataSourceMetadataUpdateResult.FAILURE) {
+                    throw new RuntimeException("Aborting transaction!");
+                  } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
+                    throw new RetryTransactionException("Aborting transaction!");
+                  }
                 }
               }
 
@@ -698,7 +709,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return true if dataSource metadata was updated from matching startMetadata to matching endMetadata
    */
-  private boolean updateDataSourceMetadataWithHandle(
+  protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
       final Handle handle,
       final String dataSource,
       final DataSourceMetadata startMetadata,
@@ -730,7 +741,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
       log.info("Not updating metadata, existing state is not the expected start state.");
-      return false;
+      return DataSourceMetadataUpdateResult.FAILURE;
     }
 
     final DataSourceMetadata newCommitMetadata = oldCommitMetadataFromDb == null
@@ -741,7 +752,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
     );
 
-    final boolean retVal;
+    final DataSourceMetadataUpdateResult retVal;
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = handle.createStatement(
@@ -757,7 +768,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .bind("commit_metadata_sha1", newCommitMetadataSha1)
                                 .execute();
 
-      retVal = numRows > 0;
+      retVal = numRows == 1 ? DataSourceMetadataUpdateResult.SUCCESS : DataSourceMetadataUpdateResult.TRY_AGAIN;
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
@@ -775,10 +786,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
                                 .execute();
 
-      retVal = numRows > 0;
+      retVal = numRows == 1 ? DataSourceMetadataUpdateResult.SUCCESS : DataSourceMetadataUpdateResult.TRY_AGAIN;
     }
 
-    if (retVal) {
+    if (retVal == DataSourceMetadataUpdateResult.SUCCESS) {
       log.info("Updated metadata from[%s] to[%s].", oldCommitMetadataFromDb, newCommitMetadata);
     } else {
       log.info("Not updating metadata, compare-and-swap failure.");

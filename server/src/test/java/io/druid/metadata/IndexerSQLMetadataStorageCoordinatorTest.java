@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.jackson.DefaultObjectMapper;
@@ -41,6 +42,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class IndexerSQLMetadataStorageCoordinatorTest
 {
@@ -98,7 +100,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   );
 
   private final Set<DataSegment> SEGMENTS = ImmutableSet.of(defaultSegment, defaultSegment2);
-  IndexerSQLMetadataStorageCoordinator coordinator;
+  private final AtomicLong metadataUpdateCounter = new AtomicLong();
+  private IndexerSQLMetadataStorageCoordinator coordinator;
   private TestDerbyConnector derbyConnector;
 
   @Before
@@ -109,11 +112,26 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
+    metadataUpdateCounter.set(0);
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector
-    );
+    )
+    {
+      @Override
+      protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
+          Handle handle,
+          String dataSource,
+          DataSourceMetadata startMetadata,
+          DataSourceMetadata endMetadata
+      ) throws IOException
+      {
+        // Count number of times this method is called.
+        metadataUpdateCounter.getAndIncrement();
+        return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
+      }
+    };
   }
 
   private void unUseSegment()
@@ -176,6 +194,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(defaultSegment.getIdentifier(), defaultSegment2.getIdentifier()),
         getUsedIdentifiers()
     );
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
   }
 
   @Test
@@ -244,6 +265,86 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
         coordinator.getDataSourceMetadata("fooDataSource")
     );
+
+    // Should only be tried once per call.
+    Assert.assertEquals(2, metadataUpdateCounter.get());
+  }
+
+  @Test
+  public void testTransactionalAnnounceRetryAndSuccess() throws IOException
+  {
+    final AtomicLong attemptCounter = new AtomicLong();
+
+    final IndexerSQLMetadataStorageCoordinator failOnceCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        mapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnector
+    )
+    {
+      @Override
+      protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
+          Handle handle,
+          String dataSource,
+          DataSourceMetadata startMetadata,
+          DataSourceMetadata endMetadata
+      ) throws IOException
+      {
+        metadataUpdateCounter.getAndIncrement();
+        if (attemptCounter.getAndIncrement() == 0) {
+          return DataSourceMetadataUpdateResult.TRY_AGAIN;
+        } else {
+          return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
+        }
+      }
+    };
+
+    // Insert first segment.
+    final SegmentPublishResult result1 = failOnceCoordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
+
+    Assert.assertArrayEquals(
+        mapper.writeValueAsString(defaultSegment).getBytes("UTF-8"),
+        derbyConnector.lookup(
+            derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+            "id",
+            "payload",
+            defaultSegment.getIdentifier()
+        )
+    );
+
+    // Reset attempt counter to induce another failure.
+    attemptCounter.set(0);
+
+    // Insert second segment.
+    final SegmentPublishResult result2 = failOnceCoordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment2), true), result2);
+
+    Assert.assertArrayEquals(
+        mapper.writeValueAsString(defaultSegment2).getBytes("UTF-8"),
+        derbyConnector.lookup(
+            derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+            "id",
+            "payload",
+            defaultSegment2.getIdentifier()
+        )
+    );
+
+    // Examine metadata.
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        failOnceCoordinator.getDataSourceMetadata("fooDataSource")
+    );
+
+    // Should be tried twice per call.
+    Assert.assertEquals(4, metadataUpdateCounter.get());
   }
 
   @Test
@@ -255,6 +356,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result1);
+
+    // Should only be tried once.
+    Assert.assertEquals(1, metadataUpdateCounter.get());
   }
 
   @Test
@@ -273,6 +377,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+
+    // Should only be tried once per call.
+    Assert.assertEquals(2, metadataUpdateCounter.get());
   }
 
   @Test
@@ -291,6 +398,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+
+    // Should only be tried once per call.
+    Assert.assertEquals(2, metadataUpdateCounter.get());
   }
 
   @Test

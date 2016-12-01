@@ -23,11 +23,9 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
-
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
@@ -159,7 +157,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public final boolean isTransientException(Throwable e)
   {
-    return e != null && (e instanceof SQLTransientException
+    return e != null && (e instanceof RetryTransactionException
+                         || e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
                          || e instanceof UnableToExecuteStatementException
