@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.select;
+package io.druid.segment;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -34,12 +34,13 @@ import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.segment.IncrementalIndexSegment;
-import io.druid.segment.MapVirtualColumn;
-import io.druid.segment.QueryableIndex;
-import io.druid.segment.QueryableIndexSegment;
-import io.druid.segment.TestIndex;
-import io.druid.segment.VirtualColumn;
+import io.druid.query.select.EventHolder;
+import io.druid.query.select.PagingSpec;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryEngine;
+import io.druid.query.select.SelectQueryQueryToolChest;
+import io.druid.query.select.SelectQueryRunnerFactory;
+import io.druid.query.select.SelectResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;

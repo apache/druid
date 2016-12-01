@@ -19,20 +19,48 @@
 
 package io.druid.segment;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "map", value = MapVirtualColumn.class)
-})
+/**
+ * Virtual columns are "views" created over a ColumnSelectorFactory. They can potentially draw from multiple
+ * underlying columns, although they always present themselves as if they were a single column.
+ */
 public interface VirtualColumn
 {
+  /**
+   * Output name of this column.
+   *
+   * @return name
+   */
   String getOutputName();
 
-  ObjectColumnSelector init(String dimension, ColumnSelectorFactory factory);
+  /**
+   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   *
+   * @param columnName the name this virtual column was referenced with
+   * @param factory column selector factory
+   * @return the selector
+   */
+  ObjectColumnSelector init(String columnName, ColumnSelectorFactory factory);
 
+  /**
+   * Indicates that this virtual column can be referenced with dot notation. For example,
+   * a virtual column named "foo" could be referred to as "foo.bar" with the Cursor it is
+   * registered with. In that case, init will be called with columnName "foo.bar" rather
+   * than "foo".
+   *
+   * @return whether to use dot notation
+   */
+  boolean usesDotNotation();
+
+  /**
+   * Returns cache key
+   *
+   * @return cache key
+   */
   byte[] getCacheKey();
 }

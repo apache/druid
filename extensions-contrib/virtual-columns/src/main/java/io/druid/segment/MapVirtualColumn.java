@@ -124,6 +124,12 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean usesDotNotation()
+  {
+    return true;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] key = StringUtils.toUtf8(keyDimension);

@@ -30,35 +30,51 @@ import java.util.Map;
 public class VirtualColumns
 {
   public static final VirtualColumns EMPTY = new VirtualColumns(
-      ImmutableMap.<String, VirtualColumn>of()
+      ImmutableMap.<String, VirtualColumn>of(), ImmutableMap.<String, VirtualColumn>of()
   );
 
   public static VirtualColumns valueOf(List<VirtualColumn> virtualColumns) {
     if (virtualColumns == null || virtualColumns.isEmpty()) {
       return EMPTY;
     }
-    Map<String, VirtualColumn> map = Maps.newHashMap();
+    Map<String, VirtualColumn> withDotSupport = Maps.newHashMap();
+    Map<String, VirtualColumn> withoutDotSupport = Maps.newHashMap();
     for (VirtualColumn vc : virtualColumns) {
-      map.put(vc.getOutputName(), vc);
+      if (vc.usesDotNotation()) {
+        withDotSupport.put(vc.getOutputName(), vc);
+      } else {
+        withoutDotSupport.put(vc.getOutputName(), vc);
+      }
     }
-    return new VirtualColumns(map);
+    return new VirtualColumns(withDotSupport, withoutDotSupport);
   }
 
-  private final Map<String, VirtualColumn> virtualColumns;
-
-  public VirtualColumns(Map<String, VirtualColumn> virtualColumns)
+  public VirtualColumns(Map<String, VirtualColumn> withDotSupport, Map<String, VirtualColumn> withoutDotSupport)
   {
-    this.virtualColumns = virtualColumns;
+    this.withDotSupport = withDotSupport;
+    this.withoutDotSupport = withoutDotSupport;
   }
+
+  private final Map<String, VirtualColumn> withDotSupport;
+  private final Map<String, VirtualColumn> withoutDotSupport;
 
   public VirtualColumn getVirtualColumn(String dimension)
   {
-    int index = dimension.indexOf('.');
-    return virtualColumns.get(index < 0 ? dimension : dimension.substring(0, index));
+    VirtualColumn vc = withoutDotSupport.get(dimension);
+    if (vc != null) {
+      return vc;
+    }
+    for (int index = dimension.indexOf('.'); index >= 0; index = dimension.indexOf('.', index + 1)) {
+      vc = withDotSupport.get(dimension.substring(0, index));
+      if (vc != null) {
+        return vc;
+      }
+    }
+    return withDotSupport.get(dimension);
   }
 
   public boolean isEmpty()
   {
-    return virtualColumns.isEmpty();
+    return withDotSupport.isEmpty() && withoutDotSupport.isEmpty();
   }
 }
