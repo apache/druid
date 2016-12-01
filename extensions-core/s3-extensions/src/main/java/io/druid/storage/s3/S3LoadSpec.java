@@ -35,9 +35,7 @@ import java.io.File;
 @JsonTypeName(S3StorageDruidModule.SCHEME)
 public class S3LoadSpec implements LoadSpec
 {
-  @JsonProperty(S3DataSegmentPuller.BUCKET)
   private final String bucket;
-  @JsonProperty(S3DataSegmentPuller.KEY)
   private final String key;
 
   private final S3DataSegmentPuller puller;
@@ -60,5 +58,17 @@ public class S3LoadSpec implements LoadSpec
   public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
   {
     return new LoadSpecResult(puller.getSegmentFiles(new S3DataSegmentPuller.S3Coords(bucket, key), outDir).size());
+  }
+
+  @JsonProperty(S3DataSegmentPuller.BUCKET)
+  public String getBucket()
+  {
+    return bucket;
+  }
+
+  @JsonProperty(S3DataSegmentPuller.KEY)
+  public String getKey()
+  {
+    return key;
   }
 }

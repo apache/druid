@@ -19,9 +19,13 @@
 
 package io.druid.storage.s3;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Json;
 import io.druid.segment.loading.DataSegmentArchiver;
+import io.druid.segment.loading.LoadSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -31,15 +35,18 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
 {
   private final S3DataSegmentArchiverConfig archiveConfig;
   private final S3DataSegmentPusherConfig restoreConfig;
+  private final ObjectMapper mapper;
 
   @Inject
   public S3DataSegmentArchiver(
-    RestS3Service s3Client,
-    S3DataSegmentArchiverConfig archiveConfig,
-    S3DataSegmentPusherConfig restoreConfig
+      @Json ObjectMapper mapper,
+      RestS3Service s3Client,
+      S3DataSegmentArchiverConfig archiveConfig,
+      S3DataSegmentPusherConfig restoreConfig
   )
   {
     super(s3Client, restoreConfig);
+    this.mapper = mapper;
     this.archiveConfig = archiveConfig;
     this.restoreConfig = restoreConfig;
   }
@@ -50,13 +57,17 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
     String targetS3Bucket = archiveConfig.getArchiveBucket();
     String targetS3BaseKey = archiveConfig.getArchiveBaseKey();
 
-    return move(
+    final DataSegment archived = move(
         segment,
         ImmutableMap.<String, Object>of(
             "bucket", targetS3Bucket,
             "baseKey", targetS3BaseKey
         )
     );
+    if (sameLoadSpec(segment, archived)) {
+      return null;
+    }
+    return archived;
   }
 
   @Override
@@ -65,12 +76,27 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
     String targetS3Bucket = restoreConfig.getBucket();
     String targetS3BaseKey = restoreConfig.getBaseKey();
 
-    return move(
+    final DataSegment restored = move(
         segment,
         ImmutableMap.<String, Object>of(
             "bucket", targetS3Bucket,
             "baseKey", targetS3BaseKey
         )
+    );
+
+    if (sameLoadSpec(segment, restored)) {
+      return null;
+    }
+    return restored;
+  }
+
+  boolean sameLoadSpec(DataSegment s1, DataSegment s2)
+  {
+    final S3LoadSpec s1LoadSpec = (S3LoadSpec) mapper.convertValue(s1.getLoadSpec(), LoadSpec.class);
+    final S3LoadSpec s2LoadSpec = (S3LoadSpec) mapper.convertValue(s2.getLoadSpec(), LoadSpec.class);
+    return Objects.equal(s1LoadSpec.getBucket(), s2LoadSpec.getBucket()) && Objects.equal(
+        s1LoadSpec.getKey(),
+        s2LoadSpec.getKey()
     );
   }
 }

@@ -21,8 +21,31 @@ package io.druid.segment.loading;
 
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 public interface DataSegmentArchiver
 {
-  public DataSegment archive(DataSegment segment) throws SegmentLoadingException;
-  public DataSegment restore(DataSegment segment) throws SegmentLoadingException;
+  /**
+   * Perform an archive task on the segment and return the resulting segment or null if there was no action needed.
+   *
+   * @param segment The source segment
+   *
+   * @return The segment after archiving or `null` if there was no archiving performed.
+   *
+   * @throws SegmentLoadingException on error
+   */
+  @Nullable
+  DataSegment archive(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Perform the restore from an archived segment and return the resulting segment or null if there was no action
+   *
+   * @param segment The source (archived) segment
+   *
+   * @return The segment after it has been unarchived
+   *
+   * @throws SegmentLoadingException on error
+   */
+  @Nullable
+  DataSegment restore(DataSegment segment) throws SegmentLoadingException;
 }
