@@ -120,7 +120,7 @@ public class RemoteTaskRunnerTestUtils
             }, null, null, null, null, null
         ),
         cf,
-        new PathChildrenCacheFactory.Builder().build(),
+        new PathChildrenCacheFactory.Builder(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),

@@ -104,8 +104,13 @@ public class PathChildrenCacheFactory
 
     public PathChildrenCacheFactory build()
     {
-      ExecutorService exec = this.exec == null ? Executors.newSingleThreadExecutor(defaultThreadFactory) : this.exec;
+      ExecutorService exec = this.exec != null ? this.exec : createDefaultExecutor();
       return new PathChildrenCacheFactory(cacheData, compressed, exec, shutdownExecutorOnClose);
+    }
+
+    public static ExecutorService createDefaultExecutor()
+    {
+      return Executors.newSingleThreadExecutor(defaultThreadFactory);
     }
   }
 }

@@ -81,10 +81,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
         remoteTaskRunnerConfig,
         zkPaths,
         curator,
-        new PathChildrenCacheFactory
-            .Builder()
-            .withCompressed(true)
-            .build(),
+        new PathChildrenCacheFactory.Builder().withCompressed(true),
         httpClient,
         workerConfigRef,
         factory.create(1, "RemoteTaskRunner-Scheduled-Cleanup--%d"),
