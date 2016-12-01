@@ -34,8 +34,8 @@ import java.util.Locale;
 
 public class TimeFormatExtractionFn implements ExtractionFn
 {
-  private final DateTimeZone tz;
   private final String format;
+  private final DateTimeZone tz;
   private final Locale locale;
   private final QueryGranularity granularity;
   private final DateTimeFormatter formatter;
@@ -160,5 +160,11 @@ public class TimeFormatExtractionFn implements ExtractionFn
     result = 31 * result + (locale != null ? locale.hashCode() : 0);
     result = 31 * result + granularity.hashCode();
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format("timeFormat(\"%s\", %s, %s, %s)", format, tz, locale, granularity);
   }
 }

@@ -146,7 +146,7 @@ public class DimensionTopNMetricSpec implements TopNMetricSpec
   {
     return "DimensionTopNMetricSpec{" +
            "previousStop='" + previousStop + '\'' +
-           "ordering='" + ordering + '\'' +
+           ", ordering=" + ordering +
            '}';
   }
 

@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -40,6 +41,7 @@ import io.druid.segment.filter.InFilter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -59,7 +61,7 @@ public class InDimFilter implements DimFilter
   @JsonCreator
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("values") List<String> values,
+      @JsonProperty("values") Collection<String> values,
       @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
@@ -225,6 +227,26 @@ public class InDimFilter implements DimFilter
     result = 31 * result + dimension.hashCode();
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    final StringBuilder builder = new StringBuilder();
+
+    if (extractionFn != null) {
+      builder.append(extractionFn).append("(");
+    }
+
+    builder.append(dimension);
+
+    if (extractionFn != null) {
+      builder.append(")");
+    }
+
+    builder.append(" IN (").append(Joiner.on(", ").join(values)).append(")");
+
+    return builder.toString();
   }
 
   // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.
