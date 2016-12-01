@@ -1025,14 +1025,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
   private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
   {
     private final ColumnSelector index;
@@ -1048,7 +1040,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
+    public ValueMatcher makeValueMatcher(String dimension, final String value)
     {
       if (getTypeForDimension(dimension) == ValueType.LONG) {
         return Filters.getLongValueMatcher(
@@ -1062,9 +1054,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       );
 
       // if matching against null, rows with size 0 should also match
-      final boolean matchNull = isComparableNullOrEmpty(value);
+      final boolean matchNull = Strings.isNullOrEmpty(value);
 
-      final int id = selector.lookupId((String) value);
+      final int id = selector.lookupId(value);
       if (id < 0) {
         return new BooleanValueMatcher(false);
       } else {
