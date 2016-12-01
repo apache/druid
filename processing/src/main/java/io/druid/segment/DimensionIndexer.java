@@ -326,7 +326,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param dimIndex the array index of this indexer's dimension within the TimeAndDims key
    * @return A ValueMatcher that matches a dimension value array from a TimeAndDims key against "matchValue"
    */
-  public ValueMatcher makeIndexingValueMatcher(Comparable matchValue, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
+  public ValueMatcher makeIndexingValueMatcher(String matchValue, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
 
 
   /**

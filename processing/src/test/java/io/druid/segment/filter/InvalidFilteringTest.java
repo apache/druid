@@ -33,7 +33,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexBuilder;
@@ -41,7 +40,6 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -88,10 +86,11 @@ public class InvalidFilteringTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, overrideIndexBuilderSchema(indexBuilder), finisher, optimize);
+    super(testName, ROWS, overrideIndexBuilderSchema(indexBuilder), finisher, cnf, optimize);
   }
 
   private static IndexBuilder overrideIndexBuilderSchema(IndexBuilder indexBuilder)
@@ -155,14 +154,5 @@ public class InvalidFilteringTest extends BaseFilterTest
         new InDimFilter("dmax", Arrays.asList("hello", "world", null), null),
         ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
     );
-  }
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

@@ -219,7 +219,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
+    public ValueMatcher makeValueMatcher(final String dimension, final String value)
     {
       if (getTypeForDimension(dimension) == ValueType.LONG) {
         return Filters.getLongValueMatcher(
@@ -232,8 +232,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
           new DefaultDimensionSpec(dimension, dimension)
       );
 
-      // Compare "value" as a String.
-      final String valueString = value == null ? null : Strings.emptyToNull(value.toString());
+      // Compare "value" as null if it's empty.
+      final String valueString = Strings.emptyToNull(value);
 
       // Missing columns match a null or empty string value, and don't match anything else.
       if (selector == null) {

@@ -220,7 +220,8 @@ public class BoundDimFilter implements DimFilter
       range = isLowerStrict() ? Range.greaterThan(getLower()) : Range.atLeast(getLower());
     } else {
       range = Range.range(getLower(), isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
-                          getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED);
+                          getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED
+      );
     }
     retSet.add(range);
     return retSet;
@@ -317,6 +318,7 @@ public class BoundDimFilter implements DimFilter
     {
       private final Object initLock = new Object();
       private volatile boolean longsInitialized = false;
+      private volatile boolean matchesAnything = true;
       private volatile boolean hasLowerLongBoundVolatile;
       private volatile boolean hasUpperLongBoundVolatile;
       private volatile long lowerLongBoundVolatile;
@@ -326,6 +328,17 @@ public class BoundDimFilter implements DimFilter
       public DruidLongPredicate get()
       {
         initLongData();
+
+        if (!matchesAnything) {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return false;
+            }
+          };
+        }
 
         return new DruidLongPredicate()
         {
@@ -369,16 +382,26 @@ public class BoundDimFilter implements DimFilter
             return;
           }
 
-          Long lowerLong = GuavaUtils.tryParseLong(lower);
-          if (hasLowerBound() && lowerLong != null) {
+          if (hasLowerBound()) {
+            final Long lowerLong = GuavaUtils.tryParseLong(lower);
+            if (lowerLong == null) {
+              matchesAnything = false;
+              return;
+            }
+
             hasLowerLongBoundVolatile = true;
             lowerLongBoundVolatile = lowerLong;
           } else {
             hasLowerLongBoundVolatile = false;
           }
 
-          Long upperLong = GuavaUtils.tryParseLong(upper);
-          if (hasUpperBound() && upperLong != null) {
+          if (hasUpperBound()) {
+            Long upperLong = GuavaUtils.tryParseLong(upper);
+            if (upperLong == null) {
+              matchesAnything = false;
+              return;
+            }
+
             hasUpperLongBoundVolatile = true;
             upperLongBoundVolatile = upperLong;
           } else {
@@ -390,6 +413,4 @@ public class BoundDimFilter implements DimFilter
       }
     };
   }
-
-
 }
