@@ -3309,6 +3309,52 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testDimFilterHavingSpecWithExtractionFns()
+  {
+    String extractionJsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+
+    String extractionJsFn2 = "function(num) { return num + 10; }";
+    ExtractionFn extractionFn2 = new JavaScriptExtractionFn(extractionJsFn2, false, JavaScriptConfig.getDefault());
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
+    final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
+        new OrDimFilter(
+            ImmutableList.of(
+                new BoundDimFilter("rows", "12", null, true, false, null, extractionFn2, StringComparators.NUMERIC),
+                new SelectorDimFilter("idx", "super-217", extractionFn)
+            )
+        )
+    );
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(havingSpec);
+
+    final GroupByQuery fullQuery = builder.build();
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
+        ""
+    );
+  }
+
+  @Test
   public void testMergedHavingSpec()
   {
     List<Row> expectedResults = Arrays.asList(
