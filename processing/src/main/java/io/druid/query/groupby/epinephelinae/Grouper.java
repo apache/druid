@@ -165,7 +165,7 @@ public interface Grouper<KeyType> extends Closeable
      * Return an object that knows how to compare two serialized key instances. Will be called by the
      * {@link #iterator(boolean)} method if sorting is enabled.
      *
-     * @return comparator for keys
+     * @return comparator for key objects.
      */
     Comparator<T> objectComparator();
   }
