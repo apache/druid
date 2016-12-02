@@ -3063,7 +3063,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 Column.TIME_COLUMN_NAME,
                 "dayOfWeek",
-                new TimeFormatExtractionFn("EEEE", null, null, null),
+                new TimeFormatExtractionFn("EEEE", null, null, null, false),
                 null
             )
         )
