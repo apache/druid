@@ -214,7 +214,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
+    public ValueMatcher makeValueMatcher(final String dimension, final String value)
     {
       if (getTypeForDimension(dimension) == ValueType.LONG) {
         return Filters.getLongValueMatcher(

@@ -33,11 +33,10 @@ import io.druid.query.filter.ValueMatcher;
  *
  * Each DimensionQueryHelper is associated with a single dimension.
  *
- * @param <ActualType> The type of this dimension's values
  * @param <RowValuesType> The type of the row values object for this dimension
  * @param <ValueSelectorType> The type of the row value selector (e.g. DimensionSelector) for this dimension
  */
-public interface DimensionQueryHelper<ActualType extends Comparable<ActualType>, RowValuesType, ValueSelectorType extends ColumnValueSelector>
+public interface DimensionQueryHelper<RowValuesType, ValueSelectorType extends ColumnValueSelector>
 {
   /**
    * Get a typed column value selector (DimensionSelector, LongColumnSelector, etc.) from a ColumnSelectorFactory.
@@ -91,7 +90,7 @@ public interface DimensionQueryHelper<ActualType extends Comparable<ActualType>,
    * @param value Value to match against
    * @return ValueMatcher that matches on 'value'
    */
-  ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, ActualType value);
+  ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, String value);
 
 
   /**

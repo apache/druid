@@ -1030,7 +1030,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
+    public ValueMatcher makeValueMatcher(String dimension, final String value)
     {
       if (dimension.equals(Column.TIME_COLUMN_NAME) || availableMetrics.contains(dimension)) {
         if (getTypeForDimension(dimension) == ValueType.LONG) {
@@ -1265,7 +1265,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     private final int rowCount;
     private final boolean descending;
-    private volatile int currentOffset;
+    private int currentOffset;
 
     NoFilterOffset(int currentOffset, int rowCount, boolean descending)
     {

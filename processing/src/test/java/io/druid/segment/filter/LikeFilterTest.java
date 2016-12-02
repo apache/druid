@@ -30,13 +30,11 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.Pair;
 import io.druid.query.extraction.SubstringDimExtractionFn;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -70,10 +68,11 @@ public class LikeFilterTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -206,14 +205,5 @@ public class LikeFilterTest extends BaseFilterTest
         new LikeDimFilter("dim1", "%ar", null, new SubstringDimExtractionFn(3, 3)),
         ImmutableList.of("2", "4")
     );
-  }
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

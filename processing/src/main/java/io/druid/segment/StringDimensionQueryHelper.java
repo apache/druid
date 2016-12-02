@@ -31,7 +31,7 @@ import io.druid.segment.data.IndexedInts;
 import java.util.BitSet;
 import java.util.Objects;
 
-public class StringDimensionQueryHelper implements DimensionQueryHelper<String, IndexedInts, DimensionSelector>
+public class StringDimensionQueryHelper implements DimensionQueryHelper<IndexedInts, DimensionSelector>
 {
   private final String dimensionName;
 
@@ -65,18 +65,19 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<String, 
   @Override
   public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final String value)
   {
+    final String valueStr = Strings.emptyToNull(value);
     final DimensionSelector selector = cursor.makeDimensionSelector(
         new DefaultDimensionSpec(dimensionName, dimensionName)
     );
 
     // if matching against null, rows with size 0 should also match
-    final boolean matchNull = Strings.isNullOrEmpty(value);
+    final boolean matchNull = Strings.isNullOrEmpty(valueStr);
 
     final int cardinality = selector.getValueCardinality();
 
     if (cardinality >= 0) {
       // Dictionary-encoded dimension. Compare by id instead of by value to save time.
-      final int valueId = selector.lookupId(value);
+      final int valueId = selector.lookupId(valueStr);
 
       return new ValueMatcher()
       {
@@ -112,7 +113,7 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<String, 
             return matchNull;
           } else {
             for (int i = 0; i < size; ++i) {
-              if (Objects.equals(selector.lookupName(row.get(i)), value)) {
+              if (Objects.equals(selector.lookupName(row.get(i)), valueStr)) {
                 return true;
               }
             }

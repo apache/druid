@@ -53,7 +53,7 @@ import java.util.Map;
 
 public class IngestSegmentFirehose implements Firehose
 {
-  private volatile Yielder<InputRow> rowYielder;
+  private Yielder<InputRow> rowYielder;
 
   public IngestSegmentFirehose(
       final List<WindowedStorageAdapter> adapters,

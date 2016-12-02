@@ -304,8 +304,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -345,8 +347,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -398,8 +402,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
-            new DateTime("2010")
+            new DateTime("2010"),
+            null
         ),
+        null,
         null
     );
 
@@ -458,8 +464,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -498,8 +506,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -549,8 +559,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -599,8 +611,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -631,8 +645,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -644,8 +660,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -697,8 +715,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -710,8 +730,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -764,8 +786,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
+            null,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -777,8 +801,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             false,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -836,8 +862,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -892,8 +920,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
     final KafkaIndexTask task2 = createTask(
@@ -905,8 +935,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -960,8 +992,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -994,8 +1028,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -1045,8 +1081,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -1127,8 +1165,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             true,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -1213,8 +1253,10 @@ public class KafkaIndexTaskTest
             kafkaServer.consumerProperties(),
             true,
             false,
+            null,
             null
         ),
+        null,
         null
     );
 
@@ -1227,6 +1269,47 @@ public class KafkaIndexTaskTest
     task.pause(0);
 
     Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+  }
+
+  @Test(timeout = 30_000L)
+  public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
+  {
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : RECORDS) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 200L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 500L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null,
+            null
+        ),
+        null,
+        true
+    );
+
+    runTask(task);
+
+    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+      Thread.sleep(2000);
+    }
+
+    int i = 0;
+    while(i++ < 5) {
+      Assert.assertEquals(task.getStatus(), KafkaIndexTask.Status.READING);
+      // Offset should not be reset
+      Assert.assertTrue(task.getCurrentOffsets().get(0) == 200L);
+      Thread.sleep(2000);
+    }
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
@@ -1282,7 +1365,8 @@ public class KafkaIndexTaskTest
   private KafkaIndexTask createTask(
       final String taskId,
       final KafkaIOConfig ioConfig,
-      final Integer maxRowsPerSegment
+      final Integer maxRowsPerSegment,
+      final Boolean resetOffsetAutomatically
   )
   {
     final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
@@ -1294,7 +1378,8 @@ public class KafkaIndexTaskTest
         null,
         buildV9Directly,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        resetOffsetAutomatically
     );
     return new KafkaIndexTask(
         taskId,

@@ -215,7 +215,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public DimensionQueryHelper<String, IndexedInts, DimensionSelector> makeQueryHelper()
+  public DimensionQueryHelper<IndexedInts, DimensionSelector> makeQueryHelper()
   {
     return new StringDimensionQueryHelper(dimensionName);
   }

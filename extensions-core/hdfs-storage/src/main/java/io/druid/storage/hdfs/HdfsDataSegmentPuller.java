@@ -23,7 +23,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
@@ -36,7 +35,6 @@ import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -177,7 +175,6 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
   public FileUtils.FileCopyResult getSegmentFiles(final Path path, final File outDir) throws SegmentLoadingException
   {
-    final LocalFileSystem localFileSystem = new LocalFileSystem();
     try {
       final FileSystem fs = path.getFileSystem(config);
       if (fs.isDirectory(path)) {

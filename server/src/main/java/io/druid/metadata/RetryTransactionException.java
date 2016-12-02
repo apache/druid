@@ -17,18 +17,16 @@
  * under the License.
  */
 
-package io.druid.java.util.common;
+package io.druid.metadata;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Properties;
-
-public class Props {
-
-  public static Properties fromFilename(String filename) throws IOException {
-    final Properties props = new Properties();
-    props.load(new FileInputStream(filename));
-    return props;
+/**
+ * Exception thrown by SQL connector code when it wants a transaction to be retried. This exception is checked for
+ * by {@link SQLMetadataConnector#isTransientException(Throwable)}.
+ */
+public class RetryTransactionException extends RuntimeException
+{
+  public RetryTransactionException(String message)
+  {
+    super(message);
   }
-
 }
