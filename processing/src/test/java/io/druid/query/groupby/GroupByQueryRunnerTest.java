@@ -87,6 +87,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
@@ -3253,6 +3254,97 @@ public class GroupByQueryRunnerTest
                 )
             )
         );
+
+    final GroupByQuery fullQuery = builder.build();
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
+        ""
+    );
+  }
+
+  @Test
+  public void testDimFilterHavingSpec()
+  {
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
+    final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
+        new AndDimFilter(
+            ImmutableList.of(
+                new OrDimFilter(
+                    ImmutableList.of(
+                        new BoundDimFilter("rows", "2", null, true, false, null, null, StringComparators.NUMERIC),
+                        new SelectorDimFilter("idx", "217", null)
+                    )
+                ),
+                new SelectorDimFilter("__time", String.valueOf(new DateTime("2011-04-01").getMillis()), null)
+            )
+        )
+    );
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(havingSpec);
+
+    final GroupByQuery fullQuery = builder.build();
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
+        ""
+    );
+  }
+
+  @Test
+  public void testDimFilterHavingSpecWithExtractionFns()
+  {
+    String extractionJsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+
+    String extractionJsFn2 = "function(num) { return num + 10; }";
+    ExtractionFn extractionFn2 = new JavaScriptExtractionFn(extractionJsFn2, false, JavaScriptConfig.getDefault());
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
+    final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
+        new OrDimFilter(
+            ImmutableList.of(
+                new BoundDimFilter("rows", "12", null, true, false, null, extractionFn2, StringComparators.NUMERIC),
+                new SelectorDimFilter("idx", "super-217", extractionFn)
+            )
+        )
+    );
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(havingSpec);
 
     final GroupByQuery fullQuery = builder.build();
     TestHelper.assertExpectedObjects(
