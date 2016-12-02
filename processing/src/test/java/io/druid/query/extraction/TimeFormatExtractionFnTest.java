@@ -28,6 +28,8 @@ import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class TimeFormatExtractionFnTest
 {
 
@@ -43,7 +45,7 @@ public class TimeFormatExtractionFnTest
   @Test
   public void testDayOfWeekExtraction() throws Exception
   {
-    TimeFormatExtractionFn fn = new TimeFormatExtractionFn("EEEE", null, null, null);
+    TimeFormatExtractionFn fn = new TimeFormatExtractionFn("EEEE", null, null, null, false);
     Assert.assertEquals("Thursday",  fn.apply(timestamps[0]));
     Assert.assertEquals("Friday",    fn.apply(timestamps[1]));
     Assert.assertEquals("Tuesday",   fn.apply(timestamps[2]));
@@ -57,7 +59,7 @@ public class TimeFormatExtractionFnTest
   @Test
   public void testLocalizedExtraction() throws Exception
   {
-    TimeFormatExtractionFn fn = new TimeFormatExtractionFn("EEEE", null, "is", null);
+    TimeFormatExtractionFn fn = new TimeFormatExtractionFn("EEEE", null, "is", null, false);
     Assert.assertEquals("fimmtudagur",  fn.apply(timestamps[0]));
     Assert.assertEquals("föstudagur",   fn.apply(timestamps[1]));
     Assert.assertEquals("þriðjudagur",  fn.apply(timestamps[2]));
@@ -71,7 +73,7 @@ public class TimeFormatExtractionFnTest
   @Test
   public void testGranularExtractionWithNullPattern() throws Exception
   {
-    TimeFormatExtractionFn fn = new TimeFormatExtractionFn(null, null, null, QueryGranularities.DAY);
+    TimeFormatExtractionFn fn = new TimeFormatExtractionFn(null, null, null, QueryGranularities.DAY, false);
     Assert.assertEquals("2015-01-01T00:00:00.000Z", fn.apply(timestamps[0]));
     Assert.assertEquals("2015-01-02T00:00:00.000Z", fn.apply(timestamps[1]));
     Assert.assertEquals("2015-03-03T00:00:00.000Z", fn.apply(timestamps[2]));
@@ -89,7 +91,8 @@ public class TimeFormatExtractionFnTest
         "'In Berlin ist es schon 'EEEE",
         DateTimeZone.forID("Europe/Berlin"),
         "de",
-        null
+        null,
+        false
     );
     Assert.assertEquals("In Berlin ist es schon Freitag",    fn.apply(timestamps[0]));
     Assert.assertEquals("In Berlin ist es schon Samstag",    fn.apply(timestamps[1]));
@@ -139,5 +142,36 @@ public class TimeFormatExtractionFnTest
             ExtractionFn.class
         )
     );
+  }
+
+  @Test
+  public void testCacheKey()
+  {
+    TimeFormatExtractionFn fn = new TimeFormatExtractionFn(
+        "'In Berlin ist es schon 'EEEE",
+        DateTimeZone.forID("Europe/Berlin"),
+        "de",
+        null,
+        false
+    );
+
+    TimeFormatExtractionFn fn2 = new TimeFormatExtractionFn(
+        "'In Berlin ist es schon 'EEEE",
+        DateTimeZone.forID("Europe/Berlin"),
+        "de",
+        null,
+        true
+    );
+
+    TimeFormatExtractionFn fn3 = new TimeFormatExtractionFn(
+        "'In Berlin ist es schon 'EEEE",
+        DateTimeZone.forID("Europe/Berlin"),
+        "de",
+        null,
+        true
+    );
+
+    Assert.assertFalse(Arrays.equals(fn.getCacheKey(), fn2.getCacheKey()));
+    Assert.assertTrue(Arrays.equals(fn2.getCacheKey(), fn3.getCacheKey()));
   }
 }
