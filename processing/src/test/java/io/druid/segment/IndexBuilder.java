@@ -118,8 +118,7 @@ public class IndexBuilder
   {
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
-    final IncrementalIndex incrementalIndex = buildIncrementalIndex();
-    try {
+    try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
       return TestHelper.getTestIndexIO().loadIndex(
           indexMerger.persist(
               incrementalIndex,
