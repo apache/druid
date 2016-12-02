@@ -36,7 +36,8 @@ import io.druid.data.input.Row;
     @JsonSubTypes.Type(name = "lessThan", value = LessThanHavingSpec.class),
     @JsonSubTypes.Type(name = "equalTo", value = EqualToHavingSpec.class),
     @JsonSubTypes.Type(name = "dimSelector", value = DimensionSelectorHavingSpec.class),
-    @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class)
+    @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class),
+    @JsonSubTypes.Type(name = "filter", value = DimFilterHavingSpec.class)
 })
 public interface HavingSpec
 {
