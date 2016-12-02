@@ -72,6 +72,8 @@ import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.CascadeExtractionFn;
+import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -5657,6 +5659,268 @@ public class GroupByQueryRunnerTest
             28L,
             "addRowsIndexConstant",
             29014.5751953125
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+
+  @Test
+  public void testGroupByTimeExtractionWithNulls()
+  {
+    final DimExtractionFn nullWednesdays = new DimExtractionFn()
+    {
+      @Override
+      public String apply(String dimValue)
+      {
+        if ("Wednesday".equals(dimValue)) {
+          return null;
+        } else {
+          return dimValue;
+        }
+      }
+
+      @Override
+      public byte[] getCacheKey()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+
+      @Override
+      public ExtractionType getExtractionType()
+      {
+        return ExtractionType.MANY_TO_ONE;
+      }
+    };
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(
+            Lists.newArrayList(
+                new DefaultDimensionSpec("market", "market"),
+                new ExtractionDimensionSpec(
+                    Column.TIME_COLUMN_NAME,
+                    "dayOfWeek",
+                    new CascadeExtractionFn(
+                        new ExtractionFn[]{
+                            new TimeFormatExtractionFn("EEEE", null, null, null, false),
+                            nullWednesdays,
+                        }
+                    ),
+                    null
+                )
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.indexDoubleSum
+            )
+        )
+        .setPostAggregatorSpecs(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDimFilter(
+            new OrDimFilter(
+                Arrays.<DimFilter>asList(
+                    new SelectorDimFilter("market", "spot", null),
+                    new SelectorDimFilter("market", "upfront", null)
+                )
+            )
+        )
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            null,
+            "market",
+            "spot",
+            "index",
+            14271.368591308594,
+            "rows",
+            126L,
+            "addRowsIndexConstant",
+            14398.368591308594
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Friday",
+            "market",
+            "spot",
+            "index",
+            13219.574157714844,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13337.574157714844
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Monday",
+            "market",
+            "spot",
+            "index",
+            13557.738830566406,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13675.738830566406
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Saturday",
+            "market",
+            "spot",
+            "index",
+            13493.751281738281,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13611.751281738281
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Sunday",
+            "market",
+            "spot",
+            "index",
+            13585.541015625,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13703.541015625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Thursday",
+            "market",
+            "spot",
+            "index",
+            14279.127197265625,
+            "rows",
+            126L,
+            "addRowsIndexConstant",
+            14406.127197265625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Tuesday",
+            "market",
+            "spot",
+            "index",
+            13199.471435546875,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13317.471435546875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            null,
+            "market",
+            "upfront",
+            "index",
+            28985.5751953125,
+            "rows",
+            28L,
+            "addRowsIndexConstant",
+            29014.5751953125
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Friday",
+            "market",
+            "upfront",
+            "index",
+            27297.8623046875,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            27324.8623046875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Monday",
+            "market",
+            "upfront",
+            "index",
+            27619.58447265625,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            27646.58447265625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Saturday",
+            "market",
+            "upfront",
+            "index",
+            27820.83154296875,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            27847.83154296875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Sunday",
+            "market",
+            "upfront",
+            "index",
+            24791.223876953125,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            24818.223876953125
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Thursday",
+            "market",
+            "upfront",
+            "index",
+            28562.748901367188,
+            "rows",
+            28L,
+            "addRowsIndexConstant",
+            28591.748901367188
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Tuesday",
+            "market",
+            "upfront",
+            "index",
+            26968.280639648438,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            26995.280639648438
         )
     );
 
