@@ -74,7 +74,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
   protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
   protected static final int[] EMPTY_STR_DIM_ARRAY = new int[]{0};
-//  protected static final Splitter SPLITTER = Splitter.on(",");
 
   private IndexedIntsWriter encodedValueWriter;
 
