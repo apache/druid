@@ -524,7 +524,8 @@ public class TaskSerdeTest
         new IndexSpec(new RoaringBitmapSerdeFactory(null),
                       CompressedObjectStrategy.CompressionStrategy.LZF,
                       CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                      CompressionFactory.LongEncodingStrategy.LONGS),
+                      CompressionFactory.LongEncodingStrategy.LONGS,
+                      null),
         false,
         true,
         null
