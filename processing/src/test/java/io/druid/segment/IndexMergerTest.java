@@ -131,7 +131,8 @@ public class IndexMergerTest
           bitmapSerdeFactory,
           dimCompressionStrategy,
           compressionStrategy,
-          longEncodingStrategy
+          longEncodingStrategy,
+          null
       );
     } else {
       return new IndexSpec();
@@ -620,7 +621,8 @@ public class IndexMergerTest
         CompressedObjectStrategy.CompressionStrategy.LZ4,
         CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
         CompressionFactory.LongEncodingStrategy.AUTO :
-        CompressionFactory.LongEncodingStrategy.LONGS
+        CompressionFactory.LongEncodingStrategy.LONGS,
+        null
     );
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
@@ -764,7 +766,8 @@ public class IndexMergerTest
         CompressedObjectStrategy.CompressionStrategy.LZ4,
         CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
         CompressionFactory.LongEncodingStrategy.AUTO :
-        CompressionFactory.LongEncodingStrategy.LONGS
+        CompressionFactory.LongEncodingStrategy.LONGS,
+        null
     );
 
     QueryableIndex converted = closer.closeLater(

@@ -250,6 +250,7 @@ public abstract class BaseFilterTest
                                                                 bitmapSerdeFactoryEntry.getValue(),
                                                                 null,
                                                                 null,
+                                                                null,
                                                                 null
                                                             ))
                                                             .indexMerger(indexMergerEntry.getValue());

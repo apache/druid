@@ -18,9 +18,13 @@
 package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -30,6 +34,10 @@ public class SpatialDimensionSchema
   private final String dimName;
   private final List<String> dims;
   private final String delimiter;
+  @JsonIgnore
+  private final Joiner joiner;
+  @JsonIgnore
+  private final Splitter splitter;
 
   @JsonCreator
   public SpatialDimensionSchema(
@@ -41,6 +49,8 @@ public class SpatialDimensionSchema
     this.dimName = dimName;
     this.dims = dims;
     this.delimiter = delimiter == null ? NewSpatialDimensionSchema.DEFAULT_DELIMITER : delimiter;
+    this.joiner = Joiner.on(this.delimiter);
+    this.splitter = Splitter.on(this.delimiter);
   }
 
   @JsonProperty
@@ -56,8 +66,19 @@ public class SpatialDimensionSchema
   }
 
   @JsonProperty
-  public String getDelimiter() {
+  public String getDelimiter()
+  {
     return delimiter;
+  }
+
+  public Joiner getJoiner()
+  {
+    return joiner;
+  }
+
+  public Splitter getSplitter()
+  {
+    return splitter;
   }
 
   @Override
@@ -76,7 +97,7 @@ public class SpatialDimensionSchema
       return false;
     }
 
-    if (dims != null ? !dims.equals(that.dims) : that.dims != null) {
+    if (!Objects.equals(dims, that.dims)) {
       return false;
     }
 

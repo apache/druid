@@ -19,6 +19,7 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -86,35 +87,47 @@ public class SpatialFilterBonusTest
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   private final Segment segment;
+  private final String spatialDimDelim;
 
-  public SpatialFilterBonusTest(Segment segment)
+  public SpatialFilterBonusTest(Segment segment, String spatialDimDelim)
   {
     this.segment = segment;
+    this.spatialDimDelim = spatialDimDelim;
   }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IndexSpec indexSpec = new IndexSpec();
-    final IncrementalIndex rtIndex = makeIncrementalIndex();
-    final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec);
-    final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec);
     return Arrays.asList(
         new Object[][]{
             {
-                new IncrementalIndexSegment(rtIndex, null)
+                new IncrementalIndexSegment(makeIncrementalIndex(","), null), null
             },
             {
-                new QueryableIndexSegment(null, mMappedTestIndex)
+                new IncrementalIndexSegment(makeIncrementalIndex("\001"), null), "\001"
             },
             {
-                new QueryableIndexSegment(null, mergedRealtimeIndex)
+                new QueryableIndexSegment(null, makeQueryableIndex(new IndexSpec(), ",")), null
+            },
+            {
+                new QueryableIndexSegment(null, makeQueryableIndex(new IndexSpec(null, null, null, null, "\001"), "\001")), "\001"
+            },
+            {
+                new QueryableIndexSegment(null, makeMergedQueryableIndex(new IndexSpec(), ",")), null
+            },
+            {
+                new QueryableIndexSegment(null, makeMergedQueryableIndex(new IndexSpec(null, null, null, null, "\001"), "\001")), "\001"
             }
         }
     );
   }
 
-  private static IncrementalIndex makeIncrementalIndex() throws IOException
+  private static String buildSpatialValue(String spatialDimDelim, Float... vals) {
+    final Joiner joiner = Joiner.on(spatialDimDelim);
+    return joiner.join(vals);
+  }
+
+  private static IncrementalIndex makeIncrementalIndex(String spatialDimDelim) throws IOException
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -128,7 +141,7 @@ public class SpatialFilterBonusTest
                                                         new SpatialDimensionSchema(
                                                             "dim.geo",
                                                             Lists.<String>newArrayList(),
-                                                            null
+                                                            spatialDimDelim
                                                         )
                                                     )
                                                 )
@@ -143,7 +156,7 @@ public class SpatialFilterBonusTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-01").toString(),
                 "dim", "foo",
-                "dim.geo", "0.0,0.0",
+                "dim.geo", buildSpatialValue(spatialDimDelim, 0.0f, 0.0f),
                 "val", 17L
             )
         )
@@ -155,7 +168,7 @@ public class SpatialFilterBonusTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-02").toString(),
                 "dim", "foo",
-                "dim.geo", "1.0,3.0",
+                "dim.geo", buildSpatialValue(spatialDimDelim, 1.0f, 3.0f),
                 "val", 29L
             )
         )
@@ -167,7 +180,7 @@ public class SpatialFilterBonusTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-03").toString(),
                 "dim", "foo",
-                "dim.geo", "4.0,2.0",
+                "dim.geo", buildSpatialValue(spatialDimDelim, 4.0f, 2.0f),
                 "val", 13L
             )
         )
@@ -179,7 +192,7 @@ public class SpatialFilterBonusTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-04").toString(),
                 "dim", "foo",
-                "dim.geo", "7.0,3.0",
+                "dim.geo", buildSpatialValue(spatialDimDelim, 7.0f, 3.0f),
                 "val", 91L
             )
         )
@@ -191,7 +204,7 @@ public class SpatialFilterBonusTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "dim", "foo",
-                "dim.geo", "8.0,6.0",
+                "dim.geo", buildSpatialValue(spatialDimDelim, 8.0f, 6.0f),
                 "val", 47L
             )
         )
@@ -216,8 +229,9 @@ public class SpatialFilterBonusTest
       String coord = null;
       while (coord == null) {
         coord = String.format(
-            "%s,%s",
+            "%s%s%s",
             (float) (rand.nextFloat() * 10 + 10.0),
+            spatialDimDelim,
             (float) (rand.nextFloat() * 10 + 10.0)
         );
         if (!alreadyChosen.add(coord)) {
@@ -241,9 +255,9 @@ public class SpatialFilterBonusTest
     return theIndex;
   }
 
-  private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec) throws IOException
+  private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec, String spatialDimDelim) throws IOException
   {
-    IncrementalIndex theIndex = makeIncrementalIndex();
+    IncrementalIndex theIndex = makeIncrementalIndex(spatialDimDelim);
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
     tmpFile.mkdirs();
@@ -253,7 +267,7 @@ public class SpatialFilterBonusTest
     return INDEX_IO.loadIndex(tmpFile);
   }
 
-  private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec)
+  private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec, final String spatialDimDelim)
   {
     try {
       IncrementalIndex first = new OnheapIncrementalIndex(
@@ -268,7 +282,7 @@ public class SpatialFilterBonusTest
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
                                                               Lists.<String>newArrayList(),
-                                                              null
+                                                              spatialDimDelim
                                                           )
                                                       )
                                                   )
@@ -289,7 +303,7 @@ public class SpatialFilterBonusTest
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
                                                               Lists.<String>newArrayList(),
-                                                              null
+                                                              spatialDimDelim
                                                           )
                                                       )
                                                   )
@@ -308,8 +322,8 @@ public class SpatialFilterBonusTest
                                                       Arrays.asList(
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
-                                                              Lists.<String>newArrayList()
-                                                              ,null
+                                                              Lists.<String>newArrayList(),
+                                                              spatialDimDelim
                                                           )
                                                       )
                                                   )
@@ -327,7 +341,7 @@ public class SpatialFilterBonusTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-01").toString(),
                   "dim", "foo",
-                  "dim.geo", "0.0,0.0",
+                  "dim.geo", buildSpatialValue(spatialDimDelim, 0.0f, 0.0f),
                   "val", 17L
               )
           )
@@ -339,7 +353,7 @@ public class SpatialFilterBonusTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-02").toString(),
                   "dim", "foo",
-                  "dim.geo", "1.0,3.0",
+                  "dim.geo", buildSpatialValue(spatialDimDelim, 1.0f, 3.0f),
                   "val", 29L
               )
           )
@@ -351,7 +365,7 @@ public class SpatialFilterBonusTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-03").toString(),
                   "dim", "foo",
-                  "dim.geo", "4.0,2.0",
+                  "dim.geo", buildSpatialValue(spatialDimDelim, 4.0f, 2.0f),
                   "val", 13L
               )
           )
@@ -375,7 +389,7 @@ public class SpatialFilterBonusTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-04").toString(),
                   "dim", "foo",
-                  "dim.geo", "7.0,3.0",
+                  "dim.geo", buildSpatialValue(spatialDimDelim, 7.0f, 3.0f),
                   "val", 91L
               )
           )
@@ -387,7 +401,7 @@ public class SpatialFilterBonusTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "dim", "foo",
-                  "dim.geo", "8.0,6.0",
+                  "dim.geo", buildSpatialValue(spatialDimDelim, 8.0f, 6.0f),
                   "val", 47L
               )
           )
@@ -404,8 +418,9 @@ public class SpatialFilterBonusTest
                     "timestamp", new DateTime("2013-01-01").toString(),
                     "dim", "boo",
                     "dim.geo", String.format(
-                        "%s,%s",
+                        "%s%s%s",
                         (float) (rand.nextFloat() * 10 + 10.0),
+                        spatialDimDelim,
                         (float) (rand.nextFloat() * 10 + 10.0)
                     ),
                     "val", i
@@ -467,7 +482,7 @@ public class SpatialFilterBonusTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
-                                          null,
+                                          spatialDimDelim,
                                           new RadiusBound(new float[]{0.0f, 0.0f}, 5)
                                       )
                                   )
@@ -520,7 +535,7 @@ public class SpatialFilterBonusTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
-                                          null,
+                                          spatialDimDelim,
                                           new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
                                       )
                                   )
@@ -613,7 +628,7 @@ public class SpatialFilterBonusTest
                                               new LongSumAggregatorFactory("valFiltered", "val"),
                                               new SpatialDimFilter(
                                                   "dim.geo",
-                                                  null,
+                                                  spatialDimDelim,
                                                   new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
                                               )
                                           ),

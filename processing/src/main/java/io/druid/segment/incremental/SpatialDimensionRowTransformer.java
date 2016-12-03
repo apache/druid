@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
@@ -46,26 +45,15 @@ import java.util.Set;
  */
 public class SpatialDimensionRowTransformer implements Function<InputRow, InputRow>
 {
-  private final Map<String, Joiner> joinerCache;
-  private final Map<String, Splitter> splitterCache;
-
   private final Map<String, SpatialDimensionSchema> spatialDimensionMap;
   private final Set<String> spatialPartialDimNames;
 
   public SpatialDimensionRowTransformer(List<SpatialDimensionSchema> spatialDimensions)
   {
     this.spatialDimensionMap = Maps.newHashMap();
-    this.joinerCache = Maps.newHashMap();
-    this.splitterCache = Maps.newHashMap();
     for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
       if (this.spatialDimensionMap.put(spatialDimension.getDimName(), spatialDimension) != null) {
         throw new ISE("Duplicate spatial dimension names found! Check your schema yo!");
-      }
-
-      if (!joinerCache.containsKey(spatialDimension.getDelimiter())) {
-        final String delim = spatialDimension.getDelimiter();
-        joinerCache.put(delim, Joiner.on(delim));
-        splitterCache.put(delim, Splitter.on(delim));
       }
     }
     this.spatialPartialDimNames = Sets.newHashSet(
@@ -177,15 +165,13 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     for (Map.Entry<String, SpatialDimensionSchema> entry : spatialDimensionMap.entrySet()) {
       final String spatialDimName = entry.getKey();
       final SpatialDimensionSchema spatialDim = entry.getValue();
-      final Joiner joiner = joinerCache.get(spatialDim.getDelimiter());
-      final Splitter splitter = splitterCache.get(spatialDim.getDelimiter());
 
       List<String> dimVals = row.getDimension(spatialDimName);
       if (dimVals != null && !dimVals.isEmpty()) {
         if (dimVals.size() != 1) {
           throw new ISE("Spatial dimension value must be in an array!");
         }
-        if (isJoinedSpatialDimValValid(splitter, dimVals.get(0))) {
+        if (isJoinedSpatialDimValValid(spatialDim.getSplitter(), dimVals.get(0))) {
           spatialLookup.put(spatialDimName, dimVals);
           finalDims.add(spatialDimName);
         }
@@ -199,7 +185,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
         }
 
         if (spatialDimVals.size() == spatialDim.getDims().size()) {
-          spatialLookup.put(spatialDimName, Arrays.asList(joiner.join(spatialDimVals)));
+          spatialLookup.put(spatialDimName, Arrays.asList(spatialDim.getJoiner().join(spatialDimVals)));
           finalDims.add(spatialDimName);
         }
       }
@@ -208,7 +194,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return retVal;
   }
 
-  private boolean isSpatialDimValsValid(List<String> dimVals)
+  private static boolean isSpatialDimValsValid(List<String> dimVals)
   {
     if (dimVals == null || dimVals.isEmpty()) {
       return false;
@@ -221,7 +207,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return true;
   }
 
-  private boolean isJoinedSpatialDimValValid(Splitter splitter, String dimVal)
+  private static boolean isJoinedSpatialDimValValid(Splitter splitter, String dimVal)
   {
     if (dimVal == null || dimVal.isEmpty()) {
       return false;

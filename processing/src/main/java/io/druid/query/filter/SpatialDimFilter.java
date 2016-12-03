@@ -20,6 +20,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import io.druid.collections.spatial.search.Bound;
@@ -79,6 +80,12 @@ public class SpatialDimFilter implements DimFilter
   }
 
   @JsonProperty
+  public String getDelimiter()
+  {
+    return delimiter;
+  }
+
+  @JsonProperty
   public Bound getBound()
   {
     return bound;
@@ -115,7 +122,7 @@ public class SpatialDimFilter implements DimFilter
       return false;
     }
 
-    return true;
+    return Objects.equal(delimiter, that.delimiter);
   }
 
   @Override
@@ -123,6 +130,7 @@ public class SpatialDimFilter implements DimFilter
   {
     int result = dimension != null ? dimension.hashCode() : 0;
     result = 31 * result + (bound != null ? bound.hashCode() : 0);
+    result = 31 * result + (delimiter != null ? delimiter.hashCode() : 0);
     return result;
   }
 
@@ -131,6 +139,7 @@ public class SpatialDimFilter implements DimFilter
   {
     return "SpatialDimFilter{" +
            "dimension='" + dimension + '\'' +
+           ", delimiter='" + delimiter + '\'' +
            ", bound=" + bound +
            '}';
   }
