@@ -31,7 +31,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Set;
 
 /**

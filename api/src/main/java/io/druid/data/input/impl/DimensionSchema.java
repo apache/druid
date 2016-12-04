@@ -27,8 +27,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 
-import java.util.Objects;
-
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringDimensionSchema.class)
@@ -109,7 +107,7 @@ public abstract class DimensionSchema
   protected DimensionSchema(String name, MultiValueHandling multiValueHandling)
   {
     this.name = Preconditions.checkNotNull(name, "Dimension name cannot be null.");
-    this.multiValueHandling = multiValueHandling;
+    this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
   }
 
   @JsonProperty
@@ -146,14 +144,14 @@ public abstract class DimensionSchema
       return false;
     }
 
-    return Objects.equals(multiValueHandling, that.multiValueHandling);
+    return multiValueHandling.equals(that.multiValueHandling);
   }
 
   @Override
   public int hashCode()
   {
     int result = name.hashCode();
-    result = result * 31 + (multiValueHandling != null ? multiValueHandling.hashCode() : 0);
+    result = result * 31 + multiValueHandling.hashCode();
     return result;
   }
 }
