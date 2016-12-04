@@ -105,8 +105,12 @@ public class NewSpatialDimensionSchema extends DimensionSchema
 
     NewSpatialDimensionSchema that = (NewSpatialDimensionSchema) o;
 
-    if (Objects.equals(dims, that.dims)) {
-      return true;
+    if (!super.equals(that)) {
+      return false;
+    }
+
+    if (!Objects.equals(dims, that.dims)) {
+      return false;
     }
 
     return this.delimiter.equals(that.delimiter);

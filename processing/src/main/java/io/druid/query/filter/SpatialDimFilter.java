@@ -20,7 +20,6 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import io.druid.collections.spatial.search.Bound;
@@ -115,22 +114,22 @@ public class SpatialDimFilter implements DimFilter
 
     SpatialDimFilter that = (SpatialDimFilter) o;
 
-    if (bound != null ? !bound.equals(that.bound) : that.bound != null) {
+    if (!bound.equals(that.bound)) {
       return false;
     }
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
+    if (!dimension.equals(that.dimension)) {
       return false;
     }
 
-    return Objects.equal(delimiter, that.delimiter);
+    return delimiter.equals(that.delimiter);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension != null ? dimension.hashCode() : 0;
-    result = 31 * result + (bound != null ? bound.hashCode() : 0);
-    result = 31 * result + (delimiter != null ? delimiter.hashCode() : 0);
+    int result = dimension.hashCode();
+    result = 31 * result + bound.hashCode();
+    result = 31 * result + delimiter.hashCode();
     return result;
   }
 

@@ -27,6 +27,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 
+import java.util.Objects;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringDimensionSchema.class)
@@ -140,13 +142,18 @@ public abstract class DimensionSchema
 
     DimensionSchema that = (DimensionSchema) o;
 
-    return name.equals(that.name);
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
+    return Objects.equals(multiValueHandling, that.multiValueHandling);
   }
 
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    int result = name.hashCode();
+    result = result * 31 + (multiValueHandling != null ? multiValueHandling.hashCode() : 0);
+    return result;
   }
 }

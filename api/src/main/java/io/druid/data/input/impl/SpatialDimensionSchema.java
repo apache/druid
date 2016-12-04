@@ -93,7 +93,7 @@ public class SpatialDimensionSchema
 
     SpatialDimensionSchema that = (SpatialDimensionSchema) o;
 
-    if (dimName != null ? !dimName.equals(that.dimName) : that.dimName != null) {
+    if (!Objects.equals(dimName, that.dimName)) {
       return false;
     }
 
