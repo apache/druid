@@ -21,10 +21,6 @@ package io.druid.metadata.storage.derby;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
-import io.druid.guice.ManageLifecycle;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -32,8 +28,6 @@ import org.apache.derby.drda.NetworkServerControl;
 
 import java.net.InetAddress;
 
-
-@ManageLifecycle
 public class DerbyMetadataStorage extends MetadataStorage
 {
   private static final Logger log = new Logger(DerbyMetadataStorage.class);
@@ -53,7 +47,6 @@ public class DerbyMetadataStorage extends MetadataStorage
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
     try {
@@ -66,7 +59,6 @@ public class DerbyMetadataStorage extends MetadataStorage
   }
 
   @Override
-  @LifecycleStop
   public void stop()
   {
     try {
