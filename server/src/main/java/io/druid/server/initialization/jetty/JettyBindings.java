@@ -22,9 +22,8 @@ package io.druid.server.initialization.jetty;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
-
 import io.druid.java.util.common.logger.Logger;
-
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.servlets.QoSFilter;
 
 import javax.servlet.DispatcherType;
@@ -50,6 +49,13 @@ public class JettyBindings
     Multibinder.newSetBinder(binder, ServletFilterHolder.class)
                .addBinding()
                .toInstance(new QosFilterHolder(path, maxRequests));
+  }
+
+  public static void addHandler(Binder binder, Class<? extends Handler> handlerClass)
+  {
+    Multibinder.newSetBinder(binder, Handler.class)
+               .addBinding()
+               .to(handlerClass);
   }
 
   private static class QosFilterHolder implements ServletFilterHolder
