@@ -19,8 +19,12 @@
 
 package io.druid.math.expr;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
 
 /**
  */
@@ -49,129 +53,157 @@ public class ParserTest
   @Test
   public void testSimpleUnaryOps2()
   {
-    validate("-1", "-1", "-1");
-    validate("--1", "--1", "1");
-    validate("-1+2", "(+ -1 2)", "1");
-    validate("-1*2", "(* -1 2)", "-2");
-    validate("-1^2", "(^ -1 2)", "1");
-  }
-
-  private void validateParser(String expression, String expected, String identifiers)
-  {
-    Assert.assertEquals(expected, Parser.parse(expression).toString());
-    Assert.assertEquals(identifiers, Parser.findRequiredBindings(expression).toString());
+    validateFlatten("-1", "-1", "-1");
+    validateFlatten("--1", "--1", "1");
+    validateFlatten("-1+2", "(+ -1 2)", "1");
+    validateFlatten("-1*2", "(* -1 2)", "-2");
+    validateFlatten("-1^2", "(^ -1 2)", "1");
   }
 
   @Test
   public void testSimpleLogicalOps1()
   {
-    validateParser("x>y", "(> x y)", "[x, y]");
-    validateParser("x<y", "(< x y)", "[x, y]");
-    validateParser("x<=y", "(<= x y)", "[x, y]");
-    validateParser("x>=y", "(>= x y)", "[x, y]");
-    validateParser("x==y", "(== x y)", "[x, y]");
-    validateParser("x!=y", "(!= x y)", "[x, y]");
-    validateParser("x && y", "(&& x y)", "[x, y]");
-    validateParser("x || y", "(|| x y)", "[x, y]");
+    validateParser("x>y", "(> x y)", ImmutableList.of("x", "y"));
+    validateParser("x<y", "(< x y)", ImmutableList.of("x", "y"));
+    validateParser("x<=y", "(<= x y)", ImmutableList.of("x", "y"));
+    validateParser("x>=y", "(>= x y)", ImmutableList.of("x", "y"));
+    validateParser("x==y", "(== x y)", ImmutableList.of("x", "y"));
+    validateParser("x!=y", "(!= x y)", ImmutableList.of("x", "y"));
+    validateParser("x && y", "(&& x y)", ImmutableList.of("x", "y"));
+    validateParser("x || y", "(|| x y)", ImmutableList.of("x", "y"));
   }
 
   @Test
   public void testSimpleAdditivityOp1()
   {
-    validateParser("x+y", "(+ x y)", "[x, y]");
-    validateParser("x-y", "(- x y)", "[x, y]");
+    validateParser("x+y", "(+ x y)", ImmutableList.of("x", "y"));
+    validateParser("x-y", "(- x y)", ImmutableList.of("x", "y"));
   }
 
   @Test
   public void testSimpleAdditivityOp2()
   {
-    validateParser("x+y+z", "(+ (+ x y) z)", "[x, y, z]");
-    validateParser("x+y-z", "(- (+ x y) z)", "[x, y, z]");
-    validateParser("x-y+z", "(+ (- x y) z)", "[x, y, z]");
-    validateParser("x-y-z", "(- (- x y) z)", "[x, y, z]");
+    validateParser("x+y+z", "(+ (+ x y) z)", ImmutableList.of("x", "y", "z"));
+    validateParser("x+y-z", "(- (+ x y) z)", ImmutableList.of("x", "y", "z"));
+    validateParser("x-y+z", "(+ (- x y) z)", ImmutableList.of("x", "y", "z"));
+    validateParser("x-y-z", "(- (- x y) z)", ImmutableList.of("x", "y", "z"));
 
-    validateParser("x-y-x", "(- (- x y) x)", "[x, y]");
+    validateParser("x-y-x", "(- (- x y) x)", ImmutableList.of("x", "y"));
   }
 
   @Test
   public void testSimpleMultiplicativeOp1()
   {
-    validateParser("x*y", "(* x y)", "[x, y]");
-    validateParser("x/y", "(/ x y)", "[x, y]");
-    validateParser("x%y", "(% x y)", "[x, y]");
+    validateParser("x*y", "(* x y)", ImmutableList.of("x", "y"));
+    validateParser("x/y", "(/ x y)", ImmutableList.of("x", "y"));
+    validateParser("x%y", "(% x y)", ImmutableList.of("x", "y"));
   }
 
   @Test
   public void testSimpleMultiplicativeOp2()
   {
-    validate("1*2*3", "(* (* 1 2) 3)", "6");
-    validate("1*2/3", "(/ (* 1 2) 3)", "0");
-    validate("1/2*3", "(* (/ 1 2) 3)", "0");
-    validate("1/2/3", "(/ (/ 1 2) 3)", "0");
+    validateFlatten("1*2*3", "(* (* 1 2) 3)", "6");
+    validateFlatten("1*2/3", "(/ (* 1 2) 3)", "0");
+    validateFlatten("1/2*3", "(* (/ 1 2) 3)", "0");
+    validateFlatten("1/2/3", "(/ (/ 1 2) 3)", "0");
 
-    validate("1.0*2*3", "(* (* 1.0 2) 3)", "6.0");
-    validate("1.0*2/3", "(/ (* 1.0 2) 3)", "0.6666666666666666");
-    validate("1.0/2*3", "(* (/ 1.0 2) 3)", "1.5");
-    validate("1.0/2/3", "(/ (/ 1.0 2) 3)", "0.16666666666666666");
+    validateFlatten("1.0*2*3", "(* (* 1.0 2) 3)", "6.0");
+    validateFlatten("1.0*2/3", "(/ (* 1.0 2) 3)", "0.6666666666666666");
+    validateFlatten("1.0/2*3", "(* (/ 1.0 2) 3)", "1.5");
+    validateFlatten("1.0/2/3", "(/ (/ 1.0 2) 3)", "0.16666666666666666");
 
     // partial
-    validate("1.0*2*x", "(* (* 1.0 2) x)", "(* 2.0 x)");
-    validate("1.0*2/x", "(/ (* 1.0 2) x)", "(/ 2.0 x)");
-    validate("1.0/2*x", "(* (/ 1.0 2) x)", "(* 0.5 x)");
-    validate("1.0/2/x", "(/ (/ 1.0 2) x)", "(/ 0.5 x)");
+    validateFlatten("1.0*2*x", "(* (* 1.0 2) x)", "(* 2.0 x)");
+    validateFlatten("1.0*2/x", "(/ (* 1.0 2) x)", "(/ 2.0 x)");
+    validateFlatten("1.0/2*x", "(* (/ 1.0 2) x)", "(* 0.5 x)");
+    validateFlatten("1.0/2/x", "(/ (/ 1.0 2) x)", "(/ 0.5 x)");
 
     // not working yet
-    validate("1.0*x*3", "(* (* 1.0 x) 3)", "(* (* 1.0 x) 3)");
+    validateFlatten("1.0*x*3", "(* (* 1.0 x) 3)", "(* (* 1.0 x) 3)");
   }
 
   @Test
   public void testSimpleCarrot1()
   {
-    validate("1^2", "(^ 1 2)", "1");
+    validateFlatten("1^2", "(^ 1 2)", "1");
   }
 
   @Test
   public void testSimpleCarrot2()
   {
-    validate("1^2^3", "(^ 1 (^ 2 3))", "1");
+    validateFlatten("1^2^3", "(^ 1 (^ 2 3))", "1");
   }
 
   @Test
   public void testMixed()
   {
-    validate("1+2*3", "(+ 1 (* 2 3))", "7");
-    validate("1+(2*3)", "(+ 1 (* 2 3))", "7");
-    validate("(1+2)*3", "(* (+ 1 2) 3)", "9");
+    validateFlatten("1+2*3", "(+ 1 (* 2 3))", "7");
+    validateFlatten("1+(2*3)", "(+ 1 (* 2 3))", "7");
+    validateFlatten("(1+2)*3", "(* (+ 1 2) 3)", "9");
 
-    validate("1*2+3", "(+ (* 1 2) 3)", "5");
-    validate("(1*2)+3", "(+ (* 1 2) 3)", "5");
-    validate("1*(2+3)", "(* 1 (+ 2 3))", "5");
+    validateFlatten("1*2+3", "(+ (* 1 2) 3)", "5");
+    validateFlatten("(1*2)+3", "(+ (* 1 2) 3)", "5");
+    validateFlatten("1*(2+3)", "(* 1 (+ 2 3))", "5");
 
-    validate("1+2^3", "(+ 1 (^ 2 3))", "9");
-    validate("1+(2^3)", "(+ 1 (^ 2 3))", "9");
-    validate("(1+2)^3", "(^ (+ 1 2) 3)", "27");
+    validateFlatten("1+2^3", "(+ 1 (^ 2 3))", "9");
+    validateFlatten("1+(2^3)", "(+ 1 (^ 2 3))", "9");
+    validateFlatten("(1+2)^3", "(^ (+ 1 2) 3)", "27");
 
-    validate("1^2+3", "(+ (^ 1 2) 3)", "4");
-    validate("(1^2)+3", "(+ (^ 1 2) 3)", "4");
-    validate("1^(2+3)", "(^ 1 (+ 2 3))", "1");
+    validateFlatten("1^2+3", "(+ (^ 1 2) 3)", "4");
+    validateFlatten("(1^2)+3", "(+ (^ 1 2) 3)", "4");
+    validateFlatten("1^(2+3)", "(^ 1 (+ 2 3))", "1");
 
-    validate("1^2*3+4", "(+ (* (^ 1 2) 3) 4)", "7");
-    validate("-1^2*-3+-4", "(+ (* (^ -1 2) -3) -4)", "-7");
+    validateFlatten("1^2*3+4", "(+ (* (^ 1 2) 3) 4)", "7");
+    validateFlatten("-1^2*-3+-4", "(+ (* (^ -1 2) -3) -4)", "-7");
 
-    validate("max(3, 4)", "(max [3, 4])", "4");
-    validate("min(1, max(3, 4))", "(min [1, (max [3, 4])])", "1");
+    validateFlatten("max(3, 4)", "(max [3, 4])", "4");
+    validateFlatten("min(1, max(3, 4))", "(min [1, (max [3, 4])])", "1");
   }
 
-  private void validate(String expression, String withoutFlatten, String withFlatten)
+  @Test
+  public void testIdentifiers()
   {
-    Assert.assertEquals(withoutFlatten, Parser.parse(expression, false).toString());
-    Assert.assertEquals(withFlatten, Parser.parse(expression, true).toString());
+    validateParser("foo", "foo", ImmutableList.of("foo"));
+    validateParser("\"foo\"", "foo", ImmutableList.of("foo"));
+    validateParser("\"foo bar\"", "foo bar", ImmutableList.of("foo bar"));
+    validateParser("\"foo\\\"bar\"", "foo\"bar", ImmutableList.of("foo\"bar"));
+  }
+
+  @Test
+  public void testLiterals()
+  {
+    validateConstantExpression("\'foo\'", "foo");
+    validateConstantExpression("\'foo bar\'", "foo bar");
+    validateConstantExpression("\'föo bar\'", "föo bar");
+    validateConstantExpression("\'f\\u0040o bar\'", "f@o bar");
+    validateConstantExpression("\'f\\u000Ao \\'b\\\\\\\"ar\'", "f\no 'b\\\"ar");
   }
 
   @Test
   public void testFunctions()
   {
-    validateParser("sqrt(x)", "(sqrt [x])", "[x]");
-    validateParser("if(cond,then,else)", "(if [cond, then, else])", "[cond, then, else]");
+    validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
+    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "then", "else"));
+  }
+
+  private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
+  {
+    Assert.assertEquals(expression, withoutFlatten, Parser.parse(expression, false).toString());
+    Assert.assertEquals(expression, withFlatten, Parser.parse(expression, true).toString());
+  }
+
+  private void validateParser(String expression, String expected, List<String> identifiers)
+  {
+    Assert.assertEquals(expression, expected, Parser.parse(expression).toString());
+    Assert.assertEquals(expression, identifiers, Parser.findRequiredBindings(expression));
+  }
+
+  private void validateConstantExpression(String expression, Object expected)
+  {
+    Assert.assertEquals(
+        expression,
+        expected,
+        Parser.parse(expression).eval(Parser.withMap(ImmutableMap.<String, Object>of())).value()
+    );
   }
 }
