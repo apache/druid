@@ -71,6 +71,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.QueryableIndexStorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
@@ -251,6 +252,7 @@ public class DumpSegment extends GuiceRunnable
     final Sequence<Cursor> cursors = adapter.makeCursors(
         Filters.toFilter(filter),
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
+        VirtualColumns.EMPTY,
         QueryGranularities.ALL,
         false
     );

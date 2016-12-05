@@ -61,6 +61,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.IndexedInts;
@@ -238,7 +239,7 @@ public class FilterPartitionBenchmark
   public void stringRead(Blackhole blackhole) throws Exception
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(null, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, null);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -253,7 +254,7 @@ public class FilterPartitionBenchmark
   public void longRead(Blackhole blackhole) throws Exception
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(null, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, null);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
     List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
@@ -268,7 +269,7 @@ public class FilterPartitionBenchmark
   public void timeFilterNone(Blackhole blackhole) throws Exception
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(timeFilterNone, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, timeFilterNone);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
     List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
@@ -283,7 +284,7 @@ public class FilterPartitionBenchmark
   public void timeFilterHalf(Blackhole blackhole) throws Exception
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(timeFilterHalf, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, timeFilterHalf);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
     List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
@@ -298,7 +299,7 @@ public class FilterPartitionBenchmark
   public void timeFilterAll(Blackhole blackhole) throws Exception
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(timeFilterAll, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, timeFilterAll);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
     List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
@@ -315,7 +316,7 @@ public class FilterPartitionBenchmark
     Filter filter = new SelectorFilter("dimSequential", "199");
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(filter, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -332,7 +333,7 @@ public class FilterPartitionBenchmark
     Filter filter = new NoBitmapSelectorFilter("dimSequential", "199");
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(filter, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -349,7 +350,7 @@ public class FilterPartitionBenchmark
     Filter filter = new SelectorDimFilter("dimSequential", "super-199", JS_EXTRACTION_FN).toFilter();
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(filter, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -366,7 +367,7 @@ public class FilterPartitionBenchmark
     Filter filter = new NoBitmapSelectorDimFilter("dimSequential", "super-199", JS_EXTRACTION_FN).toFilter();
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(filter, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, filter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -385,7 +386,7 @@ public class FilterPartitionBenchmark
     Filter orFilter = new OrFilter(Arrays.<Filter>asList(filter, filter2));
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(orFilter, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, orFilter);
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -404,7 +405,7 @@ public class FilterPartitionBenchmark
     Filter orFilter = new OrFilter(Arrays.<Filter>asList(filter, filter2));
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(Filters.convertToCNF(orFilter), schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, Filters.convertToCNF(orFilter));
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -446,7 +447,7 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(dimFilter3.toFilter(), schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, dimFilter3.toFilter());
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
@@ -488,13 +489,18 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(Filters.convertToCNF(dimFilter3.toFilter()), schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, Filters.convertToCNF(dimFilter3.toFilter()));
 
     Sequence<List<String>> stringListSeq = readCursors(cursors, blackhole);
     List<String> strings = Sequences.toList(Sequences.limit(stringListSeq, 1), Lists.<List<String>>newArrayList()).get(0);
     for (String st : strings) {
       blackhole.consume(st);
     }
+  }
+
+  private Sequence<Cursor> makeCursors(StorageAdapter sa, Filter filter)
+  {
+    return sa.makeCursors(filter, schemaInfo.getDataInterval(), VirtualColumns.EMPTY, QueryGranularities.ALL, false);
   }
 
   private Sequence<List<String>> readCursors(Sequence<Cursor> cursors, final Blackhole blackhole)

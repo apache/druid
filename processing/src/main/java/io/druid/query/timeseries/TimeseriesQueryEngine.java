@@ -29,6 +29,7 @@ import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.filter.Filters;
 
 import java.util.List;
@@ -51,6 +52,7 @@ public class TimeseriesQueryEngine
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
         filter,
+        VirtualColumns.EMPTY,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<TimeseriesResultValue>>()

@@ -50,6 +50,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.TestHelper;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IndexedInts;
@@ -288,6 +289,7 @@ public abstract class BaseFilterTest
     final Sequence<Cursor> cursors = adapter.makeCursors(
         filter,
         new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
+        VirtualColumns.EMPTY,
         QueryGranularities.ALL,
         false
     );

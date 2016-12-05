@@ -39,6 +39,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
@@ -76,6 +77,7 @@ public class IngestSegmentFirehose implements Firehose
                         adapter.getAdapter().makeCursors(
                             Filters.toFilter(dimFilter),
                             adapter.getInterval(),
+                            VirtualColumns.EMPTY,
                             granularity,
                             false
                         ), new Function<Cursor, Sequence<InputRow>>()

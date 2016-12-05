@@ -35,6 +35,7 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -74,7 +75,7 @@ public class TopNQueryEngine
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), granularity, query.isDescending()),
+            adapter.makeCursors(filter, queryIntervals.get(0), VirtualColumns.EMPTY, granularity, query.isDescending()),
             new Function<Cursor, Result<TopNResultValue>>()
             {
               @Override

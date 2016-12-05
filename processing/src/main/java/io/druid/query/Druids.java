@@ -54,6 +54,7 @@ import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.segment.VirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1103,6 +1104,7 @@ public class Druids
     private QueryGranularity granularity;
     private List<DimensionSpec> dimensions;
     private List<String> metrics;
+    private List<VirtualColumn> virtualColumns;
     private PagingSpec pagingSpec;
 
     public SelectQueryBuilder()
@@ -1125,7 +1127,10 @@ public class Druids
           descending,
           dimFilter,
           granularity,
-          dimensions, metrics, pagingSpec,
+          dimensions,
+          metrics,
+          virtualColumns,
+          pagingSpec,
           context
       );
     }
@@ -1225,6 +1230,12 @@ public class Druids
     public SelectQueryBuilder metrics(List<String> m)
     {
       metrics = m;
+      return this;
+    }
+
+    public SelectQueryBuilder virtualColumns(List<VirtualColumn> vcs)
+    {
+      virtualColumns = vcs;
       return this;
     }
 

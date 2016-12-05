@@ -39,6 +39,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -111,7 +112,7 @@ public class TimeBoundaryQueryRunnerFactory
       final Sequence<Result<DateTime>> resultSequence = QueryRunnerHelper.makeCursorBasedQuery(
           adapter,
           legacyQuery.getQuerySegmentSpec().getIntervals(),
-          Filters.toFilter(legacyQuery.getDimensionsFilter()),
+          Filters.toFilter(legacyQuery.getDimensionsFilter()), VirtualColumns.EMPTY,
           descending,
           new AllGranularity(),
           this.skipToFirstMatching

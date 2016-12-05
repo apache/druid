@@ -48,6 +48,7 @@ public class SelectQuerySpecTest
         + "\"granularity\":{\"type\":\"all\"},"
         + "\"dimensions\":[\"market\",\"quality\"],"
         + "\"metrics\":[\"index\"],"
+        + "\"virtualColumns\":null,"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3},"
         + "\"context\":null}";
 
@@ -59,6 +60,7 @@ public class SelectQuerySpecTest
         + "\"granularity\":{\"type\":\"all\"},"
         + "\"dimensions\":[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\"},{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\"}],"
         + "\"metrics\":[\"index\"],"
+        + "\"virtualColumns\":null,"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":false},"
         + "\"context\":null}";
 
@@ -70,6 +72,7 @@ public class SelectQuerySpecTest
         QueryRunnerTestHelper.allGran,
         DefaultDimensionSpec.toSpec(Arrays.<String>asList("market", "quality")),
         Arrays.<String>asList("index"),
+        null,
         new PagingSpec(null, 3),
         null
     );
