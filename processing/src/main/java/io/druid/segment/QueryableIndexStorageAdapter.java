@@ -50,6 +50,7 @@ import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
@@ -206,7 +207,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran, boolean descending)
+  public Sequence<Cursor> makeCursors(
+      Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      QueryGranularity gran,
+      boolean descending
+  )
   {
     Interval actualInterval = interval;
 
@@ -298,6 +305,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         new CursorSequenceBuilder(
             index,
             actualInterval,
+            virtualColumns,
             gran,
             offset,
             minDataTimestamp,
@@ -319,21 +327,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return columnObj.getCapabilities();
   }
 
-  private interface CursorAdvancer
-  {
-    public void advance();
-
-    public void advanceTo(int offset);
-
-    public boolean isDone();
-
-    public void reset();
-  }
-
   private static class CursorSequenceBuilder
   {
     private final ColumnSelector index;
     private final Interval interval;
+    private final VirtualColumns virtualColumns;
     private final QueryGranularity gran;
     private final Offset offset;
     private final long minDataTimestamp;
@@ -345,6 +343,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public CursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
+        VirtualColumns virtualColumns,
         QueryGranularity gran,
         Offset offset,
         long minDataTimestamp,
@@ -356,6 +355,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       this.index = index;
       this.interval = interval;
+      this.virtualColumns = virtualColumns;
       this.gran = gran;
       this.offset = offset;
       this.minDataTimestamp = minDataTimestamp;
@@ -676,6 +676,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals == null) {
+                        VirtualColumn vc = virtualColumns.getVirtualColumn(column);
+                        if (vc != null) {
+                          return vc.init(column, this);
+                        }
                         return null;
                       }
 
@@ -860,7 +864,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ColumnCapabilities getColumnCapabilities(String columnName)
                     {
-                      return getColumnCapabilites(index, columnName);
+                      ColumnCapabilities capabilities = getColumnCapabilites(index, columnName);
+                      if (capabilities == null && !virtualColumns.isEmpty()) {
+                        VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
+                        if (virtualColumn != null) {
+                          Class clazz = virtualColumn.init(columnName, this).classOfObject();
+                          capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
+                        }
+                      }
+                      return capabilities;
                     }
                   }
 

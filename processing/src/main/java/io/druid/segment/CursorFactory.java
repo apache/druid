@@ -28,5 +28,11 @@ import org.joda.time.Interval;
  */
 public interface CursorFactory
 {
-  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran, boolean descending);
+  public Sequence<Cursor> makeCursors(
+      Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      QueryGranularity gran,
+      boolean descending
+  );
 }
