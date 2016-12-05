@@ -27,6 +27,7 @@ import com.google.common.io.ByteSource;
 import io.druid.audit.AuditInfo;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.lookup.LookupModule;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -45,12 +46,28 @@ import java.util.Map;
 
 public class LookupCoordinatorResourceTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper = new DefaultObjectMapper().registerModule(new LookupModule().getJacksonModules().get(0));
   private static final String LOOKUP_TIER = "lookupTier";
   private static final String LOOKUP_NAME = "lookupName";
+  private static final Map<String, Object> LOOKUP_MAP = ImmutableMap.<String, Object>of(
+      "type", "map",
+      "map",
+      ImmutableMap.of (
+          "key",
+          "value"
+      )
+  );
+  private static final Map<String, Object> INVALID_LOOKUP_MAP = ImmutableMap.<String, Object>of(
+      "type", "map",
+      "invalid",
+      ImmutableMap.of (
+          "key",
+          "value"
+      )
+  );
   private static final Map<String, Map<String, Object>> SINGLE_LOOKUP_MAP = ImmutableMap.<String, Map<String, Object>>of(
       LOOKUP_NAME,
-      ImmutableMap.<String, Object>of()
+      LOOKUP_MAP
   );
   private static final Map<String, Map<String, Map<String, Object>>> SINGLE_TIER_MAP = ImmutableMap.<String, Map<String, Map<String, Object>>>of(
       LOOKUP_TIER,
@@ -62,6 +79,22 @@ public class LookupCoordinatorResourceTest
     public InputStream openStream() throws IOException
     {
       return new ByteArrayInputStream(StringUtils.toUtf8(mapper.writeValueAsString(SINGLE_TIER_MAP)));
+    }
+  };
+  private static final ByteSource SINGLE_MAP_SOURCE = new ByteSource()
+  {
+    @Override
+    public InputStream openStream() throws IOException
+    {
+      return new ByteArrayInputStream(StringUtils.toUtf8(mapper.writeValueAsString(LOOKUP_MAP)));
+    }
+  };
+  private static final ByteSource INVALID_MAP_SOURCE = new ByteSource()
+  {
+    @Override
+    public InputStream openStream() throws IOException
+    {
+      return new ByteArrayInputStream(StringUtils.toUtf8(mapper.writeValueAsString(INVALID_LOOKUP_MAP)));
     }
   };
   private static final ByteSource EMPTY_MAP_SOURCE = new ByteSource()
@@ -549,7 +582,7 @@ public class LookupCoordinatorResourceTest
     EasyMock.expect(lookupCoordinatorManager.updateLookup(
         EasyMock.eq(LOOKUP_TIER),
         EasyMock.eq(LOOKUP_NAME),
-        EasyMock.eq(ImmutableMap.<String, Object>of()),
+        EasyMock.eq(LOOKUP_MAP),
         EasyMock.capture(auditInfoCapture)
     )).andReturn(true).once();
 
@@ -565,7 +598,7 @@ public class LookupCoordinatorResourceTest
         LOOKUP_NAME,
         author,
         comment,
-        EMPTY_MAP_SOURCE.openStream(),
+        SINGLE_MAP_SOURCE.openStream(),
         request
     );
 
@@ -597,7 +630,7 @@ public class LookupCoordinatorResourceTest
     EasyMock.expect(lookupCoordinatorManager.updateLookup(
         EasyMock.eq(LOOKUP_TIER),
         EasyMock.eq(LOOKUP_NAME),
-        EasyMock.eq(ImmutableMap.<String, Object>of()),
+        EasyMock.eq(LOOKUP_MAP),
         EasyMock.capture(auditInfoCapture)
     )).andReturn(false).once();
 
@@ -613,7 +646,7 @@ public class LookupCoordinatorResourceTest
         LOOKUP_NAME,
         author,
         comment,
-        EMPTY_MAP_SOURCE.openStream(),
+        SINGLE_MAP_SOURCE.openStream(),
         request
     );
 
@@ -646,7 +679,7 @@ public class LookupCoordinatorResourceTest
     EasyMock.expect(lookupCoordinatorManager.updateLookup(
         EasyMock.eq(LOOKUP_TIER),
         EasyMock.eq(LOOKUP_NAME),
-        EasyMock.eq(ImmutableMap.<String, Object>of()),
+        EasyMock.eq(LOOKUP_MAP),
         EasyMock.capture(auditInfoCapture)
     )).andThrow(new RuntimeException(errMsg)).once();
 
@@ -662,7 +695,7 @@ public class LookupCoordinatorResourceTest
         LOOKUP_NAME,
         author,
         comment,
-        EMPTY_MAP_SOURCE.openStream(),
+        SINGLE_MAP_SOURCE.openStream(),
         request
     );
 
@@ -677,6 +710,40 @@ public class LookupCoordinatorResourceTest
     EasyMock.verify(lookupCoordinatorManager, request);
   }
 
+
+  @Test
+  public void testInvalidNewLookup() throws Exception
+  {
+    final String author = "some author";
+    final String comment = "some comment";
+    final String ip = "127.0.0.1";
+
+    final HttpServletRequest request = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(request.getContentType()).andReturn(MediaType.APPLICATION_JSON).once();
+
+    final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
+        LookupCoordinatorManager.class);
+    EasyMock.replay(lookupCoordinatorManager, request);
+
+    final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(
+        lookupCoordinatorManager,
+        mapper,
+        mapper
+    );
+    final Response response = lookupCoordinatorResource.createOrUpdateLookup(
+        LOOKUP_TIER,
+        LOOKUP_NAME,
+        author,
+        comment,
+        INVALID_MAP_SOURCE.openStream(),
+        request
+    );
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", String.format("Invalid spec %s", INVALID_LOOKUP_MAP.toString())), response.getEntity());
+
+    EasyMock.verify(lookupCoordinatorManager, request);
+  }
 
   @Test
   public void testNullValsNewLookup() throws Exception

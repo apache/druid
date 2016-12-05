@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.utils.ServletResourceUtils;
@@ -33,6 +33,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 
 import javax.servlet.http.HttpServletRequest;
@@ -121,8 +122,15 @@ public class LookupCoordinatorResource
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
       }
-      if (lookupCoordinatorManager.updateLookups(map, new AuditInfo(author, comment, req.getRemoteAddr()))) {
-        return Response.status(Response.Status.ACCEPTED).entity(map).build();
+      Map<String, Map<String, Map<String, Object>>> verified = Maps.newHashMapWithExpectedSize(map.size());
+      for (Map.Entry <String, Map<String, Map<String, Object>>> tierMap: map.entrySet()) {
+        Map<String, Map<String, Object>> verifiedTierMap = getVerifiedOnly(mapper, tierMap.getValue());
+        if (verifiedTierMap.size() > 0) {
+          verified.put(tierMap.getKey(), verifiedTierMap);
+        }
+      }
+      if (lookupCoordinatorManager.updateLookups(verified, new AuditInfo(author, comment, req.getRemoteAddr()))) {
+        return Response.status(Response.Status.ACCEPTED).entity(verified).build();
       } else {
         throw new RuntimeException("Unknown error updating configuration");
       }
@@ -204,15 +212,21 @@ public class LookupCoordinatorResource
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
       }
-      if (lookupCoordinatorManager.updateLookup(
-          tier,
-          lookup,
-          lookupSpec,
-          new AuditInfo(author, comment, req.getRemoteAddr())
-      )) {
-        return Response.status(Response.Status.ACCEPTED).build();
+      if (isVerified(mapper, lookupSpec) || lookupSpec.isEmpty()) {
+        if (lookupCoordinatorManager.updateLookup(
+            tier,
+            lookup,
+            lookupSpec,
+            new AuditInfo(author, comment, req.getRemoteAddr())
+        )) {
+          return Response.status(Response.Status.ACCEPTED).build();
+        } else {
+          throw new RuntimeException("Unknown error updating configuration");
+        }
       } else {
-        throw new RuntimeException("Unknown error updating configuration");
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ServletResourceUtils.sanitizeException(new IAE("Invalid spec %s", lookupSpec.toString())))
+                       .build();
       }
     }
     catch (Exception e) {
@@ -284,6 +298,32 @@ public class LookupCoordinatorResource
     catch (Exception e) {
       LOG.error(e, "Error getting tier [%s]", tier);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  Map<String, Map<String, Object>> getVerifiedOnly(ObjectMapper mapper, Map<String, Map<String, Object>> factoryMap)
+  {
+    Map<String, Map<String, Object>> verified = Maps.newHashMapWithExpectedSize(factoryMap.size());
+    for (Map.Entry<String, Map<String, Object>> factorySpec: factoryMap.entrySet()) {
+      if (isVerified(mapper, factorySpec.getValue())) {
+        verified.put(factorySpec.getKey(), factorySpec.getValue());
+      }
+    }
+
+    return verified;
+  }
+
+  boolean isVerified(ObjectMapper mapper, Map<String, Object> spec)
+  {
+    try {
+      mapper.convertValue(spec, new TypeReference<LookupExtractorFactory>()
+      {
+      });
+      return true;
+    }
+    catch (Exception e) {
+      LOG.warn("Dropped invalid LookupExtractorFactory spec: %s", spec.toString());
+      return false;
     }
   }
 }
