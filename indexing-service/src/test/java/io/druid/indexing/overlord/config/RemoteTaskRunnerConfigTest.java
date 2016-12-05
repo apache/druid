@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.guice.JsonConfigurator;
 import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -39,6 +40,12 @@ public class RemoteTaskRunnerConfigTest
   private static final int DEFAULT_MAX_RETRIES_BEFORE_BLACKLIST = 5;
   private static final Period DEFAULT_TASK_BACKOFF = new Period("PT10M");
   private static final Period DEFAULT_BLACKLIST_CLEANUP_PERIOD = new Period("PT5M");
+
+  @Test
+  public void testIsJsonConfiguratable()
+  {
+    JsonConfigurator.verifyClazzIsConfigurable(mapper, RemoteTaskRunnerConfig.class);
+  }
 
   @Test
   public void testGetTaskAssignmentTimeout() throws Exception

@@ -72,7 +72,6 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return taskAssignmentTimeout;
   }
 
-  @JsonProperty
   public Period getTaskCleanupTimeout(){
     return taskCleanupTimeout;
   }
@@ -105,7 +104,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return workerBlackListBackoffTime;
   }
 
-  public void setTaskBlackListBackoffTimeMillis(Period taskBlackListBackoffTime) {
+  public void setWorkerBlackListBackoffTime(Period taskBlackListBackoffTime) {
     this.workerBlackListBackoffTime = taskBlackListBackoffTime;
   }
 

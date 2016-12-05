@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotatedField;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -33,7 +34,6 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.ProvisionException;
 import com.google.inject.spi.Message;
-
 import io.druid.java.util.common.logger.Logger;
 
 import javax.validation.ConstraintViolation;
@@ -69,7 +69,7 @@ public class JsonConfigurator
 
   public <T> T configurate(Properties props, String propertyPrefix, Class<T> clazz) throws ProvisionException
   {
-    verifyClazzIsConfigurable(clazz);
+    verifyClazzIsConfigurable(jsonMapper, clazz);
 
     // Make it end with a period so we only include properties with sub-object thingies.
     final String propertyBase = propertyPrefix.endsWith(".") ? propertyPrefix : propertyPrefix + ".";
@@ -165,11 +165,12 @@ public class JsonConfigurator
     return config;
   }
 
-  private <T> void verifyClazzIsConfigurable(Class<T> clazz)
+  @VisibleForTesting
+  public static <T> void verifyClazzIsConfigurable(ObjectMapper mapper, Class<T> clazz)
   {
-    final List<BeanPropertyDefinition> beanDefs = jsonMapper.getSerializationConfig()
-                                                              .introspect(jsonMapper.constructType(clazz))
-                                                              .findProperties();
+    final List<BeanPropertyDefinition> beanDefs = mapper.getSerializationConfig()
+                                                        .introspect(mapper.constructType(clazz))
+                                                        .findProperties();
     for (BeanPropertyDefinition beanDef : beanDefs) {
       final AnnotatedField field = beanDef.getField();
       if (field == null || !field.hasAnnotation(JsonProperty.class)) {
