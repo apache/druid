@@ -127,7 +127,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>1.0.5</version>
+                <version>1.0.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
