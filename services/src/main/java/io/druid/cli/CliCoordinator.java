@@ -51,6 +51,7 @@ import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageProvider;
 import io.druid.server.audit.AuditManagerProvider;
+import io.druid.server.coordinator.BalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
@@ -128,6 +129,7 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);

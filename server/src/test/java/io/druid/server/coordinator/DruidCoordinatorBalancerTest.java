@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -38,6 +40,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 /**
  */
@@ -167,6 +170,10 @@ public class DruidCoordinatorBalancerTest
 
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
     LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params =
         DruidCoordinatorRuntimeParams.newBuilder()
@@ -198,17 +205,15 @@ public class DruidCoordinatorBalancerTest
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )
-                                     .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+                                     .withBalancerStrategy(balancerStrategy)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() < segments.size());
-    params.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
-
-
 
 
   @Test
@@ -244,6 +249,11 @@ public class DruidCoordinatorBalancerTest
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
     LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
     DruidCoordinatorRuntimeParams params =
@@ -275,13 +285,13 @@ public class DruidCoordinatorBalancerTest
                                     new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                                                      .build()
                                 )
-                                     .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+                                     .withBalancerStrategy(balancerStrategy)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
-    params.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
 
 
@@ -335,6 +345,11 @@ public class DruidCoordinatorBalancerTest
     LoadQueuePeonTester peon3 = new LoadQueuePeonTester();
     LoadQueuePeonTester peon4 = new LoadQueuePeonTester();
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         DruidCoordinatorRuntimeParams.newBuilder()
                                 .withDruidCluster(
@@ -371,13 +386,13 @@ public class DruidCoordinatorBalancerTest
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )
-                                     .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+                                     .withBalancerStrategy(balancerStrategy)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
-    params.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
 
 }

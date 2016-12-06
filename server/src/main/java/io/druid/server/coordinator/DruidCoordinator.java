@@ -28,6 +28,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -84,6 +86,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -129,7 +132,7 @@ public class DruidCoordinator
   private volatile int leaderCounter = 0;
   private volatile boolean leader = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-
+  private final BalancerStrategyFactory factory;
 
   @Inject
   public DruidCoordinator(
@@ -146,7 +149,8 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
-      @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers
+      @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers,
+      BalancerStrategyFactory factory
   )
   {
     this(
@@ -164,7 +168,8 @@ public class DruidCoordinator
         serviceAnnouncer,
         self,
         Maps.<String, LoadQueuePeon>newConcurrentMap(),
-        indexingServiceHelpers
+        indexingServiceHelpers,
+        factory
     );
   }
 
@@ -183,7 +188,8 @@ public class DruidCoordinator
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
-      Set<DruidCoordinatorHelper> indexingServiceHelpers
+      Set<DruidCoordinatorHelper> indexingServiceHelpers,
+      BalancerStrategyFactory factory
   )
   {
     this.config = config;
@@ -205,6 +211,7 @@ public class DruidCoordinator
 
     this.leaderLatch = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
+    this.factory = factory;
   }
 
   public boolean isLeader()
@@ -664,6 +671,7 @@ public class DruidCoordinator
     @Override
     public void run()
     {
+      ListeningExecutorService balancerExec = null;
       try {
         synchronized (lock) {
           final LeaderLatch latch = leaderLatch.get();
@@ -686,27 +694,32 @@ public class DruidCoordinator
           }
         }
 
-        try (BalancerStrategyFactory factory =
-                 new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads())) {
-          // Do coordinator stuff.
-          DruidCoordinatorRuntimeParams params =
-              DruidCoordinatorRuntimeParams.newBuilder()
-                                           .withStartTime(startTime)
-                                           .withDatasources(metadataSegmentManager.getInventory())
-                                           .withDynamicConfigs(getDynamicConfigs())
-                                           .withEmitter(emitter)
-                                           .withBalancerStrategyFactory(factory)
-                                           .build();
-          for (DruidCoordinatorHelper helper : helpers) {
-            // Don't read state and run state in the same helper otherwise racy conditions may exist
-            if (leader && startingLeaderCounter == leaderCounter) {
-              params = helper.run(params);
-            }
+        balancerExec = MoreExecutors.listeningDecorator(
+                Executors.newFixedThreadPool(getDynamicConfigs().getBalancerComputeThreads()));
+        BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
+
+        // Do coordinator stuff.
+        DruidCoordinatorRuntimeParams params =
+                DruidCoordinatorRuntimeParams.newBuilder()
+                        .withStartTime(startTime)
+                        .withDatasources(metadataSegmentManager.getInventory())
+                        .withDynamicConfigs(getDynamicConfigs())
+                        .withEmitter(emitter)
+                        .withBalancerStrategy(balancerStrategy)
+                        .build();
+        for (DruidCoordinatorHelper helper : helpers) {
+          // Don't read state and run state in the same helper otherwise racy conditions may exist
+          if (leader && startingLeaderCounter == leaderCounter) {
+            params = helper.run(params);
           }
         }
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
+      } finally {
+        if(balancerExec != null){
+          balancerExec.shutdownNow();
+        }
       }
     }
   }
