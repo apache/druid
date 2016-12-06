@@ -76,9 +76,4 @@ class StorageLocation
   {
     return maxSize - currSize;
   }
-
-  StorageLocation mostEmpty(StorageLocation other)
-  {
-    return available() > other.available() ? this : other;
-  }
 }
