@@ -27,6 +27,7 @@ import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,13 +41,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * it becomes clear that the result set does not fit in memory, the table switches to a mode where each thread
  * gets its own buffer and its own spill files on disk.
  */
-public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 {
   private final List<SpillingGrouper<KeyType>> groupers;
   private final ThreadLocal<SpillingGrouper<KeyType>> threadLocalGrouper;
   private final AtomicInteger threadNumber = new AtomicInteger();
   private volatile boolean spilling = false;
   private volatile boolean closed = false;
+  private final Comparator<KeyType> keyObjComparator;
 
   public ConcurrentGrouper(
       final ByteBuffer buffer,
@@ -94,6 +96,8 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
           )
       );
     }
+
+    this.keyObjComparator = keySerdeFactory.objectComparator();
   }
 
   @Override
@@ -161,7 +165,7 @@ public class ConcurrentGrouper<KeyType extends Comparable<KeyType>> implements G
       }
     }
 
-    return Groupers.mergeIterators(iterators, sorted);
+    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
   }
 
   @Override
