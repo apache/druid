@@ -56,6 +56,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -320,7 +321,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       final Object2IntRBTreeMap<SearchHit> retVal
   )
   {
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), query.isDescending());
+    final Sequence<Cursor> cursors = adapter.makeCursors(
+        filter,
+        interval,
+        VirtualColumns.EMPTY,
+        query.getGranularity(),
+        query.isDescending()
+    );
 
     cursors.accumulate(
         retVal,

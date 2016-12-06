@@ -56,7 +56,7 @@ import java.util.List;
  * of pointers) it still helps significantly on initialization times. Otherwise, we'd need to clear the used bits of
  * each bucket in the entire buffer, which is a lot of writes if the buckets are small.
  */
-public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class BufferGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(BufferGrouper.class);
 
@@ -265,7 +265,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
         }
       };
 
-      final KeyComparator comparator = keySerde.comparator();
+      final KeyComparator comparator = keySerde.bufferComparator();
 
       // Sort offsets in-place.
       Collections.sort(

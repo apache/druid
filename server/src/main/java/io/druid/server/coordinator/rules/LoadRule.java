@@ -33,7 +33,6 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -72,8 +71,7 @@ public abstract class LoadRule implements Rule
       }
 
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
-      final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-      final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
+      final BalancerStrategy strategy = params.getBalancerStrategy();
       if (availableSegments.contains(segment)) {
         CoordinatorStats assignStats = assign(
             params.getReplicationManager(),

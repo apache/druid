@@ -48,6 +48,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -102,6 +103,7 @@ public class GroupByQueryEngineV2
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         Filters.toFilter(query.getDimFilter()),
         intervals.get(0),
+         VirtualColumns.EMPTY,
         query.getGranularity(),
         false
     );
@@ -537,7 +539,7 @@ outer:
     }
 
     @Override
-    public Grouper.KeyComparator comparator()
+    public Grouper.KeyComparator bufferComparator()
     {
       // No sorting, let mergeRunners handle that
       throw new UnsupportedOperationException();

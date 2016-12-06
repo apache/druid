@@ -20,6 +20,7 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -65,6 +66,22 @@ import java.util.Set;
  */
 public class GroupByQuery extends BaseQuery<Row>
 {
+  public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+
+  private final static Comparator NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+
+  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = new Comparator<Row>()
+  {
+    @Override
+    public int compare(Row lhs, Row rhs)
+    {
+      return Longs.compare(
+          lhs.getTimestampFromEpoch(),
+          rhs.getTimestampFromEpoch()
+      );
+    }
+  };
+
   public static Builder builder()
   {
     return new Builder();
@@ -234,10 +251,15 @@ public class GroupByQuery extends BaseQuery<Row>
     return GROUP_BY;
   }
 
+  @JsonIgnore
+  public boolean getContextSortByDimsFirst()
+  {
+    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+  }
+
   @Override
   public Ordering getResultOrdering()
   {
-    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
     final Ordering<Row> rowOrdering = getRowOrdering(false);
 
     return Ordering.from(
@@ -250,7 +272,7 @@ public class GroupByQuery extends BaseQuery<Row>
               return rowOrdering.compare((Row) lhs, (Row) rhs);
             } else {
               // Probably bySegment queries
-              return naturalNullsFirst.compare(lhs, rhs);
+              return NATURAL_NULLS_FIRST.compare(lhs, rhs);
             }
           }
         }
@@ -259,46 +281,78 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public Ordering<Row> getRowOrdering(final boolean granular)
   {
-    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
+    final boolean sortByDimsFirst = getContextSortByDimsFirst();
 
-    return Ordering.from(
-        new Comparator<Row>()
-        {
-          @Override
-          public int compare(Row lhs, Row rhs)
+    final Comparator<Row> timeComparator = getTimeComparator(granular);
+
+    if (sortByDimsFirst) {
+      return Ordering.from(
+          new Comparator<Row>()
           {
-            final int timeCompare;
-
-            if (granular) {
-              timeCompare = Longs.compare(
-                  granularity.truncate(lhs.getTimestampFromEpoch()),
-                  granularity.truncate(rhs.getTimestampFromEpoch())
-              );
-            } else {
-              timeCompare = Longs.compare(
-                  lhs.getTimestampFromEpoch(),
-                  rhs.getTimestampFromEpoch()
-              );
-            }
-
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            for (DimensionSpec dimension : dimensions) {
-              final int dimCompare = naturalNullsFirst.compare(
-                  lhs.getRaw(dimension.getOutputName()),
-                  rhs.getRaw(dimension.getOutputName())
-              );
-              if (dimCompare != 0) {
-                return dimCompare;
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              final int cmp = compareDims(dimensions, lhs, rhs);
+              if (cmp != 0) {
+                return cmp;
               }
-            }
 
-            return 0;
+              return timeComparator.compare(lhs, rhs);
+            }
           }
+      );
+    } else {
+      return Ordering.from(
+          new Comparator<Row>()
+          {
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              final int timeCompare = timeComparator.compare(lhs, rhs);
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              return compareDims(dimensions, lhs, rhs);
+            }
+          }
+      );
+    }
+  }
+
+  private Comparator<Row> getTimeComparator(boolean granular)
+  {
+    if (granular) {
+      return new Comparator<Row>()
+      {
+        @Override
+        public int compare(Row lhs, Row rhs)
+        {
+          return Longs.compare(
+              granularity.truncate(lhs.getTimestampFromEpoch()),
+              granularity.truncate(rhs.getTimestampFromEpoch())
+          );
         }
-    );
+      };
+    } else {
+      return NON_GRANULAR_TIME_COMP;
+    }
+  }
+
+  private static int compareDims(List<DimensionSpec> dimensions, Row lhs, Row rhs)
+  {
+    for (DimensionSpec dimension : dimensions) {
+      final int dimCompare = NATURAL_NULLS_FIRST.compare(
+          lhs.getRaw(dimension.getOutputName()),
+          rhs.getRaw(dimension.getOutputName())
+      );
+      if (dimCompare != 0) {
+        return dimCompare;
+      }
+    }
+
+    return 0;
   }
 
   public Sequence<Row> applyLimit(Sequence<Row> results)

@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.primitives.Ints;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 public class IntKeySerde implements Grouper.KeySerde<Integer>
 {
@@ -38,6 +39,15 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
     public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
     {
       return Ints.compare(lhsBuffer.getInt(lhsPosition), rhsBuffer.getInt(rhsPosition));
+    }
+  };
+
+  private static final Comparator<Grouper.Entry<Integer>> ENTRY_COMPARATOR = new Comparator<Grouper.Entry<Integer>>()
+  {
+    @Override
+    public int compare(Grouper.Entry<Integer> o1, Grouper.Entry<Integer> o2)
+    {
+      return o1.getKey().intValue() - o2.getKey().intValue();
     }
   };
 
@@ -70,7 +80,7 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   }
 
   @Override
-  public Grouper.KeyComparator comparator()
+  public Grouper.KeyComparator bufferComparator()
   {
     return KEY_COMPARATOR;
   }

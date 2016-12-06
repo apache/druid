@@ -36,6 +36,11 @@ import java.util.List;
  */
 public class DefaultDimensionSpec implements DimensionSpec
 {
+  public static DefaultDimensionSpec of(String dimensionName)
+  {
+    return new DefaultDimensionSpec(dimensionName, dimensionName);
+  }
+
   public static List<DimensionSpec> toSpec(String... dimensionNames)
   {
     return toSpec(Arrays.asList(dimensionNames));
