@@ -34,7 +34,6 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 
 import java.util.Comparator;
 import java.util.List;
@@ -85,8 +84,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-    final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
+    final BalancerStrategy strategy = params.getBalancerStrategy();
     final int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
