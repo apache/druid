@@ -205,6 +205,7 @@ public class RealtimePlumber implements Plumber
   public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
   {
     final Sink sink = getSink(row.getTimestampFromEpoch());
+    metrics.reportMessageMaxTimestamp(rejectionPolicy.getCurrMaxTime().getMillis());
     if (sink == null) {
       return -1;
     }
@@ -716,6 +717,7 @@ public class RealtimePlumber implements Plumber
   private void addSink(final Sink sink)
   {
     sinks.put(sink.getInterval().getStartMillis(), sink);
+    metrics.setSinkCount(sinks.size());
     sinkTimeline.add(
         sink.getInterval(),
         sink.getVersion(),
@@ -850,6 +852,7 @@ public class RealtimePlumber implements Plumber
         removeSegment(sink, computePersistDir(schema, sink.getInterval()));
         log.info("Removing sinkKey %d for segment %s", truncatedTime, sink.getSegment().getIdentifier());
         sinks.remove(truncatedTime);
+        metrics.setSinkCount(sinks.size());
         sinkTimeline.remove(
             sink.getInterval(),
             sink.getVersion(),
