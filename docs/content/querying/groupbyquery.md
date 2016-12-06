@@ -207,3 +207,4 @@ When using the "v2" strategy, the following query context parameters apply:
 |`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
+|`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|
