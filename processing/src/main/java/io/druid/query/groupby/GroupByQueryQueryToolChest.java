@@ -153,6 +153,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
           subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
         }
+        subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
       }
       catch (ClassCastException e) {

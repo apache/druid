@@ -26,7 +26,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 
-public class CloseableGrouperIterator<KeyType extends Comparable<KeyType>, T> implements Iterator<T>, Closeable
+public class CloseableGrouperIterator<KeyType, T> implements Iterator<T>, Closeable
 {
   private final Function<Grouper.Entry<KeyType>, T> transformer;
   private final Closeable closer;

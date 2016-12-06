@@ -63,6 +63,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +89,7 @@ public class RowBasedGrouperHelper
     final DateTime fudgeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query);
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         fudgeTimestamp,
+        query.getContextSortByDimsFirst(),
         query.getDimensions().size(),
         querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
     );
@@ -223,7 +225,7 @@ public class RowBasedGrouperHelper
     );
   }
 
-  static class RowBasedKey implements Comparable<RowBasedKey>
+  static class RowBasedKey
   {
     private final long timestamp;
     private final String[] dimensions;
@@ -280,24 +282,6 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public int compareTo(RowBasedKey other)
-    {
-      final int timeCompare = Longs.compare(timestamp, other.getTimestamp());
-      if (timeCompare != 0) {
-        return timeCompare;
-      }
-
-      for (int i = 0; i < dimensions.length; i++) {
-        final int cmp = dimensions[i].compareTo(other.getDimensions()[i]);
-        if (cmp != 0) {
-          return cmp;
-        }
-      }
-
-      return 0;
-    }
-
-    @Override
     public String toString()
     {
       return "RowBasedKey{" +
@@ -310,12 +294,14 @@ public class RowBasedGrouperHelper
   private static class RowBasedKeySerdeFactory implements Grouper.KeySerdeFactory<RowBasedKey>
   {
     private final DateTime fudgeTimestamp;
+    private final boolean sortByDimsFirst;
     private final int dimCount;
     private final long maxDictionarySize;
 
-    public RowBasedKeySerdeFactory(DateTime fudgeTimestamp, int dimCount, long maxDictionarySize)
+    public RowBasedKeySerdeFactory(DateTime fudgeTimestamp, boolean sortByDimsFirst, int dimCount, long maxDictionarySize)
     {
       this.fudgeTimestamp = fudgeTimestamp;
+      this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
     }
@@ -323,8 +309,59 @@ public class RowBasedGrouperHelper
     @Override
     public Grouper.KeySerde<RowBasedKey> factorize()
     {
-      return new RowBasedKeySerde(fudgeTimestamp, dimCount, maxDictionarySize);
+      return new RowBasedKeySerde(fudgeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize);
     }
+
+    @Override
+    public Comparator<RowBasedKey> objectComparator()
+    {
+      if (sortByDimsFirst) {
+        return new Comparator<RowBasedKey>()
+        {
+          @Override
+          public int compare(
+              RowBasedKey row1, RowBasedKey row2
+          )
+          {
+            final int cmp = compareDimsInRows(row1, row2);
+            if (cmp != 0) {
+              return cmp;
+            }
+
+            return Longs.compare(row1.getTimestamp(), row2.getTimestamp());
+          }
+        };
+      } else {
+        return new Comparator<RowBasedKey>()
+        {
+          @Override
+          public int compare(
+              RowBasedKey row1, RowBasedKey row2
+          )
+          {
+            final int timeCompare = Longs.compare(row1.getTimestamp(), row2.getTimestamp());
+
+            if (timeCompare != 0) {
+              return timeCompare;
+            }
+
+            return compareDimsInRows(row1, row2);
+          }
+        };
+      }
+    }
+
+    private static int compareDimsInRows(RowBasedKey row1, RowBasedKey row2)
+    {
+      for (int i = 0; i < row1.getDimensions().length; i++) {
+        final int cmp = row1.getDimensions()[i].compareTo(row2.getDimensions()[i]);
+        if (cmp != 0) {
+          return cmp;
+        }
+      }
+
+      return 0;
+    };
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedKey>
@@ -333,6 +370,7 @@ public class RowBasedGrouperHelper
     private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
 
     private final DateTime fudgeTimestamp;
+    private final boolean sortByDimsFirst;
     private final int dimCount;
     private final int keySize;
     private final ByteBuffer keyBuffer;
@@ -348,11 +386,13 @@ public class RowBasedGrouperHelper
 
     public RowBasedKeySerde(
         final DateTime fudgeTimestamp,
+        final boolean sortByDimsFirst,
         final int dimCount,
         final long maxDictionarySize
     )
     {
       this.fudgeTimestamp = fudgeTimestamp;
+      this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
       this.keySize = (fudgeTimestamp == null ? Longs.BYTES : 0) + dimCount * Ints.BYTES;
@@ -405,7 +445,7 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public Grouper.KeyComparator comparator()
+    public Grouper.KeyComparator bufferComparator()
     {
       if (sortableIds == null) {
         Map<String, Integer> sortedMap = Maps.newTreeMap();
@@ -419,31 +459,53 @@ public class RowBasedGrouperHelper
         }
       }
 
+
       if (fudgeTimestamp == null) {
-        return new Grouper.KeyComparator()
-        {
-          @Override
-          public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+        if (sortByDimsFirst) {
+          return new Grouper.KeyComparator()
           {
-            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            for (int i = 0; i < dimCount; i++) {
-              final int cmp = Ints.compare(
-                  sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
-                  sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
+                  sortableIds,
+                  dimCount,
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
               );
-
               if (cmp != 0) {
                 return cmp;
               }
-            }
 
-            return 0;
-          }
-        };
+              return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+            }
+          };
+        } else {
+          return new Grouper.KeyComparator()
+          {
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              return compareDimsInBuffersForNullFudgeTimestamp(
+                  sortableIds,
+                  dimCount,
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
+              );
+            }
+          };
+        }
+
       } else {
         return new Grouper.KeyComparator()
         {
@@ -465,6 +527,29 @@ public class RowBasedGrouperHelper
           }
         };
       }
+    }
+
+    private static int compareDimsInBuffersForNullFudgeTimestamp(
+        int[] sortableIds,
+        int dimCount,
+        ByteBuffer lhsBuffer,
+        ByteBuffer rhsBuffer,
+        int lhsPosition,
+        int rhsPosition
+    )
+    {
+      for (int i = 0; i < dimCount; i++) {
+        final int cmp = Ints.compare(
+            sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
+            sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+        );
+
+        if (cmp != 0) {
+          return cmp;
+        }
+      }
+
+      return 0;
     }
 
     @Override
