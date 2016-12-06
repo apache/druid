@@ -48,7 +48,7 @@ public class TestDerbyConnector extends DerbyConnector
       String jdbcUri
   )
   {
-    super(config, dbTables, new DBI(jdbcUri + ";create=true"));
+    super(new NoopMetadataStorageProvider().get(), config, dbTables, new DBI(jdbcUri + ";create=true"));
     this.jdbcUri = jdbcUri;
   }
 
