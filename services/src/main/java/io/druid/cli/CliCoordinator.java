@@ -123,8 +123,7 @@ public class CliCoordinator extends ServerRunnable
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
             binder.bind(MetadataStorage.class)
-                  .toProvider(MetadataStorageProvider.class)
-                  .in(ManageLifecycle.class);
+                  .toProvider(MetadataStorageProvider.class);
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
