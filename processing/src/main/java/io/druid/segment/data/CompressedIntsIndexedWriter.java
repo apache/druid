@@ -19,18 +19,16 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.IndexIO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -69,13 +67,23 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
       final CompressedObjectStrategy.CompressionStrategy compression
   )
   {
+    this(chunkFactor, compression, new GenericIndexedWriter<>(
+        ioPeon, filenameBase, CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+    ));
+  }
+
+  public CompressedIntsIndexedWriter(
+      final int chunkFactor,
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      GenericIndexedWriter<ResourceHolder<IntBuffer>> flattner
+  )
+  {
     this.chunkFactor = chunkFactor;
     this.compression = compression;
-    this.flattener = new GenericIndexedWriter<>(
-        ioPeon, filenameBase, CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
-    );
     this.endBuffer = IntBuffer.allocate(chunkFactor);
     this.numInserted = 0;
+    this.flattener = flattner;
+
   }
 
   @Override
@@ -123,14 +131,12 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    try (final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput())) {
-      ByteStreams.copy(from, channel);
-    }
+    flattener.writeToChannel(channel, smoosher);
   }
 }

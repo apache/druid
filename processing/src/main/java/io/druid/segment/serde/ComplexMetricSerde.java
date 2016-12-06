@@ -20,7 +20,9 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Function;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
@@ -30,20 +32,21 @@ import java.nio.ByteBuffer;
 public abstract class ComplexMetricSerde
 {
   public abstract String getTypeName();
+
   public abstract ComplexMetricExtractor getExtractor();
 
   /**
    * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
    * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
    *
-   * @param buffer the buffer to deserialize
+   * @param buffer  the buffer to deserialize
    * @param builder ColumnBuilder to add the column to
    */
   public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**
    * This is deprecated because its usage is going to be removed from the code.
-   *
+   * <p>
    * It was introduced before deserializeColumn() existed.  This method creates the assumption that Druid knows
    * how to interpret the actual column representation of the data, but I would much prefer that the ComplexMetricSerde
    * objects be in charge of creating and interpreting the whole column, which is what deserializeColumn lets
@@ -57,7 +60,7 @@ public abstract class ComplexMetricSerde
   /**
    * Returns a function that can convert the Object provided by the ComplexColumn created through deserializeColumn
    * into a number of expected input bytes to produce that object.
-   *
+   * <p>
    * This is used to approximate the size of the input data via the SegmentMetadataQuery and does not need to be
    * overridden if you do not care about the query.
    *
@@ -72,6 +75,7 @@ public abstract class ComplexMetricSerde
    * Converts intermediate representation of aggregate to byte[].
    *
    * @param val intermediate representation of aggregate
+   *
    * @return serialized intermediate representation of aggregate in byte[]
    */
   public byte[] toBytes(Object val)
@@ -82,17 +86,23 @@ public abstract class ComplexMetricSerde
   /**
    * Converts byte[] to intermediate representation of the aggregate.
    *
-   * @param byte array
-   * @param start offset in the byte array where to start reading
+   * @param data     array
+   * @param start    offset in the byte array where to start reading
    * @param numBytes number of bytes to read in given array
+   *
    * @return intermediate representation of the aggregate
    */
   public Object fromBytes(byte[] data, int start, int numBytes)
   {
     ByteBuffer bb = ByteBuffer.wrap(data);
-    if(start > 0) {
+    if (start > 0) {
       bb.position(start);
     }
     return getObjectStrategy().fromByteBuffer(bb, numBytes);
+  }
+
+  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  {
+    return ComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
   }
 }

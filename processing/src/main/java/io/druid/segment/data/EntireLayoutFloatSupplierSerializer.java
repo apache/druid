@@ -24,6 +24,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -111,7 +112,7 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     try (InputStream meta = ioPeon.makeInputStream(metaFile);
          InputStream value = ioPeon.makeInputStream(valueFile)) {

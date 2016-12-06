@@ -19,17 +19,15 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.IndexIO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -38,6 +36,61 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWriter
 {
   private static final byte VERSION = CompressedVSizeIntsIndexedSupplier.VERSION;
+
+  private final int numBytes;
+  private final int chunkFactor;
+  private final int chunkBytes;
+  private final ByteOrder byteOrder;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final GenericIndexedWriter<ResourceHolder<ByteBuffer>> flattener;
+  private final ByteBuffer intBuffer;
+
+  private ByteBuffer endBuffer;
+  private int numInserted;
+
+  public CompressedVSizeIntsIndexedWriter(
+      final IOPeon ioPeon,
+      final String filenameBase,
+      final int maxValue,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      final CompressedObjectStrategy.CompressionStrategy compression
+  )
+  {
+    this(ioPeon, filenameBase, maxValue, chunkFactor, byteOrder, compression,
+         new GenericIndexedWriter<>(
+             ioPeon,
+             filenameBase,
+             CompressedByteBufferObjectStrategy.getBufferForOrder(
+                 byteOrder,
+                 compression,
+                 sizePer(maxValue, chunkFactor)
+             )
+         )
+    );
+  }
+
+  public CompressedVSizeIntsIndexedWriter(
+      final IOPeon ioPeon,
+      final String filenameBase,
+      final int maxValue,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriter writer
+  )
+  {
+    this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
+    this.chunkFactor = chunkFactor;
+    this.chunkBytes = chunkFactor * numBytes + CompressedVSizeIntsIndexedSupplier.bufferPadding(numBytes);
+    this.byteOrder = byteOrder;
+    this.compression = compression;
+    this.flattener = writer;
+    this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
+    this.endBuffer = ByteBuffer.allocate(chunkBytes).order(byteOrder);
+    this.endBuffer.limit(numBytes * chunkFactor);
+    this.numInserted = 0;
+  }
 
   public static CompressedVSizeIntsIndexedWriter create(
       final IOPeon ioPeon,
@@ -53,37 +106,10 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
     );
   }
 
-  private final int numBytes;
-  private final int chunkFactor;
-  private final int chunkBytes;
-  private final ByteOrder byteOrder;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
-  private final GenericIndexedWriter<ResourceHolder<ByteBuffer>> flattener;
-  private final ByteBuffer intBuffer;
-  private ByteBuffer endBuffer;
-  private int numInserted;
-
-  public CompressedVSizeIntsIndexedWriter(
-      final IOPeon ioPeon,
-      final String filenameBase,
-      final int maxValue,
-      final int chunkFactor,
-      final ByteOrder byteOrder,
-      final CompressedObjectStrategy.CompressionStrategy compression
-  )
+  private static int sizePer(int maxValue, int chunkFactor)
   {
-    this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
-    this.chunkFactor = chunkFactor;
-    this.chunkBytes = chunkFactor * numBytes + CompressedVSizeIntsIndexedSupplier.bufferPadding(numBytes);
-    this.byteOrder = byteOrder;
-    this.compression = compression;
-    this.flattener = new GenericIndexedWriter<>(
-        ioPeon, filenameBase, CompressedByteBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkBytes)
-    );
-    this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
-    this.endBuffer = ByteBuffer.allocate(chunkBytes).order(byteOrder);
-    this.endBuffer.limit(numBytes * chunkFactor);
-    this.numInserted = 0;
+    return chunkFactor * VSizeIndexedInts.getNumBytesForMax(maxValue)
+           + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue));
   }
 
   @Override
@@ -138,14 +164,12 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    try (final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput())) {
-      ByteStreams.copy(from, channel);
-    }
+    flattener.writeToChannel(channel, smoosher);
   }
 }

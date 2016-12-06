@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -79,7 +80,11 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     channel.write(buffer.asReadOnlyBuffer());
   }
 
-  public static CompressedFloatsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedFloatsIndexedSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SmooshedFileMapper mapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -96,7 +101,8 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
-          compression
+          compression,
+          mapper
       );
       return new CompressedFloatsIndexedSupplier(
           totalSize,
