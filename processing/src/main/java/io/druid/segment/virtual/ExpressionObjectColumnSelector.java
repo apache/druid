@@ -34,7 +34,7 @@ import io.druid.segment.column.ValueType;
 
 import java.util.Map;
 
-public class ExpressionObjectColumnSelector implements ObjectColumnSelector<Number>
+class ExpressionObjectColumnSelector implements ObjectColumnSelector<Number>
 {
   private final Expr expression;
   private final Expr.ObjectBinding bindings;

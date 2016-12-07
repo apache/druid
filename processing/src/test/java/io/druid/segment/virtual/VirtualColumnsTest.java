@@ -62,7 +62,7 @@ public class VirtualColumnsTest
     final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("expr", null);
 
     Assert.assertEquals(1L, objectSelector.get());
-    Assert.assertEquals(null, dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+    Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertEquals(1.0f, floatSelector.get(), 0.0f);
     Assert.assertEquals(1L, longSelector.get());
   }

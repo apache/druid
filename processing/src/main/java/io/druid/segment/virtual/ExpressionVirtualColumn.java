@@ -30,7 +30,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ValueType;
 import org.apache.commons.codec.Charsets;
@@ -83,7 +82,20 @@ public class ExpressionVirtualColumn implements VirtualColumn
       final ColumnSelectorFactory columnSelectorFactory
   )
   {
-    return NullDimensionSelector.instance();
+    final ExpressionObjectColumnSelector numericSelector = new ExpressionObjectColumnSelector(
+        parsedExpression,
+        columnSelectorFactory
+    );
+    class ExpressionDimensionSelector extends AbstractSingleValueVirtualDimensionSelector
+    {
+      @Override
+      protected String getValue()
+      {
+        final Number number = numericSelector.get();
+        return number == null ? null : String.valueOf(number);
+      }
+    }
+    return new ExpressionDimensionSelector();
   }
 
   @Override
