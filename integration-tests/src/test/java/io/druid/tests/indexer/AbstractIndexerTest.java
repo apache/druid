@@ -69,6 +69,9 @@ public abstract class AbstractIndexerTest
 
   protected void unloadAndKillData(final String dataSource, String start, String end) throws Exception
   {
+    // Wait for any existing index tasks to complete before disabling the datasource otherwise
+    // realtime tasks can get stuck waiting for handoff. https://github.com/druid-io/druid/issues/1729
+    waitForAllTasksToComplete();
     Interval interval = new Interval(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource, interval);
     RetryUtil.retryUntilFalse(
@@ -82,16 +85,20 @@ public abstract class AbstractIndexerTest
         }, "Segment Unloading"
     );
     coordinator.deleteSegmentsDataSource(dataSource, interval);
+    waitForAllTasksToComplete();
+  }
+
+  protected void waitForAllTasksToComplete(){
     RetryUtil.retryUntilTrue(
-        new Callable<Boolean>()
+      new Callable<Boolean>()
+      {
+        @Override
+        public Boolean call() throws Exception
         {
-          @Override
-          public Boolean call() throws Exception
-          {
-            return (indexer.getPendingTasks().size() + indexer.getRunningTasks().size() + indexer.getWaitingTasks()
-                                                                                                 .size()) == 0;
-          }
-        }, "Waiting for Tasks Completion"
+          return (indexer.getPendingTasks().size() + indexer.getRunningTasks().size() + indexer.getWaitingTasks()
+                                                                                               .size()) == 0;
+        }
+      }, "Waiting for Tasks Completion"
     );
   }
 
