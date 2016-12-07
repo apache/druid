@@ -23,6 +23,7 @@ import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
 import java.util.BitSet;
+import java.util.NoSuchElementException;
 
 /**
  * WrappedImmutableBitSetBitmap implements ImmutableBitmap for java.util.BitSet
@@ -117,18 +118,27 @@ public class WrappedImmutableBitSetBitmap implements ImmutableBitmap
 
   private class BitSetIterator implements IntIterator
   {
-    private int pos = -1;
+    private int nextPos;
+
+    BitSetIterator()
+    {
+      nextPos = bitmap.nextSetBit(0);
+    }
 
     @Override
     public boolean hasNext()
     {
-      return bitmap.nextSetBit(pos + 1) >= 0;
+      return nextPos >= 0;
     }
 
     @Override
     public int next()
     {
-      pos = bitmap.nextSetBit(pos + 1);
+      int pos = nextPos;
+      if (pos < 0) {
+        throw new NoSuchElementException();
+      }
+      nextPos = bitmap.nextSetBit(pos + 1);
       return pos;
     }
 
@@ -136,7 +146,7 @@ public class WrappedImmutableBitSetBitmap implements ImmutableBitmap
     public IntIterator clone()
     {
       BitSetIterator newIt = new BitSetIterator();
-      newIt.pos = pos;
+      newIt.nextPos = nextPos;
       return newIt;
     }
   }
