@@ -58,6 +58,7 @@ public class DefaultObjectMapper extends ObjectMapper
     configure(MapperFeature.AUTO_DETECT_SETTERS, false);
     configure(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS, false);
     configure(SerializationFeature.INDENT_OUTPUT, false);
+    configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, false);
   }
 
   @Override
