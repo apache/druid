@@ -26,6 +26,7 @@ import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.store.IndexInput;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -161,6 +162,27 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
       {
         final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(
             buffer,
+            byteOrder
+        );
+        builder.setType(ValueType.LONG)
+               .setHasMultipleValues(false)
+               .setGenericColumn(new LongGenericColumnSupplier(column));
+      }
+
+      /**
+       * new api
+       *
+       * @param indexInput
+       * @param builder
+       * @param columnConfig
+       */
+      @Override
+      public void read(
+          IndexInput indexInput, ColumnBuilder builder, ColumnConfig columnConfig
+      ) throws IOException
+      {
+        final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromIndexInput(
+            indexInput,
             byteOrder
         );
         builder.setType(ValueType.LONG)

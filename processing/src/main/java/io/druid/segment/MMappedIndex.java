@@ -21,11 +21,11 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.VSizeIndexed;
+import io.druid.segment.smooth.SmooshedFileMapper;
 import org.joda.time.Interval;
 
 import java.io.IOException;

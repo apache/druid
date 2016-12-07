@@ -23,6 +23,8 @@ import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.segment.store.ByteBufferIndexInput;
+import io.druid.segment.store.IndexInput;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -124,6 +126,9 @@ public class CompressedLongsSerdeTest
   {
     testValues(values);
     testValues(addUniques(values));
+    //test for IndexInput version
+    testValues4II(values);
+    testValues4II(addUniques(values));
   }
 
   public void testValues(long[] values) throws Exception
@@ -155,6 +160,60 @@ public class CompressedLongsSerdeTest
     IndexedLongs longs = supplier.get();
 
     assertIndexMatchesVals(longs, values);
+    for (int i = 0; i < 10; i++) {
+      int a = (int) (Math.random() * values.length);
+      int b = (int) (Math.random() * values.length);
+      int start = a < b ? a : b;
+      int end = a < b ? b : a;
+      tryFill(longs, values, start, end - start);
+    }
+    testSupplierSerde(supplier, values);
+    testConcurrentThreadReads(supplier, longs, values);
+
+    longs.close();
+  }
+
+
+  /**
+   * rewrite to use IndexInput to generate the IndexedLongs
+   * @param values
+   * @throws Exception
+   */
+  public void testValues4II(long[] values) throws Exception
+  {
+    LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(new IOPeonForTesting(), "test", order,
+                                                                             encodingStrategy, compressionStrategy
+    );
+    serializer.open();
+
+    for (long value : values) {
+      serializer.add(value);
+    }
+    Assert.assertEquals(values.length, serializer.size());
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    serializer.closeAndConsolidate(
+        new ByteSink()
+        {
+          @Override
+          public OutputStream openStream() throws IOException
+          {
+            return baos;
+          }
+        }
+    );
+    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+    ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
+    IndexInput indexInput = new ByteBufferIndexInput(byteBuffer);
+    CompressedLongsIndexedSupplier supplier = CompressedLongsIndexedSupplier
+        .fromIndexInput(indexInput, order);
+    IndexedLongs longs = supplier.get();
+
+    if(compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE){
+      assertIndexMatchesVals(longs, values);
+    }
+
+    // assertIndexMatchesVals(longs, values);
     for (int i = 0; i < 10; i++) {
       int a = (int) (Math.random() * values.length);
       int b = (int) (Math.random() * values.length);

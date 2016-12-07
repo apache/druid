@@ -34,23 +34,23 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
 
   private static final Logger log = new Logger(CachingIndexed.class);
 
-  private final GenericIndexed<T>.BufferIndexed delegate;
+  private final Indexed<T> delegate;
   private final SizedLRUMap<Integer, T> cachedValues;
 
   /**
    * Creates a CachingIndexed wrapping the given GenericIndexed with a value lookup cache
-   *
+   * <p>
    * CachingIndexed objects are not thread safe and should only be used by a single thread at a time.
    * CachingIndexed objects must be closed to release any underlying cache resources.
    *
-   * @param delegate the GenericIndexed to wrap with a lookup cache.
+   * @param delegate        the GenericIndexed to wrap with a lookup cache.
    * @param lookupCacheSize maximum size in bytes of the lookup cache if greater than zero
    */
   public CachingIndexed(GenericIndexed<T> delegate, final int lookupCacheSize)
   {
     this.delegate = delegate.singleThreaded();
 
-    if(lookupCacheSize > 0) {
+    if (lookupCacheSize > 0) {
       log.debug("Allocating column cache of max size[%d]", lookupCacheSize);
       cachedValues = new SizedLRUMap<>(INITIAL_CACHE_CAPACITY, lookupCacheSize);
     } else {
@@ -73,14 +73,24 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   @Override
   public T get(int index)
   {
-    if(cachedValues != null) {
+    if (cachedValues != null) {
       final T cached = cachedValues.getValue(index);
       if (cached != null) {
         return cached;
       }
 
       final T value = delegate.get(index);
-      cachedValues.put(index, value, delegate.getLastValueSize());
+      if (delegate instanceof GenericIndexed.BufferIndexed) {
+        GenericIndexed.BufferIndexed bufferIndexed = (GenericIndexed.BufferIndexed) delegate;
+        int lastValueSize = bufferIndexed.getLastValueSize();
+        cachedValues.put(index, value, lastValueSize);
+      }
+      if (delegate instanceof GenericIndexed.IndexInputIndexed) {
+        GenericIndexed.IndexInputIndexed indexed = (GenericIndexed.IndexInputIndexed) delegate;
+        int lastValueSize = indexed.getLastValueSize();
+        cachedValues.put(index, value, lastValueSize);
+      }
+
       return value;
     } else {
       return delegate.get(index);
@@ -108,7 +118,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
     }
   }
 
-private static class SizedLRUMap<K, V> extends LinkedHashMap<K, Pair<Integer, V>>
+  private static class SizedLRUMap<K, V> extends LinkedHashMap<K, Pair<Integer, V>>
   {
     private final int maxBytes;
     private int numBytes = 0;

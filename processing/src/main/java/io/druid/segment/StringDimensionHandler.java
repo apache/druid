@@ -19,14 +19,17 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.store.Directory;
 
 import java.io.Closeable;
 import java.io.File;
@@ -36,6 +39,8 @@ import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
+  private static final Logger log = new Logger(StringDimensionHandler.class);
+
   private final String dimensionName;
   private final MultiValueHandling multiValueHandling;
 
@@ -204,6 +209,18 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
+  public DimensionMergerV9 makeMerger(
+      IndexSpec indexSpec,
+      Directory directory,
+      IOPeon ioPeon,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress
+  )
+  {
+    return new StringDimensionMergerV9(dimensionName, indexSpec, directory, ioPeon, capabilities, progress);
+  }
+
+  @Override
   public DimensionMergerLegacy makeLegacyMerger(
       IndexSpec indexSpec,
       File outDir,
@@ -214,6 +231,21 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   {
     return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
   }
+
+  public static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
+  {
+    @Override
+    public String apply(final Object o)
+    {
+      if (o == null) {
+        return null;
+      }
+      if (o instanceof String) {
+        return (String) o;
+      }
+      return o.toString();
+    }
+  };
 
   public static final Comparator<Integer> ENCODED_COMPARATOR = new Comparator<Integer>()
   {
@@ -230,4 +262,18 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     }
   };
 
+  public static final Comparator<String> UNENCODED_COMPARATOR = new Comparator<String>()
+  {
+    @Override
+    public int compare(String o1, String o2)
+    {
+      if (o1 == null) {
+        return o2 == null ? 0 : -1;
+      }
+      if (o2 == null) {
+        return 1;
+      }
+      return o1.compareTo(o2);
+    }
+  };
 }

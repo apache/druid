@@ -20,6 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import io.druid.segment.store.ByteBufferIndexInput;
+import io.druid.segment.store.IndexInput;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,6 +39,19 @@ public class VSizeIndexedIntsTest
   {
     final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     VSizeIndexedInts ints = VSizeIndexedInts.fromArray(array);
+
+    Assert.assertEquals(1, ints.getNumBytes());
+    Assert.assertEquals(array.length, ints.size());
+    for (int i = 0; i < array.length; i++) {
+      Assert.assertEquals(array[i], ints.get(i));
+    }
+  }
+
+  @Test
+  public void testSanityIIV() throws Exception
+  {
+    final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    VSizeIndexedInts ints = VSizeIndexedInts.fromArrayIIV(array);
 
     Assert.assertEquals(1, ints.getNumBytes());
     Assert.assertEquals(array.length, ints.size());
@@ -66,12 +81,45 @@ public class VSizeIndexedIntsTest
   }
 
   @Test
+  public void testSerializationIIV() throws Exception
+  {
+    final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    VSizeIndexedInts ints = VSizeIndexedInts.fromArrayIIV(array);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ints.writeToChannel(Channels.newChannel(baos));
+
+    final byte[] bytes = baos.toByteArray();
+    Assert.assertEquals(ints.getSerializedSize(), bytes.length);
+    IndexInput indexInput = new ByteBufferIndexInput(ByteBuffer.wrap(bytes));
+    VSizeIndexedInts deserialized = VSizeIndexedInts.readFromIndexInput(indexInput);
+
+    Assert.assertEquals(1, deserialized.getNumBytes());
+    Assert.assertEquals(array.length, deserialized.size());
+    for (int i = 0; i < array.length; i++) {
+      Assert.assertEquals(array[i], deserialized.get(i));
+    }
+  }
+
+  @Test
   public void testGetBytesNoPaddingfromList() throws Exception
   {
     final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
     List<Integer> list = Ints.asList(array);
     int maxValue = Ints.max(array);
     VSizeIndexedInts ints = VSizeIndexedInts.fromList(list, maxValue);
+    byte[] bytes1 = ints.getBytesNoPadding();
+    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingfromList(list, maxValue);
+    Assert.assertArrayEquals(bytes1, bytes2);
+  }
+
+  @Test
+  public void testGetBytesNoPaddingfromListIIV() throws Exception
+  {
+    final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
+    List<Integer> list = Ints.asList(array);
+    int maxValue = Ints.max(array);
+    VSizeIndexedInts ints = VSizeIndexedInts.fromListIIV(list, maxValue);
     byte[] bytes1 = ints.getBytesNoPadding();
     byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingfromList(list, maxValue);
     Assert.assertArrayEquals(bytes1, bytes2);

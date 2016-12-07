@@ -21,7 +21,10 @@ package io.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.Pair;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
+import io.druid.segment.store.ByteBufferIndexInput;
+import io.druid.segment.store.IndexInput;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,14 +50,21 @@ public class CompressedVSizeIndexedSupplierTest
   @Before
   public void setUpSimple()
   {
-    vals = Arrays.asList(
+    Pair<List<int[]>, WritableSupplier<IndexedMultivalue<IndexedInts>>> pair = constructValsAndIndexSupplier();
+    vals =pair.lhs;
+    indexedSupplier = pair.rhs;
+  }
+
+  private Pair<List<int[]>, WritableSupplier<IndexedMultivalue<IndexedInts>>> constructValsAndIndexSupplier()
+  {
+    List<int[]> vals = Arrays.asList(
         new int[1],
         new int[]{1, 2, 3, 4, 5},
         new int[]{6, 7, 8, 9, 10},
         new int[]{11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
     );
 
-    indexedSupplier = CompressedVSizeIndexedSupplier.fromIterable(
+    WritableSupplier<IndexedMultivalue<IndexedInts>> indexedSupplier = CompressedVSizeIndexedSupplier.fromIterable(
         Iterables.transform(
             vals,
             new Function<int[], IndexedInts>()
@@ -68,6 +78,8 @@ public class CompressedVSizeIndexedSupplierTest
         ), 20, ByteOrder.nativeOrder(),
         CompressedObjectStrategy.CompressionStrategy.LZ4
     );
+    Pair<List<int[]>, WritableSupplier<IndexedMultivalue<IndexedInts>>> pair = new Pair<>(vals, indexedSupplier);
+    return pair;
   }
 
   @After
@@ -92,6 +104,26 @@ public class CompressedVSizeIndexedSupplierTest
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);
     WritableSupplier<IndexedMultivalue<IndexedInts>> deserializedIndexed = fromByteBuffer(
+        ByteBuffer.wrap(bytes),
+        ByteOrder.nativeOrder()
+    );
+
+    assertSame(vals, deserializedIndexed.get());
+  }
+
+  @Test
+  public void testIISerde() throws IOException
+  {
+
+    Pair<List<int[]>, WritableSupplier<IndexedMultivalue<IndexedInts>>> pair = constructValsAndIndexSupplier();
+    //to avoid subclass override
+    WritableSupplier<IndexedMultivalue<IndexedInts>> indexedSupplier = pair.rhs;
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    indexedSupplier.writeToChannel(Channels.newChannel(baos));
+
+    final byte[] bytes = baos.toByteArray();
+    Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);
+    WritableSupplier<IndexedMultivalue<IndexedInts>> deserializedIndexed = fromIndexInput(
         ByteBuffer.wrap(bytes),
         ByteOrder.nativeOrder()
     );
@@ -143,6 +175,15 @@ public class CompressedVSizeIndexedSupplierTest
   {
     return CompressedVSizeIndexedSupplier.fromByteBuffer(
         buffer, ByteOrder.nativeOrder()
+    );
+  }
+
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromIndexInput(ByteBuffer buffer, ByteOrder order)
+      throws IOException
+  {
+    IndexInput indexInput = new ByteBufferIndexInput(buffer);
+    return CompressedVSizeIndexedSupplier.fromIndexInput(indexInput
+        , ByteOrder.nativeOrder()
     );
   }
 }

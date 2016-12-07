@@ -27,6 +27,7 @@ import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.store.IndexInput;
 
 import java.nio.ByteBuffer;
 
@@ -68,6 +69,14 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
   {
     GenericIndexed<Sketch> ge = GenericIndexed.read(buffer, strategy);
     builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), ge));
+  }
+
+  @Override
+  public void deserializeColumn(
+      IndexInput indexInput, ColumnBuilder builder
+  )
+  {
+    //TODO ....
   }
 
   @Override

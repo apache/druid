@@ -28,6 +28,7 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.store.IndexInput;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -168,6 +169,36 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
           numBytes,
           GenericIndexed.read(
               buffer,
+              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes)
+          ),
+          compression
+      );
+
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedVSizeIntsIndexedSupplier fromIndexInput(IndexInput indexInput, ByteOrder order) throws IOException
+  {
+    byte versionFromBuffer = indexInput.readByte();
+
+    if (versionFromBuffer == VERSION) {
+      final int numBytes = indexInput.readByte();
+      final int totalSize = indexInput.readInt();
+      final int sizePer = indexInput.readInt();
+      final int chunkBytes = sizePer * numBytes + bufferPadding(numBytes);
+
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
+          indexInput.readByte()
+      );
+
+      return new CompressedVSizeIntsIndexedSupplier(
+          totalSize,
+          sizePer,
+          numBytes,
+          GenericIndexed.read(
+              indexInput,
               CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes)
           ),
           compression

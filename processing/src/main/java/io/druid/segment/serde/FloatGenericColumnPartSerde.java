@@ -26,6 +26,7 @@ import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
+import io.druid.segment.store.IndexInput;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -167,6 +168,22 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
                .setHasMultipleValues(false)
                .setGenericColumn(new FloatGenericColumnSupplier(column, byteOrder));
       }
+
+
+      @Override
+      public void read(
+          IndexInput indexInput, ColumnBuilder builder, ColumnConfig columnConfig
+      ) throws IOException
+      {
+        final CompressedFloatsIndexedSupplier column = CompressedFloatsIndexedSupplier.fromIndexInput(
+            indexInput,
+            byteOrder
+        );
+        builder.setType(ValueType.FLOAT)
+               .setHasMultipleValues(false)
+               .setGenericColumn(new FloatGenericColumnSupplier(column, byteOrder));
+      }
+
     };
   }
 }

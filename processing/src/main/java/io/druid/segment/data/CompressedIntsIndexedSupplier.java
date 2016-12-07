@@ -27,6 +27,7 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.store.IndexInput;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -72,8 +73,9 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
-    if(powerOf2) {
-      return new CompressedIndexedInts() {
+    if (powerOf2) {
+      return new CompressedIndexedInts()
+      {
         @Override
         public int get(int index)
         {
@@ -116,7 +118,10 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return new CompressedIntsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseIntBuffers, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        GenericIndexed.fromIterable(
+            baseIntBuffers,
+            CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+        ),
         compression
     );
   }
@@ -136,7 +141,8 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     if (versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
+          buffer.get());
       return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,
@@ -148,13 +154,41 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
+  public static CompressedIntsIndexedSupplier fromIndexInput(IndexInput indexInput, ByteOrder order) throws IOException
+  {
+    byte versionFromBuffer = indexInput.readByte();
+
+    if (versionFromBuffer == VERSION) {
+      final int totalSize = indexInput.readInt();
+      final int sizePer = indexInput.readInt();
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
+          indexInput.readByte());
+      return new CompressedIntsIndexedSupplier(
+          totalSize,
+          sizePer,
+          GenericIndexed.read(indexInput, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          compression
+      );
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+
+  public static CompressedIntsIndexedSupplier fromIntBuffer(
+      IntBuffer buffer,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
+  )
   {
     return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression);
   }
 
   public static CompressedIntsIndexedSupplier fromIntBuffer(
-      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final IntBuffer buffer,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -208,7 +242,10 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   }
 
   public static CompressedIntsIndexedSupplier fromList(
-      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final List<Integer> list,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -243,7 +280,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                       retVal.limit(list.size() - position);
                     }
                     final List<Integer> ints = list.subList(position, position + retVal.remaining());
-                    for(int value : ints) {
+                    for (int value : ints) {
                       retVal.put(value);
                     }
                     retVal.rewind();

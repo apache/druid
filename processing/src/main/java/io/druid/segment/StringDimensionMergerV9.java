@@ -53,6 +53,9 @@ import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
 import io.druid.segment.data.VSizeIndexedWriter;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
+import io.druid.segment.store.Directory;
+import io.druid.segment.store.IndexInput;
+import io.druid.segment.store.IndexInputInputStream;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -61,6 +64,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
@@ -94,6 +98,9 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
 
+  protected Directory directory;
+  protected boolean isDirectoryVersion;
+
   public StringDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
@@ -110,6 +117,28 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     this.ioPeon = ioPeon;
     this.progress = progress;
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+    directory = null;
+    isDirectoryVersion = false;
+  }
+
+  public StringDimensionMergerV9(
+      String dimensionName,
+      IndexSpec indexSpec,
+      Directory directory,
+      IOPeon ioPeon,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress
+  )
+  {
+    this.dimensionName = dimensionName;
+    this.indexSpec = indexSpec;
+    this.capabilities = capabilities;
+    this.outDir = new File(".");
+    this.ioPeon = ioPeon;
+    this.progress = progress;
+    nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+    this.directory = directory;
+    this.isDirectoryVersion = true;
   }
 
   @Override
@@ -286,23 +315,48 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
     // write dim values to one single file because we need to read it
     File dimValueFile = IndexIO.makeDimFile(outDir, dimensionName);
-    try (FileOutputStream fos = new FileOutputStream(dimValueFile)) {
-      ByteStreams.copy(dictionaryWriter.combineStreams(), fos);
+    if (!isDirectoryVersion) {
+      try (FileOutputStream fos = new FileOutputStream(dimValueFile)) {
+        ByteStreams.copy(dictionaryWriter.combineStreams(), fos);
+      }
+    } else {
+      try (OutputStream outputStream = ioPeon.makeOutputStream(dimValueFile.getName())) {
+        ByteStreams.copy(dictionaryWriter.combineStreams(), outputStream);
+      }
     }
+    final MappedByteBuffer dimValsMapped = isDirectoryVersion ? null : Files.map(dimValueFile);
+    final IndexInput dimValsII = isDirectoryVersion
+                                 ? ((IndexInputInputStream) ioPeon.makeInputStream(dimValueFile.getName())).getIndexInput()
+                                 : null;
 
-    final MappedByteBuffer dimValsMapped = Files.map(dimValueFile);
     try (
+        Closeable toCloseIndexInputReader = new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            if (isDirectoryVersion) {
+              dimValsII.close();
+            }
+          }
+        };
         Closeable toCloseEncodedValueWriter = encodedValueWriter;
         Closeable toCloseBitmapWriter = bitmapWriter;
         Closeable dimValsMappedUnmapper = new Closeable()
-    {
-      @Override
-      public void close()
-      {
-        ByteBufferUtils.unmap(dimValsMapped);
-      }
-    }) {
-      Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
+        {
+          @Override
+          public void close()
+          {
+            if (!isDirectoryVersion) {
+              ByteBufferUtils.unmap(dimValsMapped);
+            }
+          }
+        }) {
+      Indexed<String> dimVals = isDirectoryVersion
+                                ? GenericIndexed.read(dimValsII, GenericIndexed.STRING_STRATEGY)
+                                : GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
+
+
       BitmapFactory bmpFactory = bitmapSerdeFactory.getBitmapFactory();
 
       RTree tree = null;
@@ -349,6 +403,29 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
           dimVals.size(),
           System.currentTimeMillis() - dimStartTime
       );
+    }
+  }
+
+  private Indexed<String> getDimIndexedVals(File dimValueFile) throws IOException
+  {
+    if (isDirectoryVersion) {
+      try (final IndexInput dimValsII = directory.openInput(dimValueFile.getName())) {
+        return GenericIndexed.read(dimValsII, GenericIndexed.STRING_STRATEGY);
+      }
+    } else {
+      final MappedByteBuffer dimValsMapped = Files.map(dimValueFile);
+      try (
+          Closeable dimValsMappedUnmapper = new Closeable()
+          {
+            @Override
+            public void close()
+            {
+              ByteBufferUtils.unmap(dimValsMapped);
+            }
+          }) {
+        Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
+        return dimVals;
+      }
     }
   }
 

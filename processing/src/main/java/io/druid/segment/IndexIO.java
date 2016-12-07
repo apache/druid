@@ -36,19 +36,15 @@ import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.Smoosh;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
@@ -81,6 +77,14 @@ import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import io.druid.segment.smooth.FileSmoosher;
+import io.druid.segment.smooth.Smoosh;
+import io.druid.segment.smooth.SmooshedFileMapper;
+import io.druid.segment.smooth.SmooshedWriter;
+import io.druid.segment.store.Directory;
+import io.druid.segment.store.DirectoryUtils;
+import io.druid.segment.store.IndexInput;
+import io.druid.segment.util.IndexInputSerializerUtils;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
@@ -110,6 +114,8 @@ public class IndexIO
 
   private static final EmittingLogger log = new EmittingLogger(IndexIO.class);
   private static final SerializerUtils serializerUtils = new SerializerUtils();
+  private static final IndexInputSerializerUtils iiSerializerUtils = new IndexInputSerializerUtils();
+  private static final IndexInputSerializerUtils indexInputSerializerUtils = new IndexInputSerializerUtils();
 
   private final ObjectMapper mapper;
   private final DefaultIndexIOHandler defaultIndexIOHandler;
@@ -138,6 +144,18 @@ public class IndexIO
   }
 
   public void validateTwoSegments(File dir1, File dir2) throws IOException
+  {
+    try (QueryableIndex queryableIndex1 = loadIndex(dir1)) {
+      try (QueryableIndex queryableIndex2 = loadIndex(dir2)) {
+        validateTwoSegments(
+            new QueryableIndexIndexableAdapter(queryableIndex1),
+            new QueryableIndexIndexableAdapter(queryableIndex2)
+        );
+      }
+    }
+  }
+
+  public void validateTwoSegments(Directory dir1, Directory dir2) throws IOException
   {
     try (QueryableIndex queryableIndex1 = loadIndex(dir1)) {
       try (QueryableIndex queryableIndex2 = loadIndex(dir2)) {
@@ -223,6 +241,19 @@ public class IndexIO
     }
   }
 
+  public QueryableIndex loadIndex(Directory directory) throws IOException
+  {
+    final int version = DirectoryUtils.getSegmentVersionFromDir(directory);
+
+    final IndexLoader loader = indexLoaders.get(version);
+
+    if (loader != null) {
+      return loader.load(directory, mapper);
+    } else {
+      throw new ISE("Unknown index version[%s]", version);
+    }
+  }
+
   public static int getVersionFromDir(File inDir) throws IOException
   {
     File versionFile = new File(inDir, "version.bin");
@@ -238,12 +269,21 @@ public class IndexIO
     return version;
   }
 
+  /**
+   * TODO .....
+   *
+   * @param indexFile
+   *
+   * @throws IOException
+   */
   public static void checkFileSize(File indexFile) throws IOException
   {
-    final long fileSize = indexFile.length();
-    if (fileSize > Integer.MAX_VALUE) {
-      throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
-    }
+    /**
+     final long fileSize = indexFile.length();
+     if (fileSize > Integer.MAX_VALUE) {
+     throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
+     }
+     */
   }
 
   public boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
@@ -850,6 +890,8 @@ public class IndexIO
   static interface IndexLoader
   {
     public QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException;
+
+    public QueryableIndex load(Directory directory, ObjectMapper mapper) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
@@ -954,6 +996,14 @@ public class IndexIO
           null
       );
     }
+
+
+    @Override
+    public QueryableIndex load(Directory directory, ObjectMapper mapper) throws IOException
+    {
+      //TODO legacy version need to be implement
+      return null;
+    }
   }
 
   static class V9IndexLoader implements IndexLoader
@@ -1035,6 +1085,81 @@ public class IndexIO
       return index;
     }
 
+
+    @Override
+    public QueryableIndex load(Directory directory, ObjectMapper mapper) throws IOException
+    {
+      File inDir = new File(".");
+      log.debug("Mapping v9 index[%s]", inDir);
+      long startTime = System.currentTimeMillis();
+      byte[] versionBytes = DirectoryUtils.openShortFilesAsBytesArrary(directory, "version.bin");
+      final int theVersion = Ints.fromByteArray(versionBytes);
+      if (theVersion != V9_VERSION) {
+        throw new IllegalArgumentException(String.format("Expected version[9], got[%s]", theVersion));
+      }
+
+      SmooshedFileMapper smooshedFiles = Smoosh.map(directory);
+
+      IndexInput indexInput = smooshedFiles.openFile("index.drd");
+      /**
+       * Index.drd should consist of the segment version, the columns and dimensions of the segment as generic
+       * indexes, the interval start and end millis as longs (in 16 bytes), and a bitmap index type.
+       */
+      final GenericIndexed<String> cols = GenericIndexed.read(indexInput, GenericIndexed.STRING_STRATEGY);
+      final GenericIndexed<String> dims = GenericIndexed.read(indexInput, GenericIndexed.STRING_STRATEGY);
+      final Interval dataInterval = new Interval(indexInput.readLong(), indexInput.readLong());
+      final BitmapSerdeFactory segmentBitmapSerdeFactory;
+
+      /**
+       * This is a workaround for the fact that in v8 segments, we have no information about the type of bitmap
+       * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
+       * this information is appended to the end of index.drd.
+       */
+      if (indexInput.hasRemaining()) {
+        segmentBitmapSerdeFactory = mapper.readValue(
+            iiSerializerUtils.readString(indexInput),
+            BitmapSerdeFactory.class
+        );
+      } else {
+        segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
+      }
+
+      Metadata metadata = null;
+      IndexInput metadataII = smooshedFiles.openFile("metadata.drd");
+      if (metadataII != null) {
+        try {
+          metadata = mapper.readValue(
+              iiSerializerUtils.readBytes(metadataII, (int) metadataII.remaining()),
+              Metadata.class
+          );
+        }
+        catch (JsonParseException | JsonMappingException ex) {
+          // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+          // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+          log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
+        }
+        catch (IOException ex) {
+          throw new IOException("Failed to read metadata", ex);
+        }
+      }
+
+      Map<String, Column> columns = Maps.newHashMap();
+
+      for (String columnName : cols) {
+        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.openFile(columnName)));
+      }
+
+      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.openFile("__time")));
+
+      final QueryableIndex index = new SimpleQueryableIndex(
+          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
+      );
+
+      log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
+
+      return index;
+    }
+
     private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
@@ -1042,6 +1167,16 @@ public class IndexIO
       );
       return serde.read(byteBuffer, columnConfig);
     }
+
+    private Column deserializeColumn(ObjectMapper mapper, IndexInput indexInput) throws IOException
+    {
+      ColumnDescriptor serde = mapper.readValue(
+          indexInputSerializerUtils.readString(indexInput), ColumnDescriptor.class
+      );
+      return serde.read(indexInput, columnConfig);
+    }
+
+
   }
 
   public static File makeDimFile(File dir, String dimension)

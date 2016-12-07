@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.IAE;
 import io.druid.segment.serde.ColumnPartSerde;
+import io.druid.segment.store.IndexInput;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -100,6 +101,19 @@ public class ColumnDescriptor
 
     for (ColumnPartSerde part : parts) {
       part.getDeserializer().read(buffer, builder, columnConfig);
+    }
+
+    return builder.build();
+  }
+
+  public Column read(IndexInput indexInput, ColumnConfig columnConfig) throws IOException
+  {
+    final ColumnBuilder builder = new ColumnBuilder()
+        .setType(valueType)
+        .setHasMultipleValues(hasMultipleValues);
+
+    for (ColumnPartSerde part : parts) {
+      part.getDeserializer().read(indexInput, builder, columnConfig);
     }
 
     return builder.build();

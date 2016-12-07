@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
+import io.druid.segment.store.IndexInput;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -160,6 +161,12 @@ public class CompressionFactory
       {
         return new DeltaLongEncodingReader(buffer);
       }
+
+      @Override
+      public LongEncodingReader getReader(IndexInput indexInput, ByteOrder order)
+      {
+        return new DeltaLongEncodingReader(indexInput);
+      }
     },
     /**
      * TABLE format encodes a series of longs by mapping each unique value to an id, and string the id with the
@@ -172,6 +179,12 @@ public class CompressionFactory
       {
         return new TableLongEncodingReader(buffer);
       }
+
+      @Override
+      public LongEncodingReader getReader(IndexInput indexInput, ByteOrder order)
+      {
+        return new TableLongEncodingReader(indexInput);
+      }
     },
     /**
      * LONGS format encodes longs as is, using 8 bytes for each value.
@@ -181,6 +194,12 @@ public class CompressionFactory
       public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
         return new LongsLongEncodingReader(buffer, order);
+      }
+
+      @Override
+      public LongEncodingReader getReader(IndexInput indexInput, ByteOrder order)
+      {
+        return new LongsLongEncodingReader(indexInput, order);
       }
     };
 
@@ -205,6 +224,8 @@ public class CompressionFactory
     }
 
     public abstract LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order);
+
+    public abstract LongEncodingReader getReader(IndexInput indexInput, ByteOrder order);
 
     public static LongEncodingFormat forId(byte id)
     {
@@ -253,6 +274,8 @@ public class CompressionFactory
 
   public interface LongEncodingReader
   {
+    void setIndexInput(IndexInput indexInput);
+
     void setBuffer(ByteBuffer buffer);
 
     long read(int index);
@@ -277,6 +300,21 @@ public class CompressionFactory
     }
   }
 
+  public static Supplier<IndexedLongs> getLongSupplier(
+      int totalSize, int sizePer, IndexInput indexInput, ByteOrder order,
+      LongEncodingFormat encodingFormat,
+      CompressedObjectStrategy.CompressionStrategy strategy
+  )
+  {
+    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(indexInput, order));
+    } else {
+      return new BlockLayoutIndexedLongSupplier(totalSize, sizePer, indexInput, order,
+                                                encodingFormat.getReader(indexInput, order), strategy
+      );
+    }
+  }
+
   public static LongSupplierSerializer getLongSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
       LongEncodingStrategy encodingStrategy,
@@ -285,12 +323,12 @@ public class CompressionFactory
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
       return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, compressionStrategy);
-    } else if (encodingStrategy == LongEncodingStrategy.LONGS){
+    } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
         return new EntireLayoutLongSupplierSerializer(
             ioPeon, filenameBase, order, new LongsLongEncodingWriter(order)
         );
-      } else{
+      } else {
         return new BlockLayoutLongSupplierSerializer(
             ioPeon, filenameBase, order, new LongsLongEncodingWriter(order), compressionStrategy
         );
@@ -314,6 +352,18 @@ public class CompressionFactory
     }
   }
 
+  public static Supplier<IndexedFloats> getFloatSupplier(
+      int totalSize, int sizePer, IndexInput fromIndexInput, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy
+  )
+  {
+    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutIndexedFloatSupplier(totalSize, fromIndexInput, order);
+    } else {
+      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromIndexInput, order, strategy);
+    }
+  }
+
   public static FloatSupplierSerializer getFloatSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy
@@ -323,7 +373,7 @@ public class CompressionFactory
       return new EntireLayoutFloatSupplierSerializer(
           ioPeon, filenameBase, order
       );
-    } else{
+    } else {
       return new BlockLayoutFloatSupplierSerializer(
           ioPeon, filenameBase, order, compressionStrategy
       );

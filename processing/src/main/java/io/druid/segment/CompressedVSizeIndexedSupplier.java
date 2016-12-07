@@ -27,6 +27,7 @@ import io.druid.segment.data.IndexedIntsIterator;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.WritableSupplier;
+import io.druid.segment.store.IndexInput;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -87,6 +88,24 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
       );
       CompressedVSizeIntsIndexedSupplier valueSupplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
           buffer,
+          order
+      );
+      return new CompressedVSizeIndexedSupplier(offsetSupplier, valueSupplier);
+    }
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedVSizeIndexedSupplier fromIndexInput(IndexInput indexInput, ByteOrder order) throws IOException
+  {
+    byte versionFromBuffer = indexInput.readByte();
+
+    if (versionFromBuffer == version) {
+      CompressedVSizeIntsIndexedSupplier offsetSupplier = CompressedVSizeIntsIndexedSupplier.fromIndexInput(
+          indexInput,
+          order
+      );
+      CompressedVSizeIntsIndexedSupplier valueSupplier = CompressedVSizeIntsIndexedSupplier.fromIndexInput(
+          indexInput,
           order
       );
       return new CompressedVSizeIndexedSupplier(offsetSupplier, valueSupplier);

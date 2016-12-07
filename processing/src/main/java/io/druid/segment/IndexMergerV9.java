@@ -28,12 +28,11 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import com.google.common.io.Files;
+import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
@@ -43,6 +42,7 @@ import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.DirectoryBasedTmpIOPeon;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.TmpFileIOPeon;
@@ -52,6 +52,11 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.smooth.FileSmoosher;
+import io.druid.segment.smooth.SmooshedWriter;
+import io.druid.segment.store.Directory;
+import io.druid.segment.store.IndexOutput;
+import io.druid.segment.store.IndexOutputOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,6 +65,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -128,6 +134,7 @@ public class IndexMergerV9 extends IndexMerger
 
     Closer closer = Closer.create();
     final IOPeon ioPeon = new TmpFileIOPeon(false);
+
     closer.register(new Closeable()
     {
       @Override
@@ -206,7 +213,7 @@ public class IndexMergerV9 extends IndexMerger
       makeTimeColumn(v9Smoosher, progress, timeWriter);
       makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
 
-      for(int i = 0; i < mergedDimensions.size(); i++) {
+      for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
         merger.writeIndexes(rowNumConversions, closer);
         if (merger.canSkip()) {
@@ -229,6 +236,172 @@ public class IndexMergerV9 extends IndexMerger
       progress.stop();
 
       return outDir;
+    }
+    catch (Throwable t) {
+      throw closer.rethrow(t);
+    }
+    finally {
+      closer.close();
+    }
+  }
+
+  @Override
+  protected void makeIndexFilesV1(
+      final List<IndexableAdapter> adapters,
+      final AggregatorFactory[] metricAggs,
+      final Directory directory,
+      final ProgressIndicator progress,
+      final List<String> mergedDimensions,
+      final List<String> mergedMetrics,
+      final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
+      final IndexSpec indexSpec
+  ) throws IOException
+  {
+    progress.start();
+    progress.progress();
+
+    List<Metadata> metadataList = Lists.transform(
+        adapters,
+        new Function<IndexableAdapter, Metadata>()
+        {
+          @Override
+          public Metadata apply(IndexableAdapter input)
+          {
+            return input.getMetadata();
+          }
+        }
+    );
+
+    Metadata segmentMetadata = null;
+    if (metricAggs != null) {
+      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
+      for (int i = 0; i < metricAggs.length; i++) {
+        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
+      }
+      segmentMetadata = Metadata.merge(
+          metadataList,
+          combiningMetricAggs
+      );
+    } else {
+      segmentMetadata = Metadata.merge(
+          metadataList,
+          null
+      );
+    }
+
+    Closer closer = Closer.create();
+    final IOPeon ioPeon = new DirectoryBasedTmpIOPeon(directory);
+    closer.register(new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        ioPeon.cleanup();
+      }
+    });
+    final FileSmoosher v9Smoosher = new FileSmoosher(directory);
+    final List<String> toDeleteTmpFiles = new ArrayList<>();
+    closer.register(new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        for (String tmpFile : toDeleteTmpFiles) {
+          directory.deleteFile(tmpFile);
+        }
+      }
+    });
+    log.info("Start making v9 index files, outDir:%s", directory.toString());
+    try {
+      long startTime = System.currentTimeMillis();
+      ByteStreams.write(
+          Ints.toByteArray(IndexIO.V9_VERSION),
+          new OutputSupplier<OutputStream>()
+          {
+            @Override
+            public OutputStream getOutput() throws IOException
+            {
+              IndexOutput indexOutput = directory.createOutput("version.bin");
+              OutputStream outputStream = new IndexOutputOutputStream(indexOutput);
+              //toDeleteTmpFiles.add("version.bin");
+              return outputStream;
+            }
+          }
+      );
+      log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
+
+      progress.progress();
+      final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+      final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+      final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
+
+      final DimensionHandler[] handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
+      final List<DimensionMerger> mergers = new ArrayList<>();
+      for (int i = 0; i < mergedDimensions.size(); i++) {
+        mergers.add(handlers[i].makeMerger(indexSpec, directory, ioPeon, dimCapabilities.get(i), progress));
+      }
+
+      /************* Setup Dim Conversions **************/
+      progress.progress();
+      startTime = System.currentTimeMillis();
+      final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
+      final ArrayList<Boolean> dimensionSkipFlag = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      writeDimValueAndSetupDimConversion(
+          adapters, progress, mergedDimensions, mergers
+      );
+      log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
+
+      /************* Walk through data sets, merge them, and write merged columns *************/
+      progress.progress();
+      final Iterable<Rowboat> theRows = makeRowIterable(
+          adapters,
+          mergedDimensions,
+          mergedMetrics,
+          rowMergerFn,
+          dimCapabilities,
+          handlers,
+          mergers
+      );
+      final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon, indexSpec);
+      final ArrayList<GenericColumnSerializer> metWriters = setupMetricsWriters(
+          ioPeon, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec
+      );
+      final List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
+
+      mergeIndexesAndWriteColumns(
+          adapters, progress, theRows, timeWriter, metWriters, rowNumConversions, mergers
+      );
+
+      /************ Create Inverted Indexes and Finalize Build Columns *************/
+      final String section = "build inverted index and columns";
+      progress.startSection(section);
+      makeTimeColumn(v9Smoosher, progress, timeWriter);
+      makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
+
+      for (int i = 0; i < mergedDimensions.size(); i++) {
+        DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
+        merger.writeIndexes(rowNumConversions, closer);
+        if (merger.canSkip()) {
+          continue;
+        }
+        ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
+        makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
+      }
+
+      progress.stopSection(section);
+
+      /************* Make index.drd & metadata.drd files **************/
+      progress.progress();
+      makeIndexBinary(
+          v9Smoosher, adapters, null, mergedDimensions, mergedMetrics, progress, indexSpec, mergers
+      );
+      makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
+
+      v9Smoosher.close();
+      progress.stop();
+
     }
     catch (Throwable t) {
       throw closer.rethrow(t);
@@ -306,8 +479,9 @@ public class IndexMergerV9 extends IndexMerger
         writer, bitmapSerdeFactoryType
     );
     writer.close();
-
-    IndexIO.checkFileSize(new File(outDir, "index.drd"));
+    if (outDir != null) {
+      IndexIO.checkFileSize(new File(outDir, "index.drd"));
+    }
     log.info("Completed index.drd in %,d millis.", System.currentTimeMillis() - startTime);
 
     progress.stopSection(section);

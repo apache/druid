@@ -22,8 +22,11 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.segment.store.IndexInput;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -46,6 +49,23 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     this.sizePer = sizePer;
   }
 
+  public BlockLayoutIndexedFloatSupplier(
+      int totalSize, int sizePer, IndexInput fromII, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy
+  )
+  {
+    try {
+      baseFloatBuffers = GenericIndexed.read(fromII, VSizeCompressedObjectStrategy.getBufferForOrder(
+          order, strategy, sizePer * Floats.BYTES
+      ));
+      this.totalSize = totalSize;
+      this.sizePer = sizePer;
+    }
+    catch (IOException e) {
+      throw new IOE(e);
+    }
+  }
+
   @Override
   public IndexedFloats get()
   {
@@ -53,22 +73,22 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
     if (powerOf2) {
-        return new BlockLayoutIndexedFloats()
+      return new BlockLayoutIndexedFloats()
+      {
+        @Override
+        public float get(int index)
         {
-          @Override
-          public float get(int index)
-          {
-            // optimize division and remainder for powers of 2
-            final int bufferNum = index >> div;
+          // optimize division and remainder for powers of 2
+          final int bufferNum = index >> div;
 
-            if (bufferNum != currIndex) {
-              loadBuffer(bufferNum);
-            }
-
-            final int bufferIndex = index & rem;
-            return floatBuffer.get(floatBuffer.position() + bufferIndex);
+          if (bufferNum != currIndex) {
+            loadBuffer(bufferNum);
           }
-        };
+
+          final int bufferIndex = index & rem;
+          return floatBuffer.get(floatBuffer.position() + bufferIndex);
+        }
+      };
     } else {
       return new BlockLayoutIndexedFloats();
     }

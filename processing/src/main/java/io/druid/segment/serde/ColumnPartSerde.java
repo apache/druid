@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.store.IndexInput;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -53,5 +54,14 @@ public interface ColumnPartSerde
   public interface Deserializer
   {
     public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+
+    /**
+     * new api
+     *
+     * @param indexInput
+     * @param builder
+     * @param columnConfig
+     */
+    public void read(IndexInput indexInput, ColumnBuilder builder, ColumnConfig columnConfig) throws IOException;
   }
 }

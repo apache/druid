@@ -26,7 +26,7 @@ import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.store.ByteBufferIndexInput;
 import io.druid.segment.store.IndexInput;
-import io.druid.segment.store.IndexInputUtil;
+import io.druid.segment.store.IndexInputUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -194,6 +194,7 @@ public class GenericIndexed<T> implements Indexed<T>
     return new GenericIndexed<T>(indexInput, strategy, allowReverseLookup);
   }
 
+
   @Override
   public Class<? extends T> getClazz()
   {
@@ -241,10 +242,11 @@ public class GenericIndexed<T> implements Indexed<T>
   private final int valuesOffset;
   private final BufferIndexed bufferIndexed;
 
-
   private final IndexInput indexInput;
 
   private final Indexed<T> indexed;
+
+  private final boolean indexInputVersion;
 
   GenericIndexed(
       ByteBuffer buffer,
@@ -262,6 +264,7 @@ public class GenericIndexed<T> implements Indexed<T>
     bufferIndexed = new BufferIndexed();
     //for new api
     indexInput = null;
+    indexInputVersion = false;
     indexed = new BufferIndexed();
   }
 
@@ -276,6 +279,7 @@ public class GenericIndexed<T> implements Indexed<T>
     this.strategy = strategy;
     this.allowReverseLookup = allowReverseLookup;
     this.indexInput = indexInput;
+    this.indexInputVersion = true;
     try {
       size = indexInput.readInt();
 
@@ -285,10 +289,11 @@ public class GenericIndexed<T> implements Indexed<T>
       indexed = new IndexInputIndexed();
     }
     catch (IOException e) {
-      throw new IAE("error occured to construct a IndexInput version GenericIndexed", e);
+      throw new IOE("error occured to construct a IndexInput version GenericIndexed", e);
     }
 
   }
+
 
   class BufferIndexed implements Indexed<T>
   {
@@ -393,6 +398,7 @@ public class GenericIndexed<T> implements Indexed<T>
     }
   }
 
+
   /**
    * indexed implementation of the new IndexInput API
    */
@@ -418,8 +424,9 @@ public class GenericIndexed<T> implements Indexed<T>
       try {
         IndexInput duplicated = indexInput.duplicate();
         return _get(duplicated, index);
-      }catch (IOException e){
-        throw new IOE("occured exception", e);
+      }
+      catch (IOException e) {
+        throw new IOE("occured exception:", e);
       }
     }
 
@@ -452,7 +459,7 @@ public class GenericIndexed<T> implements Indexed<T>
         indexInput.seek(valuesOffset + startOffset);
         final int size = endOffset - startOffset;
         lastReadSize = size;
-        //TODO later refactor the ObjectStrategy with IndexInput
+        //TODO later refactoring the ObjectStrategy with IndexInput ,here is just to decompress the bytes content,memory footprint is less
         ByteBuffer byteBuffer = ByteBuffer.allocate(size);
         byte[] strategyBytes = byteBuffer.array();
         indexInput.readBytes(strategyBytes, 0, size);
@@ -460,7 +467,7 @@ public class GenericIndexed<T> implements Indexed<T>
         return value;
       }
       catch (IOException e) {
-        throw new IAE("while reading generic index of " + index + " occurs error", e);
+        throw new IOE("while reading generic index of " + index + " occurs error", e);
       }
     }
 
@@ -511,9 +518,14 @@ public class GenericIndexed<T> implements Indexed<T>
     }
   }
 
+
   public long getSerializedSize()
   {
-    return theBuffer.remaining() + 2 + 4 + 4;
+    if (!indexInputVersion) {
+      return theBuffer.remaining() + 2 + 4 + 4;
+    } else {
+      return getSerializedSizeV1();
+    }
   }
 
   /**
@@ -526,22 +538,27 @@ public class GenericIndexed<T> implements Indexed<T>
     try {
       long remaining = remaining() + 2 + 4 + 4;
       return remaining;
-    }catch (IOException e){
-      throw new IOE("occured exception",e);
+    }
+    catch (IOException e) {
+      throw new IOE("occured exception", e);
     }
   }
 
   private long remaining() throws IOException
   {
-    return IndexInputUtil.remaining(indexInput);
+    return IndexInputUtils.remaining(indexInput);
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
-    channel.write(theBuffer.asReadOnlyBuffer());
+    if (!indexInputVersion) {
+      channel.write(ByteBuffer.wrap(new byte[]{version, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
+      channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
+      channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
+      channel.write(theBuffer.asReadOnlyBuffer());
+    } else {
+      writeToChannelV1(channel);
+    }
   }
 
   /**
@@ -557,34 +574,37 @@ public class GenericIndexed<T> implements Indexed<T>
     channel.write(ByteBuffer.wrap(Ints.toByteArray((int) remaining() + 4)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
     IndexInput duplicatedInput = indexInput.duplicate();
-    IndexInputUtil.write2Channel(duplicatedInput, channel);
+    IndexInputUtils.write2Channel(duplicatedInput, channel);
   }
-
 
   /**
    * Create a non-thread-safe Indexed, which may perform better than the underlying Indexed.
    *
    * @return a non-thread-safe Indexed
    */
-  public GenericIndexed<T>.BufferIndexed singleThreaded()
+  public Indexed singleThreaded()
   {
-    final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
-    return new BufferIndexed()
-    {
-      @Override
-      public T get(int index)
+    if (indexInputVersion) {
+      return singleThreadedV1();
+    } else {
+      final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
+      return new BufferIndexed()
       {
-        return _get(copyBuffer, index);
-      }
-    };
+        @Override
+        public T get(int index)
+        {
+          return _get(copyBuffer, index);
+        }
+      };
+    }
   }
 
   /**
    * new version
-   *
+   * duplicate has the meaning of READ-ONLY concurrency mechanism
    * @return
    */
-  public GenericIndexed<T>.IndexInputIndexed singleThreadedV1()
+  private Indexed singleThreadedV1()
   {
     try {
       final IndexInput copyed = indexInput.duplicate();
@@ -596,8 +616,9 @@ public class GenericIndexed<T> implements Indexed<T>
           return _get(copyed, index);
         }
       };
-    }catch (IOException e){
-      throw new IOE("occured exception",e);
+    }
+    catch (IOException e) {
+      throw new IOE("occured exception", e);
     }
   }
 
@@ -683,12 +704,7 @@ public class GenericIndexed<T> implements Indexed<T>
       return Ordering.natural().nullsFirst().compare(o1, o2);
     }
 
-    /**
-     * IndexInput version of ObjectStrategy
-     * @param indexInput
-     * @param numBytes
-     * @return
-     */
+
     public String fromIndexInput(final IndexInput indexInput, final int numBytes)
     {
       try {
@@ -698,7 +714,7 @@ public class GenericIndexed<T> implements Indexed<T>
         return io.druid.java.util.common.StringUtils.fromUtf8(byteBuffer, numBytes);
       }
       catch (IOException e) {
-        throw new IAE("");
+        throw new IOE("");
       }
 
     }

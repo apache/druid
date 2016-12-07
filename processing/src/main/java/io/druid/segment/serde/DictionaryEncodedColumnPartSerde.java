@@ -45,6 +45,7 @@ import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
+import io.druid.segment.store.IndexInput;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -502,6 +503,108 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
               return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder);
+            } else {
+              throw new IAE("Unrecognized multi-value flag[%d]", flags);
+            }
+        }
+        throw new IAE("Unsupported multi-value version[%s]", version);
+      }
+
+
+
+      /**
+       * refactoring for new api
+       * @param indexInput
+       * @param builder
+       * @param columnConfig
+       * @throws IOException
+       */
+      @Override
+      public void read(IndexInput indexInput, ColumnBuilder builder, ColumnConfig columnConfig) throws IOException
+      {
+        final VERSION rVersion = VERSION.fromByte(indexInput.readByte());
+        final int rFlags;
+
+        if (rVersion.compareTo(VERSION.COMPRESSED) >= 0) {
+          rFlags = indexInput.readInt();
+        } else {
+          rFlags = rVersion.equals(VERSION.UNCOMPRESSED_MULTI_VALUE)
+                   ? Feature.MULTI_VALUE.getMask()
+                   : NO_FLAGS;
+        }
+
+        final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
+
+        final GenericIndexed<String> rDictionary = GenericIndexed.read(indexInput, GenericIndexed.STRING_STRATEGY);
+        builder.setType(ValueType.STRING);
+
+        final WritableSupplier<IndexedInts> rSingleValuedColumn;
+        final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
+
+        if (hasMultipleValues) {
+          rMultiValuedColumn = readMultiValuedColum(rVersion, indexInput, rFlags);
+          rSingleValuedColumn = null;
+        } else {
+          rSingleValuedColumn = readSingleValuedColumn(rVersion, indexInput);
+          rMultiValuedColumn = null;
+        }
+
+        builder.setHasMultipleValues(hasMultipleValues)
+               .setDictionaryEncodedColumn(
+                   new DictionaryEncodedColumnSupplier(
+                       rDictionary,
+                       rSingleValuedColumn,
+                       rMultiValuedColumn,
+                       columnConfig.columnCacheSizeBytes()
+                   )
+               );
+
+        GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
+            indexInput, bitmapSerdeFactory.getObjectStrategy()
+        );
+        builder.setBitmapIndex(
+            new BitmapIndexColumnPartSupplier(
+                bitmapSerdeFactory.getBitmapFactory(),
+                rBitmaps,
+                rDictionary
+            )
+        );
+
+        ImmutableRTree rSpatialIndex = null;
+        if (indexInput.hasRemaining()) {
+          //TODO ..........
+          rSpatialIndex = ByteBufferSerializer.read(
+              null, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
+          );
+          builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(rSpatialIndex));
+        }
+      }
+
+
+      private WritableSupplier<IndexedInts> readSingleValuedColumn(VERSION version, IndexInput indexInput)
+          throws IOException
+      {
+        switch (version) {
+          case UNCOMPRESSED_SINGLE_VALUE:
+            return VSizeIndexedInts.readFromIndexInput(indexInput).asWritableSupplier();
+          case COMPRESSED:
+            return CompressedVSizeIntsIndexedSupplier.fromIndexInput(indexInput, byteOrder);
+        }
+        throw new IAE("Unsupported single-value version[%s]", version);
+      }
+
+      private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColum(
+          VERSION version, IndexInput indexInput, int flags
+      ) throws IOException
+      {
+        switch (version) {
+          case UNCOMPRESSED_MULTI_VALUE:
+            return VSizeIndexed.readFromIndexInput(indexInput).asWritableSupplier();
+          case COMPRESSED:
+            if (Feature.MULTI_VALUE.isSet(flags)) {
+              return CompressedVSizeIndexedSupplier.fromIndexInput(indexInput, byteOrder);
+            } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
+              return CompressedVSizeIndexedV3Supplier.fromIndexInput(indexInput, byteOrder);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }

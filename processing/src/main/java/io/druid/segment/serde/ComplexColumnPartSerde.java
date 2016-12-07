@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.store.IndexInput;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -160,6 +161,16 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
       {
         if (serde != null) {
           serde.deserializeColumn(buffer, builder);
+        }
+      }
+
+      @Override
+      public void read(
+          IndexInput indexInput, ColumnBuilder builder, ColumnConfig columnConfig
+      ) throws IOException
+      {
+        if (serde != null) {
+          serde.deserializeColumn(indexInput, builder);
         }
       }
     };

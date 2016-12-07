@@ -21,8 +21,11 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import io.druid.collections.ResourceHolder;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.segment.store.IndexInput;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
@@ -47,6 +50,26 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;
+  }
+
+
+  public BlockLayoutIndexedLongSupplier(
+      int totalSize, int sizePer, IndexInput indexInput, ByteOrder order,
+      CompressionFactory.LongEncodingReader reader,
+      CompressedObjectStrategy.CompressionStrategy strategy
+  )
+  {
+    try {
+      baseLongBuffers = GenericIndexed.read(indexInput, VSizeCompressedObjectStrategy.getBufferForOrder(
+          order, strategy, reader.getNumBytes(sizePer)
+      ));
+      this.totalSize = totalSize;
+      this.sizePer = sizePer;
+      this.baseReader = reader;
+    }
+    catch (IOException e) {
+      throw new IOE("IO Exception:", e);
+    }
   }
 
   @Override

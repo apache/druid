@@ -1,18 +1,20 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package io.druid.segment.store;
 
@@ -31,7 +33,7 @@ public abstract class DataOutput
    * <p>
    * The most primitive data type is an eight-bit byte. Files are
    * accessed as sequences of bytes. All other data types are defined
-   * as sequences of bytes, so file formats are byte-order independent.
+   * as sequences of bytes, big-endian ,so file formats are byte-order independent.
    *
    * @see IndexInput#readByte()
    */
@@ -68,7 +70,7 @@ public abstract class DataOutput
    *
    * @see DataInput#readInt()
    */
-  public void writeInt(int i) throws IOException
+  public final void writeInt(int i) throws IOException
   {
     writeByte((byte) (i >> 24));
     writeByte((byte) (i >> 16));
@@ -81,7 +83,7 @@ public abstract class DataOutput
    *
    * @see DataInput#readShort()
    */
-  public void writeShort(short i) throws IOException
+  public final void writeShort(short i) throws IOException
   {
     writeByte((byte) (i >> 8));
     writeByte((byte) i);
@@ -95,7 +97,7 @@ public abstract class DataOutput
    *
    * @see DataInput#readLong()
    */
-  public void writeLong(long i) throws IOException
+  public final void writeLong(long i) throws IOException
   {
     writeInt((int) (i >> 32));
     writeInt((int) i);

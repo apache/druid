@@ -23,6 +23,8 @@ import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Floats;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.segment.store.ByteBufferIndexInput;
+import io.druid.segment.store.IndexInput;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -93,6 +95,16 @@ public class CompressedFloatsSerdeTest
     testWithValues(values5);
     testWithValues(values6);
     testWithValues(values7);
+
+
+    testIIWithValues(values0);
+    testIIWithValues(values1);
+    testIIWithValues(values2);
+    testIIWithValues(values3);
+    testIIWithValues(values4);
+    testIIWithValues(values5);
+    testIIWithValues(values6);
+    testIIWithValues(values7);
   }
 
   @Test
@@ -103,6 +115,7 @@ public class CompressedFloatsSerdeTest
       chunk[i] = i;
     }
     testWithValues(chunk);
+    testIIWithValues(chunk);
   }
 
   public void testWithValues(float[] values) throws Exception
@@ -130,6 +143,48 @@ public class CompressedFloatsSerdeTest
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
+    IndexedFloats floats = supplier.get();
+
+    assertIndexMatchesVals(floats, values);
+    for (int i = 0; i < 10; i++) {
+      int a = (int) (Math.random() * values.length);
+      int b = (int) (Math.random() * values.length);
+      int start = a < b ? a : b;
+      int end = a < b ? b : a;
+      tryFill(floats, values, start, end - start);
+    }
+    testSupplierSerde(supplier, values);
+    testConcurrentThreadReads(supplier, floats, values);
+
+    floats.close();
+  }
+
+  public void testIIWithValues(float[] values) throws Exception
+  {
+    FloatSupplierSerializer serializer = CompressionFactory.getFloatSerializer(new IOPeonForTesting(), "test", order, compressionStrategy
+    );
+    serializer.open();
+
+    for (float value : values) {
+      serializer.add(value);
+    }
+    Assert.assertEquals(values.length, serializer.size());
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    serializer.closeAndConsolidate(
+        new ByteSink()
+        {
+          @Override
+          public OutputStream openStream() throws IOException
+          {
+            return baos;
+          }
+        }
+    );
+    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+    IndexInput indexInput = new ByteBufferIndexInput(ByteBuffer.wrap(baos.toByteArray()));
+    CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
+        .fromIndexInput(indexInput, order);
     IndexedFloats floats = supplier.get();
 
     assertIndexMatchesVals(floats, values);
@@ -224,7 +279,7 @@ public class CompressedFloatsSerdeTest
               final float indexedVal = indexed.get(j);
               if (Floats.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
-                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                reason.set(String.format("Thread1[%d]: %f != %f", j, val, indexedVal));
                 stopLatch.countDown();
                 return;
               }
@@ -263,7 +318,7 @@ public class CompressedFloatsSerdeTest
                 final float indexedVal = indexed2.get(j);
                 if (Floats.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
-                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  reason.set(String.format("Thread2[%d]: %f != %f", j, val, indexedVal));
                   stopLatch.countDown();
                   return;
                 }

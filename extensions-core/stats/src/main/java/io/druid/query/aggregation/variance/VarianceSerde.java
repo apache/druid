@@ -27,6 +27,7 @@ import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.store.IndexInput;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -84,6 +85,14 @@ public class VarianceSerde extends ComplexMetricSerde
   {
     final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy());
     columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+  }
+
+  @Override
+  public void deserializeColumn(
+      IndexInput indexInput, ColumnBuilder builder
+  )
+  {
+    //TODO ......
   }
 
   @Override

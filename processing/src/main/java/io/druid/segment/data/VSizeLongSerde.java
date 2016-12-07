@@ -20,6 +20,9 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
+import io.druid.segment.store.IndexInput;
+import io.druid.segment.store.RandomAccessInput;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -179,6 +182,45 @@ public class VSizeLongSerde
         throw new IAE("Unsupported size %s", longSize);
     }
   }
+
+  public static LongDeserializer getDeserializer(int longSize, IndexInput fromIndexInput, int bufferOffset)
+      throws IOException
+  {
+    // The buffer needs to be duplicated since the byte order is changed
+    //ByteBuffer buffer = fromBuffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    RandomAccessInput randomAccessInput = fromIndexInput.randomAccess();
+    switch (longSize) {
+      case 1:
+        return new Size1Des(randomAccessInput, bufferOffset);
+      case 2:
+        return new Size2Des(randomAccessInput, bufferOffset);
+      case 4:
+        return new Size4Des(randomAccessInput, bufferOffset);
+      case 8:
+        return new Size8Des(randomAccessInput, bufferOffset);
+      case 12:
+        return new Size12Des(randomAccessInput, bufferOffset);
+      case 16:
+        return new Size16Des(randomAccessInput, bufferOffset);
+      case 20:
+        return new Size20Des(randomAccessInput, bufferOffset);
+      case 24:
+        return new Size24Des(randomAccessInput, bufferOffset);
+      case 32:
+        return new Size32Des(randomAccessInput, bufferOffset);
+      case 40:
+        return new Size40Des(randomAccessInput, bufferOffset);
+      case 48:
+        return new Size48Des(randomAccessInput, bufferOffset);
+      case 56:
+        return new Size56Des(randomAccessInput, bufferOffset);
+      case 64:
+        return new Size64Des(randomAccessInput, bufferOffset);
+      default:
+        throw new IAE("Unsupported size %s", longSize);
+    }
+  }
+
 
   public interface LongSerializer extends Closeable
   {
@@ -395,18 +437,39 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size1Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size1Des(RandomAccessInput randomAccessInput, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = randomAccessInput;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
       int shift = 7 - (index & 7);
-      return (buffer.get(offset + (index >> 3)) >> shift) & 1;
+      if (!isIIVersion) {
+        return (buffer.get(offset + (index >> 3)) >> shift) & 1;
+      } else {
+        try {
+          return (in.readByte(offset + (index >> 3)) >> shift) & 1;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -414,18 +477,41 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size2Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size2Des(RandomAccessInput in, int bufferOffset)
+    {
+      this.buffer = null;
+      this.offset = bufferOffset;
+      this.in = in;
+      this.isIIVersion = true;
+
     }
 
     @Override
     public long get(int index)
     {
       int shift = 6 - ((index & 3) << 1);
-      return (buffer.get(offset + (index >> 2)) >> shift) & 3;
+      if (!isIIVersion) {
+
+        return (buffer.get(offset + (index >> 2)) >> shift) & 3;
+      } else {
+        try {
+          return (in.readByte(offset + (index >> 2)) >> shift) & 3;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -433,18 +519,39 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size4Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size4Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
       int shift = ((index + 1) & 1) << 2;
-      return (buffer.get(offset + (index >> 1)) >> shift) & 0xF;
+      if (!isIIVersion) {
+        return (buffer.get(offset + (index >> 1)) >> shift) & 0xF;
+      } else {
+        try {
+          return (in.readByte(offset + (index >> 1)) >> shift) & 0xF;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -452,17 +559,38 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size8Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size8Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
-    public long get(int index)
+    public synchronized long get(int index)
     {
-      return buffer.get(offset + index) & 0xFF;
+      if (!isIIVersion) {
+        return buffer.get(offset + index) & 0xFF;
+      } else {
+        try {
+          return in.readByte(offset + index) & 0xFF;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -470,11 +598,23 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size12Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size12Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
@@ -482,7 +622,16 @@ public class VSizeLongSerde
     {
       int shift = ((index + 1) & 1) << 2;
       int offset = (index * 3) >> 1;
-      return (buffer.getShort(this.offset + offset) >> shift) & 0xFFF;
+      if (!isIIVersion) {
+        return (buffer.getShort(this.offset + offset) >> shift) & 0xFFF;
+      } else {
+        try {
+          return (in.readShort(this.offset + offset) >> shift) & 0xFFF;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -490,16 +639,37 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size16Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size16Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     public long get(int index)
     {
-      return buffer.getShort(offset + (index << 1)) & 0xFFFF;
+      if (!isIIVersion) {
+        return buffer.getShort(offset + (index << 1)) & 0xFFFF;
+      } else {
+        try {
+          return in.readShort(offset + (index << 1)) & 0xFFFF;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -507,11 +677,23 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size20Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size20Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
@@ -519,7 +701,16 @@ public class VSizeLongSerde
     {
       int shift = (((index + 1) & 1) << 2) + 8;
       int offset = (index * 5) >> 1;
-      return (buffer.getInt(this.offset + offset) >> shift) & 0xFFFFF;
+      if (!isIIVersion) {
+        return (buffer.getInt(this.offset + offset) >> shift) & 0xFFFFF;
+      } else {
+        try {
+          return (in.readInt(this.offset + offset) >> shift) & 0xFFFFF;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -527,17 +718,38 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size24Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size24Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getInt(offset + index * 3) >>> 8;
+      if (!isIIVersion) {
+        return buffer.getInt(offset + index * 3) >>> 8;
+      } else {
+        try {
+          return in.readInt(offset + index * 3) >>> 8;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -545,17 +757,38 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size32Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size32Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getInt(offset + (index << 2)) & 0xFFFFFFFFL;
+      if (!isIIVersion) {
+        return buffer.getInt(offset + (index << 2)) & 0xFFFFFFFFL;
+      } else {
+        try {
+          return in.readInt(offset + (index << 2)) & 0xFFFFFFFFL;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -563,17 +796,39 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
+
 
     public Size40Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size40Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 5) >>> 24;
+      if (!isIIVersion) {
+        return buffer.getLong(offset + index * 5) >>> 24;
+      } else {
+        try {
+          return in.readLong(offset + index * 5) >>> 24;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -581,17 +836,38 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size48Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size48Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 6) >>> 16;
+      if (!isIIVersion) {
+        return buffer.getLong(offset + index * 6) >>> 16;
+      } else {
+        try {
+          return in.readLong(offset + index * 6) >>> 16;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -599,17 +875,38 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size56Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size56Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + index * 7) >>> 8;
+      if (!isIIVersion) {
+        return buffer.getLong(offset + index * 7) >>> 8;
+      } else {
+        try {
+          return in.readLong(offset + index * 7) >>> 8;
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 
@@ -617,17 +914,38 @@ public class VSizeLongSerde
   {
     final ByteBuffer buffer;
     final int offset;
+    final RandomAccessInput in;
+    final boolean isIIVersion;
 
     public Size64Des(ByteBuffer buffer, int bufferOffset)
     {
       this.buffer = buffer;
       this.offset = bufferOffset;
+      this.in = null;
+      this.isIIVersion = false;
+    }
+
+    public Size64Des(RandomAccessInput in, int offset)
+    {
+      this.buffer = null;
+      this.offset = offset;
+      this.in = in;
+      this.isIIVersion = true;
     }
 
     @Override
     public long get(int index)
     {
-      return buffer.getLong(offset + (index << 3));
+      if (!isIIVersion) {
+        return buffer.getLong(offset + (index << 3));
+      } else {
+        try {
+          return in.readLong(offset + (index << 3));
+        }
+        catch (IOException e) {
+          throw new IOE(e);
+        }
+      }
     }
   }
 

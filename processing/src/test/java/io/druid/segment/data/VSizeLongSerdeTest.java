@@ -20,6 +20,8 @@
 package io.druid.segment.data;
 
 
+import io.druid.segment.store.ByteBufferIndexInput;
+import io.druid.segment.store.IndexInput;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -121,6 +123,16 @@ public class VSizeLongSerdeTest
       Assert.assertEquals(values[i], streamDes.get(i));
       Assert.assertEquals(values[i], bufferDes.get(i));
     }
+    //test for IndexInput version
+    buffer = ByteBuffer.wrap(outStream.toByteArray());
+    IndexInput indexInput = new ByteBufferIndexInput(buffer);
+    IndexInput outIndexInput = new ByteBufferIndexInput(outBuffer);
+    VSizeLongSerde.LongDeserializer streamDesII = VSizeLongSerde.getDeserializer(longSize, indexInput, 0);
+    VSizeLongSerde.LongDeserializer bufferDesII = VSizeLongSerde.getDeserializer(longSize, outIndexInput, 0);
+    for (int i = 0; i < values.length; i++) {
+      Assert.assertEquals(values[i], streamDesII.get(i));
+      Assert.assertEquals(values[i], bufferDesII.get(i));
+    }
   }
 
   public void testSerdeIncLoop(int longSize, long start, long end) throws IOException
@@ -144,6 +156,19 @@ public class VSizeLongSerdeTest
     for (int i = 0; i < end - start; i++) {
       Assert.assertEquals(start + i, streamDes.get(i));
       Assert.assertEquals(start + i, bufferDes.get(i));
+    }
+
+    //add test for II version
+    buffer = ByteBuffer.wrap(outStream.toByteArray());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), buffer.capacity());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), outBuffer.position());
+    IndexInput indexInput = new ByteBufferIndexInput(buffer);
+    IndexInput outIndexInput = new ByteBufferIndexInput(outBuffer);
+    VSizeLongSerde.LongDeserializer streamDesII = VSizeLongSerde.getDeserializer(longSize, indexInput, 0);
+    VSizeLongSerde.LongDeserializer bufferDesII = VSizeLongSerde.getDeserializer(longSize, outIndexInput, 0);
+    for (int i = 0; i < end - start; i++) {
+      Assert.assertEquals(start + i, streamDesII.get(i));
+      Assert.assertEquals(start + i, bufferDesII.get(i));
     }
   }
 

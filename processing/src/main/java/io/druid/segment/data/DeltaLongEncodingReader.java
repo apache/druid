@@ -20,7 +20,10 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
+import io.druid.segment.store.IndexInput;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingReader
@@ -30,9 +33,13 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
   private final long base;
   private final int bitsPerValue;
   private VSizeLongSerde.LongDeserializer deserializer;
+  private IndexInput indexInput;
+  private boolean isIIVersion;
 
   public DeltaLongEncodingReader(ByteBuffer fromBuffer)
   {
+    this.indexInput = null;
+    this.isIIVersion = false;
     this.buffer = fromBuffer.asReadOnlyBuffer();
     byte version = buffer.get();
     if (version == CompressionFactory.DELTA_ENCODING_VERSION) {
@@ -45,12 +52,57 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
     }
   }
 
+  public DeltaLongEncodingReader(IndexInput fromIndexInput)
+  {
+    try {
+      this.isIIVersion = true;
+      this.buffer = null;
+      this.indexInput = fromIndexInput.duplicate();
+      byte version = this.indexInput.readByte();
+      if (version == CompressionFactory.DELTA_ENCODING_VERSION) {
+        base = this.indexInput.readLong();
+        bitsPerValue = this.indexInput.readInt();
+        fromIndexInput.seek(indexInput.getFilePointer());
+        deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, indexInput, (int) indexInput.getFilePointer());
+      } else {
+        throw new IAE("Unknown version[%s]", version);
+      }
+    }
+    catch (IOException e) {
+      throw new IOE(e);
+    }
+  }
+
   private DeltaLongEncodingReader(ByteBuffer buffer, long base, int bitsPerValue)
   {
     this.buffer = buffer;
     this.base = base;
     this.bitsPerValue = bitsPerValue;
     deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+    this.indexInput = null;
+    this.isIIVersion = false;
+
+  }
+
+  private DeltaLongEncodingReader(IndexInput in, long base, int bitsPerValue) throws IOException
+  {
+    this.buffer = null;
+    this.base = base;
+    this.bitsPerValue = bitsPerValue;
+    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, in, (int) in.getFilePointer());
+    this.indexInput = in;
+    this.isIIVersion = true;
+  }
+
+  @Override
+  public void setIndexInput(IndexInput indexInput)
+  {
+    try {
+      deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, indexInput, (int) indexInput.getFilePointer());
+    }
+    catch (IOException e) {
+      throw new IOE(e);
+    }
   }
 
   @Override
@@ -74,6 +126,15 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);
+    if (!isIIVersion) {
+      return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);
+    } else {
+      try {
+        return new DeltaLongEncodingReader(indexInput.duplicate(), base, bitsPerValue);
+      }
+      catch (IOException e) {
+        throw new IOE(e);
+      }
+    }
   }
 }

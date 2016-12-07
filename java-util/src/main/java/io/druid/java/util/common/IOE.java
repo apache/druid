@@ -3,7 +3,7 @@ package io.druid.java.util.common;
 /**
  * IOException to RuntimeException
  */
-public class IOE extends java.lang.RuntimeException
+public class IOE extends RuntimeException
 {
 
   public IOE()
@@ -14,6 +14,11 @@ public class IOE extends java.lang.RuntimeException
   public IOE(String message)
   {
     super(message);
+  }
+
+  public IOE(Throwable e)
+  {
+    super(e);
   }
 
   public IOE(String message, Throwable throwable)

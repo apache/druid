@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.store.ByteBufferIndexInput;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -83,11 +84,19 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
     indexed = supplier.get();
   }
 
+
   private void setupSimpleWithSerde(final int chunkSize) throws IOException
   {
     vals = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16};
 
     makeWithSerde(chunkSize);
+  }
+
+  private void setupSimpleWithIISerde(final int chunkSize) throws IOException
+  {
+    vals = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16};
+
+    makeWithIISerde(chunkSize);
   }
 
   private void makeWithSerde(final int chunkSize) throws IOException
@@ -107,11 +116,31 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
     indexed = supplier.get();
   }
 
+
+  private void makeWithIISerde(final int chunkSize) throws IOException
+  {
+    CloseQuietly.close(indexed);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final CompressedIntsIndexedSupplier theSupplier = CompressedIntsIndexedSupplier.fromIntBuffer(
+        IntBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
+    );
+    theSupplier.writeToChannel(Channels.newChannel(baos));
+
+    final byte[] bytes = baos.toByteArray();
+    Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
+    ByteBufferIndexInput ii = new ByteBufferIndexInput(ByteBuffer.wrap(bytes));
+
+    supplier = CompressedIntsIndexedSupplier.fromIndexInput(ii, ByteOrder.nativeOrder());
+    indexed = supplier.get();
+  }
+
+
   private void setupLargeChunks(final int chunkSize, final int totalSize) throws IOException
   {
     vals = new int[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
+    for (int i = 0; i < vals.length; ++i) {
       vals[i] = rand.nextInt();
     }
 
@@ -186,6 +215,11 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
 
     Assert.assertEquals(4, supplier.getBaseIntBuffers().size());
     assertIndexMatchesVals();
+
+    setupSimpleWithIISerde(5);
+
+    Assert.assertEquals(4, supplier.getBaseIntBuffers().size());
+    assertIndexMatchesVals();
   }
 
   @Test
@@ -197,12 +231,22 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
     tryFill(3, 6);
     tryFill(7, 7);
     tryFill(7, 9);
+
+    setupSimpleWithIISerde(5);
+
+    tryFill(0, 15);
+    tryFill(3, 6);
+    tryFill(7, 7);
+    tryFill(7, 9);
   }
 
   @Test(expected = IndexOutOfBoundsException.class)
   public void testBulkFillTooMuchWithSerde() throws Exception
   {
     setupSimpleWithSerde(5);
+    tryFill(7, 10);
+
+    setupSimpleWithIISerde(5);
     tryFill(7, 10);
   }
 
@@ -309,6 +353,109 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
       Assert.fail("Failure happened.  Reason: " + reason.get());
     }
   }
+
+
+  @Test
+  public void testIIConcurrentThreadReads() throws Exception
+  {
+    setupSimpleWithIISerde(5);
+    final AtomicReference<String> reason = new AtomicReference<String>("none");
+
+    final int numRuns = 1000;
+    final CountDownLatch startLatch = new CountDownLatch(1);
+    final CountDownLatch stopLatch = new CountDownLatch(2);
+    final AtomicBoolean failureHappened = new AtomicBoolean(false);
+    new Thread(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          startLatch.await();
+        }
+        catch (InterruptedException e) {
+          failureHappened.set(true);
+          reason.set("interrupt.");
+          stopLatch.countDown();
+          return;
+        }
+
+        try {
+          for (int i = 0; i < numRuns; ++i) {
+            for (int j = 0; j < indexed.size(); ++j) {
+              final long val = vals[j];
+              final long indexedVal = indexed.get(j);
+              if (Longs.compare(val, indexedVal) != 0) {
+                failureHappened.set(true);
+                reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
+                stopLatch.countDown();
+                return;
+              }
+            }
+          }
+        }
+        catch (Exception e) {
+          e.printStackTrace();
+          failureHappened.set(true);
+          reason.set(e.getMessage());
+        }
+
+        stopLatch.countDown();
+      }
+    }).start();
+
+    final IndexedInts indexed2 = supplier.get();
+    try {
+      new Thread(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          try {
+            startLatch.await();
+          }
+          catch (InterruptedException e) {
+            stopLatch.countDown();
+            return;
+          }
+
+          try {
+            for (int i = 0; i < numRuns; ++i) {
+              for (int j = indexed2.size() - 1; j >= 0; --j) {
+                final long val = vals[j];
+                final long indexedVal = indexed2.get(j);
+                if (Longs.compare(val, indexedVal) != 0) {
+                  failureHappened.set(true);
+                  reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
+                  stopLatch.countDown();
+                  return;
+                }
+              }
+            }
+          }
+          catch (Exception e) {
+            e.printStackTrace();
+            reason.set(e.getMessage());
+            failureHappened.set(true);
+          }
+
+          stopLatch.countDown();
+        }
+      }).start();
+
+      startLatch.countDown();
+
+      stopLatch.await();
+    }
+    finally {
+      CloseQuietly.close(indexed2);
+    }
+
+    if (failureHappened.get()) {
+      Assert.fail("Failure happened.  Reason: " + reason.get());
+    }
+  }
+
 
   private void tryFill(final int startIndex, final int size)
   {

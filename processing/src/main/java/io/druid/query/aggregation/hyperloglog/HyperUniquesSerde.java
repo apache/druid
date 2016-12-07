@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -29,7 +30,9 @@ import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.store.IndexInput;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -107,6 +110,21 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   {
     final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy());
     columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+  }
+
+
+  @Override
+  public void deserializeColumn(
+      IndexInput indexInput, ColumnBuilder builder
+  )
+  {
+    try {
+      final GenericIndexed column = GenericIndexed.read(indexInput, getObjectStrategy());
+      builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    }
+    catch (IOException e) {
+      throw new IOE(e);
+    }
   }
 
   @Override

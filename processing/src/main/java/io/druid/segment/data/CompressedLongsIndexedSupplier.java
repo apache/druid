@@ -22,6 +22,9 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
+import io.druid.segment.store.IndexInput;
+import io.druid.segment.store.IndexInputUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,6 +45,8 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
   private final Supplier<IndexedLongs> supplier;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private final CompressionFactory.LongEncodingFormat encoding;
+  private final IndexInput indexInput;
+  private final boolean isIIVersion;
 
   CompressedLongsIndexedSupplier(
       int totalSize,
@@ -58,6 +63,27 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     this.supplier = supplier;
     this.compression = compression;
     this.encoding = encoding;
+    this.indexInput = null;
+    this.isIIVersion = false;
+  }
+
+  CompressedLongsIndexedSupplier(
+      int totalSize,
+      int sizePer,
+      IndexInput indexInput,
+      Supplier<IndexedLongs> supplier,
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingFormat encoding
+  )
+  {
+    this.totalSize = totalSize;
+    this.sizePer = sizePer;
+    this.buffer = null;
+    this.supplier = supplier;
+    this.compression = compression;
+    this.encoding = encoding;
+    this.indexInput = indexInput;
+    this.isIIVersion = true;
   }
 
   public int size()
@@ -73,7 +99,19 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
   public long getSerializedSize()
   {
-    return buffer.remaining() + 1 + 4 + 4 + 1 + (encoding == CompressionFactory.LEGACY_LONG_ENCODING_FORMAT ? 0 : 1);
+    int remaining = 0;
+    if (!isIIVersion) {
+      remaining = buffer.remaining();
+    } else {
+      try {
+        remaining = (int) IndexInputUtils.remaining(indexInput);
+      }
+      catch (IOException e) {
+        throw new IOE(e);
+      }
+    }
+
+    return remaining + 1 + 4 + 4 + 1 + (encoding == CompressionFactory.LEGACY_LONG_ENCODING_FORMAT ? 0 : 1);
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -87,8 +125,13 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       channel.write(ByteBuffer.wrap(new byte[]{CompressionFactory.setEncodingFlag(compression.getId())}));
       channel.write(ByteBuffer.wrap(new byte[]{encoding.getId()}));
     }
-    channel.write(buffer.asReadOnlyBuffer());
+    if (!isIIVersion) {
+      channel.write(buffer.asReadOnlyBuffer());
+    } else {
+      IndexInputUtils.write2Channel(indexInput.duplicate(), channel);
+    }
   }
+
 
   public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
@@ -127,4 +170,43 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
+
+  public static CompressedLongsIndexedSupplier fromIndexInput(IndexInput indexInput, ByteOrder order) throws IOException
+  {
+    byte versionFromBuffer = indexInput.readByte();
+
+    if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
+      final int totalSize = indexInput.readInt();
+      final int sizePer = indexInput.readInt();
+      CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      CompressionFactory.LongEncodingFormat encoding = CompressionFactory.LEGACY_LONG_ENCODING_FORMAT;
+      if (versionFromBuffer == version) {
+        byte compressionId = indexInput.readByte();
+        if (CompressionFactory.hasEncodingFlag(compressionId)) {
+          encoding = CompressionFactory.LongEncodingFormat.forId(indexInput.readByte());
+          compressionId = CompressionFactory.clearEncodingFlag(compressionId);
+        }
+        compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
+      }
+      Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(
+          totalSize,
+          sizePer,
+          indexInput.duplicate(),
+          order,
+          encoding,
+          compression
+      );
+      return new CompressedLongsIndexedSupplier(
+          totalSize,
+          sizePer,
+          indexInput,
+          supplier,
+          compression,
+          encoding
+      );
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
 }
