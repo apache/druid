@@ -32,6 +32,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
+import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -285,7 +286,18 @@ public class GroupByQuery extends BaseQuery<Row>
 
     final Comparator<Row> timeComparator = getTimeComparator(granular);
 
-    if (sortByDimsFirst) {
+    if (timeComparator == null) {
+      return Ordering.from(
+          new Comparator<Row>()
+          {
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              return compareDims(dimensions, lhs, rhs);
+            }
+          }
+      );
+    } else if (sortByDimsFirst) {
       return Ordering.from(
           new Comparator<Row>()
           {
@@ -323,7 +335,9 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Comparator<Row> getTimeComparator(boolean granular)
   {
-    if (granular) {
+    if (QueryGranularities.ALL.equals(granularity)) {
+      return null;
+    } else if (granular) {
       return new Comparator<Row>()
       {
         @Override
