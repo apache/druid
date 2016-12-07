@@ -49,7 +49,7 @@ shared:
       command: mvn -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.version`"
     clone_druid_pkg:
       description: clone druid package
-      command: git clone --branch master git@git.corp.yahoo.com:greyhawk/druid_package.git
+      command: git clone --branch trunk git@git.corp.yahoo.com:greyhawk/druid_package.git
     set_config_files:
       description: call update_vars.sh (comes from druid_package repo) to replace placeholders embedded in the yicf files with meaningful names
       command: >
