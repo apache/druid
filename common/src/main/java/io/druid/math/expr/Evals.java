@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import com.google.common.base.Strings;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.logger.Logger;
 
@@ -80,5 +81,35 @@ public class Evals
       log.warn(e, "failed to rewrite expression " + binary);
       return binary;  // best effort.. keep it working
     }
+  }
+
+  public static long asLong(boolean x)
+  {
+    return x ? 1L : 0L;
+  }
+
+  public static double asDouble(boolean x)
+  {
+    return x ? 1D : 0D;
+  }
+
+  public static String asString(boolean x)
+  {
+    return String.valueOf(x);
+  }
+
+  public static boolean asBoolean(long x)
+  {
+    return x > 0;
+  }
+
+  public static boolean asBoolean(double x)
+  {
+    return x > 0;
+  }
+
+  public static boolean asBoolean(String x)
+  {
+    return !Strings.isNullOrEmpty(x) && Boolean.valueOf(x);
   }
 }

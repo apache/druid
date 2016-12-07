@@ -143,4 +143,35 @@ public class EvalTest
     Assert.assertEquals("NULL", eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString());
     Assert.assertEquals("x", eval("nvl(if(x == 9223372036854775806, '', 'x'), 'NULL')", bindings).asString());
   }
+
+  @Test
+  public void testBooleanReturn()
+  {
+    Expr.ObjectBinding bindings = Parser.withMap(
+        ImmutableMap.of("x", 100L, "y", 100L, "z", 100D, "w", 100D)
+    );
+    ExprEval eval = Parser.parse("x==y").eval(bindings);
+    Assert.assertTrue(eval.asBoolean());
+    Assert.assertEquals(ExprType.LONG, eval.type());
+
+    eval = Parser.parse("x!=y").eval(bindings);
+    Assert.assertFalse(eval.asBoolean());
+    Assert.assertEquals(ExprType.LONG, eval.type());
+
+    eval = Parser.parse("x==z").eval(bindings);
+    Assert.assertTrue(eval.asBoolean());
+    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+
+    eval = Parser.parse("x!=z").eval(bindings);
+    Assert.assertFalse(eval.asBoolean());
+    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+
+    eval = Parser.parse("z==w").eval(bindings);
+    Assert.assertTrue(eval.asBoolean());
+    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+
+    eval = Parser.parse("z!=w").eval(bindings);
+    Assert.assertFalse(eval.asBoolean());
+    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+  }
 }
