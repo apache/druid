@@ -30,7 +30,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
-
 import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
@@ -206,7 +205,11 @@ public class Initialization
       int i = 0;
       extensionsToLoad = new File[toLoad.size()];
       for (final String extensionName : toLoad) {
-        final File extensionDir = new File(rootExtensionsDir, extensionName);
+        File extensionDir = new File(extensionName);
+        if (!extensionDir.isAbsolute()) {
+          extensionDir = new File(rootExtensionsDir, extensionName);
+        }
+
         if (!extensionDir.isDirectory()) {
           throw new ISE(
               String.format(
