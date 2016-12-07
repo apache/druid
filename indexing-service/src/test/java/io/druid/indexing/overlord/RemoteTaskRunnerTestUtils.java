@@ -28,7 +28,7 @@ import com.google.common.base.Throwables;
 
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
-import io.druid.curator.cache.SimplePathChildrenCacheFactory;
+import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -120,7 +120,7 @@ public class RemoteTaskRunnerTestUtils
             }, null, null, null, null, null
         ),
         cf,
-        new SimplePathChildrenCacheFactory.Builder().build(),
+        new PathChildrenCacheFactory.Builder(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
