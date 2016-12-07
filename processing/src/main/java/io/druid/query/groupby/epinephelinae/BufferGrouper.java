@@ -19,7 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -135,12 +134,13 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
       return false;
     }
 
-    Preconditions.checkArgument(
-        keyBuffer.remaining() == keySize,
-        "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-        keyBuffer.remaining(),
-        keySize
-    );
+    if (keyBuffer.remaining() != keySize) {
+      throw new IAE(
+          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
+          keyBuffer.remaining(),
+          keySize
+      );
+    }
 
     int bucket = findBucket(
         tableBuffer,
