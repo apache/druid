@@ -22,6 +22,7 @@ package io.druid.segment;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.filter.Filter;
+import io.druid.segment.virtual.VirtualColumns;
 import org.joda.time.Interval;
 
 /**

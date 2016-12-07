@@ -45,7 +45,7 @@ import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.VirtualColumns;
+import io.druid.segment.virtual.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;

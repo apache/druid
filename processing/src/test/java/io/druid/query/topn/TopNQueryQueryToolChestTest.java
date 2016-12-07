@@ -40,6 +40,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.TestIndex;
+import io.druid.segment.virtual.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -60,6 +61,7 @@ public class TopNQueryQueryToolChestTest
         new TopNQueryQueryToolChest(null, null).getCacheStrategy(
             new TopNQuery(
                 new TableDataSource("dummy"),
+                VirtualColumns.EMPTY,
                 new DefaultDimensionSpec("test", "test"),
                 new NumericTopNMetricSpec("metric1"),
                 3,

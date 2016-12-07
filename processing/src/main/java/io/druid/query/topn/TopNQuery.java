@@ -34,6 +34,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.virtual.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 {
   public static final String TOPN = "topN";
 
+  private final VirtualColumns virtualColumns;
   private final DimensionSpec dimensionSpec;
   private final TopNMetricSpec topNMetricSpec;
   private final int threshold;
@@ -55,6 +57,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @JsonCreator
   public TopNQuery(
       @JsonProperty("dataSource") DataSource dataSource,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("dimension") DimensionSpec dimensionSpec,
       @JsonProperty("metric") TopNMetricSpec topNMetricSpec,
       @JsonProperty("threshold") int threshold,
@@ -67,6 +70,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   )
   {
     super(dataSource, querySegmentSpec, false, context);
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;
@@ -101,6 +105,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public String getType()
   {
     return TOPN;
+  }
+
+  @JsonProperty
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   @JsonProperty("dimension")
@@ -157,6 +167,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -173,6 +184,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         spec,
         topNMetricSpec,
         threshold,
@@ -189,6 +201,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         getDimensionSpec(),
         topNMetricSpec,
         threshold,
@@ -205,6 +218,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         getDimensionSpec(),
         topNMetricSpec,
         threshold,
@@ -222,6 +236,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         dataSource,
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -238,6 +253,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -254,6 +270,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -270,6 +287,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         getDimensionSpec(),
         topNMetricSpec,
         threshold,
@@ -280,22 +298,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         postAggregatorSpecs,
         getContext()
     );
-  }
-
-  @Override
-  public String toString()
-  {
-    return "TopNQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", dimensionSpec=" + dimensionSpec +
-           ", topNMetricSpec=" + topNMetricSpec +
-           ", threshold=" + threshold +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", aggregatorSpecs=" + aggregatorSpecs +
-           ", postAggregatorSpecs=" + postAggregatorSpecs +
-           '}';
   }
 
   @Override
@@ -311,37 +313,39 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       return false;
     }
 
-    TopNQuery topNQuery = (TopNQuery) o;
+    TopNQuery query = (TopNQuery) o;
 
-    if (threshold != topNQuery.threshold) {
+    if (threshold != query.threshold) {
       return false;
     }
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null) {
+    if (!virtualColumns.equals(query.virtualColumns)) {
       return false;
     }
-    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) {
+    if (dimensionSpec != null ? !dimensionSpec.equals(query.dimensionSpec) : query.dimensionSpec != null) {
       return false;
     }
-    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null) {
+    if (topNMetricSpec != null ? !topNMetricSpec.equals(query.topNMetricSpec) : query.topNMetricSpec != null) {
       return false;
     }
-    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) {
+    if (dimFilter != null ? !dimFilter.equals(query.dimFilter) : query.dimFilter != null) {
       return false;
     }
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs) : topNQuery.postAggregatorSpecs != null) {
+    if (granularity != null ? !granularity.equals(query.granularity) : query.granularity != null) {
       return false;
     }
-    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null) {
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(query.aggregatorSpecs) : query.aggregatorSpecs != null) {
       return false;
     }
-
-    return true;
+    return postAggregatorSpecs != null
+           ? postAggregatorSpecs.equals(query.postAggregatorSpecs)
+           : query.postAggregatorSpecs == null;
   }
 
   @Override
   public int hashCode()
   {
     int result = super.hashCode();
+    result = 31 * result + virtualColumns.hashCode();
     result = 31 * result + (dimensionSpec != null ? dimensionSpec.hashCode() : 0);
     result = 31 * result + (topNMetricSpec != null ? topNMetricSpec.hashCode() : 0);
     result = 31 * result + threshold;
@@ -350,5 +354,20 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TopNQuery{" +
+           "virtualColumns=" + virtualColumns +
+           ", dimensionSpec=" + dimensionSpec +
+           ", topNMetricSpec=" + topNMetricSpec +
+           ", threshold=" + threshold +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + granularity +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           '}';
   }
 }

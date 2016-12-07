@@ -28,20 +28,34 @@ import java.io.IOException;
 
 public class NullDimensionSelector implements DimensionSelector
 {
+  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
 
-  private static final IndexedInts SINGLETON = new IndexedInts() {
+  private NullDimensionSelector()
+  {
+  }
+
+  public static final NullDimensionSelector instance()
+  {
+    return INSTANCE;
+  }
+
+  private static final IndexedInts SINGLETON = new IndexedInts()
+  {
     @Override
-    public int size() {
+    public int size()
+    {
       return 1;
     }
 
     @Override
-    public int get(int index) {
+    public int get(int index)
+    {
       return 0;
     }
 
     @Override
-    public IntIterator iterator() {
+    public IntIterator iterator()
+    {
       return IntIterators.singleton(0);
     }
 

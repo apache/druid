@@ -39,9 +39,9 @@ import io.druid.segment.Cursor;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
+import io.druid.segment.virtual.VirtualColumns;
 import org.joda.time.DateTime;
 
 import java.util.Iterator;

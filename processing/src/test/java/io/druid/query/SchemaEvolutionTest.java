@@ -49,6 +49,7 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
@@ -257,12 +258,15 @@ public class SchemaEvolutionTest
         .newTimeseriesQueryBuilder()
         .dataSource(DATA_SOURCE)
         .intervals("1000/3000")
+        .virtualColumns(
+            new ExpressionVirtualColumn("expr", "c1 * 1")
+        )
         .aggregators(
             ImmutableList.of(
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
-                new LongSumAggregatorFactory("c", null, "c1 * 1"),
-                new DoubleSumAggregatorFactory("d", null, "c1 * 1")
+                new LongSumAggregatorFactory("c", "expr"),
+                new DoubleSumAggregatorFactory("d", "expr")
             )
         )
         .build();

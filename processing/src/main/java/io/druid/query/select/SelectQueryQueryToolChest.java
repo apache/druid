@@ -49,7 +49,6 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.timeline.DataSegmentUtils;
-import io.druid.segment.VirtualColumn;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -192,20 +191,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-        List<VirtualColumn> virtualColumns = query.getVirtualColumns();
-        if (virtualColumns == null) {
-          virtualColumns = Collections.emptyList();
-        }
-
-        final byte[][] virtualColumnsBytes = new byte[virtualColumns.size()][];
-        int virtualColumnsBytesSize = 0;
-        index = 0;
-        for (VirtualColumn vc : virtualColumns) {
-          virtualColumnsBytes[index] = vc.getCacheKey();
-          virtualColumnsBytesSize += virtualColumnsBytes[index].length;
-          ++index;
-        }
-
+        final byte[] virtualColumnsCacheKey = query.getVirtualColumns().getCacheKey();
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1
@@ -214,7 +200,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
                 + query.getPagingSpec().getCacheKey().length
                 + dimensionsBytesSize
                 + metricBytesSize
-                + virtualColumnsBytesSize
+                + virtualColumnsCacheKey.length
             )
             .put(SELECT_QUERY)
             .put(granularityBytes)
@@ -229,9 +215,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           queryCacheKey.put(metricByte);
         }
 
-        for (byte[] vcByte : virtualColumnsBytes) {
-          queryCacheKey.put(vcByte);
-        }
+        queryCacheKey.put(virtualColumnsCacheKey);
 
         return queryCacheKey.array();
       }

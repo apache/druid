@@ -355,6 +355,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
         final byte[] havingBytes = query.getHavingSpec() == null ? new byte[]{} : query.getHavingSpec().getCacheKey();
         final byte[] limitBytes = query.getLimitSpec().getCacheKey();
+        final byte[] virtualColumnsBytes = query.getVirtualColumns().getCacheKey();
 
         ByteBuffer buffer = ByteBuffer
             .allocate(
@@ -365,6 +366,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                 + dimensionsBytesSize
                 + havingBytes.length
                 + limitBytes.length
+                + virtualColumnsBytes.length
             )
             .put(GROUPBY_QUERY)
             .put(CACHE_STRATEGY_VERSION)
@@ -379,6 +381,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         return buffer
             .put(havingBytes)
             .put(limitBytes)
+            .put(virtualColumnsBytes)
             .array();
       }
 

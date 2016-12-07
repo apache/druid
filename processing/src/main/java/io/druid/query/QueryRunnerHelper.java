@@ -30,7 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
+import io.druid.segment.virtual.VirtualColumns;
 import org.joda.time.Interval;
 
 import java.io.Closeable;

@@ -44,6 +44,7 @@ import io.druid.query.select.SelectResultValue;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.virtual.VirtualColumn;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;

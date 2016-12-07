@@ -313,11 +313,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
         final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final byte[] virtualColumnBytes = query.getVirtualColumns().getCacheKey();
 
         return ByteBuffer
             .allocate(
-                1 + dimensionSpecBytes.length + metricSpecBytes.length + 4 +
-                granularityBytes.length + filterBytes.length + aggregatorBytes.length
+                1 + dimensionSpecBytes.length + metricSpecBytes.length + 4
+                + granularityBytes.length + filterBytes.length + aggregatorBytes.length
+                + virtualColumnBytes.length
             )
             .put(TOPN_QUERY)
             .put(dimensionSpecBytes)
@@ -326,6 +328,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes)
+            .put(virtualColumnBytes)
             .array();
       }
 

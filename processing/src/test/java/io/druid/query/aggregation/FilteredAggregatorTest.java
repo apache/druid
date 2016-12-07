@@ -40,10 +40,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
@@ -167,27 +164,13 @@ public class FilteredAggregatorTest
       }
 
       @Override
-      public ColumnCapabilities getColumnCapabilities(String columnName)
+      public ValueType getNativeType(String columnName)
       {
-        ColumnCapabilitiesImpl caps;
         if (columnName.equals("value")) {
-          caps = new ColumnCapabilitiesImpl();
-          caps.setType(ValueType.FLOAT);
-          caps.setDictionaryEncoded(false);
-          caps.setHasBitmapIndexes(false);
+          return ValueType.FLOAT;
         } else {
-          caps = new ColumnCapabilitiesImpl();
-          caps.setType(ValueType.STRING);
-          caps.setDictionaryEncoded(true);
-          caps.setHasBitmapIndexes(true);
+          return ValueType.STRING;
         }
-        return caps;
-      }
-
-      @Override
-      public NumericColumnSelector makeMathExpressionSelector(String expression)
-      {
-        throw new UnsupportedOperationException();
       }
     };
   }

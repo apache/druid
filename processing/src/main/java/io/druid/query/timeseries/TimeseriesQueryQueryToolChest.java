@@ -138,15 +138,23 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         final byte[] granularityBytes = query.getGranularity().cacheKey();
         final byte descending = query.isDescending() ? (byte) 1 : 0;
         final byte skipEmptyBuckets = query.isSkipEmptyBuckets() ? (byte) 1 : 0;
+        final byte[] virtualColumnsBytes = query.getVirtualColumns().getCacheKey();
 
         return ByteBuffer
-            .allocate(3 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
+            .allocate(
+                3
+                + granularityBytes.length
+                + filterBytes.length
+                + aggregatorBytes.length
+                + virtualColumnsBytes.length
+            )
             .put(TIMESERIES_QUERY)
             .put(descending)
             .put(skipEmptyBuckets)
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes)
+            .put(virtualColumnsBytes)
             .array();
       }
 

@@ -31,8 +31,6 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.column.Column;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -221,7 +219,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final String value)
     {
-      if (getTypeForDimension(dimension) == ValueType.LONG) {
+      if (getNativeType(dimension) == ValueType.LONG) {
         return Filters.getLongValueMatcher(
             columnSelectorFactory.makeLongColumnSelector(dimension),
             value
@@ -293,7 +291,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
     {
-      ValueType type = getTypeForDimension(dimension);
+      final ValueType type = getNativeType(dimension);
       switch (type) {
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
@@ -380,16 +378,10 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       );
     }
 
-    private ValueType getTypeForDimension(String dimension)
+    private ValueType getNativeType(String columnName)
     {
-      // FilteredAggregatorFactory is sometimes created from a ColumnSelectorFactory that
-      // has no knowledge of column capabilities/types.
-      // Default to LONG for __time, STRING for everything else.
-      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-        return ValueType.LONG;
-      }
-      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
+      final ValueType nativeType = columnSelectorFactory.getNativeType(columnName);
+      return nativeType == null ? ValueType.STRING : nativeType;
     }
   }
 }

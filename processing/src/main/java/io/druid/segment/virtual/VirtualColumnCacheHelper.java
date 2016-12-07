@@ -17,28 +17,18 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.virtual;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ValueType;
-
-/**
- * Factory class for MetricSelectors
- */
-public interface ColumnSelectorFactory
+public class VirtualColumnCacheHelper
 {
-  DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  FloatColumnSelector makeFloatColumnSelector(String columnName);
-  LongColumnSelector makeLongColumnSelector(String columnName);
-  ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  public static final byte CACHE_TYPE_ID_MAP = 0x00;
+  public static final byte CACHE_TYPE_ID_EXPRESSION = 0x01;
 
-  /**
-   * Returns the native type of the named column, which should match the type returned, which
-   * should correspond to the best performing selector. May be null if unknown.
-   *
-   * @param columnName name of the column
-   *
-   * @return native type, or null if unknown
-   */
-  ValueType getNativeType(String columnName);
+  // Starting byte 0xFF is reserved for site-specific virtual columns.
+  public static final byte CACHE_TYPE_ID_USER_DEFINED = (byte) 0xFF;
+
+  private VirtualColumnCacheHelper()
+  {
+    // No instantiation.
+  }
 }
