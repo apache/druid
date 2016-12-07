@@ -42,7 +42,16 @@ public class BitmapIterationTest extends TestCase
     List<BitmapFactory> factories = Arrays.asList(
         new BitSetBitmapFactory(),
         new ConciseBitmapFactory()
-        // Exclude Roaring because it fails yet!
+        // Roaring iteration fails because it doesn't throw NoSuchElementException on next() call when there are no more
+        // elements. Instead, it either throws NullPointerException or returns some unspecified value. If bitmap
+        // iterators are always used correctly in shouldn't be a problem, but if next() is occasionally called after
+        // hasNext() returned false and it returns some unspecified value, and everything continues to work without
+        // indication that there was a error, it would be a bug that is very hard to catch.
+        //
+        // This line should be uncommented when Druid updates RoaringBitmap dependency to a version which includes a fix
+        // for https://github.com/RoaringBitmap/RoaringBitmap/issues/129, or when RoaringBitmap is included into Druid
+        // as a module and the issue is fixed there.
+
         //new RoaringBitmapFactory()
     );
 
