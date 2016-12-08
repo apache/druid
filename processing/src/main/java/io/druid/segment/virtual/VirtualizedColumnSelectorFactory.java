@@ -34,7 +34,7 @@ public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory
   private final ColumnSelectorFactory baseFactory;
   private final VirtualColumns virtualColumns;
 
-  VirtualizedColumnSelectorFactory(
+  public VirtualizedColumnSelectorFactory(
       ColumnSelectorFactory baseFactory,
       VirtualColumns virtualColumns
   )
