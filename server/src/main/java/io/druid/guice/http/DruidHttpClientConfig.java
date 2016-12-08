@@ -30,6 +30,8 @@ import javax.validation.constraints.Min;
 
 public class DruidHttpClientConfig
 {
+  private final String DEFAULT_COMPRESSION_CODEC = "gzip";
+
   @JsonProperty
   @Min(0)
   private int numConnections = 20;
@@ -40,6 +42,9 @@ public class DruidHttpClientConfig
   @JsonProperty
   @Min(1)
   private int numMaxThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
+
+  @JsonProperty
+  private String compressionCodec = DEFAULT_COMPRESSION_CODEC;
 
   public int getNumConnections()
   {
@@ -54,5 +59,10 @@ public class DruidHttpClientConfig
   public int getNumMaxThreads()
   {
     return numMaxThreads;
+  }
+
+  public String getCompressionCodec()
+  {
+    return compressionCodec;
   }
 }
