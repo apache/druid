@@ -91,6 +91,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new TestDruidCoordinatorConfig(null, null, null, null, null, null, 10, null, false, false)
     );
 
+    loadQueuePeon.start();
+
     final CountDownLatch[] loadRequestSignal = new CountDownLatch[5];
     final CountDownLatch[] dropRequestSignal = new CountDownLatch[5];
     final CountDownLatch[] segmentLoadedSignal = new CountDownLatch[5];
@@ -296,6 +298,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
         new TestDruidCoordinatorConfig(null, null, null, new Duration(1), null, null, 10, null, false, false)
     );
+
+    loadQueuePeon.start();
 
     loadQueueCache.getListenable().addListener(
         new PathChildrenCacheListener()

@@ -141,6 +141,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
       Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
       druidCoordinatorConfig
     );
+    loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", 1234);
     loadManagementPeons = new MapMaker().makeMap();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
@@ -197,6 +198,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @After
   public void tearDown() throws Exception
   {
+    loadQueuePeon.stop();
     pathChildrenCache.close();
     tearDownServerAndCurator();
   }
