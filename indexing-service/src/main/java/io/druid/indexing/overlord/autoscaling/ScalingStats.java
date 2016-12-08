@@ -26,6 +26,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import org.joda.time.DateTime;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -88,6 +89,13 @@ public class ScalingStats
               EVENT.TERMINATE
           )
       );
+    }
+  }
+
+  public void addAllEvents(Collection<ScalingEvent> events)
+  {
+    synchronized (lock) {
+      recentEvents.addAll(events);
     }
   }
 

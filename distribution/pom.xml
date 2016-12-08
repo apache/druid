@@ -100,6 +100,8 @@
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-tasktier</argument>
                             </arguments>
                         </configuration>
                     </execution>

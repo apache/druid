@@ -100,6 +100,7 @@
         <module>extensions-core/lookups-cached-global</module>
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/s3-extensions</module>
+        <module>extensions-core/tasktier</module>
         <!-- Community extensions -->
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
@@ -119,6 +120,38 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Basic druid dependencies. Set equal to this POM's version -->
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-services</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-processing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-indexing-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- Compile Scope -->
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -129,6 +162,12 @@
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
                 <version>1.0.6</version>
+            </dependency>
+            <!-- For some reason dependency detection is dumb and we need to specify this explicitly -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+                <version>3.9.5.Final</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -236,6 +275,10 @@
                 <exclusions>
                     <exclusion>
                         <groupId>org.jboss.netty</groupId>
+                        <artifactId>netty</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
                         <artifactId>netty</artifactId>
                     </exclusion>
                 </exclusions>
@@ -404,6 +447,11 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
                 <version>2.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
