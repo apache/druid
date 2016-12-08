@@ -31,6 +31,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.ValueType;
 import org.apache.commons.codec.Charsets;
 

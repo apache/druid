@@ -54,8 +54,8 @@ import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
-import io.druid.segment.virtual.VirtualColumn;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

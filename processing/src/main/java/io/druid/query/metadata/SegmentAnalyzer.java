@@ -48,7 +48,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

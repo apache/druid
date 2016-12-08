@@ -57,7 +57,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumns;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.joda.time.Interval;
 

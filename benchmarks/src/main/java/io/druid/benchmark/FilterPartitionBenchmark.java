@@ -61,7 +61,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.IndexedInts;

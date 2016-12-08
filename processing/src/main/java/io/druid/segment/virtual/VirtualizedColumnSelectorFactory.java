@@ -26,6 +26,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 
 public class VirtualizedColumnSelectorFactory implements ColumnSelectorFactory

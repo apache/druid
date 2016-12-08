@@ -33,8 +33,8 @@ import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.segment.virtual.VirtualColumn;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import java.util.Arrays;

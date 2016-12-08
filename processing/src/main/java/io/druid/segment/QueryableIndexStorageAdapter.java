@@ -56,7 +56,6 @@ import io.druid.segment.data.Offset;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
-import io.druid.segment.virtual.VirtualColumns;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

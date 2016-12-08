@@ -30,9 +30,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.virtual.VirtualColumn;
 import io.druid.segment.virtual.VirtualColumnCacheHelper;
-import io.druid.segment.virtual.VirtualColumns;
 
 import java.nio.ByteBuffer;
 import java.util.List;

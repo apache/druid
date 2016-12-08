@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.virtual;
+package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -31,16 +31,9 @@ import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NullDimensionSelector;
-import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.ZeroFloatColumnSelector;
-import io.druid.segment.ZeroLongColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.List;

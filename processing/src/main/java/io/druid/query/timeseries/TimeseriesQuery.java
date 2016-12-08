@@ -33,7 +33,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;

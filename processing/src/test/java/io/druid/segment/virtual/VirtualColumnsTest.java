@@ -31,6 +31,8 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;

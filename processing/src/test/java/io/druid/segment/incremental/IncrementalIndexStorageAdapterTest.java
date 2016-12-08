@@ -51,7 +51,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.SelectorFilter;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;

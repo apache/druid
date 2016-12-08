@@ -25,7 +25,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.virtual.VirtualColumns;
+import io.druid.segment.VirtualColumns;
 
 /**
  */

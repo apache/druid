@@ -42,8 +42,6 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.segment.virtual.VirtualColumn;
-import io.druid.segment.virtual.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
