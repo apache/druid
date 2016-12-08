@@ -594,11 +594,13 @@ public class KafkaSupervisor implements Supervisor
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
     final Properties props = new Properties();
+
+    props.setProperty("metadata.max.age.ms", "10000");
+    props.setProperty("group.id", String.format("kafka-supervisor-%s", getRandomId()));
+
     props.putAll(ioConfig.getConsumerProperties());
 
     props.setProperty("enable.auto.commit", "false");
-    props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("group.id", String.format("kafka-supervisor-%s", getRandomId()));
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
