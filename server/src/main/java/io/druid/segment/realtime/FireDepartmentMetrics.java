@@ -190,12 +190,12 @@ public class FireDepartmentMetrics
     return sinkCount.get();
   }
 
-  public long getMessageMaxTimestamp()
+  public long messageMaxTimestamp()
   {
     return messageMaxTimestamp.get();
   }
 
-  public long getSourceMaxTimestamp()
+  public long sourceMaxTimestamp()
   {
     return sourceMaxTimestamp.get();
   }
@@ -258,8 +258,8 @@ public class FireDepartmentMetrics
     persistCpuTime.addAndGet(otherSnapshot.persistCpuTime());
     handOffCount.addAndGet(otherSnapshot.handOffCount());
     sinkCount.addAndGet(otherSnapshot.sinkCount());
-    messageMaxTimestamp.set(Math.max(getMessageMaxTimestamp(), otherSnapshot.getMessageMaxTimestamp()));
-    sourceMaxTimestamp.set(Math.max(getSourceMaxTimestamp(), otherSnapshot.getSourceMaxTimestamp()));
+    messageMaxTimestamp.set(Math.max(messageMaxTimestamp(), otherSnapshot.messageMaxTimestamp()));
+    sourceMaxTimestamp.set(Math.max(sourceMaxTimestamp(), otherSnapshot.sourceMaxTimestamp()));
     messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
     sourceGap.set(Math.max(sourceGap(), otherSnapshot.sourceGap()));
     return this;

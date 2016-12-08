@@ -204,8 +204,9 @@ public class RealtimePlumber implements Plumber
   @Override
   public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
   {
-    final Sink sink = getSink(row.getTimestampFromEpoch());
-    metrics.reportMessageMaxTimestamp(rejectionPolicy.getCurrMaxTime().getMillis());
+    long messageTimestamp = row.getTimestampFromEpoch();
+    final Sink sink = getSink(messageTimestamp);
+    metrics.reportMessageMaxTimestamp(messageTimestamp);
     if (sink == null) {
       return -1;
     }
