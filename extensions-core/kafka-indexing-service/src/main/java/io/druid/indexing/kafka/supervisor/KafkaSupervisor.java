@@ -103,6 +103,7 @@ public class KafkaSupervisor implements Supervisor
   private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000; // prevent us from running too often in response to events
   private static final long NOT_SET = -1;
+  private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
 
   // Internal data structures
   // --------------------------------------------------------
@@ -175,7 +176,7 @@ public class KafkaSupervisor implements Supervisor
   private final KafkaTuningConfig taskTuningConfig;
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
-  private final long futureTimeout; // how long to wait for async operations to complete
+  private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
@@ -257,8 +258,8 @@ public class KafkaSupervisor implements Supervisor
       }
     };
 
-    this.futureTimeout = Math.max(
-        120,
+    this.futureTimeoutInSeconds = Math.max(
+        MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
                                          + KafkaIndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
@@ -747,7 +748,7 @@ public class KafkaSupervisor implements Supervisor
                                 taskId
                             );
                             try {
-                              stopTask(taskId, false).get(futureTimeout, TimeUnit.SECONDS);
+                              stopTask(taskId, false).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                             }
                             catch (InterruptedException | ExecutionException | TimeoutException e) {
                               log.warn(e, "Exception while stopping task");
@@ -775,7 +776,7 @@ public class KafkaSupervisor implements Supervisor
                               taskId
                           );
                           try {
-                            stopTask(taskId, false).get(futureTimeout, TimeUnit.SECONDS);
+                            stopTask(taskId, false).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                           }
                           catch (InterruptedException | ExecutionException | TimeoutException e) {
                             log.warn(e, "Exception while stopping task");
@@ -794,7 +795,7 @@ public class KafkaSupervisor implements Supervisor
       }
     }
 
-    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeout, TimeUnit.SECONDS);
+    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
     for (int i = 0; i < results.size(); i++) {
       if (results.get(i) == null) {
         String taskId = futureTaskIds.get(i);
@@ -891,7 +892,7 @@ public class KafkaSupervisor implements Supervisor
       }
     }
 
-    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeout, TimeUnit.SECONDS);
+    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
     for (int i = 0; i < results.size(); i++) {
       // false means the task hasn't started running yet and that's okay; null means it should be running but the HTTP
       // request threw an exception so kill the task
@@ -928,7 +929,7 @@ public class KafkaSupervisor implements Supervisor
       }
     }
 
-    List<Map<Integer, Long>> results = Futures.successfulAsList(futures).get(futureTimeout, TimeUnit.SECONDS);
+    List<Map<Integer, Long>> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
     for (int j = 0; j < results.size(); j++) {
       Integer groupId = futureGroupIds.get(j);
       TaskGroup group = taskGroups.get(groupId);
@@ -1050,7 +1051,7 @@ public class KafkaSupervisor implements Supervisor
 
             try {
               List<Boolean> results = Futures.successfulAsList(setEndOffsetFutures)
-                                             .get(futureTimeout, TimeUnit.SECONDS);
+                                             .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
               for (int i = 0; i < results.size(); i++) {
                 if (results.get(i) == null || !results.get(i)) {
                   String taskId = setEndOffsetTaskIds.get(i);
@@ -1160,7 +1161,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     // wait for all task shutdowns to complete before returning
-    Futures.successfulAsList(futures).get(futureTimeout, TimeUnit.SECONDS);
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
@@ -1212,7 +1213,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     // wait for all task shutdowns to complete before returning
-    Futures.successfulAsList(futures).get(futureTimeout, TimeUnit.SECONDS);
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
   void createNewTasks()
@@ -1423,17 +1424,7 @@ public class KafkaSupervisor implements Supervisor
       }
     }
 
-    return Futures.transform(
-        Futures.successfulAsList(futures), new Function<List<Void>, Void>()
-        {
-          @Nullable
-          @Override
-          public Void apply(@Nullable List<Void> input)
-          {
-            return null;
-          }
-        }
-    );
+    return asVoidFuture(Futures.successfulAsList(futures));
   }
 
   private ListenableFuture<Void> stopTask(final String id, final boolean publish)
@@ -1559,7 +1550,8 @@ public class KafkaSupervisor implements Supervisor
         }
       }
 
-      List<Map<Integer, Long>> results = Futures.successfulAsList(futures).get(futureTimeout, TimeUnit.SECONDS);
+      List<Map<Integer, Long>> results = Futures.successfulAsList(futures)
+                                                .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
       for (int i = 0; i < taskReports.size(); i++) {
         TaskReportData reportData = taskReports.get(i);
         if (includeOffsets) {
@@ -1585,5 +1577,20 @@ public class KafkaSupervisor implements Supervisor
         notices.add(new RunNotice());
       }
     };
+  }
+
+  private ListenableFuture<Void> asVoidFuture(ListenableFuture<?> future)
+  {
+    return Futures.transform(
+        future, new Function<Object, Void>()
+        {
+          @Nullable
+          @Override
+          public Void apply(@Nullable Object input)
+          {
+            return null;
+          }
+        }
+    );
   }
 }
