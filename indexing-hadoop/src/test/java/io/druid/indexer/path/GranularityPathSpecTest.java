@@ -49,6 +49,27 @@ import java.util.Arrays;
 
 public class GranularityPathSpecTest
 {
+  private static final HadoopTuningConfig DEFAULT_TUNING_CONFIG = new HadoopTuningConfig(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      null,
+      null,
+      null,
+      false,
+      false
+  );
+
   private GranularityPathSpec granularityPathSpec;
   private final String TEST_STRING_PATH = "TEST";
   private final String TEST_STRING_PATTERN = "*.TEST";
@@ -59,35 +80,41 @@ public class GranularityPathSpecTest
   @Rule
   public final TemporaryFolder testFolder = new TemporaryFolder();
 
-  @Before public void setUp()
+  @Before
+  public void setUp()
   {
     granularityPathSpec = new GranularityPathSpec();
   }
 
-  @After public void tearDown()
+  @After
+  public void tearDown()
   {
     granularityPathSpec = null;
   }
 
-  @Test public void testSetInputPath()
+  @Test
+  public void testSetInputPath()
   {
     granularityPathSpec.setInputPath(TEST_STRING_PATH);
-    Assert.assertEquals(TEST_STRING_PATH,granularityPathSpec.getInputPath());
+    Assert.assertEquals(TEST_STRING_PATH, granularityPathSpec.getInputPath());
   }
 
-  @Test public void testSetFilePattern()
+  @Test
+  public void testSetFilePattern()
   {
     granularityPathSpec.setFilePattern(TEST_STRING_PATTERN);
-    Assert.assertEquals(TEST_STRING_PATTERN,granularityPathSpec.getFilePattern());
+    Assert.assertEquals(TEST_STRING_PATTERN, granularityPathSpec.getFilePattern());
   }
 
-  @Test public void testSetPathFormat()
+  @Test
+  public void testSetPathFormat()
   {
     granularityPathSpec.setPathFormat(TEST_STRING_FORMAT);
-    Assert.assertEquals(TEST_STRING_FORMAT,granularityPathSpec.getPathFormat());
+    Assert.assertEquals(TEST_STRING_FORMAT, granularityPathSpec.getPathFormat());
   }
 
-  @Test public void testSetDataGranularity()
+  @Test
+  public void testSetDataGranularity()
   {
     Granularity granularity = Granularity.DAY;
     granularityPathSpec.setDataGranularity(granularity);
@@ -123,26 +150,7 @@ public class GranularityPathSpecTest
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false
-        )
+        DEFAULT_TUNING_CONFIG
     );
 
     granularityPathSpec.setDataGranularity(Granularity.HOUR);
@@ -187,13 +195,13 @@ public class GranularityPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.ALL,
+                QueryGranularities.ALL,
                 ImmutableList.of(new Interval("2015-01-01T11Z/2015-01-02T05Z"))
             ),
             jsonMapper
         ),
         new HadoopIOConfig(null, null, null),
-        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+        DEFAULT_TUNING_CONFIG
     );
 
     granularityPathSpec.setDataGranularity(Granularity.HOUR);
@@ -242,7 +250,8 @@ public class GranularityPathSpecTest
       String filePattern,
       String pathFormat,
       Granularity granularity,
-      Class inputFormat) throws Exception
+      Class inputFormat
+  ) throws Exception
   {
     StringBuilder sb = new StringBuilder();
     sb.append("{\"inputPath\" : \"");
@@ -258,7 +267,7 @@ public class GranularityPathSpecTest
     // Double-check Jackson's lower-case enum support
     sb.append(granularity.toString().toLowerCase());
     sb.append("\",");
-    if(inputFormat != null) {
+    if (inputFormat != null) {
       sb.append("\"inputFormat\" : \"");
       sb.append(inputFormat.getName());
       sb.append("\",");
