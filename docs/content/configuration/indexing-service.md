@@ -173,8 +173,8 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`worker.config.selectStrategy.type`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
-|`worker.config.autoScaler.type`|Only used if autoscaling is enabled, Choice is `ec2`. See below.|null|
+|`selectStrategy`|How to assign tasks to middle managers. This is an object, the options are documented below.|fillCapacity|
+|`autoScaler`|Only used if autoscaling is enabled, Choice is `ec2`. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
 
