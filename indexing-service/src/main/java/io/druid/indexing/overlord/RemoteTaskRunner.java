@@ -37,6 +37,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
+import com.google.common.io.Closer;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -134,7 +135,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final Duration shutdownTimeout;
   private final IndexerZkConfig indexerZkConfig;
   private final CuratorFramework cf;
-  private final PathChildrenCacheFactory pathChildrenCacheFactory;
+  private final PathChildrenCacheFactory workerStatusPathChildrenCacheFactory;
+  private final ExecutorService workerStatusPathChildrenCacheExecutor;
   private final PathChildrenCache workerPathCache;
   private final HttpClient httpClient;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
@@ -181,7 +183,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       RemoteTaskRunnerConfig config,
       IndexerZkConfig indexerZkConfig,
       CuratorFramework cf,
-      PathChildrenCacheFactory pathChildrenCacheFactory,
+      PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ScheduledExecutorService cleanupExec,
@@ -193,8 +195,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     this.shutdownTimeout = config.getTaskShutdownLinkTimeout().toStandardDuration(); // Fail fast
     this.indexerZkConfig = indexerZkConfig;
     this.cf = cf;
-    this.pathChildrenCacheFactory = pathChildrenCacheFactory;
-    this.workerPathCache = pathChildrenCacheFactory.make(cf, indexerZkConfig.getAnnouncementsPath());
+    this.workerPathCache = pathChildrenCacheFactory.build().make(cf, indexerZkConfig.getAnnouncementsPath());
+    this.workerStatusPathChildrenCacheExecutor = PathChildrenCacheFactory.Builder.createDefaultExecutor();
+    this.workerStatusPathChildrenCacheFactory = pathChildrenCacheFactory
+        .withExecutorService(workerStatusPathChildrenCacheExecutor)
+        .withShutdownExecutorOnClose(false)
+        .build();
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
     this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
@@ -337,10 +343,17 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       resourceManagement.stopManagement();
 
+      Closer closer = Closer.create();
       for (ZkWorker zkWorker : zkWorkers.values()) {
-        zkWorker.close();
+        closer.register(zkWorker);
       }
-      workerPathCache.close();
+      closer.register(workerPathCache);
+      try {
+        closer.close();
+      }
+      finally {
+        workerStatusPathChildrenCacheExecutor.shutdown();
+      }
 
       if (runPendingTasksExec != null) {
         runPendingTasksExec.shutdown();
@@ -889,7 +902,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       cancelWorkerCleanup(worker.getHost());
 
       final String workerStatusPath = JOINER.join(indexerZkConfig.getStatusPath(), worker.getHost());
-      final PathChildrenCache statusCache = pathChildrenCacheFactory.make(cf, workerStatusPath);
+      final PathChildrenCache statusCache = workerStatusPathChildrenCacheFactory.make(cf, workerStatusPath);
       final SettableFuture<ZkWorker> retVal = SettableFuture.create();
       final ZkWorker zkWorker = new ZkWorker(
           worker,
