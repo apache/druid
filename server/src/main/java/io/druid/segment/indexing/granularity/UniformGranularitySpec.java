@@ -102,6 +102,12 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
+  public List<Interval> inputIntervals()
+  {
+    return inputIntervals == null ? ImmutableList.<Interval>of() : ImmutableList.copyOf(inputIntervals);
+  }
+
+  @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
     return wrappedSpec.bucketInterval(dt);

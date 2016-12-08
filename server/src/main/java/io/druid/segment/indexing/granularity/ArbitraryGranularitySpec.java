@@ -22,6 +22,7 @@ package io.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
@@ -107,7 +108,13 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   @JsonProperty("intervals")
   public Optional<SortedSet<Interval>> bucketIntervals()
   {
-    return Optional.of((SortedSet<Interval>) intervals);
+    return Optional.<SortedSet<Interval>>of(intervals);
+  }
+
+  @Override
+  public List<Interval> inputIntervals()
+  {
+    return ImmutableList.copyOf(intervals);
   }
 
   @Override

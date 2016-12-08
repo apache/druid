@@ -44,6 +44,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
+import java.util.Arrays;
+
 public class GranularityPathSpecTest
 {
   private GranularityPathSpec granularityPathSpec;
@@ -171,6 +174,67 @@ public class GranularityPathSpecTest
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
+  }
+
+  @Test
+  public void testIntervalTrimming() throws Exception
+  {
+    UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
+    HadoopIngestionSpec spec = new HadoopIngestionSpec(
+        new DataSchema(
+            "foo",
+            null,
+            new AggregatorFactory[0],
+            new UniformGranularitySpec(
+                Granularity.DAY,
+                QueryGranularity.ALL,
+                ImmutableList.of(new Interval("2015-01-01T11Z/2015-01-02T05Z"))
+            ),
+            jsonMapper
+        ),
+        new HadoopIOConfig(null, null, null),
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+    );
+
+    granularityPathSpec.setDataGranularity(Granularity.HOUR);
+    granularityPathSpec.setPathFormat("yyyy/MM/dd/HH");
+    granularityPathSpec.setFilePattern(".*");
+    granularityPathSpec.setInputFormat(TextInputFormat.class);
+
+    Job job = Job.getInstance();
+    String formatStr = "file:%s/%s;org.apache.hadoop.mapreduce.lib.input.TextInputFormat";
+
+    createFile(
+        testFolder,
+        "test/2015/01/01/00/file1", "test/2015/01/01/10/file2", "test/2015/01/01/18/file3", "test/2015/01/02/00/file1",
+        "test/2015/01/02/03/file2", "test/2015/01/02/05/file3", "test/2015/01/02/07/file4", "test/2015/01/02/09/file5"
+    );
+
+    granularityPathSpec.setInputPath(testFolder.getRoot().getPath() + "/test");
+
+    granularityPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
+
+    String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
+
+    String expected = Joiner.on(",").join(
+        Lists.newArrayList(
+            String.format(formatStr, testFolder.getRoot(), "test/2015/01/01/18/file3"),
+            String.format(formatStr, testFolder.getRoot(), "test/2015/01/02/00/file1"),
+            String.format(formatStr, testFolder.getRoot(), "test/2015/01/02/03/file2")
+        )
+    );
+
+    Assert.assertEquals("Did not find expected input paths", expected, actual);
+  }
+
+  private void createFile(TemporaryFolder folder, String... files) throws IOException
+  {
+    for (String file : files) {
+      String[] split = file.split("/");
+      Assert.assertTrue(split.length > 1);
+      folder.newFolder(Arrays.copyOfRange(split, 0, split.length - 1));
+      folder.newFile(file);
+    }
   }
 
   private void testSerde(
