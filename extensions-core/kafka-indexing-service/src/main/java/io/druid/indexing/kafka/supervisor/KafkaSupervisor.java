@@ -978,11 +978,11 @@ public class KafkaSupervisor implements Supervisor
         // metadata store (which will have advanced if we succeeded in publishing and will remain the same if publishing
         // failed and we need to re-ingest)
         return Futures.transform(
-            stopTasksInGroup(taskGroup), new Function<Void, Map<Integer, Long>>()
+            stopTasksInGroup(taskGroup), new Function<Object, Map<Integer, Long>>()
             {
               @Nullable
               @Override
-              public Map<Integer, Long> apply(@Nullable Void input)
+              public Map<Integer, Long> apply(@Nullable Object input)
               {
                 return null;
               }
@@ -1086,7 +1086,7 @@ public class KafkaSupervisor implements Supervisor
    */
   private void checkPendingCompletionTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<Void>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = Lists.newArrayList();
 
     for (Map.Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
@@ -1166,7 +1166,7 @@ public class KafkaSupervisor implements Supervisor
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<Void>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = Lists.newArrayList();
     Iterator<Map.Entry<Integer, TaskGroup>> iTaskGroups = taskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
       Map.Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
@@ -1411,7 +1411,7 @@ public class KafkaSupervisor implements Supervisor
     return generateSequenceName(taskGroupId).equals(taskSequenceName);
   }
 
-  private ListenableFuture<Void> stopTasksInGroup(TaskGroup taskGroup)
+  private ListenableFuture<?> stopTasksInGroup(TaskGroup taskGroup)
   {
     if (taskGroup == null) {
       return Futures.immediateFuture(null);
@@ -1424,7 +1424,7 @@ public class KafkaSupervisor implements Supervisor
       }
     }
 
-    return asVoidFuture(Futures.successfulAsList(futures));
+    return Futures.successfulAsList(futures);
   }
 
   private ListenableFuture<Void> stopTask(final String id, final boolean publish)
@@ -1577,20 +1577,5 @@ public class KafkaSupervisor implements Supervisor
         notices.add(new RunNotice());
       }
     };
-  }
-
-  private ListenableFuture<Void> asVoidFuture(ListenableFuture<?> future)
-  {
-    return Futures.transform(
-        future, new Function<Object, Void>()
-        {
-          @Nullable
-          @Override
-          public Void apply(@Nullable Object input)
-          {
-            return null;
-          }
-        }
-    );
   }
 }
