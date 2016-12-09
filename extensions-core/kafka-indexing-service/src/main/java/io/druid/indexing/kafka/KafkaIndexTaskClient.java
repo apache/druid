@@ -76,6 +76,9 @@ public class KafkaIndexTaskClient
     }
   }
 
+  public static final int MAX_RETRY_WAIT_SECONDS = 10;
+
+  private static final int MIN_RETRY_WAIT_SECONDS = 2;
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTaskClient.class);
   private static final String BASE_PATH = "/druid/worker/v1/chat";
   private static final int TASK_MISMATCH_RETRY_DELAY_SECONDS = 5;
@@ -437,8 +440,8 @@ public class KafkaIndexTaskClient
     // the middle of persisting to disk and doesn't respond immediately.
     return new RetryPolicyFactory(
         new RetryPolicyConfig()
-            .setMinWait(Period.seconds(2))
-            .setMaxWait(Period.seconds(10))
+            .setMinWait(Period.seconds(MIN_RETRY_WAIT_SECONDS))
+            .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
             .setMaxRetryCount(numRetries)
     );
   }
