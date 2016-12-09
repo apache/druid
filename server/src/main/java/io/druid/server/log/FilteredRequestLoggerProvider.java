@@ -36,31 +36,31 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   private RequestLoggerProvider delegate = null;
 
   @JsonProperty
-  private long queryTimeThreshold = 0;
+  private long queryTimeThresholdMs = 0;
 
   @Override
   public RequestLogger get()
   {
-    return new FilteredRequestLogger(delegate.get(), queryTimeThreshold);
+    return new FilteredRequestLogger(delegate.get(), queryTimeThresholdMs);
   }
 
   public static class FilteredRequestLogger implements RequestLogger
   {
 
-    private final long queryTimeThreshold;
+    private final long queryTimeThresholdMs;
     private final RequestLogger logger;
 
-    public FilteredRequestLogger(RequestLogger logger, long queryTimeThreshold)
+    public FilteredRequestLogger(RequestLogger logger, long queryTimeThresholdMs)
     {
       this.logger = logger;
-      this.queryTimeThreshold = queryTimeThreshold;
+      this.queryTimeThresholdMs = queryTimeThresholdMs;
     }
 
     @Override
     public void log(RequestLogLine requestLogLine) throws IOException
     {
       Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
-      if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThreshold) {
+      if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
         logger.log(requestLogLine);
       }
     }

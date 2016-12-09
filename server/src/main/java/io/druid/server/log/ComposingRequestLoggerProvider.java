@@ -22,11 +22,13 @@ package io.druid.server.log;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.server.RequestLogLine;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,28 +38,20 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
 {
   @JsonProperty
   @NotNull
-  private List<RequestLoggerProvider> requestLoggers = Lists.newArrayList();
+  private final List<RequestLoggerProvider> loggerProviders = Lists.newArrayList();
 
   @Override
   public RequestLogger get()
   {
-    final List<RequestLogger> loggers = Lists.newArrayList(Lists.transform(
-        requestLoggers,
-        new Function<RequestLoggerProvider, RequestLogger>()
-        {
-          @Override
-          public RequestLogger apply(RequestLoggerProvider input)
-          {
-            return input.get();
-          }
-        }
-    ));
+    final List<RequestLogger> loggers = new ArrayList<>();
+    for (RequestLoggerProvider loggerProvider : loggerProviders) {
+      loggers.add(loggerProvider.get());
+    }
     return new ComposingRequestLogger(loggers);
   }
 
   public static class ComposingRequestLogger implements RequestLogger
   {
-
     private final List<RequestLogger> loggers;
 
     public ComposingRequestLogger(List<RequestLogger> loggers)
@@ -68,12 +62,12 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
     @Override
     public void log(RequestLogLine requestLogLine) throws IOException
     {
-      IOException exception = null;
+      Exception exception = null;
       for (RequestLogger logger : loggers) {
         try {
           logger.log(requestLogLine);
         }
-        catch (IOException e) {
+        catch (Exception e) {
           if (exception == null) {
             exception = e;
           } else {
@@ -82,7 +76,11 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
         }
       }
       if (exception != null) {
-        throw exception;
+        if (exception instanceof IOException) {
+          throw (IOException) exception;
+        } else {
+          throw Throwables.propagate(exception);
+        }
       }
     }
   }
