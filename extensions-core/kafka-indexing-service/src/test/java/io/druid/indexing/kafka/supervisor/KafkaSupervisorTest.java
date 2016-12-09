@@ -513,8 +513,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null
         )
     ).anyTimes();
+    expect(taskClient.stopAsync("id1", false)).andReturn(Futures.immediateFuture(true));
+    expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(false));
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-    taskQueue.shutdown("id1");
     taskQueue.shutdown("id3");
 
     expect(taskQueue.add(anyObject(Task.class))).andReturn(true);
@@ -596,8 +597,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null
         )
     ).anyTimes();
+    expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(true));
+    expect(taskClient.stopAsync("id4", false)).andReturn(Futures.immediateFuture(false));
+    expect(taskClient.stopAsync("id5", false)).andReturn(Futures.immediateFuture((Boolean) null));
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-    taskQueue.shutdown("id3");
     taskQueue.shutdown("id4");
     taskQueue.shutdown("id5");
     replayAll();
