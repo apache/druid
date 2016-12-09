@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.druid.client.BrokerSegmentWatcherConfig;
 import io.druid.client.BrokerServerView;
@@ -39,25 +38,19 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-<<<<<<< HEAD
 import io.druid.java.util.common.logger.Logger;
-=======
->>>>>>> 5c43f3c... Add metrics for Query Count statistics
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.BrokerQueryResource;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
-<<<<<<< HEAD
-=======
-import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.QueryResource;
->>>>>>> 5c43f3c... Add metrics for Query Count statistics
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 
