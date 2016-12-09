@@ -97,9 +97,9 @@ public class QueryResource implements QueryCountStatsProvider
   protected final RequestLogger requestLogger;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
-  private AtomicLong successfulQueryCount = new AtomicLong();
-  private AtomicLong failedQueryCount = new AtomicLong();
-  private AtomicLong interruptedQueryCount = new AtomicLong();
+  private final AtomicLong successfulQueryCount = new AtomicLong();
+  private final AtomicLong failedQueryCount = new AtomicLong();
+  private final AtomicLong interruptedQueryCount = new AtomicLong();
 
   @Inject
   public QueryResource(
