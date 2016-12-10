@@ -111,6 +111,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/handoff/count`|Number of handoffs that happened.|dataSource.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
 |`ingest/sink/count`|Number of sinks not handoffed.|dataSource.|1~3|
 |`ingest/events/messageGap`|Time gap between the data time in event and current system time.|dataSource.|Greater than 0, depends on the time carried in event |
+|`ingest/events/sourceGap`|Time gap between the time when the event written into source(like kafka 0.10 https://issues.apache.org/jira/browse/KAFKA-2511) and current system time.|dataSource.|Greater than 0, depends on the time when the event written into source|
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0. 
 
