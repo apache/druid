@@ -22,7 +22,6 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
-
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
@@ -31,7 +30,8 @@ import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
+import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
@@ -103,6 +103,15 @@ public class RemoteTaskRunnerTestUtils
 
   RemoteTaskRunner makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
   {
+    NoopProvisioningStrategy<WorkerTaskRunner> resourceManagement = new NoopProvisioningStrategy<>();
+    return makeRemoteTaskRunner(config, resourceManagement);
+  }
+
+  public RemoteTaskRunner makeRemoteTaskRunner(
+      RemoteTaskRunnerConfig config,
+      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
+  )
+  {
     RemoteTaskRunner remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         config,
@@ -121,7 +130,7 @@ public class RemoteTaskRunnerTestUtils
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
-        new NoopResourceManagementStrategy<WorkerTaskRunner>()
+        provisioningStrategy
     );
 
     remoteTaskRunner.start();

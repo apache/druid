@@ -19,25 +19,43 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-import io.druid.indexing.overlord.TaskRunner;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
+import org.joda.time.Period;
 
-public class NoopResourceManagementStrategy<T extends TaskRunner> implements ResourceManagementStrategy<T>
+/**
+ */
+public class ProvisioningSchedulerConfig
 {
-  @Override
-  public void startManagement(T runner)
-  {
+  @JsonProperty
+  private boolean doAutoscale = false;
 
+  @JsonProperty
+  private Period provisionPeriod = new Period("PT1M");
+
+  @JsonProperty
+  private Period terminatePeriod = new Period("PT5M");
+
+  @JsonProperty
+  private DateTime originTime = new DateTime("2012-01-01T00:55:00.000Z");
+
+  public boolean isDoAutoscale()
+  {
+    return doAutoscale;
   }
 
-  @Override
-  public void stopManagement()
+  public Period getProvisionPeriod()
   {
-
+    return provisionPeriod;
   }
 
-  @Override
-  public ScalingStats getStats()
+  public Period getTerminatePeriod()
   {
-    return null;
+    return terminatePeriod;
+  }
+
+  public DateTime getOriginTime()
+  {
+    return originTime;
   }
 }

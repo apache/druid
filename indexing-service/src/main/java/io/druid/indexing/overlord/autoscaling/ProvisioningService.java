@@ -19,43 +19,28 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.DateTime;
-import org.joda.time.Period;
+import java.io.Closeable;
 
 /**
+ * The ProvisioningService decides if worker nodes should be provisioned or terminated
+ * based on the available tasks in the system and the state of the workers in the system.
+ *
+ * ProvisioningService is tied to the task runner.
+ *
+ * @see ProvisioningStrategy#makeProvisioningService
  */
-public class ResourceManagementSchedulerConfig
+public interface ProvisioningService extends Closeable
 {
-  @JsonProperty
-  private boolean doAutoscale = false;
+  /**
+   * Should be called from TaskRunner's lifecycle stop
+   */
+  @Override
+  void close();
 
-  @JsonProperty
-  private Period provisionPeriod = new Period("PT1M");
-
-  @JsonProperty
-  private Period terminatePeriod = new Period("PT5M");
-
-  @JsonProperty
-  private DateTime originTime = new DateTime("2012-01-01T00:55:00.000Z");
-
-  public boolean isDoAutoscale()
-  {
-    return doAutoscale;
-  }
-
-  public Period getProvisionPeriod()
-  {
-    return provisionPeriod;
-  }
-
-  public Period getTerminatePeriod()
-  {
-    return terminatePeriod;
-  }
-
-  public DateTime getOriginTime()
-  {
-    return originTime;
-  }
+  /**
+   * Get any interesting stats related to scaling
+   *
+   * @return The ScalingStats or `null` if nothing of interest
+   */
+  ScalingStats getStats();
 }

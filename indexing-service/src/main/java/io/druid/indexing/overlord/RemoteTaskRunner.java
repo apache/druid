@@ -57,7 +57,8 @@ import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ProvisioningService;
+import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -176,7 +177,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final ListeningScheduledExecutorService cleanupExec;
 
   private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
-  private final ResourceManagementStrategy<WorkerTaskRunner> resourceManagement;
+  private final ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy;
+  private ProvisioningService provisioningService;
 
   public RemoteTaskRunner(
       ObjectMapper jsonMapper,
@@ -187,7 +189,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ScheduledExecutorService cleanupExec,
-      ResourceManagementStrategy<WorkerTaskRunner> resourceManagement
+      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
   )
   {
     this.jsonMapper = jsonMapper;
@@ -204,7 +206,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
     this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
-    this.resourceManagement = resourceManagement;
+    this.provisioningStrategy = provisioningStrategy;
     this.runPendingTasksExec = Execs.multiThreaded(
         config.getPendingTasksRunnerNumThreads(),
         "rtr-pending-tasks-runner-%d"
@@ -323,7 +325,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
       }
       scheduleBlackListedNodesCleanUp();
-      resourceManagement.startManagement(this);
+      provisioningService = provisioningStrategy.makeProvisioningService(this);
       started = true;
     }
     catch (Exception e) {
@@ -341,7 +343,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
       started = false;
 
-      resourceManagement.stopManagement();
+      provisioningService.close();
 
       Closer closer = Closer.create();
       for (ZkWorker zkWorker : zkWorkers.values()) {
@@ -446,7 +448,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Optional<ScalingStats> getScalingStats()
   {
-    return Optional.fromNullable(resourceManagement.getStats());
+    return Optional.fromNullable(provisioningService.getStats());
   }
 
   public ZkWorker findWorkerRunningTask(String taskId)

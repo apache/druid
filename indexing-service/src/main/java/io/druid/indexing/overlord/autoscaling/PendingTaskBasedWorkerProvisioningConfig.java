@@ -24,7 +24,7 @@ import org.joda.time.Period;
 
 /**
  */
-public class PendingTaskBasedWorkerResourceManagementConfig extends SimpleWorkerResourceManagementConfig
+public class PendingTaskBasedWorkerProvisioningConfig extends SimpleWorkerProvisioningConfig
 {
   @JsonProperty
   private int maxScalingStep = 10;
@@ -35,37 +35,37 @@ public class PendingTaskBasedWorkerResourceManagementConfig extends SimpleWorker
     return maxScalingStep;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setMaxScalingStep(int maxScalingStep)
+  public PendingTaskBasedWorkerProvisioningConfig setMaxScalingStep(int maxScalingStep)
   {
     this.maxScalingStep = maxScalingStep;
     return this;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setWorkerIdleTimeout(Period workerIdleTimeout)
+  public PendingTaskBasedWorkerProvisioningConfig setWorkerIdleTimeout(Period workerIdleTimeout)
   {
     super.setWorkerIdleTimeout(workerIdleTimeout);
     return this;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setMaxScalingDuration(Period maxScalingDuration)
+  public PendingTaskBasedWorkerProvisioningConfig setMaxScalingDuration(Period maxScalingDuration)
   {
     super.setMaxScalingDuration(maxScalingDuration);
     return this;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setNumEventsToTrack(int numEventsToTrack)
+  public PendingTaskBasedWorkerProvisioningConfig setNumEventsToTrack(int numEventsToTrack)
   {
     super.setNumEventsToTrack(numEventsToTrack);
     return this;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setWorkerVersion(String workerVersion)
+  public PendingTaskBasedWorkerProvisioningConfig setWorkerVersion(String workerVersion)
   {
     super.setWorkerVersion(workerVersion);
     return this;
   }
 
-  public PendingTaskBasedWorkerResourceManagementConfig setPendingTaskTimeout(Period pendingTaskTimeout)
+  public PendingTaskBasedWorkerProvisioningConfig setPendingTaskTimeout(Period pendingTaskTimeout)
   {
     super.setPendingTaskTimeout(pendingTaskTimeout);
     return this;
