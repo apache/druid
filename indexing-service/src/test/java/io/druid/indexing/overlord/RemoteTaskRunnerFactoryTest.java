@@ -133,11 +133,11 @@ public class RemoteTaskRunnerFactoryTest
             provisioningSchedulerConfig
         )
     );
-    Assert.assertEquals(1, executorCount.get());
+    Assert.assertEquals(0, executorCount.get());
     RemoteTaskRunner remoteTaskRunner1 = factory.build();
-    Assert.assertEquals(2, executorCount.get());
+    Assert.assertEquals(1, executorCount.get());
     RemoteTaskRunner remoteTaskRunner2 = factory.build();
-    Assert.assertEquals(3, executorCount.get());
+    Assert.assertEquals(2, executorCount.get());
 
   }
 }
