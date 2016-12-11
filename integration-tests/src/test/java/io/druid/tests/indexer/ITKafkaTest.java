@@ -158,7 +158,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     LOG.info("kafka host: [%s]", config.getKafkaHost());
     properties.put("serializer.class", "kafka.serializer.StringEncoder");
     properties.put("request.required.acks", "1");
-    properties.put("producer.type", "async");
+    properties.put("producer.type", "sync"); // use sync producer for deterministic test
     ProducerConfig producerConfig = new ProducerConfig(properties);
     Producer<String, String> producer = new Producer<String, String>(producerConfig);
 

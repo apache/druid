@@ -21,10 +21,96 @@ package io.druid.curator.cache;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.utils.CloseableExecutorService;
+import org.apache.curator.utils.ThreadUtils;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  */
-public interface PathChildrenCacheFactory
+public class PathChildrenCacheFactory
 {
-  public PathChildrenCache make(CuratorFramework curator, String path);
+  private final boolean cacheData;
+  private final boolean compressed;
+  private final ExecutorService exec;
+  private final boolean shutdownExecutorOnClose;
+
+  private PathChildrenCacheFactory(
+      boolean cacheData,
+      boolean compressed,
+      ExecutorService exec,
+      boolean shutdownExecutorOnClose
+  )
+  {
+    this.cacheData = cacheData;
+    this.compressed = compressed;
+    this.exec = exec;
+    this.shutdownExecutorOnClose = shutdownExecutorOnClose;
+  }
+
+  public PathChildrenCache make(CuratorFramework curator, String path)
+  {
+    return new PathChildrenCache(
+        curator,
+        path,
+        cacheData,
+        compressed,
+        new CloseableExecutorService(exec, shutdownExecutorOnClose)
+    );
+  }
+
+  public static class Builder
+  {
+    private static final ThreadFactory defaultThreadFactory = ThreadUtils.newThreadFactory("PathChildrenCache");
+
+    private boolean cacheData;
+    private boolean compressed;
+    private ExecutorService exec;
+    private boolean shutdownExecutorOnClose;
+
+    public Builder()
+    {
+      cacheData = true;
+      compressed = false;
+      exec = null;
+      shutdownExecutorOnClose = true;
+    }
+
+    public Builder withCacheData(boolean cacheData)
+    {
+      this.cacheData = cacheData;
+      return this;
+    }
+
+    public Builder withCompressed(boolean compressed)
+    {
+      this.compressed = compressed;
+      return this;
+    }
+
+    public Builder withExecutorService(ExecutorService exec)
+    {
+      this.exec = exec;
+      return this;
+    }
+
+    public Builder withShutdownExecutorOnClose(boolean shutdownExecutorOnClose)
+    {
+      this.shutdownExecutorOnClose = shutdownExecutorOnClose;
+      return this;
+    }
+
+    public PathChildrenCacheFactory build()
+    {
+      ExecutorService exec = this.exec != null ? this.exec : createDefaultExecutor();
+      return new PathChildrenCacheFactory(cacheData, compressed, exec, shutdownExecutorOnClose);
+    }
+
+    public static ExecutorService createDefaultExecutor()
+    {
+      return Executors.newSingleThreadExecutor(defaultThreadFactory);
+    }
+  }
 }

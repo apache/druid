@@ -22,7 +22,6 @@ package io.druid.server.log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -49,8 +48,8 @@ public class FileRequestLogger implements RequestLogger
 
   private final Object lock = new Object();
 
-  private volatile DateTime currentDay;
-  private volatile OutputStreamWriter fileWriter;
+  private DateTime currentDay;
+  private OutputStreamWriter fileWriter;
 
   public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
@@ -67,12 +66,14 @@ public class FileRequestLogger implements RequestLogger
 
       MutableDateTime mutableDateTime = new DateTime().toMutableDateTime();
       mutableDateTime.setMillisOfDay(0);
-      currentDay = mutableDateTime.toDateTime();
+      synchronized (lock) {
+        currentDay = mutableDateTime.toDateTime();
 
-      fileWriter = new OutputStreamWriter(
-          new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-          Charsets.UTF_8
-      );
+        fileWriter = new OutputStreamWriter(
+            new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+            Charsets.UTF_8
+        );
+      }
       long nextDay = currentDay.plusDays(1).getMillis();
       Duration delay = new Duration(nextDay - new DateTime().getMillis());
 
@@ -85,10 +86,9 @@ public class FileRequestLogger implements RequestLogger
             @Override
             public ScheduledExecutors.Signal call()
             {
-              currentDay = currentDay.plusDays(1);
-
               try {
                 synchronized (lock) {
+                  currentDay = currentDay.plusDays(1);
                   CloseQuietly.close(fileWriter);
                   fileWriter = new OutputStreamWriter(
                       new FileOutputStream(new File(baseDir, currentDay.toString()), true),

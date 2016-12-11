@@ -19,18 +19,13 @@
 
 package io.druid.metadata;
 
-import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.java.util.common.lifecycle.LifecycleStop;
-
 public abstract class MetadataStorage
 {
-  @LifecycleStart
   public void start()
   {
     // do nothing
   }
 
-  @LifecycleStop
   public void stop()
   {
     // do nothing

@@ -59,6 +59,7 @@
 
     <properties>
         <apache.curator.version>2.11.0</apache.curator.version>
+        <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
@@ -128,12 +129,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>1.0.5</version>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>bytebuffer-collections</artifactId>
-                <version>0.2.5</version>
+                <version>1.0.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -253,7 +249,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>16.0.1</version>
+                <version>${guava.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -574,6 +570,21 @@
                 <version>7.0.13</version>
             </dependency>
             <dependency>
+                <groupId>net.sf.opencsv</groupId>
+                <artifactId>opencsv</artifactId>
+                <version>2.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+                <version>2.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.6.4</version>
+            </dependency>
+            <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>3.3</version>
@@ -659,6 +670,12 @@
                 <groupId>pl.pragmatists</groupId>
                 <artifactId>JUnitParams</artifactId>
                 <version>1.0.4</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava-testlib</artifactId>
+                <version>${guava.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

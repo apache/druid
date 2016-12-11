@@ -19,7 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -56,7 +55,7 @@ import java.util.List;
  * of pointers) it still helps significantly on initialization times. Otherwise, we'd need to clear the used bits of
  * each bucket in the entire buffer, which is a lot of writes if the buckets are small.
  */
-public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class BufferGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(BufferGrouper.class);
 
@@ -135,12 +134,13 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
       return false;
     }
 
-    Preconditions.checkArgument(
-        keyBuffer.remaining() == keySize,
-        "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-        keyBuffer.remaining(),
-        keySize
-    );
+    if (keyBuffer.remaining() != keySize) {
+      throw new IAE(
+          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
+          keyBuffer.remaining(),
+          keySize
+      );
+    }
 
     int bucket = findBucket(
         tableBuffer,
@@ -265,7 +265,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
         }
       };
 
-      final KeyComparator comparator = keySerde.comparator();
+      final KeyComparator comparator = keySerde.bufferComparator();
 
       // Sort offsets in-place.
       Collections.sort(

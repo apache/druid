@@ -35,7 +35,7 @@ package io.druid.query.filter;
 public interface ValueMatcherFactory
 {
   /**
-   * Create a ValueMatcher that compares row values to the provided value.
+   * Create a ValueMatcher that compares row values to the provided string.
    *
    * An implementation of this method should be able to handle dimensions of various types.
    *
@@ -44,8 +44,7 @@ public interface ValueMatcherFactory
    *
    * @return An object that matches row values on the provided value.
    */
-  public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-
+  public ValueMatcher makeValueMatcher(String dimension, String value);
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.

@@ -24,11 +24,11 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -39,6 +39,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -105,14 +106,14 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(jvmArgsPrepend = "-server", value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 15)
+@Measurement(iterations = 30)
 public class GroupByBenchmark
 {
   @Param({"4"})
   private int numSegments;
 
-  @Param({"4"})
+  @Param({"2", "4"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -127,6 +128,9 @@ public class GroupByBenchmark
   @Param({"v1", "v2"})
   private String defaultStrategy;
 
+  @Param({"all", "day"})
+  private String queryGranularity;
+
   private static final Logger log = new Logger(GroupByBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -137,7 +141,7 @@ public class GroupByBenchmark
   private IncrementalIndex anIncrementalIndex;
   private List<QueryableIndex> queryableIndexes;
 
-  private QueryRunnerFactory factory;
+  private QueryRunnerFactory<Row, GroupByQuery> factory;
 
   private BenchmarkSchemaInfo schemaInfo;
   private GroupByQuery query;
@@ -190,7 +194,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularities.DAY)
+          .setGranularity(QueryGranularity.fromString(queryGranularity))
           .build();
 
       basicQueries.put("A", queryA);
@@ -335,7 +339,7 @@ public class GroupByBenchmark
       @Override
       public long getMaxOnDiskStorage()
       {
-        return 0L;
+        return 1_000_000_000L;
       }
     };
     config.setSingleThreaded(false);
@@ -475,29 +479,17 @@ public class GroupByBenchmark
     }
   }
 
-
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
   {
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
-    QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
-      QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
-          factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, queryableIndexes.get(i))
-      );
-      singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
-    }
-
-    QueryRunner theRunner = toolChest.postMergeQueryDecoration(
-        new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
-            toolChest
-        )
+    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
     );
 
     Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
@@ -506,5 +498,71 @@ public class GroupByBenchmark
     for (Row result : results) {
       blackhole.consume(result);
     }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole) throws Exception
+  {
+    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(executorService, makeMultiRunners())
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    final GroupByQuery spillingQuery = query.withOverriddenContext(
+        ImmutableMap.<String, Object>of("bufferGrouperMaxSize", 4000)
+    );
+    Sequence<Row> queryResult = theRunner.run(spillingQuery, Maps.<String, Object>newHashMap());
+    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+
+    for (Row result : results) {
+      blackhole.consume(result);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndexWithSerde(Blackhole blackhole) throws Exception
+  {
+    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
+    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            new SerializingQueryRunner<>(
+                new DefaultObjectMapper(new SmileFactory()),
+                Row.class,
+                toolChest.mergeResults(
+                    factory.mergeRunners(executorService, makeMultiRunners())
+                )
+            )
+        ),
+        (QueryToolChest) toolChest
+    );
+
+    Sequence<Row> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+
+    for (Row result : results) {
+      blackhole.consume(result);
+    }
+  }
+
+  private List<QueryRunner<Row>> makeMultiRunners()
+  {
+    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    for (int i = 0; i < numSegments; i++) {
+      String segmentName = "qIndex" + i;
+      QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+          factory,
+          segmentName,
+          new QueryableIndexSegment(segmentName, queryableIndexes.get(i))
+      );
+      runners.add(factory.getToolchest().preMergeQueryDecoration(runner));
+    }
+    return runners;
   }
 }

@@ -36,7 +36,6 @@ import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -73,6 +72,8 @@ import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.CascadeExtractionFn;
+import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -88,6 +89,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
@@ -385,6 +387,78 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithOutputNameCollisions()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Duplicate output name[alias]");
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("alias", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+  }
+
+  @Test
+  public void testGroupByWithSortDimsFirst()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setContext(ImmutableMap.<String, Object>of("sortByDimsFirst", true, "groupByStrategy", "v2"))
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
@@ -3243,6 +3317,97 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testDimFilterHavingSpec()
+  {
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
+    final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
+        new AndDimFilter(
+            ImmutableList.of(
+                new OrDimFilter(
+                    ImmutableList.of(
+                        new BoundDimFilter("rows", "2", null, true, false, null, null, StringComparators.NUMERIC),
+                        new SelectorDimFilter("idx", "217", null)
+                    )
+                ),
+                new SelectorDimFilter("__time", String.valueOf(new DateTime("2011-04-01").getMillis()), null)
+            )
+        )
+    );
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(havingSpec);
+
+    final GroupByQuery fullQuery = builder.build();
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
+        ""
+    );
+  }
+
+  @Test
+  public void testDimFilterHavingSpecWithExtractionFns()
+  {
+    String extractionJsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+
+    String extractionJsFn2 = "function(num) { return num + 10; }";
+    ExtractionFn extractionFn2 = new JavaScriptExtractionFn(extractionJsFn2, false, JavaScriptConfig.getDefault());
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
+    final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
+        new OrDimFilter(
+            ImmutableList.of(
+                new BoundDimFilter("rows", "12", null, true, false, null, extractionFn2, StringComparators.NUMERIC),
+                new SelectorDimFilter("idx", "super-217", extractionFn)
+            )
+        )
+    );
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(havingSpec);
+
+    final GroupByQuery fullQuery = builder.build();
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
+        ""
+    );
+  }
+
+  @Test
   public void testMergedHavingSpec()
   {
     List<Row> expectedResults = Arrays.asList(
@@ -4008,7 +4173,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     Column.TIME_COLUMN_NAME,
                     Column.TIME_COLUMN_NAME,
-                    new TimeFormatExtractionFn("EEEE", null, null, null),
+                    new TimeFormatExtractionFn("EEEE", null, null, null, false),
                     null
                 )
             )
@@ -4882,8 +5047,8 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final DimFilter fridayFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null));
-    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"),  new TimeFormatExtractionFn("d", null, null, null));
+    final DimFilter fridayFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null, false));
+    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"),  new TimeFormatExtractionFn("d", null, null, null, false));
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
@@ -4978,23 +5143,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    // v1 strategy would throw an exception for this because it calls AggregatorFactory.getRequiredColumns to get
-    // aggregator for all fields to build the inner query result incremental index. In this case, quality is a string
-    // field but getRequiredColumn() returned a Cardinality aggregator for it, which has type hyperUnique.
-    // The "quality" column is interpreted as a dimension because it appears in the dimension list of the
-    // MapBasedInputRows from the subquery, but the COMPLEX type from the agg overrides the actual string type.
-    // COMPLEX is not currently supported as a dimension type, so IAE is thrown. Even if it were, the actual string
-    // values in the "quality" column could not be interpreted as hyperUniques.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(IAE.class);
-      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    } else {
-      List<Row> expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9)
-      );
-      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-      TestHelper.assertExpectedObjects(expectedResults, results, "");
-    }
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9)
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -5079,43 +5232,29 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    // v1 strategy would throw an exception for this because it calls AggregatorFactory.getRequiredColumns to get
-    // aggregator for all fields to build the inner query result incremental index. In this case, market is a string
-    // field but getRequiredColumn() returned a Javascript aggregator for it, which has type float.
-    // The "market" column is interpreted as a dimension because it appears in the dimension list of the
-    // MapBasedInputRows from the subquery, but the float type from the agg overrides the actual string type.
-    // Float is not currently supported as a dimension type, so IAE is thrown. Even if it were, a ParseException
-    // would occur because the "market" column really contains non-numeric values.
-    // Additionally, the V1 strategy always uses "combining" aggregator factories (meant for merging) on the subquery,
-    // which does not work for this particular javascript agg.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(IAE.class);
-      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    } else {
-      List<Row> expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "js_agg", 139D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "business", "js_agg", 122D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "entertainment", "js_agg", 162D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "health", "js_agg", 124D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "mezzanine", "js_agg", 2893D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "news", "js_agg", 125D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "premium", "js_agg", 2923D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "technology", "js_agg", 82D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "travel", "js_agg", 123D),
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "js_agg", 139D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "business", "js_agg", 122D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "entertainment", "js_agg", 162D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "health", "js_agg", 124D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "mezzanine", "js_agg", 2893D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "news", "js_agg", 125D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "premium", "js_agg", 2923D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "technology", "js_agg", 82D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "travel", "js_agg", 123D),
 
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "automotive", "js_agg", 151D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "business", "js_agg", 116D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "entertainment", "js_agg", 170D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "health", "js_agg", 117D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "mezzanine", "js_agg", 2470D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "news", "js_agg", 118D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "premium", "js_agg", 2528D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "technology", "js_agg", 101D),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "travel", "js_agg", 130D)
-      );
-      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-      TestHelper.assertExpectedObjects(expectedResults, results, "");
-    }
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "automotive", "js_agg", 151D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "business", "js_agg", 116D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "entertainment", "js_agg", 170D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "health", "js_agg", 117D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "mezzanine", "js_agg", 2470D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "news", "js_agg", 118D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "premium", "js_agg", 2528D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "technology", "js_agg", 101D),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "travel", "js_agg", 130D)
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -5366,7 +5505,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     Column.TIME_COLUMN_NAME,
                     "dayOfWeek",
-                    new TimeFormatExtractionFn("EEEE", null, null, null),
+                    new TimeFormatExtractionFn("EEEE", null, null, null, false),
                     null
                 )
             )
@@ -5571,6 +5710,268 @@ public class GroupByQueryRunnerTest
             28L,
             "addRowsIndexConstant",
             29014.5751953125
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+
+  @Test
+  public void testGroupByTimeExtractionWithNulls()
+  {
+    final DimExtractionFn nullWednesdays = new DimExtractionFn()
+    {
+      @Override
+      public String apply(String dimValue)
+      {
+        if ("Wednesday".equals(dimValue)) {
+          return null;
+        } else {
+          return dimValue;
+        }
+      }
+
+      @Override
+      public byte[] getCacheKey()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+
+      @Override
+      public ExtractionType getExtractionType()
+      {
+        return ExtractionType.MANY_TO_ONE;
+      }
+    };
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(
+            Lists.newArrayList(
+                new DefaultDimensionSpec("market", "market"),
+                new ExtractionDimensionSpec(
+                    Column.TIME_COLUMN_NAME,
+                    "dayOfWeek",
+                    new CascadeExtractionFn(
+                        new ExtractionFn[]{
+                            new TimeFormatExtractionFn("EEEE", null, null, null, false),
+                            nullWednesdays,
+                        }
+                    ),
+                    null
+                )
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.indexDoubleSum
+            )
+        )
+        .setPostAggregatorSpecs(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDimFilter(
+            new OrDimFilter(
+                Arrays.<DimFilter>asList(
+                    new SelectorDimFilter("market", "spot", null),
+                    new SelectorDimFilter("market", "upfront", null)
+                )
+            )
+        )
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            null,
+            "market",
+            "spot",
+            "index",
+            14271.368591308594,
+            "rows",
+            126L,
+            "addRowsIndexConstant",
+            14398.368591308594
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Friday",
+            "market",
+            "spot",
+            "index",
+            13219.574157714844,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13337.574157714844
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Monday",
+            "market",
+            "spot",
+            "index",
+            13557.738830566406,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13675.738830566406
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Saturday",
+            "market",
+            "spot",
+            "index",
+            13493.751281738281,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13611.751281738281
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Sunday",
+            "market",
+            "spot",
+            "index",
+            13585.541015625,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13703.541015625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Thursday",
+            "market",
+            "spot",
+            "index",
+            14279.127197265625,
+            "rows",
+            126L,
+            "addRowsIndexConstant",
+            14406.127197265625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Tuesday",
+            "market",
+            "spot",
+            "index",
+            13199.471435546875,
+            "rows",
+            117L,
+            "addRowsIndexConstant",
+            13317.471435546875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            null,
+            "market",
+            "upfront",
+            "index",
+            28985.5751953125,
+            "rows",
+            28L,
+            "addRowsIndexConstant",
+            29014.5751953125
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Friday",
+            "market",
+            "upfront",
+            "index",
+            27297.8623046875,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            27324.8623046875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Monday",
+            "market",
+            "upfront",
+            "index",
+            27619.58447265625,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            27646.58447265625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Saturday",
+            "market",
+            "upfront",
+            "index",
+            27820.83154296875,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            27847.83154296875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Sunday",
+            "market",
+            "upfront",
+            "index",
+            24791.223876953125,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            24818.223876953125
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Thursday",
+            "market",
+            "upfront",
+            "index",
+            28562.748901367188,
+            "rows",
+            28L,
+            "addRowsIndexConstant",
+            28591.748901367188
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "dayOfWeek",
+            "Tuesday",
+            "market",
+            "upfront",
+            "index",
+            26968.280639648438,
+            "rows",
+            26L,
+            "addRowsIndexConstant",
+            26995.280639648438
         )
     );
 

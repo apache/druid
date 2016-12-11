@@ -213,8 +213,8 @@ public class HadoopDruidIndexerConfig
     return retVal;
   }
 
-  private volatile HadoopIngestionSpec schema;
-  private volatile PathSpec pathSpec;
+  private HadoopIngestionSpec schema;
+  private PathSpec pathSpec;
   private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final QueryGranularity rollupGran;
@@ -436,6 +436,13 @@ public class HadoopDruidIndexerConfig
                               .bucketIntervals()
                               .orNull()
     );
+  }
+
+  public List<Interval> getInputIntervals()
+  {
+    return schema.getDataSchema()
+                 .getGranularitySpec()
+                 .inputIntervals();
   }
 
   public Optional<Iterable<Bucket>> getAllBuckets()

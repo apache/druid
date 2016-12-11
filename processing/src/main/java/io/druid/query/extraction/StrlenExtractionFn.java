@@ -17,54 +17,45 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.query.extraction;
 
-/**
- *  @deprecated this class uses expensive volatile counter inside, but it is not thread-safe. It is going to be removed
- *  in the future.
- */
+import com.fasterxml.jackson.annotation.JsonCreator;
 
-@Deprecated
-public class LimitedYieldingAccumulator<OutType, T> extends YieldingAccumulator<OutType, T>
+public class StrlenExtractionFn extends DimExtractionFn
 {
-  private final int limit;
-  private final YieldingAccumulator<OutType, T> delegate;
+  private static final StrlenExtractionFn INSTANCE = new StrlenExtractionFn();
 
-  private volatile int count = 0;
-
-  public LimitedYieldingAccumulator(
-      YieldingAccumulator<OutType, T> delegate, int limit
-  )
+  private StrlenExtractionFn()
   {
-    this.limit = limit;
-    this.delegate = delegate;
+  }
+
+  @JsonCreator
+  public static StrlenExtractionFn instance()
+  {
+    return INSTANCE;
   }
 
   @Override
-  public void yield()
+  public String apply(String value)
   {
-    delegate.yield();
+    return String.valueOf(value == null ? 0 : value.length());
   }
 
   @Override
-  public boolean yielded()
+  public boolean preservesOrdering()
   {
-    return delegate.yielded();
+    return false;
   }
 
   @Override
-  public void reset()
+  public ExtractionType getExtractionType()
   {
-    delegate.reset();
+    return ExtractionType.MANY_TO_ONE;
   }
 
   @Override
-  public OutType accumulate(OutType accumulated, T in)
+  public byte[] getCacheKey()
   {
-    if (count < limit) {
-      count++;
-      return delegate.accumulate(accumulated, in);
-    }
-    return accumulated;
+    return new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_STRLEN};
   }
 }

@@ -16,19 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.server.coordinator;
 
-package io.druid.java.util.common;
+import com.google.common.util.concurrent.ListeningExecutorService;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Properties;
-
-public class Props {
-
-  public static Properties fromFilename(String filename) throws IOException {
-    final Properties props = new Properties();
-    props.load(new FileInputStream(filename));
-    return props;
+public class DiskNormalizedCostBalancerStrategyFactory implements BalancerStrategyFactory
+{
+  @Override
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  {
+    return new DiskNormalizedCostBalancerStrategy(exec);
   }
-
 }

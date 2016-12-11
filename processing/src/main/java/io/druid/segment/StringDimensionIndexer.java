@@ -147,12 +147,16 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     public String getMinValue()
     {
-      return minValue;
+      synchronized (lock) {
+        return minValue;
+      }
     }
 
     public String getMaxValue()
     {
-      return maxValue;
+      synchronized (lock) {
+        return maxValue;
+      }
     }
 
     public SortedDimensionDictionary sort()
@@ -532,14 +536,13 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   @Override
   public ValueMatcher makeIndexingValueMatcher(
-      final Comparable matchValue,
+      final String matchValue,
       final IncrementalIndexStorageAdapter.EntryHolder holder,
       final int dimIndex
   )
   {
-    final String value = STRING_TRANSFORMER.apply(matchValue);
-    final int encodedVal = getEncodedValue(value, false);
-    final boolean matchOnNull = Strings.isNullOrEmpty(value);
+    final int encodedVal = getEncodedValue(matchValue, false);
+    final boolean matchOnNull = Strings.isNullOrEmpty(matchValue);
     if (encodedVal < 0 && !matchOnNull) {
       return new BooleanValueMatcher(false);
     }

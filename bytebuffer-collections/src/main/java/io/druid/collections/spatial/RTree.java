@@ -39,7 +39,7 @@ public class RTree
   private final SplitStrategy splitStrategy;
   private final BitmapFactory bitmapFactory;
   private Node root;
-  private volatile int size;
+  private int size;
 
   public RTree(BitmapFactory bitmapFactory)
   {

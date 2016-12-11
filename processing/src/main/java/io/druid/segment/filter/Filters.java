@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
@@ -42,6 +43,7 @@ import io.druid.segment.data.Indexed;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  */
@@ -140,26 +142,42 @@ public class Filters
           {
             return new Iterator<ImmutableBitmap>()
             {
-              int currIndex = 0;
+              private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
+              private int nextIndex = 0;
+              private ImmutableBitmap nextBitmap;
+
+              {
+                findNextBitmap();
+              }
+
+              private void findNextBitmap()
+              {
+                while (nextIndex < bitmapIndexCardinality) {
+                  if (predicate.apply(dimValues.get(nextIndex))) {
+                    nextBitmap = bitmapIndex.getBitmap(nextIndex);
+                    nextIndex++;
+                    return;
+                  }
+                  nextIndex++;
+                }
+                nextBitmap = null;
+              }
 
               @Override
               public boolean hasNext()
               {
-                return currIndex < bitmapIndex.getCardinality();
+                return nextBitmap != null;
               }
 
               @Override
               public ImmutableBitmap next()
               {
-                while (currIndex < bitmapIndex.getCardinality() && !predicate.apply(dimValues.get(currIndex))) {
-                  currIndex++;
+                ImmutableBitmap bitmap = nextBitmap;
+                if (bitmap == null) {
+                  throw new NoSuchElementException();
                 }
-
-                if (currIndex == bitmapIndex.getCardinality()) {
-                  return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
-                }
-
-                return bitmapIndex.getBitmap(currIndex++);
+                findNextBitmap();
+                return bitmap;
               }
 
               @Override
@@ -175,14 +193,14 @@ public class Filters
 
   public static ValueMatcher getLongValueMatcher(
       final LongColumnSelector longSelector,
-      Comparable value
+      final String value
   )
   {
-    if (value == null) {
+    if (Strings.isNullOrEmpty(value)) {
       return new BooleanValueMatcher(false);
     }
 
-    final Long longValue = GuavaUtils.tryParseLong(value.toString());
+    final Long longValue = GuavaUtils.tryParseLong(value);
     if (longValue == null) {
       return new BooleanValueMatcher(false);
     }
@@ -190,7 +208,7 @@ public class Filters
     return new ValueMatcher()
     {
       // store the primitive, so we don't unbox for every comparison
-      final long unboxedLong = longValue.longValue();
+      final long unboxedLong = longValue;
 
       @Override
       public boolean matches()

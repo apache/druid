@@ -481,6 +481,11 @@ public class RemoteTaskRunnerTest
     rtrTestUtils.mockWorkerCompleteSuccessfulTask("worker", task);
   }
 
+  private void mockWorkerCompleteFailedTask(final Task task) throws Exception
+  {
+    rtrTestUtils.mockWorkerCompleteFailedTask("worker", task);
+  }
+
   @Test
   public void testFindLazyWorkerTaskRunning() throws Exception
   {
@@ -607,5 +612,69 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(item3,workItems.get(0));
     Assert.assertEquals(item2, workItems.get(1));
     Assert.assertEquals(item1, workItems.get(2));
+  }
+
+  @Test
+  public void testBlacklistZKWorkers() throws Exception
+  {
+    Period timeoutPeriod = Period.millis(1000);
+    makeWorker();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(timeoutPeriod));
+
+    TestRealtimeTask task1 = new TestRealtimeTask(
+            "realtime1",
+            new TaskResource("realtime1", 1),
+            "foo",
+            TaskStatus.success("realtime1"),
+            jsonMapper
+    );
+    Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+    mockWorkerCompleteFailedTask(task1);
+    Assert.assertTrue(taskFuture1.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
+    Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(1,
+            remoteTaskRunner.findWorkerRunningTask(task1.getId()).getCountinouslyFailedTasksCount());
+
+    TestRealtimeTask task2 = new TestRealtimeTask(
+            "realtime2",
+            new TaskResource("realtime2", 1),
+            "foo",
+            TaskStatus.running("realtime2"),
+            jsonMapper
+    );
+    Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
+    Assert.assertTrue(taskAnnounced(task2.getId()));
+    mockWorkerRunningTask(task2);
+    mockWorkerCompleteFailedTask(task2);
+    Assert.assertTrue(taskFuture2.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isFailure());
+    Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(2,
+            remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
+
+    remoteTaskRunner.cleanBlackListedNode(remoteTaskRunner.findWorkerRunningTask(task2.getId()),
+            System.currentTimeMillis() + 2*timeoutPeriod.toStandardDuration().getMillis());
+
+    // After backOffTime the nodes are whitelisted
+    Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(2,
+            remoteTaskRunner.findWorkerRunningTask(task2.getId()).getCountinouslyFailedTasksCount());
+
+    TestRealtimeTask task3 = new TestRealtimeTask(
+            "realtime3",
+            new TaskResource("realtime3", 1),
+            "foo",
+            TaskStatus.running("realtime3"),
+            jsonMapper
+    );
+    Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
+    Assert.assertTrue(taskAnnounced(task3.getId()));
+    mockWorkerRunningTask(task3);
+    mockWorkerCompleteSuccessfulTask(task3);
+    Assert.assertTrue(taskFuture3.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isSuccess());
+    Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+    Assert.assertEquals(0,
+            remoteTaskRunner.findWorkerRunningTask(task3.getId()).getCountinouslyFailedTasksCount());
   }
 }
