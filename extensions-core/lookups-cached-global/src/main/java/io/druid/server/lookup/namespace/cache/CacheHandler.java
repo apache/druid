@@ -19,10 +19,13 @@
 
 package io.druid.server.lookup.namespace.cache;
 
+import io.druid.java.util.common.logger.Logger;
+
 import java.util.concurrent.ConcurrentMap;
 
 public final class CacheHandler implements AutoCloseable
 {
+  private static final Logger log = new Logger(CacheHandler.class);
 
   private final NamespaceExtractionCacheManager cacheManager;
   private final ConcurrentMap<String, String> cache;
@@ -30,6 +33,7 @@ public final class CacheHandler implements AutoCloseable
 
   CacheHandler(NamespaceExtractionCacheManager cacheManager, ConcurrentMap<String, String> cache, Object id)
   {
+    log.debug("Creating %s", super.toString());
     this.cacheManager = cacheManager;
     this.cache = cache;
     this.id = id;
@@ -42,6 +46,7 @@ public final class CacheHandler implements AutoCloseable
 
   public void close()
   {
+    log.debug("Closing %s", super.toString());
     cacheManager.disposeCache(this);
   }
 }

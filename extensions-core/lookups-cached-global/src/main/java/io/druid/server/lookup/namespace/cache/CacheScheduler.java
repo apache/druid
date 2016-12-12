@@ -144,7 +144,7 @@ public final class CacheScheduler
   public class EntryImpl<T extends ExtractionNamespace> {
 
     private final T namespace;
-    private final EntryImpl<T> entryId = this;
+    private final String asString;
     private final AtomicReference<CacheState> cacheStateHolder = new AtomicReference<CacheState>(NoCache.CACHE_NOT_INITIALIZED);
     private final Future<?> updaterFuture;
     private final Cleaner entryCleaner;
@@ -157,6 +157,7 @@ public final class CacheScheduler
     {
       try {
         this.namespace = namespace;
+        this.asString = String.format("namespace [%s] : %s", namespace, super.toString());
         this.updaterFuture = schedule(namespace);
         this.entryCleaner = createCleaner(entry);
         this.cachePopulator = cachePopulator;
@@ -207,18 +208,18 @@ public final class CacheScheduler
         if (!Thread.currentThread().isInterrupted() && currentCacheState != NoCache.ENTRY_CLOSED) {
           final String currentVersion = currentVersionOrNull(currentCacheState);
           final VersionedCache newVersionedCache =
-              cachePopulator.populateCache(namespace, entryId, currentVersion, CacheScheduler.this);
+              cachePopulator.populateCache(namespace, this, currentVersion, CacheScheduler.this);
           if (newVersionedCache != null) {
             swapCacheState(newVersionedCache);
           } else {
-            log.debug("%s: Version `%s` not updated, the cache is not updated", entryId, currentVersion);
+            log.debug("%s: Version `%s` not updated, the cache is not updated", this, currentVersion);
           }
         }
       }
       catch (Throwable t) {
         try {
           dispose();
-          log.error(t, "Failed to update %s", entryId);
+          log.error(t, "Failed to update %s", this);
         }
         catch (Exception e) {
           t.addSuppressed(e);
@@ -247,7 +248,7 @@ public final class CacheScheduler
         lastCacheState = cacheStateHolder.get();
         if (lastCacheState == NoCache.ENTRY_CLOSED) {
           newVersionedCache.close();
-          log.debug("%s was disposed while the cache was being updated, discarding the update", entryId);
+          log.debug("%s was disposed while the cache was being updated, discarding the update", this);
           return;
         }
       } while (!cacheStateHolder.compareAndSet(lastCacheState, newVersionedCache));
@@ -258,13 +259,13 @@ public final class CacheScheduler
       if (lastCacheState instanceof VersionedCache) {
         ((VersionedCache) lastCacheState).cacheHandler.close();
       }
-      log.debug("%s: the cache was successfully updated", entryId);
+      log.debug("%s: the cache was successfully updated", this);
     }
 
     private void dispose()
     {
       if (!doDispose(true)) {
-        log.error("Cache for %s has already been disposed", entryId);
+        log.error("Cache for %s has already been disposed", this);
       }
       // This Cleaner.clean() call effectively just removes the Cleaner from the internal linked list of all cleaners.
       // It will delegate to EntryDisposer.run() which will be a no-op because entryDisposer.cacheStateHolder is already
@@ -281,7 +282,7 @@ public final class CacheScheduler
       }
       catch (Throwable t) {
         try {
-          log.error(t, "Error while disposing %s", entryId);
+          log.error(t, "Error while disposing %s", this);
         }
         catch (Exception e) {
           t.addSuppressed(e);
@@ -300,7 +301,7 @@ public final class CacheScheduler
       CacheState lastCacheState = cacheStateHolder.getAndSet(NoCache.ENTRY_CLOSED);
       if (lastCacheState != NoCache.ENTRY_CLOSED) {
         try {
-          log.info("Disposing %s", entryId);
+          log.info("Disposing %s", this);
           logExecutionError();
         }
         // Logging (above) is not the main goal of the disposal process, so try to cancel the updaterFuture even if
@@ -329,10 +330,10 @@ public final class CacheScheduler
           updaterFuture.get();
         }
         catch (ExecutionException ee) {
-          log.error(ee.getCause(), "Error in %s", entryId);
+          log.error(ee.getCause(), "Error in %s", this);
         }
         catch (CancellationException ce) {
-          log.error(ce, "Future for %s has already been cancelled", entryId);
+          log.error(ce, "Future for %s has already been cancelled", this);
         }
         catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
@@ -344,7 +345,7 @@ public final class CacheScheduler
     @Override
     public String toString()
     {
-      return String.format("namespace [%s] : %s", namespace, super.toString());
+      return asString;
     }
   }
 
@@ -359,11 +360,13 @@ public final class CacheScheduler
 
   public final class VersionedCache implements CacheState, AutoCloseable
   {
+    final String entryId;
     final CacheHandler cacheHandler;
     final String version;
 
-    private VersionedCache(CacheHandler cacheHandler, String version)
+    private VersionedCache(String entryId, CacheHandler cacheHandler, String version)
     {
+      this.entryId = entryId;
       this.cacheHandler = cacheHandler;
       this.version = version;
     }
@@ -381,6 +384,7 @@ public final class CacheScheduler
     @Override
     public void close()
     {
+      log.debug("Closing version [%s] of %s", version, entryId);
       cacheHandler.close();
     }
   }
@@ -432,12 +436,14 @@ public final class CacheScheduler
    * This method should be used from {@link ExtractionNamespaceCacheFactory#populateCache} implementations, to obtain
    * a {@link VersionedCache} to be returned.
    *
+   * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
+   *                created
    * @param version version, associated with the cache
    */
-  public VersionedCache createVersionedCache(String version)
+  public VersionedCache createVersionedCache(EntryImpl<? extends ExtractionNamespace> entryId, String version)
   {
     updatesStarted.incrementAndGet();
-    return new VersionedCache(cacheManager.createCache(), version);
+    return new VersionedCache(entryId.toString(), cacheManager.createCache(), version);
   }
 
   @VisibleForTesting

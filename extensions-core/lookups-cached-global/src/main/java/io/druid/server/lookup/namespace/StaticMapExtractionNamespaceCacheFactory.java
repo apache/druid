@@ -46,7 +46,7 @@ public final class StaticMapExtractionNamespaceCacheFactory implements Extractio
           "StaticMapExtractionNamespaceCacheFactory could only be configured for a namespace which is scheduled "
           + "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
-    CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(version);
+    CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
     versionedCache.getCache().putAll(namespace.getMap());
     return versionedCache;
   }

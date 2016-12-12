@@ -112,7 +112,7 @@ public final class JDBCExtractionNamespaceCacheFactory
     } else {
       newVersion = String.format("%d", dbQueryStart);
     }
-    final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(newVersion);
+    final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
     final Map<String, String> cache = versionedCache.getCache();
     for (Pair<String, String> pair : pairs) {
       cache.put(pair.lhs, pair.rhs);

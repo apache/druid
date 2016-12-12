@@ -161,7 +161,7 @@ public final class URIExtractionNamespaceCacheFactory implements ExtractionNames
               };
             }
 
-            CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(version);
+            CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
             try {
               final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
                   extractionNamespace.getNamespaceParseSpec()

@@ -138,7 +138,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       {
         Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
         String version = Long.toString(System.currentTimeMillis());
-        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(version);
+        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
         // Don't actually read off disk because TravisCI doesn't like that
         versionedCache.getCache().put(KEY, VALUE);
         return versionedCache;
