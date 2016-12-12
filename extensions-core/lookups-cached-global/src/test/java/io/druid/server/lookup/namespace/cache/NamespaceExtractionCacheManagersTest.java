@@ -73,7 +73,7 @@ public class NamespaceExtractionCacheManagersTest
   @Test(timeout = 30000L)
   public void testRacyCreation() throws Exception
   {
-    final int concurrentThreads = 100;
+    final int concurrentThreads = 10;
     final ListeningExecutorService service = MoreExecutors.listeningDecorator(Execs.multiThreaded(
         concurrentThreads,
         "offheaptest-%s"
