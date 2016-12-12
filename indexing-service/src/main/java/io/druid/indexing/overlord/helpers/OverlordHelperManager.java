@@ -38,7 +38,7 @@ public class OverlordHelperManager
   private final Set<OverlordHelper> helpers;
 
   private volatile ScheduledExecutorService exec;
-  private final Object lock = new Object();
+  private final Object startStopLock = new Object();
   private volatile boolean started = false;
 
   @Inject
@@ -53,7 +53,7 @@ public class OverlordHelperManager
   @LifecycleStart
   public void start()
   {
-    synchronized (lock) {
+    synchronized (startStopLock) {
       if (!started) {
         log.info("OverlordHelperManager is starting.");
 
@@ -75,7 +75,7 @@ public class OverlordHelperManager
   @LifecycleStop
   public void stop()
   {
-    synchronized (lock) {
+    synchronized (startStopLock) {
       if (started) {
         log.info("OverlordHelperManager is stopping.");
         if (exec != null) {

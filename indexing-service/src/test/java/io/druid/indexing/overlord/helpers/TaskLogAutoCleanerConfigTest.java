@@ -49,9 +49,31 @@ public class TaskLogAutoCleanerConfigTest
         ), TaskLogAutoCleanerConfig.class
     );
 
-    Assert.assertEquals(true, config.isEnabled());
+    Assert.assertTrue(config.isEnabled());
     Assert.assertEquals(10, config.getInitialDelay());
     Assert.assertEquals(40, config.getDelay());
     Assert.assertEquals(30, config.getDurationToRetain());
+  }
+
+  @Test
+  public void testSerdeWithDefaults() throws Exception
+  {
+    String json = "{}";
+
+    ObjectMapper mapper = TestUtil.MAPPER;
+
+    TaskLogAutoCleanerConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                json,
+                TaskLogAutoCleanerConfig.class
+            )
+        ), TaskLogAutoCleanerConfig.class
+    );
+
+    Assert.assertFalse(config.isEnabled());
+    Assert.assertTrue(config.getInitialDelay() >= 60000 && config.getInitialDelay() <= 300000);
+    Assert.assertEquals(6*60*60*1000, config.getDelay());
+    Assert.assertEquals(Long.MAX_VALUE, config.getDurationToRetain());
   }
 }

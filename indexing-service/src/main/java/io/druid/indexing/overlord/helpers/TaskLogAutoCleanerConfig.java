@@ -56,11 +56,15 @@ public class TaskLogAutoCleanerConfig
     this.initialDelay = initialDelay == null ? 60000 + new Random().nextInt(4*60000) : initialDelay.longValue();
     this.delay = delay == null ? 6*60*60*1000 : delay.longValue();
     this.durationToRetain = durationToRetain == null ? Long.MAX_VALUE : durationToRetain.longValue();
+
+    Preconditions.checkArgument(this.initialDelay > 0, "initialDelay must be > 0.");
+    Preconditions.checkArgument(this.delay > 0, "delay must be > 0.");
+    Preconditions.checkArgument(this.durationToRetain > 0, "durationToRetain must be > 0.");
   }
 
   public boolean isEnabled()
   {
-    return true;
+    return this.enabled;
   }
 
   public long getInitialDelay()

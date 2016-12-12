@@ -96,6 +96,11 @@ public class FileTaskLogs implements TaskLogs
   {
     File taskLogDir = config.getDirectory();
     if (taskLogDir.exists()) {
+
+      if (!taskLogDir.isDirectory()) {
+        throw new IOException(String.format("taskLogDir [%s] must be a directory.", taskLogDir));
+      }
+
       File[] files = taskLogDir.listFiles(
           new FileFilter()
           {
