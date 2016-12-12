@@ -47,12 +47,12 @@ import java.util.concurrent.atomic.AtomicReference;
  * CacheScheduler.Entry entry = cacheScheduler.schedule(namespace); // or scheduleAndWait(namespace, timeout)
  * CacheState cacheState = entry.getCacheState();
  * if (cacheState instanceof NoCache) {
- *   // the cache is not yet created, or already disposed
+ *   // the cache is not yet created, or already closed
  * } else if (cacheState instanceof VersionedCache) {
  *   Map<String, String> cache = ((VersionedCache) cacheState).getCache(); // use the cache
  * }
  * ...
- * entry.close(); // dispose the last VersionedCache and unschedule future updates
+ * entry.close(); // close the last VersionedCache and unschedule future updates
  * }</pre>
  */
 public final class CacheScheduler
@@ -77,7 +77,7 @@ public final class CacheScheduler
     }
 
     /**
-     * @return the entry's cache if it is already initialized and not yet disposed
+     * @return the entry's cache if it is already initialized and not yet closed
      * @throws IllegalStateException if the entry's cache is not yet initialized, or {@link #close()} has
      * already been called
      */
@@ -121,11 +121,12 @@ public final class CacheScheduler
     }
 
     /**
-     * Dispose the last {@link #getCacheState()}, if it is {@link VersionedCache}, and unschedule future updates.
+     * Close the last {@link #getCacheState()}, if it is {@link VersionedCache}, and unschedule future updates.
      */
+    @Override
     public void close()
     {
-      impl.dispose();
+      impl.close();
     }
 
     @Override
@@ -141,7 +142,7 @@ public final class CacheScheduler
    * that would be a leak preventing the Entry to be collected by GC, and therefore {@link #entryCleaner} to be run by
    * the JVM. Also, {@link #entryCleaner} must not reference the Entry through it's Runnable hunk.
    */
-  public class EntryImpl<T extends ExtractionNamespace> {
+  public class EntryImpl<T extends ExtractionNamespace> implements AutoCloseable {
 
     private final T namespace;
     private final String asString;
@@ -175,7 +176,7 @@ public final class CacheScheduler
         @Override
         public void run()
         {
-          disposeFromCleaner();
+          closeFromCleaner();
         }
       });
     }
@@ -218,7 +219,7 @@ public final class CacheScheduler
       }
       catch (Throwable t) {
         try {
-          dispose();
+          close();
           log.error(t, "Failed to update %s", this);
         }
         catch (Exception e) {
@@ -247,7 +248,7 @@ public final class CacheScheduler
         lastCacheState = cacheStateHolder.get();
         if (lastCacheState == NoCache.ENTRY_CLOSED) {
           newVersionedCache.close();
-          log.debug("%s was disposed while the cache was being updated, discarding the update", this);
+          log.debug("%s was closed while the cache was being updated, discarding the update", this);
           return;
         }
       } while (!cacheStateHolder.compareAndSet(lastCacheState, newVersionedCache));
@@ -261,27 +262,28 @@ public final class CacheScheduler
       log.debug("%s: the cache was successfully updated", this);
     }
 
-    private void dispose()
+    @Override
+    public void close()
     {
-      if (!doDispose(true)) {
-        log.error("Cache for %s has already been disposed", this);
+      if (!doClose(true)) {
+        log.error("Cache for %s has already been closed", this);
       }
       // This Cleaner.clean() call effectively just removes the Cleaner from the internal linked list of all cleaners.
-      // It will delegate to EntryDisposer.run() which will be a no-op because entryDisposer.cacheStateHolder is already
-      // set to ENTRY_CLOSED.
+      // It will delegate to closeFromCleaner() which will be a no-op because cacheStateHolder is already set to
+      // ENTRY_CLOSED.
       entryCleaner.clean();
     }
 
-    private void disposeFromCleaner()
+    private void closeFromCleaner()
     {
       try {
-        if (doDispose(false)) {
-          log.error("Entry.close() was not called, disposed resources by the JVM");
+        if (doClose(false)) {
+          log.error("Entry.close() was not called, closed resources by the JVM");
         }
       }
       catch (Throwable t) {
         try {
-          log.error(t, "Error while disposing %s", this);
+          log.error(t, "Error while closing %s", this);
         }
         catch (Exception e) {
           t.addSuppressed(e);
@@ -292,18 +294,18 @@ public final class CacheScheduler
     }
 
     /**
-     * @param calledManually true if called manually from {@link #dispose()}, false if called by the JVM via Cleaner
-     * @return true if successfully disposed, false if has already disposed before
+     * @param calledManually true if called manually from {@link #close()}, false if called by the JVM via Cleaner
+     * @return true if successfully closed, false if has already closed before
      */
-    private boolean doDispose(boolean calledManually)
+    private boolean doClose(boolean calledManually)
     {
       CacheState lastCacheState = cacheStateHolder.getAndSet(NoCache.ENTRY_CLOSED);
       if (lastCacheState != NoCache.ENTRY_CLOSED) {
         try {
-          log.info("Disposing %s", this);
+          log.info("Closing %s", this);
           logExecutionError();
         }
-        // Logging (above) is not the main goal of the disposal process, so try to cancel the updaterFuture even if
+        // Logging (above) is not the main goal of the closing process, so try to cancel the updaterFuture even if
         // logging failed for whatever reason.
         finally {
           activeEntries.decrementAndGet();
