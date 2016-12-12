@@ -16,7 +16,7 @@
         "columns": {
           "location": {
             "type": "STRING",
-            "size": 10140,
+            "size": 0,
             "hasMultipleValues": false,
             "minValue": "location_1",
             "maxValue": "location_5",
@@ -43,7 +43,7 @@
           },
           "__time": {
             "type": "LONG",
-            "size": 10140,
+            "size": 0,
             "hasMultipleValues": false,
             "minValue": null,
             "maxValue": null,
@@ -52,7 +52,7 @@
           },
           "product": {
             "type": "STRING",
-            "size": 9531,
+            "size": 0,
             "hasMultipleValues": false,
             "minValue": "product_1",
             "maxValue": "product_9",
@@ -60,7 +60,7 @@
             "errorMessage": null
           }
         },
-        "size": 34881,
+        "size": 0,
         "numRows": 1014,
         "aggregators": null,
         "timestampSpec": null,
