@@ -73,7 +73,7 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getVersion()
   {
-    CacheScheduler.CacheState cacheState = factory.entry.getCacheState();
+    final CacheScheduler.CacheState cacheState = factory.entry.getCacheState();
     if (cacheState instanceof CacheScheduler.NoCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {

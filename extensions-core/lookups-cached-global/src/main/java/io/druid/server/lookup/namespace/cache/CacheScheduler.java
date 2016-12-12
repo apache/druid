@@ -87,7 +87,7 @@ public final class CacheScheduler
       if (cacheState instanceof VersionedCache) {
         return ((VersionedCache) cacheState).getCache();
       } else {
-        throw new IllegalStateException("Cannot get cache: " + cacheState);
+        throw new ISE("Cannot get cache: %s", cacheState);
       }
     }
 
@@ -235,7 +235,6 @@ public final class CacheScheduler
       if (currentCacheState instanceof VersionedCache) {
         return ((VersionedCache) currentCacheState).version;
       } else {
-        // currentCacheState == CACHE_NOT_INITIALIZED
         return null;
       }
     }
