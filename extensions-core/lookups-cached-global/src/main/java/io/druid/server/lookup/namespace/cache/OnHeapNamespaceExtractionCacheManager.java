@@ -63,7 +63,13 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
          iterator.hasNext(); ) {
       WeakReference<?> cacheRef = iterator.next();
       if (cacheRef.get() == null) {
-        LOG.error("CacheHandler.close() was not called, disposed resources by the JVM");
+        // This may not necessarily mean leak of CacheHandler, because disposeCache() may be called concurrently with
+        // this iteration, and cacheHandler (hence the cache) could be already claimed by the GC. That is why we emit
+        // no warning here. Also, "soft leak" (close() not called, but the objects becomes unreachable and claimed by
+        // the GC) of on-heap cache is effectively harmless and logging may be useful here only for identifying bugs in
+        // the code which uses NamespaceExtractionCacheManager, if there are plans to switch to
+        // OffHeapNamespaceExtractionCacheManager. However in OffHeapNamespaceExtractionCacheManager CacheHandler leaks
+        // are identified and logged better than in this class.
         iterator.remove();
       }
     }
