@@ -46,10 +46,15 @@ import java.util.concurrent.atomic.AtomicReference;
  * <pre>{@code
  * CacheScheduler.Entry entry = cacheScheduler.schedule(namespace); // or scheduleAndWait(namespace, timeout)
  * CacheState cacheState = entry.getCacheState();
+ * // cacheState could be either NoCache or VersionedCache.
  * if (cacheState instanceof NoCache) {
  *   // the cache is not yet created, or already closed
  * } else if (cacheState instanceof VersionedCache) {
  *   Map<String, String> cache = ((VersionedCache) cacheState).getCache(); // use the cache
+ *   // Although VersionedCache implements AutoCloseable, versionedCache shouldn't be manually closed
+ *   // when obtained from entry.getCacheState(). If the namespace updates should be ceased completely,
+ *   // entry.close() (see below) should be called, it will close the last VersionedCache itself.
+ *   // On scheduled updates, outdated VersionedCaches are also closed automatically.
  * }
  * ...
  * entry.close(); // close the last VersionedCache and unschedule future updates
