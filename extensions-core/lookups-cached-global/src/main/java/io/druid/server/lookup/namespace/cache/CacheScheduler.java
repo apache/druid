@@ -446,10 +446,10 @@ public final class CacheScheduler
    *                created
    * @param version version, associated with the cache
    */
-  public VersionedCache createVersionedCache(EntryImpl<? extends ExtractionNamespace> entryId, String version)
+  public VersionedCache createVersionedCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId, String version)
   {
     updatesStarted.incrementAndGet();
-    return new VersionedCache(entryId.toString(), cacheManager.createCache(), version);
+    return new VersionedCache(String.valueOf(entryId), cacheManager.createCache(), version);
   }
 
   @VisibleForTesting
