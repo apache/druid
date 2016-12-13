@@ -21,15 +21,13 @@ package io.druid.server.lookup.namespace.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.concurrent.ExecutorServices;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -45,18 +43,16 @@ public abstract class NamespaceExtractionCacheManager
 {
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
 
-  private final ScheduledExecutorService scheduledExecutorService;
+  private final ScheduledThreadPoolExecutor scheduledExecutorService;
 
   public NamespaceExtractionCacheManager(final Lifecycle lifecycle, final ServiceEmitter serviceEmitter) {
-    this.scheduledExecutorService = MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            1,
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat("NamespaceExtractionCacheManager-%d")
-                .setPriority(Thread.MIN_PRIORITY)
-                .build()
-        )
+    this.scheduledExecutorService = new ScheduledThreadPoolExecutor(
+        1,
+        new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("NamespaceExtractionCacheManager-%d")
+            .setPriority(Thread.MIN_PRIORITY)
+            .build()
     );
     ExecutorServices.manageLifecycle(lifecycle, scheduledExecutorService);
     scheduledExecutorService.scheduleAtFixedRate(
@@ -81,7 +77,7 @@ public abstract class NamespaceExtractionCacheManager
     );
   }
 
-  final ScheduledExecutorService scheduledExecutorService()
+  final ScheduledThreadPoolExecutor scheduledExecutorService()
   {
     return scheduledExecutorService;
   }
