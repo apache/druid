@@ -40,6 +40,9 @@ public class FireDepartmentMetrics
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
   private final AtomicLong persistCpuTime = new AtomicLong(0);
   private final AtomicLong handOffCount = new AtomicLong(0);
+  private final AtomicLong sinkCount = new AtomicLong(0);
+  private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
+  private final AtomicLong messageGap = new AtomicLong(0);
 
   public void incrementProcessed()
   {
@@ -101,6 +104,14 @@ public class FireDepartmentMetrics
 
   public void incrementHandOffCount(){
     handOffCount.incrementAndGet();
+  }
+
+  public void setSinkCount(long sinkCount){
+    this.sinkCount.set(sinkCount);
+  }
+
+  public void reportMessageMaxTimestamp(long messageMaxTimestamp){
+    this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
   }
 
   public long processed()
@@ -168,6 +179,20 @@ public class FireDepartmentMetrics
     return handOffCount.get();
   }
 
+  public long sinkCount()
+  {
+    return sinkCount.get();
+  }
+
+  public long messageMaxTimestamp()
+  {
+    return messageMaxTimestamp.get();
+  }
+
+  public long messageGap()
+  {
+    return messageGap.get();
+  }
 
   public FireDepartmentMetrics snapshot()
   {
@@ -185,6 +210,9 @@ public class FireDepartmentMetrics
     retVal.mergeCpuTime.set(mergeCpuTime.get());
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());
+    retVal.sinkCount.set(sinkCount.get());
+    retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
+    retVal.messageGap.set(System.currentTimeMillis() - messageMaxTimestamp.get());
     return retVal;
   }
 
@@ -210,6 +238,9 @@ public class FireDepartmentMetrics
     mergeCpuTime.addAndGet(otherSnapshot.mergeCpuTime());
     persistCpuTime.addAndGet(otherSnapshot.persistCpuTime());
     handOffCount.addAndGet(otherSnapshot.handOffCount());
+    sinkCount.addAndGet(otherSnapshot.sinkCount());
+    messageMaxTimestamp.set(Math.max(messageMaxTimestamp(), otherSnapshot.messageMaxTimestamp()));
+    messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
     return this;
   }
 
