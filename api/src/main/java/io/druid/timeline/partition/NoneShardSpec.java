@@ -20,6 +20,7 @@
 package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import io.druid.data.input.InputRow;
@@ -55,6 +56,7 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
+  @JsonIgnore
   public int getPartitionNum()
   {
     return 0;
