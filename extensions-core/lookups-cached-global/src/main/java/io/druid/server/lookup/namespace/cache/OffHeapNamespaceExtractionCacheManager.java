@@ -188,7 +188,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
     String mapDbKey;
     // This loop will succeed because 2^64 cache maps couldn't exist in memory simultaneously
     while (true) {
-      mapDbKey = mapDbKeyCounter.getAndIncrement() + "";
+      mapDbKey = Long.toString(mapDbKeyCounter.getAndIncrement());
       try {
         HTreeMap<String, String> hTreeMap = mmapDB.createHashMap(mapDbKey).make();
         // Access MapDB's HTreeMap and create a cleaner via proxy, because there is no 100% confidence that there are
