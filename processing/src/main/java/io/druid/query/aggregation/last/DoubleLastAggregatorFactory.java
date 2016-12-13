@@ -65,8 +65,9 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastAggregator(
-        name, metricFactory.makeFloatColumnSelector(fieldName),
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)
+        name,
+        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeFloatColumnSelector(fieldName)
     );
   }
 
@@ -239,7 +240,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public String toString()
   {
-    return "DoubleFirstAggregatorFactory{" +
+    return "DoubleLastAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            '}';

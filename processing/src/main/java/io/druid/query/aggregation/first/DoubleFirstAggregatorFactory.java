@@ -82,8 +82,9 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleFirstAggregator(
-        name, metricFactory.makeFloatColumnSelector(fieldName),
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)
+        name,
+        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeFloatColumnSelector(fieldName)
     );
   }
 
