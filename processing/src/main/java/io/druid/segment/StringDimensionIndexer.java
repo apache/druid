@@ -25,9 +25,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.MutableBitmap;
+
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -146,12 +147,16 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     public String getMinValue()
     {
-      return minValue;
+      synchronized (lock) {
+        return minValue;
+      }
     }
 
     public String getMaxValue()
     {
-      return maxValue;
+      synchronized (lock) {
+        return maxValue;
+      }
     }
 
     public SortedDimensionDictionary sort()
@@ -531,14 +536,13 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   @Override
   public ValueMatcher makeIndexingValueMatcher(
-      final Comparable matchValue,
+      final String matchValue,
       final IncrementalIndexStorageAdapter.EntryHolder holder,
       final int dimIndex
   )
   {
-    final String value = STRING_TRANSFORMER.apply(matchValue);
-    final int encodedVal = getEncodedValue(value, false);
-    final boolean matchOnNull = Strings.isNullOrEmpty(value);
+    final int encodedVal = getEncodedValue(matchValue, false);
+    final boolean matchOnNull = Strings.isNullOrEmpty(matchValue);
     if (encodedVal < 0 && !matchOnNull) {
       return new BooleanValueMatcher(false);
     }

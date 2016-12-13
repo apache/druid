@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.yahoo.sketches.theta.Sketch;
 import io.druid.initialization.DruidModule;
 import io.druid.query.aggregation.datasketches.theta.SketchBuildComplexMetricSerde;
-import io.druid.query.aggregation.datasketches.theta.SketchJsonSerializer;
+import io.druid.query.aggregation.datasketches.theta.SketchHolder;
+import io.druid.query.aggregation.datasketches.theta.SketchHolderJsonSerializer;
 import io.druid.query.aggregation.datasketches.theta.SketchMergeComplexMetricSerde;
 import io.druid.query.aggregation.datasketches.theta.SketchModule;
 import io.druid.segment.serde.ComplexMetrics;
@@ -80,7 +80,7 @@ public class OldApiSketchModule implements DruidModule
                 new NamedType(OldSketchEstimatePostAggregator.class, "sketchEstimate"),
                 new NamedType(OldSketchSetPostAggregator.class, "sketchSetOper")
             )
-            .addSerializer(Sketch.class, new SketchJsonSerializer())
+            .addSerializer(SketchHolder.class, new SketchHolderJsonSerializer())
     );
   }
 }

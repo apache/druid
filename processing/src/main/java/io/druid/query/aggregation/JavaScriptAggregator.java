@@ -40,7 +40,7 @@ public class JavaScriptAggregator implements Aggregator
   private final ObjectColumnSelector[] selectorList;
   private final ScriptAggregator script;
 
-  private volatile double current;
+  private double current;
 
   public JavaScriptAggregator(List<ObjectColumnSelector> selectorList, ScriptAggregator script)
   {

@@ -88,15 +88,19 @@ public class TimestampSpec
 
   public DateTime extractTimestamp(Map<String, Object> input)
   {
-    final Object o = input.get(timestampColumn);
+    return parseDateTime(input.get(timestampColumn));
+  }
+
+  public DateTime parseDateTime(Object input)
+  {
     DateTime extracted = missingValue;
-    if (o != null) {
-      if (o.equals(parseCtx.lastTimeObject)) {
+    if (input != null) {
+      if (input.equals(parseCtx.lastTimeObject)) {
         extracted = parseCtx.lastDateTime;
       } else {
         ParseCtx newCtx = new ParseCtx();
-        newCtx.lastTimeObject = o;
-        extracted = timestampConverter.apply(o);
+        newCtx.lastTimeObject = input;
+        extracted = timestampConverter.apply(input);
         newCtx.lastDateTime = extracted;
         parseCtx = newCtx;
       }

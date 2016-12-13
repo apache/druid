@@ -25,6 +25,9 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -35,6 +38,7 @@ import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -95,13 +99,22 @@ public class GroupByQueryHelper
 
     final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
 
+    // All groupBy dimensions are strings, for now.
+    final List<DimensionSchema> dimensionSchemas = Lists.newArrayList();
+    for (DimensionSpec dimension : query.getDimensions()) {
+      dimensionSchemas.add(new StringDimensionSchema(dimension.getOutputName()));
+    }
+
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
+        .withMetrics(aggs.toArray(new AggregatorFactory[aggs.size()]))
+        .withQueryGranularity(gran)
+        .withMinTimestamp(granTimeStart)
+        .build();
+
     if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          indexSchema,
           false,
           true,
           sortResults,
@@ -110,11 +123,7 @@ public class GroupByQueryHelper
       );
     } else {
       index = new OnheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          indexSchema,
           false,
           true,
           sortResults,

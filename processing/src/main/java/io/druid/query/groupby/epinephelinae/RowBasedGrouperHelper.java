@@ -20,7 +20,7 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -63,6 +63,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -85,9 +86,10 @@ public class RowBasedGrouperHelper
     Preconditions.checkArgument(concurrencyHint >= 1 || concurrencyHint == -1, "invalid concurrencyHint");
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
-    final DateTime fudgeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query);
+    final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
-        fudgeTimestamp,
+        includeTimestamp,
+        query.getContextSortByDimsFirst(),
         query.getDimensions().size(),
         querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
     );
@@ -148,29 +150,45 @@ public class RowBasedGrouperHelper
           return null;
         }
 
-        long timestamp = row.getTimestampFromEpoch();
-        if (isInputRaw) {
-          if (query.getGranularity() instanceof AllGranularity) {
-            timestamp = query.getIntervals().get(0).getStartMillis();
-          } else {
-            timestamp = query.getGranularity().truncate(timestamp);
-          }
-        }
 
         columnSelectorFactory.setRow(row);
-        final String[] dimensions = new String[query.getDimensions().size()];
-        for (int i = 0; i < dimensions.length; i++) {
-          final String value;
+
+        final int dimStart;
+        final Comparable[] key;
+
+        if (includeTimestamp) {
+          key = new Comparable[query.getDimensions().size() + 1];
+
+          final long timestamp;
           if (isInputRaw) {
-            IndexedInts index = dimensionSelectors[i].getRow();
-            value = index.size() == 0 ? "" : dimensionSelectors[i].lookupName(index.get(0));
+            if (query.getGranularity() instanceof AllGranularity) {
+              timestamp = query.getIntervals().get(0).getStartMillis();
+            } else {
+              timestamp = query.getGranularity().truncate(row.getTimestampFromEpoch());
+            }
           } else {
-            value = (String) row.getRaw(query.getDimensions().get(i).getOutputName());
+            timestamp = row.getTimestampFromEpoch();
           }
-          dimensions[i] = Strings.nullToEmpty(value);
+
+          key[0] = timestamp;
+          dimStart = 1;
+        } else {
+          key = new Comparable[query.getDimensions().size()];
+          dimStart = 0;
         }
 
-        final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(timestamp, dimensions));
+        for (int i = dimStart; i < key.length; i++) {
+          final String value;
+          if (isInputRaw) {
+            IndexedInts index = dimensionSelectors[i - dimStart].getRow();
+            value = index.size() == 0 ? "" : dimensionSelectors[i - dimStart].lookupName(index.get(0));
+          } else {
+            value = (String) row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
+          }
+          key[i] = Strings.nullToEmpty(value);
+        }
+
+        final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
         if (!didAggregate) {
           // null return means grouping resources were exhausted.
           return null;
@@ -190,6 +208,8 @@ public class RowBasedGrouperHelper
       final Closeable closeable
   )
   {
+    final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
+
     return new CloseableGrouperIterator<>(
         grouper,
         true,
@@ -200,11 +220,23 @@ public class RowBasedGrouperHelper
           {
             Map<String, Object> theMap = Maps.newLinkedHashMap();
 
+            // Get timestamp, maybe.
+            final DateTime timestamp;
+            final int dimStart;
+
+            if (includeTimestamp) {
+              timestamp = query.getGranularity().toDateTime(((long) (entry.getKey().getKey()[0])));
+              dimStart = 1;
+            } else {
+              timestamp = null;
+              dimStart = 0;
+            }
+
             // Add dimensions.
-            for (int i = 0; i < entry.getKey().getDimensions().length; i++) {
+            for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
               theMap.put(
-                  query.getDimensions().get(i).getOutputName(),
-                  Strings.emptyToNull(entry.getKey().getDimensions()[i])
+                  query.getDimensions().get(i - dimStart).getOutputName(),
+                  Strings.emptyToNull((String) entry.getKey().getKey()[i])
               );
             }
 
@@ -213,42 +245,37 @@ public class RowBasedGrouperHelper
               theMap.put(query.getAggregatorSpecs().get(i).getName(), entry.getValues()[i]);
             }
 
-            return new MapBasedRow(
-                query.getGranularity().toDateTime(entry.getKey().getTimestamp()),
-                theMap
-            );
+            return new MapBasedRow(timestamp, theMap);
           }
         },
         closeable
     );
   }
 
-  static class RowBasedKey implements Comparable<RowBasedKey>
+  static class RowBasedKey
   {
-    private final long timestamp;
-    private final String[] dimensions;
+    private final Object[] key;
+
+    RowBasedKey(final Object[] key)
+    {
+      this.key = key;
+    }
 
     @JsonCreator
-    public RowBasedKey(
-        // Using short key names to reduce serialized size when spilling to disk.
-        @JsonProperty("t") long timestamp,
-        @JsonProperty("d") String[] dimensions
-    )
+    public static RowBasedKey fromJsonArray(final Object[] key)
     {
-      this.timestamp = timestamp;
-      this.dimensions = dimensions;
+      // Type info is lost during serde. We know we don't want ints as timestamps, so adjust.
+      if (key.length > 0 && key[0] instanceof Integer) {
+        key[0] = ((Integer) key[0]).longValue();
+      }
+
+      return new RowBasedKey(key);
     }
 
-    @JsonProperty("t")
-    public long getTimestamp()
+    @JsonValue
+    public Object[] getKey()
     {
-      return timestamp;
-    }
-
-    @JsonProperty("d")
-    public String[] getDimensions()
-    {
-      return dimensions;
+      return key;
     }
 
     @Override
@@ -263,59 +290,33 @@ public class RowBasedGrouperHelper
 
       RowBasedKey that = (RowBasedKey) o;
 
-      if (timestamp != that.timestamp) {
-        return false;
-      }
-      // Probably incorrect - comparing Object[] arrays with Arrays.equals
-      return Arrays.equals(dimensions, that.dimensions);
-
+      return Arrays.equals(key, that.key);
     }
 
     @Override
     public int hashCode()
     {
-      int result = (int) (timestamp ^ (timestamp >>> 32));
-      result = 31 * result + Arrays.hashCode(dimensions);
-      return result;
-    }
-
-    @Override
-    public int compareTo(RowBasedKey other)
-    {
-      final int timeCompare = Longs.compare(timestamp, other.getTimestamp());
-      if (timeCompare != 0) {
-        return timeCompare;
-      }
-
-      for (int i = 0; i < dimensions.length; i++) {
-        final int cmp = dimensions[i].compareTo(other.getDimensions()[i]);
-        if (cmp != 0) {
-          return cmp;
-        }
-      }
-
-      return 0;
+      return Arrays.hashCode(key);
     }
 
     @Override
     public String toString()
     {
-      return "RowBasedKey{" +
-             "timestamp=" + timestamp +
-             ", dimensions=" + Arrays.toString(dimensions) +
-             '}';
+      return Arrays.toString(key);
     }
   }
 
   private static class RowBasedKeySerdeFactory implements Grouper.KeySerdeFactory<RowBasedKey>
   {
-    private final DateTime fudgeTimestamp;
+    private final boolean includeTimestamp;
+    private final boolean sortByDimsFirst;
     private final int dimCount;
     private final long maxDictionarySize;
 
-    public RowBasedKeySerdeFactory(DateTime fudgeTimestamp, int dimCount, long maxDictionarySize)
+    RowBasedKeySerdeFactory(boolean includeTimestamp, boolean sortByDimsFirst, int dimCount, long maxDictionarySize)
     {
-      this.fudgeTimestamp = fudgeTimestamp;
+      this.includeTimestamp = includeTimestamp;
+      this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
     }
@@ -323,8 +324,66 @@ public class RowBasedGrouperHelper
     @Override
     public Grouper.KeySerde<RowBasedKey> factorize()
     {
-      return new RowBasedKeySerde(fudgeTimestamp, dimCount, maxDictionarySize);
+      return new RowBasedKeySerde(includeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize);
     }
+
+    @Override
+    public Comparator<RowBasedKey> objectComparator()
+    {
+      if (includeTimestamp) {
+        if (sortByDimsFirst) {
+          return new Comparator<RowBasedKey>()
+          {
+            @Override
+            public int compare(RowBasedKey key1, RowBasedKey key2)
+            {
+              final int cmp = compareDimsInRows(key1, key2, 1);
+              if (cmp != 0) {
+                return cmp;
+              }
+
+              return Longs.compare((long) key1.getKey()[0], (long) key2.getKey()[0]);
+            }
+          };
+        } else {
+          return new Comparator<RowBasedKey>()
+          {
+            @Override
+            public int compare(RowBasedKey key1, RowBasedKey key2)
+            {
+              final int timeCompare = Longs.compare((long) key1.getKey()[0], (long) key2.getKey()[0]);
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              return compareDimsInRows(key1, key2, 1);
+            }
+          };
+        }
+      } else {
+        return new Comparator<RowBasedKey>()
+        {
+          @Override
+          public int compare(RowBasedKey key1, RowBasedKey key2)
+          {
+            return compareDimsInRows(key1, key2, 0);
+          }
+        };
+      }
+    }
+
+    private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, int dimStart)
+    {
+      for (int i = dimStart; i < key1.getKey().length; i++) {
+        final int cmp = ((String) key1.getKey()[i]).compareTo((String) key2.getKey()[i]);
+        if (cmp != 0) {
+          return cmp;
+        }
+      }
+
+      return 0;
+    };
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedKey>
@@ -332,7 +391,8 @@ public class RowBasedGrouperHelper
     // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
     private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
 
-    private final DateTime fudgeTimestamp;
+    private final boolean includeTimestamp;
+    private final boolean sortByDimsFirst;
     private final int dimCount;
     private final int keySize;
     private final ByteBuffer keyBuffer;
@@ -346,16 +406,18 @@ public class RowBasedGrouperHelper
     // dictionary id -> its position if it were sorted by dictionary value
     private int[] sortableIds = null;
 
-    public RowBasedKeySerde(
-        final DateTime fudgeTimestamp,
+    RowBasedKeySerde(
+        final boolean includeTimestamp,
+        final boolean sortByDimsFirst,
         final int dimCount,
         final long maxDictionarySize
     )
     {
-      this.fudgeTimestamp = fudgeTimestamp;
+      this.includeTimestamp = includeTimestamp;
+      this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
-      this.keySize = (fudgeTimestamp == null ? Longs.BYTES : 0) + dimCount * Ints.BYTES;
+      this.keySize = (includeTimestamp ? Longs.BYTES : 0) + dimCount * Ints.BYTES;
       this.keyBuffer = ByteBuffer.allocate(keySize);
     }
 
@@ -376,12 +438,16 @@ public class RowBasedGrouperHelper
     {
       keyBuffer.rewind();
 
-      if (fudgeTimestamp == null) {
-        keyBuffer.putLong(key.getTimestamp());
+      final int dimStart;
+      if (includeTimestamp) {
+        keyBuffer.putLong((long) key.getKey()[0]);
+        dimStart = 1;
+      } else {
+        dimStart = 0;
       }
 
-      for (int i = 0; i < key.getDimensions().length; i++) {
-        final int id = addToDictionary(key.getDimensions()[i]);
+      for (int i = dimStart; i < key.getKey().length; i++) {
+        final int id = addToDictionary((String) key.getKey()[i]);
         if (id < 0) {
           return null;
         }
@@ -395,17 +461,30 @@ public class RowBasedGrouperHelper
     @Override
     public RowBasedKey fromByteBuffer(ByteBuffer buffer, int position)
     {
-      final long timestamp = fudgeTimestamp == null ? buffer.getLong(position) : fudgeTimestamp.getMillis();
-      final String[] dimensions = new String[dimCount];
-      final int dimsPosition = fudgeTimestamp == null ? position + Longs.BYTES : position;
-      for (int i = 0; i < dimensions.length; i++) {
-        dimensions[i] = dictionary.get(buffer.getInt(dimsPosition + (Ints.BYTES * i)));
+      final int dimStart;
+      final Comparable[] key;
+      final int dimsPosition;
+
+      if (includeTimestamp) {
+        key = new Comparable[dimCount + 1];
+        key[0] = buffer.getLong(position);
+        dimsPosition = position + Longs.BYTES;
+        dimStart = 1;
+      } else {
+        key = new Comparable[dimCount];
+        dimsPosition = position;
+        dimStart = 0;
       }
-      return new RowBasedKey(timestamp, dimensions);
+
+      for (int i = dimStart; i < key.length; i++) {
+        key[i] = dictionary.get(buffer.getInt(dimsPosition + (Ints.BYTES * (i - dimStart))));
+      }
+
+      return new RowBasedKey(key);
     }
 
     @Override
-    public Grouper.KeyComparator comparator()
+    public Grouper.KeyComparator bufferComparator()
     {
       if (sortableIds == null) {
         Map<String, Integer> sortedMap = Maps.newTreeMap();
@@ -419,31 +498,51 @@ public class RowBasedGrouperHelper
         }
       }
 
-      if (fudgeTimestamp == null) {
-        return new Grouper.KeyComparator()
-        {
-          @Override
-          public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      if (includeTimestamp) {
+        if (sortByDimsFirst) {
+          return new Grouper.KeyComparator()
           {
-            final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            for (int i = 0; i < dimCount; i++) {
-              final int cmp = Ints.compare(
-                  sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
-                  sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
+                  sortableIds,
+                  dimCount,
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
               );
-
               if (cmp != 0) {
                 return cmp;
               }
-            }
 
-            return 0;
-          }
-        };
+              return Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+            }
+          };
+        } else {
+          return new Grouper.KeyComparator()
+          {
+            @Override
+            public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+            {
+              final int timeCompare = Longs.compare(lhsBuffer.getLong(lhsPosition), rhsBuffer.getLong(rhsPosition));
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              return compareDimsInBuffersForNullFudgeTimestamp(
+                  sortableIds,
+                  dimCount,
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
+              );
+            }
+          };
+        }
       } else {
         return new Grouper.KeyComparator()
         {
@@ -465,6 +564,29 @@ public class RowBasedGrouperHelper
           }
         };
       }
+    }
+
+    private static int compareDimsInBuffersForNullFudgeTimestamp(
+        int[] sortableIds,
+        int dimCount,
+        ByteBuffer lhsBuffer,
+        ByteBuffer rhsBuffer,
+        int lhsPosition,
+        int rhsPosition
+    )
+    {
+      for (int i = 0; i < dimCount; i++) {
+        final int cmp = Ints.compare(
+            sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
+            sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+        );
+
+        if (cmp != 0) {
+          return cmp;
+        }
+      }
+
+      return 0;
     }
 
     @Override

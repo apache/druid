@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 
 /**
@@ -37,7 +38,7 @@ import java.util.Iterator;
  *
  * @param <KeyType> type of the key that will be passed in
  */
-public interface Grouper<KeyType extends Comparable<KeyType>> extends Closeable
+public interface Grouper<KeyType> extends Closeable
 {
   /**
    * Aggregate the current row with the provided key. Some implementations are thread-safe and
@@ -159,6 +160,14 @@ public interface Grouper<KeyType extends Comparable<KeyType>> extends Closeable
      * Create a new KeySerde, which may be stateful.
      */
     KeySerde<T> factorize();
+
+    /**
+     * Return an object that knows how to compare two serialized key instances. Will be called by the
+     * {@link #iterator(boolean)} method if sorting is enabled.
+     *
+     * @return comparator for key objects.
+     */
+    Comparator<T> objectComparator();
   }
 
   /**
@@ -206,11 +215,11 @@ public interface Grouper<KeyType extends Comparable<KeyType>> extends Closeable
      *
      * @return comparator for keys
      */
-    KeyComparator comparator();
+    KeyComparator bufferComparator();
 
     /**
      * Reset the keySerde to its initial state. After this method is called, {@link #fromByteBuffer(ByteBuffer, int)}
-     * and {@link #comparator()} may no longer work properly on previously-serialized keys.
+     * and {@link #bufferComparator()} may no longer work properly on previously-serialized keys.
      */
     void reset();
   }

@@ -18,21 +18,13 @@
  */
 package io.druid.server.coordinator;
 
-import org.joda.time.DateTime;
-
-import java.io.IOException;
+import com.google.common.util.concurrent.ListeningExecutorService;
 
 public class RandomBalancerStrategyFactory implements BalancerStrategyFactory
 {
   @Override
-  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
   {
     return new RandomBalancerStrategy();
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    // No-op
   }
 }

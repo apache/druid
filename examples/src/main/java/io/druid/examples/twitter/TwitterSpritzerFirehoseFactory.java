@@ -55,8 +55,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.Thread.sleep;
-
 /**
  * Twitter "spritzer" Firehose Factory named "twitzer".
  * Builds a Firehose that emits a stream of
@@ -263,7 +261,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
             // sleep a long time instead of terminating
             try {
               log.info("reached limit, sleeping a long time...");
-              sleep(2000000000L);
+              Thread.sleep(2000000000L);
             }
             catch (InterruptedException e) {
               throw new RuntimeException("InterruptedException", e);

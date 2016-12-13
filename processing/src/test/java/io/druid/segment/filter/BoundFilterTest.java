@@ -33,13 +33,11 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -75,10 +73,11 @@ public class BoundFilterTest extends BaseFilterTest
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean cnf,
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -463,14 +462,5 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim4", "super-null", "super-null", false, false, false, superFn, StringComparators.NUMERIC),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
-  }
-
-  private void assertFilterMatches(
-      final DimFilter filter,
-      final List<String> expectedRows
-  )
-  {
-    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
-    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

@@ -523,7 +523,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     private static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
     private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 75000;
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-    private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.FALSE;
+    private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.TRUE;
 
     private final int targetPartitionSize;
     private final int rowFlushBoundary;

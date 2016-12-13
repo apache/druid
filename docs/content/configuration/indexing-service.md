@@ -19,11 +19,11 @@ The indexing service uses several of the global configs in [Configuration](../co
 
 #### Task Logging
 
-If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store or HDFS.
+If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, s3, azure, hdfs, file. Where to store task logs|file|
+|`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
 
 ##### File Task Logs
 
@@ -50,6 +50,16 @@ Note: this uses the same storage account as the deep storage module for azure.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
+|`druid.indexer.logs.prefix`|The path to prepend to logs|none|
+
+#### Google Cloud Storage Task Logs
+Store task logs in Google Cloud Storage.
+
+Note: this uses the same storage settings as the deep storage module for google.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.bucket`|The Google Cloud Storage bucket to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
 ##### HDFS Task Logs
@@ -83,6 +93,10 @@ The following configs only apply if the overlord is running in remote mode:
 |`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a middle manager is disconnected from Zookeeper.|PT15M|
 |`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a middle manager before timing out|PT1M|
 |`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
+|`druid.indexer.runner.maxRetriesBeforeBlacklist`|Number of consecutive times the middle manager can fail tasks,  before the worker is blacklisted, must be at least 1|5|
+|`druid.indexer.runner.workerBlackListBackoffTime`|How long to wait before a task is whitelisted again. This value should be greater that the value set for taskBlackListCleanupPeriod.|PT15M|
+|`druid.indexer.runner.workerBlackListCleanupPeriod`|A duration after which the cleanup thread will startup to clean blacklisted workers.|PT5M|
+|`druid.indexer.runner.maxPercentageBlacklistWorkers`|The maximum percentage of workers to blacklist, this must be between 0 and 100.|20|
 
 There are additional configs for autoscaling (if it is enabled):
 

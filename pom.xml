@@ -58,7 +58,8 @@
     </scm>
 
     <properties>
-        <apache.curator.version>2.11.0</apache.curator.version>
+        <apache.curator.version>2.11.1</apache.curator.version>
+        <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
@@ -84,6 +85,7 @@
         <module>benchmarks</module>
         <module>aws-common</module>
         <module>java-util</module>
+        <module>bytebuffer-collections</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -110,6 +112,10 @@
         <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
+        <module>extensions-contrib/time-min-max</module>
+        <module>extensions-contrib/google-extensions</module>
+        <module>extensions-contrib/virtual-columns</module>
+        <module>extensions-contrib/thrift-extensions</module>
     </modules>
 
     <dependencyManagement>
@@ -118,17 +124,12 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.3.6</version>
+                <version>0.4.0</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>1.0.5</version>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>bytebuffer-collections</artifactId>
-                <version>0.2.5</version>
+                <version>1.0.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -248,7 +249,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>16.0.1</version>
+                <version>${guava.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -569,6 +570,21 @@
                 <version>7.0.13</version>
             </dependency>
             <dependency>
+                <groupId>net.sf.opencsv</groupId>
+                <artifactId>opencsv</artifactId>
+                <version>2.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+                <version>2.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.6.4</version>
+            </dependency>
+            <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>3.3</version>
@@ -630,12 +646,12 @@
                         <artifactId>google-http-client</artifactId>
                     </exclusion>
                     <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpclient</artifactId>
+                        <groupId>com.google.http-client</groupId>
+                        <artifactId>google-http-client-jackson2</artifactId>
                     </exclusion>
                     <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpcore</artifactId>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -654,6 +670,12 @@
                 <groupId>pl.pragmatists</groupId>
                 <artifactId>JUnitParams</artifactId>
                 <version>1.0.4</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava-testlib</artifactId>
+                <version>${guava.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -684,6 +706,13 @@
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>6.19</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>validate</id>

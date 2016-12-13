@@ -29,7 +29,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -49,6 +50,7 @@ import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
@@ -205,7 +207,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran, boolean descending)
+  public Sequence<Cursor> makeCursors(
+      Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      QueryGranularity gran,
+      boolean descending
+  )
   {
     Interval actualInterval = interval;
 
@@ -275,13 +283,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (preFilters.size() == 0) {
         offset = new NoFilterOffset(0, index.getNumRows(), descending);
       } else {
-        List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-        for (Filter prefilter : preFilters) {
-          bitmaps.add(prefilter.getBitmapIndex(selector));
-        }
+        // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
         offset = new BitmapOffset(
             selector.getBitmapFactory(),
-            selector.getBitmapFactory().intersection(bitmaps),
+            AndFilter.getBitmapIndex(selector, preFilters),
             descending
         );
       }
@@ -300,6 +305,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         new CursorSequenceBuilder(
             index,
             actualInterval,
+            virtualColumns,
             gran,
             offset,
             minDataTimestamp,
@@ -321,21 +327,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return columnObj.getCapabilities();
   }
 
-  private interface CursorAdvancer
-  {
-    public void advance();
-
-    public void advanceTo(int offset);
-
-    public boolean isDone();
-
-    public void reset();
-  }
-
   private static class CursorSequenceBuilder
   {
     private final ColumnSelector index;
     private final Interval interval;
+    private final VirtualColumns virtualColumns;
     private final QueryGranularity gran;
     private final Offset offset;
     private final long minDataTimestamp;
@@ -347,6 +343,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public CursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
+        VirtualColumns virtualColumns,
         QueryGranularity gran,
         Offset offset,
         long minDataTimestamp,
@@ -358,6 +355,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       this.index = index;
       this.interval = interval;
+      this.virtualColumns = virtualColumns;
       this.gran = gran;
       this.offset = offset;
       this.minDataTimestamp = minDataTimestamp;
@@ -678,6 +676,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals == null) {
+                        VirtualColumn vc = virtualColumns.getVirtualColumn(column);
+                        if (vc != null) {
+                          return vc.init(column, this);
+                        }
                         return null;
                       }
 
@@ -849,7 +851,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
                       }
                       final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                      return new NumericColumnSelector() {
+                      return new NumericColumnSelector()
+                      {
                         @Override
                         public Number get()
                         {
@@ -861,7 +864,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ColumnCapabilities getColumnCapabilities(String columnName)
                     {
-                      return getColumnCapabilites(index, columnName);
+                      ColumnCapabilities capabilities = getColumnCapabilites(index, columnName);
+                      if (capabilities == null && !virtualColumns.isEmpty()) {
+                        VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
+                        if (virtualColumn != null) {
+                          Class clazz = virtualColumn.init(columnName, this).classOfObject();
+                          capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
+                        }
+                      }
+                      return capabilities;
                     }
                   }
 
@@ -923,6 +934,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       );
 
                       final ValueMatcher filterMatcher;
+
                       {
                         if (postFilter instanceof BooleanFilter) {
                           filterMatcher = ((BooleanFilter) postFilter).makeMatcher(
@@ -1025,14 +1037,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
   private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
   {
     private final ColumnSelector index;
@@ -1048,7 +1052,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
+    public ValueMatcher makeValueMatcher(String dimension, final String value)
     {
       if (getTypeForDimension(dimension) == ValueType.LONG) {
         return Filters.getLongValueMatcher(
@@ -1062,9 +1066,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       );
 
       // if matching against null, rows with size 0 should also match
-      final boolean matchNull = isComparableNullOrEmpty(value);
+      final boolean matchNull = Strings.isNullOrEmpty(value);
 
-      final int id = selector.lookupId((String) value);
+      final int id = selector.lookupId(value);
       if (id < 0) {
         return new BooleanValueMatcher(false);
       } else {
@@ -1158,12 +1162,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     // Use an iterator-based implementation, ImmutableBitmap.get(index) works differently for Concise and Roaring.
     // ImmutableConciseSet.get(index) is also inefficient, it performs a linear scan on each call
     @Override
-    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap) {
+    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap)
+    {
       final IntIterator iter = descending ?
                                BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
                                rowBitmap.iterator();
 
-      if(!iter.hasNext()) {
+      if (!iter.hasNext()) {
         return new BooleanValueMatcher(false);
       }
 
@@ -1252,7 +1257,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public Offset clone() {
+    public Offset clone()
+    {
       throw new IllegalStateException("clone");
     }
   }
@@ -1326,7 +1332,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     private final int rowCount;
     private final boolean descending;
-    private volatile int currentOffset;
+    private int currentOffset;
 
     NoFilterOffset(int currentOffset, int rowCount, boolean descending)
     {

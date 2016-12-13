@@ -50,17 +50,15 @@ public class EmittingRequestLogger implements RequestLogger
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
 
-  public static class RequestLogEvent implements Event
+  private static class RequestLogEvent implements Event
   {
-    final String service;
-    final String host;
+    final ImmutableMap<String, String> serviceDimensions;
     final String feed;
     final RequestLogLine request;
 
-    public RequestLogEvent(String service, String host, String feed, RequestLogLine request)
+    RequestLogEvent(ImmutableMap<String, String> serviceDimensions, String feed, RequestLogLine request)
     {
-      this.service = service;
-      this.host = host;
+      this.serviceDimensions = serviceDimensions;
       this.request = request;
       this.feed = feed;
     }
@@ -91,13 +89,13 @@ public class EmittingRequestLogger implements RequestLogger
     @JsonProperty("service")
     public String getService()
     {
-      return service;
+      return serviceDimensions.get("service");
     }
 
     @JsonProperty("host")
     public String getHost()
     {
-      return host;
+      return serviceDimensions.get("host");
     }
 
     @JsonProperty("query")
@@ -125,7 +123,7 @@ public class EmittingRequestLogger implements RequestLogger
     }
   }
 
-  private static class RequestLogEventBuilder implements ServiceEventBuilder
+  private static class RequestLogEventBuilder extends ServiceEventBuilder<Event>
   {
     private final String feed;
     private final RequestLogLine requestLogLine;
@@ -141,9 +139,9 @@ public class EmittingRequestLogger implements RequestLogger
 
 
     @Override
-    public Event build(String service, String host)
+    public Event build(ImmutableMap<String, String> serviceDimensions)
     {
-      return new RequestLogEvent(service, host, feed, requestLogLine);
+      return new RequestLogEvent(serviceDimensions, feed, requestLogLine);
     }
   }
 }

@@ -26,14 +26,24 @@ import io.druid.java.util.common.IAE;
  */
 public abstract class ExprEval<T>
 {
+  public static ExprEval ofLong(Number longValue)
+  {
+    return new LongExprEval(longValue);
+  }
+
   public static ExprEval of(long longValue)
   {
     return new LongExprEval(longValue);
   }
 
-  public static ExprEval of(double longValue)
+  public static ExprEval ofDouble(Number doubleValue)
   {
-    return new DoubleExprEval(longValue);
+    return new DoubleExprEval(doubleValue);
+  }
+
+  public static ExprEval of(double doubleValue)
+  {
+    return new DoubleExprEval(doubleValue);
   }
 
   public static ExprEval of(String stringValue)
@@ -45,9 +55,9 @@ public abstract class ExprEval<T>
   {
     switch (type) {
       case DOUBLE:
-        return ExprEval.of(value ? 1D : 0D);
+        return ExprEval.of(Evals.asDouble(value));
       case LONG:
-        return ExprEval.of(value ? 1L : 0L);
+        return ExprEval.of(Evals.asLong(value));
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
@@ -108,6 +118,8 @@ public abstract class ExprEval<T>
 
   public abstract ExprEval castTo(ExprType castTo);
 
+  public abstract Expr toExpr();
+
   private static abstract class NumericExprEval extends ExprEval<Number> {
 
     private NumericExprEval(Number value)
@@ -150,7 +162,7 @@ public abstract class ExprEval<T>
     @Override
     public final boolean asBoolean()
     {
-      return asDouble() > 0;
+      return Evals.asBoolean(asDouble());
     }
 
     @Override
@@ -165,6 +177,12 @@ public abstract class ExprEval<T>
           return ExprEval.of(asString());
       }
       throw new IAE("invalid type " + castTo);
+    }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new DoubleExpr(value == null ? null : value.doubleValue());
     }
   }
 
@@ -184,7 +202,7 @@ public abstract class ExprEval<T>
     @Override
     public final boolean asBoolean()
     {
-      return asLong() > 0;
+      return Evals.asBoolean(asLong());
     }
 
     @Override
@@ -199,6 +217,12 @@ public abstract class ExprEval<T>
           return ExprEval.of(asString());
       }
       throw new IAE("invalid type " + castTo);
+    }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new LongExpr(value == null ? null : value.longValue());
     }
   }
 
@@ -242,7 +266,7 @@ public abstract class ExprEval<T>
     @Override
     public final boolean asBoolean()
     {
-      return Boolean.valueOf(value);
+      return Evals.asBoolean(value);
     }
 
     @Override
@@ -257,6 +281,12 @@ public abstract class ExprEval<T>
           return this;
       }
       throw new IAE("invalid type " + castTo);
+    }
+
+    @Override
+    public Expr toExpr()
+    {
+      return new StringExpr(value);
     }
   }
 }

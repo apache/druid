@@ -37,21 +37,27 @@ import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class SketchAggregationTest
 {
   private final AggregationTestHelper helper;
@@ -59,11 +65,25 @@ public class SketchAggregationTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public SketchAggregationTest()
+  public SketchAggregationTest(final GroupByQueryConfig config)
   {
     SketchModule sm = new SketchModule();
     sm.configure(null);
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(sm.getJacksonModules(), tempFolder);
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        sm.getJacksonModules(),
+        config,
+        tempFolder
+    );
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
   }
 
   @Test
@@ -87,10 +107,10 @@ public class SketchAggregationTest
             ImmutableMap
                 .<String, Object>builder()
                 .put("sids_sketch_count", 50.0)
-                .put("sids_sketch_count_with_err", 
+                .put("sids_sketch_count_with_err",
                     new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
                 .put("sketchEstimatePostAgg", 50.0)
-                .put("sketchEstimatePostAggWithErrorBounds", 
+                .put("sketchEstimatePostAggWithErrorBounds",
                     new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
                 .put("sketchUnionPostAggEstimate", 50.0)
                 .put("sketchIntersectionPostAggEstimate", 50.0)
@@ -206,7 +226,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeFinalization() throws Exception
   {
-    Sketch sketch = Sketches.updateSketchBuilder().build(128);
+    SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().build(128));
 
     SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
@@ -216,7 +236,7 @@ public class SketchAggregationTest
 
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null, null);
     Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
-    
+
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, 2);
     SketchEstimateWithErrorBounds est = (SketchEstimateWithErrorBounds) agg.finalizeComputation(sketch);
     Assert.assertEquals(0.0, est.getEstimate(), 0.0001);
@@ -247,7 +267,7 @@ public class SketchAggregationTest
             null
         )
     );
-    
+
     assertPostAggregatorSerde(
         new SketchEstimatePostAggregator(
             "name",
@@ -344,7 +364,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchAggregatorFactoryComparator()
   {
-    Comparator<Object> comparator = SketchAggregatorFactory.COMPARATOR;
+    Comparator<Object> comparator = SketchHolder.COMPARATOR;
     Assert.assertEquals(0, comparator.compare(null, null));
 
     Union union1 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
@@ -352,8 +372,8 @@ public class SketchAggregationTest
     union1.update("b");
     Sketch sketch1 = union1.getResult();
 
-    Assert.assertEquals(-1, comparator.compare(null, sketch1));
-    Assert.assertEquals(1, comparator.compare(sketch1, null));
+    Assert.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
 
     Union union2 = (Union) SetOperation.builder().build(1<<4, Family.UNION);
     union2.update("a");
@@ -361,12 +381,12 @@ public class SketchAggregationTest
     union2.update("c");
     Sketch sketch2 = union2.getResult();
 
-    Assert.assertEquals(-1, comparator.compare(sketch1, sketch2));
-    Assert.assertEquals(-1, comparator.compare(sketch1, union2));
-    Assert.assertEquals(1, comparator.compare(sketch2, sketch1));
-    Assert.assertEquals(1, comparator.compare(sketch2, union1));
-    Assert.assertEquals(1, comparator.compare(union2, union1));
-    Assert.assertEquals(1, comparator.compare(union2, sketch1));
+    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(sketch2)));
+    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(union2)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(sketch1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(union1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(union1)));
+    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(sketch1)));
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

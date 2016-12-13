@@ -214,7 +214,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
-            ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
+            ImmutableMap.of(new DateTime("2010-01-01T01:00:00").getMillis(), specs),
             null,
             null,
             false,
@@ -276,12 +276,12 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
-            ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(new DateTime("2010-01-01T01:00:00"),
+            ImmutableMap.<Long, List<HadoopyShardSpec>>of(new DateTime("2010-01-01T01:00:00").getMillis(),
                                                               Lists.newArrayList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   1
                                                               )),
-                                                              new DateTime("2010-01-01T02:00:00"),
+                                                              new DateTime("2010-01-01T02:00:00").getMillis(),
                                                               Lists.newArrayList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   2

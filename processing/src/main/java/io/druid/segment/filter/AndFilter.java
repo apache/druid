@@ -21,7 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
@@ -47,19 +47,29 @@ public class AndFilter implements BooleanFilter
     this.filters = filters;
   }
 
-  @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public static ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector, List<Filter> filters)
   {
     if (filters.size() == 1) {
       return filters.get(0).getBitmapIndex(selector);
     }
 
-    List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-    for (int i = 0; i < filters.size(); i++) {
-      bitmaps.add(filters.get(i).getBitmapIndex(selector));
+    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
+    for (final Filter filter : filters) {
+      final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
+      if (bitmapIndex.isEmpty()) {
+        // Short-circuit.
+        return Filters.allFalse(selector);
+      }
+      bitmaps.add(bitmapIndex);
     }
 
     return selector.getBitmapFactory().intersection(bitmaps);
+  }
+
+  @Override
+  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  {
+    return getBitmapIndex(selector, filters);
   }
 
   @Override
