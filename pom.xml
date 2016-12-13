@@ -115,6 +115,7 @@
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/google-extensions</module>
         <module>extensions-contrib/virtual-columns</module>
+        <module>extensions-contrib/thrift-extensions</module>
     </modules>
 
     <dependencyManagement>
