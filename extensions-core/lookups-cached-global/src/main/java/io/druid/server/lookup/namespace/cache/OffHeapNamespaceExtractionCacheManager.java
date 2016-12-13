@@ -50,6 +50,15 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
     /**
      * Manages the race between dispose via {@link #disposeManually()} and automatic dispose by the JVM via
      * {@link #run()}.
+     *
+     * <p>In case of actual race, we don't wait in those methods until the other one, which manages to switch this flag
+     * first, completes. This could result into the situation that neither one completes, if the JVM is shutting down
+     * and the thread from which {@link Cleaner#clean()} (delegating to {@link #run()}) is called started the disposal
+     * operation, then more deterministic shutdown hook / lifecycle.stop(), which may call {@link #disposeManually()}
+     * completed early, and then the whole process shuts down before {@link Cleaner#clean()} completes, because shutdown
+     * is not blocked by it. However this should be harmless because anyway we remove the whole MapDB's file in
+     * lifecycle.stop() (see {@link OffHeapNamespaceExtractionCacheManager#OffHeapNamespaceExtractionCacheManager}).
+     * However if we persist off-heap DB between JVM runs, this decision should be revised.
      */
     final AtomicBoolean disposed = new AtomicBoolean(false);
 
