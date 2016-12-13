@@ -77,6 +77,12 @@ public abstract class NamespaceExtractionCacheManager
     );
   }
 
+  /**
+   * Return {@link ScheduledThreadPoolExecutor} rather than more generic {@link
+   * java.util.concurrent.ScheduledExecutorService}, because the former guarantees that periodic runs of scheduled
+   * tasks see all "local" changes from the previous runs, via happens-before (see {@link ScheduledThreadPoolExecutor}'s
+   * class-level Javadoc).
+   */
   final ScheduledThreadPoolExecutor scheduledExecutorService()
   {
     return scheduledExecutorService;
