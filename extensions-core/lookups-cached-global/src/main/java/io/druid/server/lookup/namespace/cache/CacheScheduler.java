@@ -209,29 +209,61 @@ public final class CacheScheduler
       try {
         // Ensures visibility of the whole EntryImpl's state (fields and their state).
         startLatch.await();
-
         CacheState currentCacheState = cacheStateHolder.get();
         if (!Thread.currentThread().isInterrupted() && currentCacheState != NoCache.ENTRY_CLOSED) {
           final String currentVersion = currentVersionOrNull(currentCacheState);
-          final VersionedCache newVersionedCache =
-              cachePopulator.populateCache(namespace, this, currentVersion, CacheScheduler.this);
-          if (newVersionedCache != null) {
-            swapCacheState(newVersionedCache);
-          } else {
-            log.debug("%s: Version `%s` not updated, the cache is not updated", this, currentVersion);
-          }
+          tryUpdateCache(currentVersion);
         }
       }
       catch (Throwable t) {
         try {
           close();
+        }
+        catch (Exception e) {
+          t.addSuppressed(e);
+        }
+        if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
+          throw Throwables.propagate(t);
+        }
+      }
+    }
+
+    private void tryUpdateCache(String currentVersion) throws Exception
+    {
+      boolean updatedCacheSuccessfully = false;
+      VersionedCache newVersionedCache = null;
+      try {
+        newVersionedCache = cachePopulator.populateCache(namespace, this, currentVersion, CacheScheduler.this
+        );
+        if (newVersionedCache != null) {
+          CacheState previousCacheState = swapCacheState(newVersionedCache);
+          if (previousCacheState != NoCache.ENTRY_CLOSED) {
+            updatedCacheSuccessfully = true;
+            if (previousCacheState instanceof VersionedCache) {
+              ((VersionedCache) previousCacheState).close();
+            }
+            log.debug("%s: the cache was successfully updated", this);
+          } else {
+            newVersionedCache.close();
+            log.debug("%s was closed while the cache was being updated, discarding the update", this);
+          }
+        } else {
+          log.debug("%s: Version `%s` not updated, the cache is not updated", this, currentVersion);
+        }
+      }
+      catch (Throwable t) {
+        try {
+          if (newVersionedCache != null && !updatedCacheSuccessfully) {
+            newVersionedCache.close();
+          }
           log.error(t, "Failed to update %s", this);
         }
         catch (Exception e) {
           t.addSuppressed(e);
         }
-        if (Thread.currentThread().isInterrupted() || t instanceof Error) {
-          throw Throwables.propagate(t);
+        if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
+          // propagate to the catch block in updateCache()
+          throw t;
         }
       }
     }
@@ -245,26 +277,21 @@ public final class CacheScheduler
       }
     }
 
-    private void swapCacheState(VersionedCache newVersionedCache)
+    private CacheState swapCacheState(VersionedCache newVersionedCache)
     {
       CacheState lastCacheState;
       // CAS loop
       do {
         lastCacheState = cacheStateHolder.get();
         if (lastCacheState == NoCache.ENTRY_CLOSED) {
-          newVersionedCache.close();
-          log.debug("%s was closed while the cache was being updated, discarding the update", this);
-          return;
+          return lastCacheState;
         }
       } while (!cacheStateHolder.compareAndSet(lastCacheState, newVersionedCache));
 
       if (updateCounter.incrementAndGet() == 1) {
         firstRunLatch.countDown();
       }
-      if (lastCacheState instanceof VersionedCache) {
-        ((VersionedCache) lastCacheState).cacheHandler.close();
-      }
-      log.debug("%s: the cache was successfully updated", this);
+      return lastCacheState;
     }
 
     @Override
