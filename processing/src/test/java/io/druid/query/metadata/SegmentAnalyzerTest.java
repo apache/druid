@@ -91,11 +91,7 @@ public class SegmentAnalyzerTest
       final ColumnAnalysis columnAnalysis = columns.get(metric);
 
       Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
-      if (analyses == null) {
-        Assert.assertTrue(metric, columnAnalysis.getSize() > 0);
-      } else {
-        Assert.assertEquals(metric, 0, columnAnalysis.getSize());
-      }
+      Assert.assertEquals(metric, 0, columnAnalysis.getSize());
       Assert.assertNull(metric, columnAnalysis.getCardinality());
     }
   }
@@ -131,12 +127,11 @@ public class SegmentAnalyzerTest
         Assert.assertNull(columnAnalysis);
       } else {
         Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+        Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
         if (analyses == null) {
-          Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
           Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
         } else {
           Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
-          Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
         }
       }
     }
@@ -145,11 +140,7 @@ public class SegmentAnalyzerTest
       final ColumnAnalysis columnAnalysis = columns.get(metric);
 
       Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
-      if (analyses == null) {
-        Assert.assertTrue(metric, columnAnalysis.getSize() > 0);
-      } else {
-        Assert.assertEquals(metric, 0, columnAnalysis.getSize());
-      }
+      Assert.assertEquals(metric, 0, columnAnalysis.getSize());
       Assert.assertNull(metric, columnAnalysis.getCardinality());
     }
   }

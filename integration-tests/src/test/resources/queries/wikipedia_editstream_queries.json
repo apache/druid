@@ -1048,7 +1048,7 @@
                     "country_name": {
                         "type": "STRING",
                         "hasMultipleValues": false,
-                        "size": 41922148,
+                        "size": 0,
                         "cardinality": 208,
                         "minValue":"",
                         "maxValue":"mmx._unknown",
@@ -1057,14 +1057,14 @@
                     "language": {
                         "type": "STRING",
                         "hasMultipleValues": false,
-                        "size": 8924222,
+                        "size": 0,
                         "cardinality": 36,
                         "minValue":"ar",
                         "maxValue":"zh",
                         "errorMessage": null
                     }
                 },
-                "size": 902457341,
+                "size": 0,
                 "numRows": 4462111,
                 "aggregators": null,
                 "timestampSpec": null,

@@ -154,7 +154,12 @@ public class SegmentMetadataQueryTest
                       .dataSource("testing")
                       .intervals("2013/2014")
                       .toInclude(new ListColumnIncluderator(Arrays.asList("__time", "index", "placement")))
-                      .analysisTypes(null)
+                      .analysisTypes(
+                          SegmentMetadataQuery.AnalysisType.CARDINALITY,
+                          SegmentMetadataQuery.AnalysisType.SIZE,
+                          SegmentMetadataQuery.AnalysisType.INTERVAL,
+                          SegmentMetadataQuery.AnalysisType.MINMAX
+                      )
                       .merge(true)
                       .build();
 

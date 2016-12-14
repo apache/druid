@@ -598,14 +598,14 @@
                     "has_links": {
                         "type": "STRING",
                         "hasMultipleValues": false,
-                        "size": 7773438,
+                        "size": 0,
                         "cardinality": 2,
                         "minValue":"No",
                         "maxValue":"Yes",
                         "errorMessage": null
                     }
                 },
-                "size": 747056474,
+                "size": 0,
                 "numRows": 3702583,
                 "aggregators": null,
                 "timestampSpec": null,
@@ -619,14 +619,14 @@
                     "has_links": {
                         "type": "STRING",
                         "hasMultipleValues": false,
-                        "size": 7901000,
+                        "size": 0,
                         "cardinality": 2,
                         "minValue":"No",
                         "maxValue":"Yes",
                         "errorMessage": null
                     }
                 },
-                "size": 755796690,
+                "size": 0,
                 "numRows": 3743002,
                 "aggregators": null,
                 "timestampSpec": null,
@@ -640,14 +640,14 @@
                     "has_links": {
                         "type": "STRING",
                         "hasMultipleValues": false,
-                        "size": 7405654,
+                        "size": 0,
                         "cardinality": 2,
                         "minValue":"No",
                         "maxValue":"Yes",
                         "errorMessage": null
                     }
                 },
-                "size": 706893542,
+                "size": 0,
                 "numRows":3502959,
                 "aggregators": null,
                 "timestampSpec": null,

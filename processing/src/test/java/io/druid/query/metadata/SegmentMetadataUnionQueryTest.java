@@ -121,6 +121,12 @@ public class SegmentMetadataUnionQueryTest
         .dataSource(QueryRunnerTestHelper.unionDataSource)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .toInclude(new ListColumnIncluderator(Lists.newArrayList("placement")))
+        .analysisTypes(
+            SegmentMetadataQuery.AnalysisType.CARDINALITY,
+            SegmentMetadataQuery.AnalysisType.SIZE,
+            SegmentMetadataQuery.AnalysisType.INTERVAL,
+            SegmentMetadataQuery.AnalysisType.MINMAX
+        )
         .build();
     List result = Sequences.toList(runner.run(query, Maps.newHashMap()), Lists.<SegmentAnalysis>newArrayList());
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
