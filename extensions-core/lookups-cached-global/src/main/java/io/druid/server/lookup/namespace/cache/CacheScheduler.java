@@ -102,27 +102,14 @@ public final class CacheScheduler
       return impl.updaterFuture;
     }
 
-    /**
-     * Awaits for {@code totalUpdates} cache updates since Entry creation. Should be used in tests only, unreliable
-     * for production.
-     *
-     * <p>Proper implementation should use {@link java.util.concurrent.locks.AbstractQueuedSynchronizer}, that adds
-     * a lot of complexity.
-     */
-    public void awaitTotalUpdates(long totalUpdates) throws InterruptedException
+    public void awaitTotalUpdates(int totalUpdates) throws InterruptedException
     {
-      while (totalUpdates - impl.updateCounter.get() > 0) { // overflow-aware
-        Thread.sleep(1);
-      }
+      impl.updateCounter.awaitTotalUpdates(totalUpdates);
     }
 
-    /**
-     * Awaits for {@code nextUpdates} cache updates since this method is called. Should be used in tests only,
-     * unreliable for production.
-     */
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
-      awaitTotalUpdates(impl.updateCounter.get() + nextUpdates);
+      impl.updateCounter.awaitNextUpdates(nextUpdates);
     }
 
     /**
@@ -155,8 +142,7 @@ public final class CacheScheduler
     private final Future<?> updaterFuture;
     private final Cleaner entryCleaner;
     private final ExtractionNamespaceCacheFactory<T> cachePopulator;
-    private final AtomicLong updateCounter = new AtomicLong(0);
-    private final CountDownLatch firstRunLatch = new CountDownLatch(1);
+    private final UpdateCounter updateCounter = new UpdateCounter();
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
     private EntryImpl(final T namespace, final Entry<T> entry, final ExtractionNamespaceCacheFactory<T> cachePopulator)
@@ -287,10 +273,7 @@ public final class CacheScheduler
           return lastCacheState;
         }
       } while (!cacheStateHolder.compareAndSet(lastCacheState, newVersionedCache));
-
-      if (updateCounter.incrementAndGet() == 1) {
-        firstRunLatch.countDown();
-      }
+      updateCounter.update();
       return lastCacheState;
     }
 
@@ -499,7 +482,7 @@ public final class CacheScheduler
     log.debug("Scheduled new %s", entry);
     boolean success = false;
     try {
-      success = entry.impl.firstRunLatch.await(waitForFirstRunMs, TimeUnit.MILLISECONDS);
+      success = entry.impl.updateCounter.awaitFirstUpdate(waitForFirstRunMs, TimeUnit.MILLISECONDS);
       if (success) {
         return entry;
       } else {
@@ -508,9 +491,9 @@ public final class CacheScheduler
     }
     finally {
       if (!success) {
-        log.error("CacheScheduler[%s] - problem during start or waiting for the first run", entry);
         // ExecutionException's cause is logged in entry.close()
         entry.close();
+        log.error("CacheScheduler[%s] - problem during start or waiting for the first run", entry);
       }
     }
   }
