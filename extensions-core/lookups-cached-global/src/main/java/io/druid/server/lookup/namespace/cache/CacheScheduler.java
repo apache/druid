@@ -370,10 +370,10 @@ public final class CacheScheduler
     final CacheHandler cacheHandler;
     final String version;
 
-    private VersionedCache(String entryId, CacheHandler cacheHandler, String version)
+    private VersionedCache(String entryId, String version)
     {
       this.entryId = entryId;
-      this.cacheHandler = cacheHandler;
+      this.cacheHandler = cacheManager.createCache();
       this.version = version;
     }
 
@@ -450,7 +450,7 @@ public final class CacheScheduler
   public VersionedCache createVersionedCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId, String version)
   {
     updatesStarted.incrementAndGet();
-    return new VersionedCache(String.valueOf(entryId), cacheManager.createCache(), version);
+    return new VersionedCache(String.valueOf(entryId), version);
   }
 
   @VisibleForTesting

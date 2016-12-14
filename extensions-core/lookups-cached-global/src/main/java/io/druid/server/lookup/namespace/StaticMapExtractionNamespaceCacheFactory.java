@@ -47,8 +47,19 @@ public final class StaticMapExtractionNamespaceCacheFactory implements Extractio
           + "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
     CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
-    versionedCache.getCache().putAll(namespace.getMap());
-    return versionedCache;
+    try {
+      versionedCache.getCache().putAll(namespace.getMap());
+      return versionedCache;
+    }
+    catch (Throwable t) {
+      try {
+        versionedCache.close();
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
+    }
   }
 
   String getVersion()

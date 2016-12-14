@@ -113,12 +113,23 @@ public final class JDBCExtractionNamespaceCacheFactory
       newVersion = String.format("%d", dbQueryStart);
     }
     final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
-    final Map<String, String> cache = versionedCache.getCache();
-    for (Pair<String, String> pair : pairs) {
-      cache.put(pair.lhs, pair.rhs);
+    try {
+      final Map<String, String> cache = versionedCache.getCache();
+      for (Pair<String, String> pair : pairs) {
+        cache.put(pair.lhs, pair.rhs);
+      }
+      LOG.info("Finished loading %d values for %s", cache.size(), entryId);
+      return versionedCache;
     }
-    LOG.info("Finished loading %d values for %s", cache.size(), entryId);
-    return versionedCache;
+    catch (Throwable t) {
+      try {
+        versionedCache.close();
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
+    }
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JDBCExtractionNamespace> id, JDBCExtractionNamespace namespace)
