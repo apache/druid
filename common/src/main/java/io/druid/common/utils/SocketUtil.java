@@ -34,7 +34,11 @@ public class SocketUtil
 
   public static int findOpenPort(int basePort)
   {
-    final int startPort = rnd.nextInt(0xffff / 2) + basePort;
+    final int startPort = basePort == -1 ? -1 : rnd.nextInt(0x7fff) + basePort;
+    return findOpenPortFrom(startPort);
+  }
+
+  public static int findOpenPortFrom(int startPort) {
     int currPort = startPort;
 
     while (currPort < 0xffff) {
