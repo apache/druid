@@ -43,7 +43,6 @@ import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import net.jcip.annotations.NotThreadSafe;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -56,7 +55,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
-@NotThreadSafe
 public class JettyQosTest extends BaseJettyTest
 {
   @Override
