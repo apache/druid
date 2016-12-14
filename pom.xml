@@ -729,11 +729,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.19.1</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                         <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                            -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
@@ -894,6 +895,41 @@
                 <!-- distribution packaging -->
                 <module>distribution</module>
             </modules>
+        </profile>
+
+        <profile>
+            <id>parallel-test</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration combine.self="override">
+                            <forkCount>${maven.fork.count}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <trimStackTrace>false</trimStackTrace>
+                            <!-- locale settings must be set on the command line before startup -->
+                            <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
+                            <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            </argLine>
+                            <!-- our tests are very verbose, let's keep the volume down -->
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
