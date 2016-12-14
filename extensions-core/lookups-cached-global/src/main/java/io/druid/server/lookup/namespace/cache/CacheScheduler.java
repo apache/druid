@@ -390,8 +390,9 @@ public final class CacheScheduler
     @Override
     public void close()
     {
-      log.debug("Closing version [%s] of %s", version, entryId);
       cacheHandler.close();
+      // Log statement after cacheHandler.close(), because logging may fail (e. g. in shutdown hooks)
+      log.debug("Closed version [%s] of %s", version, entryId);
     }
   }
 

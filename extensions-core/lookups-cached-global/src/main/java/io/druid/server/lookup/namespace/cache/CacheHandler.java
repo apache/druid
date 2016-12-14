@@ -46,7 +46,8 @@ public final class CacheHandler implements AutoCloseable
 
   public void close()
   {
-    log.debug("Closing %s", super.toString());
     cacheManager.disposeCache(this);
+    // Log statement after disposeCache(), because logging may fail (e. g. in shutdown hooks)
+    log.debug("Closed %s", super.toString());
   }
 }
