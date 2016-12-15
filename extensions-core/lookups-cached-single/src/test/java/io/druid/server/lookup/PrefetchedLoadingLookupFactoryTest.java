@@ -22,7 +22,6 @@ package io.druid.server.lookup;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.segment.TestHelper;
 import io.druid.server.lookup.cache.loading.LoadingCache;

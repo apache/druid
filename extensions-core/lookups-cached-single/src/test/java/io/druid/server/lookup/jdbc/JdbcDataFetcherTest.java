@@ -65,9 +65,9 @@ public class JdbcDataFetcherTest
   Handle handle;
   
   private JdbcDataFetcher jdbcDataFetcher;
-  private final String tableName = "tableName";
-  private final String keyColumn = "keyColumn";
-  private final String valueColumn = "valueColumn";
+  private static final String tableName = "tableName";
+  private static final String keyColumn = "keyColumn";
+  private static final String valueColumn = "valueColumn";
 
   private static final Map<String, String> lookupMap = ImmutableMap.of(
       "foo", "bar",
@@ -91,9 +91,9 @@ public class JdbcDataFetcherTest
   private static final PrefetchKeyProvider prefetchPointsProvider = new PrefetchKeyProvider()
   {
     @Override
-    public ReturnType getReturnType()
+    public PrefetchQueryProvider getQueryProvider()
     {
-      return ReturnType.Points;
+      return new PrefetchPointsQueryProvider();
     }
 
     @Override

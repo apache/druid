@@ -30,12 +30,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface PrefetchKeyProvider
 {
-  enum ReturnType
-  {
-    Range,
-    Points
-  }
-
-  ReturnType getReturnType();
+  PrefetchQueryProvider getQueryProvider();
   String[] get(String key);
 }

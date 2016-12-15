@@ -20,7 +20,6 @@
 package io.druid.server.lookup;
 
 import com.google.common.base.Strings;
-import com.metamx.common.logger.Logger;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 
 import java.util.List;

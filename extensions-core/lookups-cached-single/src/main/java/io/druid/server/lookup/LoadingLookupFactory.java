@@ -22,7 +22,6 @@ package io.druid.server.lookup;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.query.lookup.LookupIntrospectHandler;
@@ -32,6 +31,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@JsonTypeName("loadingLookup")
 public class LoadingLookupFactory implements LookupExtractorFactory
 {
   private final static Logger LOGGER = new Logger(LoadingLookupFactory.class);

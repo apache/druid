@@ -32,7 +32,7 @@ public class PrefetchedLoadingLookupFactory extends LoadingLookupFactory
       @JsonProperty("reverseLoadingCacheSpec") LoadingCache<String, List<String>> reverseLoadingCache
   )
   {
-    super(prefetchableFetcher, loadingCache, reverseLoadingCache, new PrefetchedLoadingLookup(prefetchableFetcher,loadingCache,reverseLoadingCache));
+    this(prefetchableFetcher, loadingCache, reverseLoadingCache, new PrefetchedLoadingLookup(prefetchableFetcher,loadingCache,reverseLoadingCache));
   }
 
   public PrefetchedLoadingLookupFactory(

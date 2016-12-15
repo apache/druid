@@ -27,13 +27,12 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.server.lookup.PrefetchableFetcher;
-import org.apache.commons.lang.StringUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -64,12 +63,9 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
 
   private final String fetchAllQuery;
   private final String fetchQuery;
-  private final String prefetchQueryFromTo;
-  private final String prefetchQueryFromOnly;
-  private final String prefetchQueryToOnly;
-  private final String prefetchQueryForKeys;
   private final String reverseFetchQuery;
   private final DBI dbi;
+  private final PrefetchQueryProvider queryProvider;
 
   public JdbcDataFetcher(
       @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
@@ -100,35 +96,6 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
         this.table,
         this.keyColumn
     );
-    this.prefetchQueryFromTo = String.format(
-        "SELECT %s, %s FROM %s WHERE '%%s' <= %s AND %s < '%%s'",
-        this.keyColumn,
-        this.valueColumn,
-        this.table,
-        this.keyColumn,
-        this.keyColumn
-    );
-    this.prefetchQueryFromOnly = String.format(
-        "SELECT %s, %s FROM %s WHERE %s < '%%s'",
-        this.keyColumn,
-        this.valueColumn,
-        this.table,
-        this.keyColumn
-    );
-    this.prefetchQueryToOnly = String.format(
-        "SELECT %s, %s FROM %s WHERE '%%s' <= %s",
-        this.keyColumn,
-        this.valueColumn,
-        this.table,
-        this.keyColumn
-    );
-    this.prefetchQueryForKeys = String.format(
-        "SELECT %s, %s FROM %s WHERE %s in (%%s)",
-        this.keyColumn,
-        this.valueColumn,
-        this.table,
-        this.keyColumn
-    );
     this.reverseFetchQuery = String.format(
         "SELECT %s FROM %s WHERE %s = :val",
         this.keyColumn,
@@ -141,6 +108,12 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
         connectorConfig.getPassword()
     );
     dbi.registerMapper(new KeyValueResultSetMapper(keyColumn, valueColumn));
+    if (prefetchKeyProvider != null) {
+      queryProvider = Preconditions.checkNotNull(prefetchKeyProvider.getQueryProvider(), "query provider should be set");
+      queryProvider.init(keyColumn, valueColumn, table);
+    } else {
+      queryProvider = null;
+    }
   }
 
   @Override
@@ -211,13 +184,11 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
   }
 
   @Override
-  public Map<String, String> prefetch(String key)
+  public Map<String, String> prefetch(final String key)
   {
     if (prefetchKeyProvider == null) {
       return ImmutableMap.of();
     }
-
-    final String queryString = Preconditions.checkNotNull(makePrefetchQuery(key), "query string is null");
 
     return inReadOnlyTransaction(
         new TransactionCallback<Map<String, String>>()
@@ -225,7 +196,7 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
           @Override
           public Map<String, String> inTransaction(Handle handle, TransactionStatus status) throws Exception
           {
-            List<Map<String, Object>> rowList = handle.createQuery(queryString)
+            List<Map<String, Object>> rowList = makePrefetchQuery(handle, key)
                 .setFetchSize(streamingFetchSize)
                 .list();
             Map<String, String> rowMap = Maps.newHashMap();
@@ -266,32 +237,12 @@ public class JdbcDataFetcher extends PrefetchableFetcher<String, String>
 
   }
 
-  private String makePrefetchQuery(String key)
+  private Query<Map<String, Object>> makePrefetchQuery(Handle handle, String key)
   {
-    PrefetchKeyProvider.ReturnType returnType = prefetchKeyProvider.getReturnType();
-    String[] keys = prefetchKeyProvider.get(key);
-
-    switch(returnType) {
-      case Range:
-        Preconditions.checkArgument(keys.length == 2,
-            "Needs only two points of range (start and end) but got %d", keys.length);
-        String from = keys[0];
-        String to = keys[1];
-        return
-            (from == null) ? String.format(prefetchQueryToOnly, to) :
-                (to == null) ? String.format(prefetchQueryFromOnly, from)
-                             : String.format(prefetchQueryFromTo, from, to);
-      case Points:
-        Preconditions.checkArgument(keys.length > 0, "Needs at least one key to prefetch");
-        String inList = String.format(
-            "'%s'",
-            StringUtils.join(keys, "', '")
-            );
-        return String.format(prefetchQueryForKeys, inList);
-      default:
-        // should not reach here
-        throw new ISE(String.format("Unknown type: %s", returnType.name()));
-    }
+    return queryProvider.makePrefetchQuery(
+        handle,
+        prefetchKeyProvider.get(key)
+    );
   }
 
   private DBI getDbi()

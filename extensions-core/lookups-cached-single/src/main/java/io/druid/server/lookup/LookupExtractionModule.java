@@ -20,12 +20,12 @@
 package io.druid.server.lookup;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.StringUtils;
-import io.druid.query.lookup.LookupExtractorFactory;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,7 +41,9 @@ public class LookupExtractionModule implements DruidModule
           @Override
           public void setupModule(SetupContext context)
           {
-            context.setMixInAnnotations(LookupExtractorFactory.class, LookupExtractorFactoryMixIn.class);
+            context.registerSubtypes(LoadingLookupFactory.class);
+            context.registerSubtypes(PollingLookupFactory.class);
+            context.registerSubtypes(new NamedType(PrefetchedLoadingLookupFactory.class, "prefetchLoadingLookup"));
           }
         }
     );

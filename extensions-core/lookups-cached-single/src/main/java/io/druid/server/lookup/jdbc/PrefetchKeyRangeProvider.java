@@ -14,6 +14,7 @@ public class PrefetchKeyRangeProvider implements PrefetchKeyProvider
   private final List<String> partitionKeys;
 
   private final NavigableSet<String> sortedPartitionKeys;
+  private final PrefetchQueryProvider queryProvider;
 
   @JsonCreator
   public PrefetchKeyRangeProvider(
@@ -22,12 +23,13 @@ public class PrefetchKeyRangeProvider implements PrefetchKeyProvider
   {
     this.partitionKeys = Preconditions.checkNotNull(partitionKeys, "partitionKeys");
     this.sortedPartitionKeys = new TreeSet<>(this.partitionKeys);
+    this.queryProvider = new PrefetchRangeQueryProvider();
   }
 
   @Override
-  public ReturnType getReturnType()
+  public PrefetchQueryProvider getQueryProvider()
   {
-    return ReturnType.Range;
+    return queryProvider;
   }
 
   @Override

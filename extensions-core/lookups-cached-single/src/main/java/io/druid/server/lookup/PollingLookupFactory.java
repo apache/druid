@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.query.lookup.LookupIntrospectHandler;
@@ -33,6 +32,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@JsonTypeName("pollingLookup")
 public class PollingLookupFactory implements LookupExtractorFactory
 {
   private static final Logger LOGGER = new Logger(PollingLookupFactory.class);
