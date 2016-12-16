@@ -124,7 +124,7 @@ public class LookupCoordinatorResource
       }
       Map<String, Map<String, Map<String, Object>>> verified = Maps.newHashMapWithExpectedSize(map.size());
       for (Map.Entry <String, Map<String, Map<String, Object>>> tierMap: map.entrySet()) {
-        Map<String, Map<String, Object>> verifiedTierMap = getVerifiedOnly(mapper, tierMap.getValue());
+        Map<String, Map<String, Object>> verifiedTierMap = getVerified(mapper, tierMap.getValue());
         if (verifiedTierMap.size() > 0) {
           verified.put(tierMap.getKey(), verifiedTierMap);
         }
@@ -212,7 +212,7 @@ public class LookupCoordinatorResource
       catch (IOException e) {
         return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
       }
-      if (isVerified(mapper, lookupSpec) || lookupSpec.isEmpty()) {
+      if (lookupSpec.isEmpty() || verifySpec(mapper, lookupSpec)) {
         if (lookupCoordinatorManager.updateLookup(
             tier,
             lookup,
@@ -301,11 +301,11 @@ public class LookupCoordinatorResource
     }
   }
 
-  Map<String, Map<String, Object>> getVerifiedOnly(ObjectMapper mapper, Map<String, Map<String, Object>> factoryMap)
+  Map<String, Map<String, Object>> getVerified(ObjectMapper mapper, Map<String, Map<String, Object>> factoryMap)
   {
     Map<String, Map<String, Object>> verified = Maps.newHashMapWithExpectedSize(factoryMap.size());
     for (Map.Entry<String, Map<String, Object>> factorySpec: factoryMap.entrySet()) {
-      if (isVerified(mapper, factorySpec.getValue())) {
+      if (verifySpec(mapper, factorySpec.getValue())) {
         verified.put(factorySpec.getKey(), factorySpec.getValue());
       }
     }
@@ -313,7 +313,7 @@ public class LookupCoordinatorResource
     return verified;
   }
 
-  boolean isVerified(ObjectMapper mapper, Map<String, Object> spec)
+  boolean verifySpec(ObjectMapper mapper, Map<String, Object> spec)
   {
     try {
       mapper.convertValue(spec, new TypeReference<LookupExtractorFactory>()
