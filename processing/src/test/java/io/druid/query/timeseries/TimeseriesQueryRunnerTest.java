@@ -36,6 +36,8 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -109,6 +111,44 @@ public class TimeseriesQueryRunnerTest
   {
     this.runner = runner;
     this.descending = descending;
+  }
+
+  @Test
+  public void testEmptyTimeseries()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.emptyInterval)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          new DoubleFirstAggregatorFactory("first", "index")
+
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime("2020-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 0L,
+                    "index", 0D,
+                    "first", 0D
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
   @Test
@@ -1730,6 +1770,114 @@ public class TimeseriesQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeseriesWithFirstLastAggregator()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.monthGran)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .aggregators(
+                                      ImmutableList.of(
+                                          new DoubleFirstAggregatorFactory("first", "index"),
+                                          new DoubleLastAggregatorFactory("last", "index")
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+    // There's a difference between ascending and descending results since granularity of druid.sample.tsv is days,
+    // with multiple first and last times. The traversal order difference cause the first and last aggregator
+    // to select different value from the list of first and last dates
+    List<Result<TimeseriesResultValue>> expectedAscendingResults = ImmutableList.of(
+        new Result<>(
+            new DateTime("2011-01-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(100.000000).doubleValue(),
+                    "last", new Float(943.497198).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(132.123776).doubleValue(),
+                    "last", new Float(1101.918270).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(153.059937).doubleValue(),
+                    "last", new Float(1063.201156).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(135.885094).doubleValue(),
+                    "last", new Float(780.271977).doubleValue()
+                )
+            )
+        )
+    );
+
+    List<Result<TimeseriesResultValue>> expectedDescendingResults = ImmutableList.of(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(1234.247546).doubleValue(),
+                    "last", new Float(106.793700).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(1004.940887).doubleValue(),
+                    "last", new Float(151.752485).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(913.561076).doubleValue(),
+                    "last", new Float(122.258195).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-01-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "first", new Float(800.000000).doubleValue(),
+                    "last", new Float(133.740047).doubleValue()
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    if (descending) {
+      TestHelper.assertExpectedResults(expectedDescendingResults, actualResults);
+    } else {
+      TestHelper.assertExpectedResults(expectedAscendingResults, actualResults);
+    }
   }
 
   @Test

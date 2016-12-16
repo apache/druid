@@ -76,6 +76,60 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 { "type" : "longMax", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
+### First / Last aggregator
+
+First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+
+Note that queries with first/last aggregators on a segment created with rollup enabled will return the rolled up value, and not the last value within the raw ingested data.
+
+#### `doubleFirst` aggregator
+
+`doubleFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "doubleFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `doubleLast` aggregator
+
+`doubleLast` computes the metric value with the maximum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "doubleLast",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `longFirst` aggregator
+
+`longFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "longFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `longLast` aggregator
+
+`longLast` computes the metric value with the maximum timestamp or 0 if no row exist
+
+```json
+{ 
+  "type" : "longLast",
+  "name" : <output_name>, 
+  "fieldName" : <metric_name>,
+}
+```
+
 ### JavaScript aggregator
 
 Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your

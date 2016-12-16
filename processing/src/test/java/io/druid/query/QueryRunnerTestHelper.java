@@ -106,6 +106,7 @@ public class QueryRunnerTestHelper
   public static final DateTime minTime = new DateTime("2011-01-12T00:00:00.000Z");
 
   public static final QueryGranularity dayGran = QueryGranularities.DAY;
+  public static final QueryGranularity monthGran = QueryGranularities.MONTH;
   public static final QueryGranularity allGran = QueryGranularities.ALL;
   public static final String timeDimension = "__time";
   public static final String marketDimension = "market";

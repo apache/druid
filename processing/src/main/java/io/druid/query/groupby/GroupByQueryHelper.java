@@ -55,7 +55,8 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
-      StupidPool<ByteBuffer> bufferPool
+      StupidPool<ByteBuffer> bufferPool,
+      final boolean combine
   )
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -66,17 +67,23 @@ public class GroupByQueryHelper
     // AllGranularity returns timeStart instead of Long.MIN_VALUE
     final long granTimeStart = gran.iterable(timeStart, timeStart + 1).iterator().next();
 
-    final List<AggregatorFactory> aggs = Lists.transform(
-        query.getAggregatorSpecs(),
-        new Function<AggregatorFactory, AggregatorFactory>()
-        {
-          @Override
-          public AggregatorFactory apply(AggregatorFactory input)
+    final List<AggregatorFactory> aggs;
+    if (combine) {
+      aggs = Lists.transform(
+          query.getAggregatorSpecs(),
+          new Function<AggregatorFactory, AggregatorFactory>()
           {
-            return input.getCombiningFactory();
+            @Override
+            public AggregatorFactory apply(AggregatorFactory input)
+            {
+              return input.getCombiningFactory();
+            }
           }
-        }
-    );
+      );
+    } else {
+      aggs = query.getAggregatorSpecs();
+    }
+
     final List<String> dimensions = Lists.transform(
         query.getDimensions(),
         new Function<DimensionSpec, String>()
@@ -178,13 +185,15 @@ public class GroupByQueryHelper
       GroupByQuery query,
       GroupByQueryConfig config,
       StupidPool<ByteBuffer> bufferPool,
-      Sequence<Row> rows
+      Sequence<Row> rows,
+      boolean combine
   )
   {
     Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
         config,
-        bufferPool
+        bufferPool,
+        combine
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);

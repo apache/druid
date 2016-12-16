@@ -29,8 +29,11 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.HistogramAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -39,6 +42,7 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.DoubleGreatestPostAggregator;
@@ -79,7 +83,11 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "histogram", value = HistogramAggregatorFactory.class),
       @JsonSubTypes.Type(name = "hyperUnique", value = HyperUniquesAggregatorFactory.class),
       @JsonSubTypes.Type(name = "cardinality", value = CardinalityAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "filtered", value = FilteredAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "filtered", value = FilteredAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "longFirst", value = LongFirstAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "doubleFirst", value = DoubleFirstAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "longLast", value = LongLastAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "doubleLast", value = DoubleLastAggregatorFactory.class)
   })
   public static interface AggregatorFactoryMixin
   {
