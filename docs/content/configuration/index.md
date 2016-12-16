@@ -92,7 +92,7 @@ All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|noop|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -133,6 +133,22 @@ MDC fields populated with `setMDC`:
 |`duration`  |The duration of the query interval|
 |`resultOrdering`|The ordering of results|
 |`descending`|If the query is a descending query|
+
+#### Filtered Request Logging
+Filtered Request Logger filters requests based on a configurable query/time threshold. Only request logs where query/time is above the threshold are emitted.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
+|`druid.request.logging.delegate`|Delegate request logger to log requests.|none|
+
+#### Composite Request Logging
+Composite Request Logger emits request logs to multiple request loggers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
+
 
 ### Enabling Metrics
 
