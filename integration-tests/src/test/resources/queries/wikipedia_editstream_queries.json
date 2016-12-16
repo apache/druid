@@ -73,6 +73,26 @@
                     "type": "hyperUnique",
                     "fieldName": "unique_users",
                     "name": "unique_users"
+                },
+                {
+                    "type" : "doubleFirst",
+                    "name" : "firstAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "doubleLast",
+                    "name" : "lastAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "longFirst",
+                    "name" : "firstCount",
+                    "fieldName" : "count"
+                },
+                {
+                    "type" : "longLast",
+                    "name" : "lastCount",
+                    "fieldName" : "count"
                 }
             ],
             "context": {
@@ -87,6 +107,10 @@
                 "result": {
                     "added": 9.11526338E8,
                     "count": 2815650,
+                    "firstAdded": 39.0,
+                    "lastAdded": 210.0,
+                    "firstCount": 1,
+                    "lastCount": 1,
                     "delta": 5.48967603E8,
                     "variation": 1.274085073E9,
                     "delta_hist": {
@@ -174,6 +198,26 @@
                     "type": "hyperUnique",
                     "fieldName": "unique_users",
                     "name": "unique_users"
+                },
+                {
+                    "type" : "doubleFirst",
+                    "name" : "firstAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "doubleLast",
+                    "name" : "lastAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "longFirst",
+                    "name" : "firstCount",
+                    "fieldName" : "count"
+                },
+                {
+                    "type" : "longLast",
+                    "name" : "lastCount",
+                    "fieldName" : "count"
                 }
             ],
             "context": {
@@ -188,6 +232,10 @@
                 "result": {
                     "added": 3.49393993E8,
                     "count": 1829240,
+                    "firstAdded": 39.0,
+                    "lastAdded": 210.0,
+                    "firstCount": 1,
+                    "lastCount": 1,
                     "delta": 2.24089868E8,
                     "variation": 4.74698118E8,
                     "delta_hist": {
@@ -365,6 +413,26 @@
                     "type": "hyperUnique",
                     "fieldName": "unique_users",
                     "name": "unique_users"
+                },
+                {
+                    "type" : "doubleFirst",
+                    "name" : "firstAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "doubleLast",
+                    "name" : "lastAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "longFirst",
+                    "name" : "firstCount",
+                    "fieldName" : "count"
+                },
+                {
+                    "type" : "longLast",
+                    "name" : "lastCount",
+                    "fieldName" : "count"
                 }
             ],
             "dimension": "page",
@@ -383,6 +451,10 @@
                     {
                         "added": 1812960.0,
                         "count": 1697,
+                        "firstCount": 2,
+                        "lastCount": 3,
+                        "firstAdded": 462.0,
+                        "lastAdded": 1871.0,
                         "page": "Wikipedia:Administrators'_noticeboard/Incidents",
                         "delta": 770071.0,
                         "variation": 2855849.0,
@@ -393,6 +465,10 @@
                     {
                         "added": 70162.0,
                         "count": 967,
+                        "firstCount": 1,
+                        "lastCount": 1,
+                        "firstAdded": 12.0,
+                        "lastAdded": 129.0,
                         "page": "2013",
                         "delta": 40872.0,
                         "variation": 99452.0,
@@ -403,6 +479,10 @@
                     {
                         "added": 519152.0,
                         "count": 1700,
+                        "firstCount": 1,
+                        "lastCount": 5,
+                        "firstAdded": 0.0,
+                        "lastAdded": 2399.0,
                         "page": "Wikipedia:Vandalismusmeldung",
                         "delta": -5446.0,
                         "variation": 1043750.0,
@@ -480,6 +560,26 @@
                     "type": "hyperUnique",
                     "fieldName": "unique_users",
                     "name": "unique_users"
+                },
+                {
+                    "type" : "doubleFirst",
+                    "name" : "firstAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "doubleLast",
+                    "name" : "lastAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "longFirst",
+                    "name" : "firstCount",
+                    "fieldName" : "count"
+                },
+                {
+                    "type" : "longLast",
+                    "name" : "lastCount",
+                    "fieldName" : "count"
                 }
             ],
             "dimension": "page",
@@ -498,6 +598,10 @@
                     {
                         "added": 61739.0,
                         "count": 852,
+                        "firstCount": 1,
+                        "lastCount": 1,
+                        "firstAdded": 12.0,
+                        "lastAdded": 129.0,
                         "page": "2013",
                         "delta": 35313.0,
                         "variation": 88165.0,
@@ -508,6 +612,10 @@
                     {
                         "added": 28288.0,
                         "count": 513,
+                        "firstCount": 1,
+                        "lastCount": 1,
+                        "firstAdded": 29.0,
+                        "lastAdded": 37.0,
                         "page": "Gérard_Depardieu",
                         "delta": 7027.0,
                         "variation": 49549.0,
@@ -518,6 +626,10 @@
                     {
                         "added": 10951.0,
                         "count": 459,
+                        "firstCount": 1,
+                        "lastCount": 1,
+                        "firstAdded": 29.0,
+                        "lastAdded": 35.0,
                         "page": "Zichyújfalu",
                         "delta": 9030.0,
                         "variation": 12872.0,
@@ -570,6 +682,26 @@
                     "type": "hyperUnique",
                     "fieldName": "unique_users",
                     "name": "unique_users"
+                },
+                {
+                    "type" : "doubleFirst",
+                    "name" : "firstAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "doubleLast",
+                    "name" : "lastAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "longFirst",
+                    "name" : "firstCount",
+                    "fieldName" : "count"
+                },
+                {
+                    "type" : "longLast",
+                    "name" : "lastCount",
+                    "fieldName" : "count"
                 }
             ],
             "postAggregations": [
@@ -619,6 +751,10 @@
                     {
                         "added": 151409.0,
                         "count": 1770,
+                        "firstCount": 9,
+                        "lastCount": 9,
+                        "firstAdded": 1612.0,
+                        "lastAdded": 560.0,
                         "page": "User:Cyde/List_of_candidates_for_speedy_deletion/Subpage",
                         "delta": 670.0,
                         "variation": 302148.0,
@@ -630,6 +766,10 @@
                     {
                         "added": 519152.0,
                         "count": 1700,
+                        "firstCount": 1,
+                        "lastCount": 5,
+                        "firstAdded": 0.0,
+                        "lastAdded": 2399.0,
                         "page": "Wikipedia:Vandalismusmeldung",
                         "delta": -5446.0,
                         "variation": 1043750.0,
@@ -641,6 +781,10 @@
                     {
                         "added": 1812960.0,
                         "count": 1697,
+                        "firstCount": 2,
+                        "lastCount": 3,
+                        "firstAdded": 462.0,
+                        "lastAdded": 1871.0,
                         "page": "Wikipedia:Administrators'_noticeboard/Incidents",
                         "delta": 770071.0,
                         "variation": 2855849.0,
@@ -865,7 +1009,7 @@
         ]
     },
     {
-        "description": "groupBy, two aggs, namespace + robot dim, postAggs",
+        "description": "groupBy, six aggs, namespace + robot dim, postAggs",
         "query": {
             "queryType": "groupBy",
             "dataSource": "wikipedia_editstream",
@@ -880,6 +1024,26 @@
                     "type": "longSum",
                     "fieldName": "count",
                     "name": "count"
+                },
+                {
+                    "type" : "doubleFirst",
+                    "name" : "firstAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "doubleLast",
+                    "name" : "lastAdded",
+                    "fieldName" : "added"
+                },
+                {
+                    "type" : "longFirst",
+                    "name" : "firstCount",
+                    "fieldName" : "count"
+                },
+                {
+                    "type" : "longLast",
+                    "name" : "lastCount",
+                    "fieldName" : "count"
                 }
             ],
             "postAggregations": [
@@ -920,6 +1084,10 @@
                 "event": {
                     "sumOfRowsAndCount": 2268154.0,
                     "count": 1286354,
+                    "firstCount": 1,
+                    "lastCount": 1,
+                    "firstAdded": 70.0,
+                    "lastAdded": 210.0,
                     "robot": "0",
                     "rows": 981800,
                     "namespace": "article"
@@ -931,6 +1099,10 @@
                 "event": {
                     "sumOfRowsAndCount": 1385233.0,
                     "count": 693711,
+                    "firstCount": 1,
+                    "lastCount": 1,
+                    "firstAdded": 39.0,
+                    "lastAdded": 0.0,
                     "robot": "1",
                     "rows": 691522,
                     "namespace": "article"
@@ -942,6 +1114,10 @@
                 "event": {
                     "sumOfRowsAndCount": 878393.0,
                     "count": 492643,
+                    "firstCount": 2,
+                    "lastCount": 1,
+                    "firstAdded": 431.0,
+                    "lastAdded": 43.0,
                     "robot": "0",
                     "rows": 385750,
                     "namespace": "wikipedia"
