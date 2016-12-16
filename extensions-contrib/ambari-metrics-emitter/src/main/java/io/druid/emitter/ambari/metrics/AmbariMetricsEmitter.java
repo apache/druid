@@ -56,14 +56,14 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   private final String collectorURI;
   private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
-      .setDaemon(true)
-      .setNameFormat("AmbariMetricsEmitter-%s")
-      .build()); // Thread pool of two in order to schedule flush runnable
+    .setDaemon(true)
+    .setNameFormat("AmbariMetricsEmitter-%s")
+    .build()); // Thread pool of two in order to schedule flush runnable
   private AtomicLong countLostEvents = new AtomicLong(0);
 
   public AmbariMetricsEmitter(
-      AmbariMetricsEmitterConfig config,
-      List<Emitter> emitterList
+    AmbariMetricsEmitterConfig config,
+    List<Emitter> emitterList
   )
   {
     this.config = config;
@@ -71,11 +71,11 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     this.timelineMetricConverter = config.getDruidToTimelineEventConverter();
     this.eventsQueue = new LinkedBlockingQueue<>(config.getMaxQueueSize());
     this.collectorURI = String.format(
-        "%s://%s:%s%s",
-        config.getProtocol(),
-        config.getHostname(),
-        config.getPort(),
-        WS_V1_TIMELINE_METRICS
+      "%s://%s:%s%s",
+      config.getProtocol(),
+      config.getHostname(),
+      config.getPort(),
+      WS_V1_TIMELINE_METRICS
     );
   }
 
@@ -89,10 +89,10 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
           loadTruststore(config.getTrustStorePath(), config.getTrustStoreType(), config.getTrustStorePassword());
         }
         exec.scheduleAtFixedRate(
-            new ConsumerRunnable(),
-            config.getFlushPeriod(),
-            config.getFlushPeriod(),
-            TimeUnit.MILLISECONDS
+          new ConsumerRunnable(),
+          config.getFlushPeriod(),
+          config.getFlushPeriod(),
+          TimeUnit.MILLISECONDS
         );
         started.set(true);
       }
@@ -113,15 +113,15 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
       }
       try {
         final boolean isSuccessful = eventsQueue.offer(
-            timelineEvent,
-            config.getEmitWaitTime(),
-            TimeUnit.MILLISECONDS
+          timelineEvent,
+          config.getEmitWaitTime(),
+          TimeUnit.MILLISECONDS
         );
         if (!isSuccessful) {
           if (countLostEvents.getAndIncrement() % 1000 == 0) {
             log.error(
-                "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
-                countLostEvents.get()
+              "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+              countLostEvents.get()
             );
           }
         }
@@ -162,16 +162,16 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         while (eventsQueue.size() > 0 && !exec.isShutdown()) {
           try {
             final TimelineMetric metricEvent = eventsQueue.poll(
-                config.getWaitForEventTime(),
-                TimeUnit.MILLISECONDS
+              config.getWaitForEventTime(),
+              TimeUnit.MILLISECONDS
             );
             if (metricEvent != null) {
               metrics.addOrMergeTimelineMetric(metricEvent);
               if (metrics.getMetrics().size() == batchSize) {
                 emitMetrics(metrics);
                 log.debug(
-                    "sent [%d] events",
-                    metrics.getMetrics().size()
+                  "sent [%d] events",
+                  metrics.getMetrics().size()
                 );
                 metrics = new TimelineMetrics();
               }
@@ -179,17 +179,15 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
           }
           catch (InterruptedException e) {
             log.error(e, e.getMessage());
-            if (e instanceof InterruptedException) {
-              Thread.currentThread().interrupt();
-            }
+            Thread.currentThread().interrupt();
           }
-          if (metrics.getMetrics().size() > 0) {
-            emitMetrics(metrics);
-            log.debug(
-                "sent [%d] events",
-                metrics.getMetrics().size()
-            );
-          }
+        }
+        if (metrics.getMetrics().size() > 0) {
+          emitMetrics(metrics);
+          log.debug(
+            "sent [%d] events",
+            metrics.getMetrics().size()
+          );
         }
       }
       catch (Exception e) {
@@ -198,6 +196,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
           Thread.currentThread().interrupt();
         }
       }
+
     }
   }
 
