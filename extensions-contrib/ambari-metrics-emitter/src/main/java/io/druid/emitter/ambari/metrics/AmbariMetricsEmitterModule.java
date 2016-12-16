@@ -20,7 +20,6 @@
 package io.druid.emitter.ambari.metrics;
 
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
