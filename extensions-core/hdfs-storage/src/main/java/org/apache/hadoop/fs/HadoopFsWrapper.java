@@ -22,6 +22,7 @@ package org.apache.hadoop.fs;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 /**
  * This wrapper class is created to be able to access some of the the "protected" methods inside Hadoop's
@@ -48,10 +49,11 @@ public class HadoopFsWrapper
   public static boolean rename(FileSystem fs, Path from, Path to) throws IOException
   {
     try {
-      fs.rename(from, to, Options.Rename.NONE);
+      Method renameMethod = fs.getClass().getMethod("rename", Path.class, Path.class, Options.Rename[].class);
+      renameMethod.invoke(fs, from, to, new Options.Rename[]{Options.Rename.NONE});
       return true;
     }
-    catch (IOException ex) {
+    catch (Exception ex) {
       log.warn(ex, "Failed to rename [%s] to [%s].", from, to);
       return false;
     }
