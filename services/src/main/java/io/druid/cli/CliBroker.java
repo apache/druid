@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.druid.client.BrokerSegmentWatcherConfig;
 import io.druid.client.BrokerServerView;
@@ -51,6 +50,7 @@ import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.router.TieredBrokerConfig;
+import io.druid.sql.guice.SqlModule;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -111,7 +111,8 @@ public class CliBroker extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
           }
         },
-        new LookupModule()
+        new LookupModule(),
+        new SqlModule()
     );
   }
 }
