@@ -44,3 +44,9 @@ This product contains a modified version of Metamarkets bytebuffer-collections l
     * https://github.com/metamx/bytebuffer-collections
   * COMMIT TAG:
     * https://github.com/metamx/bytebuffer-collections/commit/3d1e7c8
+
+This product contains SQL query planning code adapted from Apache Calcite
+  * LICENSE:
+    * https://github.com/apache/calcite/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://calcite.apache.org/
