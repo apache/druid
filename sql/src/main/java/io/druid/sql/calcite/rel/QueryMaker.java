@@ -38,6 +38,7 @@ import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
+import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
@@ -217,13 +218,26 @@ public class QueryMaker
     final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
     final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(druidTable);
 
+    final boolean descending;
+
+    if (queryBuilder.getLimitSpec() != null) {
+      final DefaultLimitSpec limitSpec = queryBuilder.getLimitSpec();
+
+      // Sanity checks; these preconditions should be assured by DruidQueryBuilder.accumulate.
+      Preconditions.checkState(limitSpec.getColumns().size() == 1);
+      Preconditions.checkState(limitSpec.getColumns().get(0).getDimension().equals(timeOutputName));
+      descending = limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.DESCENDING;
+    } else {
+      descending = false;
+    }
+
     final Map<String, Object> context = Maps.newHashMap();
     context.put("skipEmptyBuckets", true);
 
     final TimeseriesQuery query = new TimeseriesQuery(
         druidTable.getDataSource(),
         filtration.getQuerySegmentSpec(),
-        false,
+        descending,
         filtration.getDimFilter(),
         queryGranularity,
         queryBuilder.getGrouping().getAggregatorFactories(),
