@@ -1950,7 +1950,12 @@ public class CalciteQueryTest
   public void testTimeseries() throws Exception
   {
     testQuery(
-        "SELECT gran, SUM(cnt) FROM (SELECT floor(__time TO month) AS gran, cnt FROM druid.foo) AS x GROUP BY gran ORDER BY gran",
+        "SELECT gran, SUM(cnt) FROM (\n"
+        + "  SELECT floor(__time TO month) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE)
@@ -1963,6 +1968,33 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{T("2000-01-01"), 3L},
             new Object[]{T("2001-01-01"), 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesDescending() throws Exception
+  {
+    testQuery(
+        "SELECT gran, SUM(cnt) FROM (\n"
+        + "  SELECT floor(__time TO month) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran DESC",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(QueryGranularities.MONTH)
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .descending(true)
+                  .context(TIMESERIES_CONTEXT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{T("2001-01-01"), 3L},
+            new Object[]{T("2000-01-01"), 3L}
         )
     );
   }
