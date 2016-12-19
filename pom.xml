@@ -120,6 +120,7 @@
         <module>extensions-contrib/google-extensions</module>
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
+        <module>extensions-contrib/ambari-metrics-emitter</module>
     </modules>
 
     <dependencyManagement>
