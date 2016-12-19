@@ -46,6 +46,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
@@ -73,17 +74,19 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 @Path("/druid/v2/")
-public class QueryResource
+public class QueryResource implements QueryCountStatsProvider
 {
   protected static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   protected static final String APPLICATION_SMILE = "application/smile";
 
   protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
+
 
   protected final QueryToolChestWarehouse warehouse;
   protected final ServerConfig config;
@@ -94,6 +97,9 @@ public class QueryResource
   protected final RequestLogger requestLogger;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
+  private final AtomicLong successfulQueryCount = new AtomicLong();
+  private final AtomicLong failedQueryCount = new AtomicLong();
+  private final AtomicLong interruptedQueryCount = new AtomicLong();
 
   @Inject
   public QueryResource(
@@ -250,7 +256,7 @@ public class QueryResource
 
                     os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
                     os.close();
-
+                    successfulQueryCount.incrementAndGet();
                     final long queryTime = System.currentTimeMillis() - start;
                     emitter.emit(
                         DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
@@ -308,6 +314,7 @@ public class QueryResource
     catch (QueryInterruptedException e) {
       try {
         log.warn(e, "Exception while processing queryId [%s]", queryId);
+        interruptedQueryCount.incrementAndGet();
         final long queryTime = System.currentTimeMillis() - start;
         emitter.emit(
             DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
@@ -347,6 +354,7 @@ public class QueryResource
           : query.toString();
 
       log.warn(e, "Exception occurred on request [%s]", queryString);
+      failedQueryCount.incrementAndGet();
 
       try {
         final long queryTime = System.currentTimeMillis() - start;
@@ -436,5 +444,23 @@ public class QueryResource
                      .entity(newOutputWriter().writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e)))
                      .build();
     }
+  }
+
+  @Override
+  public long getSuccessfulQueryCount()
+  {
+    return successfulQueryCount.get();
+  }
+
+  @Override
+  public long getFailedQueryCount()
+  {
+    return failedQueryCount.get();
+  }
+
+  @Override
+  public long getInterruptedQueryCount()
+  {
+    return interruptedQueryCount.get();
   }
 }

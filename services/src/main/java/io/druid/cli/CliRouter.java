@@ -25,7 +25,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
@@ -38,7 +37,9 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
+import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.CoordinatorRuleManager;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -91,6 +92,7 @@ public class CliRouter extends ServerRunnable
                   .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                   .in(LazySingleton.class);
 
+            binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
             binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, Server.class);
