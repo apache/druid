@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 
 public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements Emitter
 {
-  private static Logger log = new Logger(AmbariMetricsEmitter.class);
+  private static final Logger log = new Logger(AmbariMetricsEmitter.class);
 
   private final DruidToTimelineMetricConverter timelineMetricConverter;
   private final List<Emitter> emitterList;
@@ -54,12 +54,12 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   private final LinkedBlockingQueue<TimelineMetric> eventsQueue;
   private final AmbariMetricsEmitterConfig config;
   private final String collectorURI;
-  private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
+  private static final long DEFAULT_FLUSH_TIMEOUT_MILLIS = 60000; // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
     .setDaemon(true)
     .setNameFormat("AmbariMetricsEmitter-%s")
     .build()); // Thread pool of two in order to schedule flush runnable
-  private AtomicLong countLostEvents = new AtomicLong(0);
+  private final AtomicLong countLostEvents = new AtomicLong(0);
 
   public AmbariMetricsEmitter(
     AmbariMetricsEmitterConfig config,
@@ -148,7 +148,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   @Override
   protected int getTimeoutSeconds()
   {
-    return (int) (FLUSH_TIMEOUT / 1000);
+    return (int) (DEFAULT_FLUSH_TIMEOUT_MILLIS / 1000);
   }
 
   private class ConsumerRunnable implements Runnable
@@ -203,16 +203,17 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   @Override
   public void flush() throws IOException
   {
-    if (started.get()) {
-      Future future = exec.schedule(new ConsumerRunnable(), 0, TimeUnit.MILLISECONDS);
-      try {
-        future.get(FLUSH_TIMEOUT, TimeUnit.MILLISECONDS);
-      }
-      catch (InterruptedException | ExecutionException | TimeoutException e) {
-        if (e instanceof InterruptedException) {
-          throw new RuntimeException("interrupted flushing elements from queue", e);
+    synchronized (started) {
+      if (started.get()) {
+        Future future = exec.schedule(new ConsumerRunnable(), 0, TimeUnit.MILLISECONDS);
+        try {
+          future.get(DEFAULT_FLUSH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
         }
-        log.error(e, e.getMessage());
+        catch (InterruptedException | ExecutionException | TimeoutException e) {
+          if (e instanceof InterruptedException) {
+            throw new RuntimeException("interrupted flushing elements from queue", e);
+          }
+        }
       }
     }
   }
@@ -220,9 +221,11 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   @Override
   public void close() throws IOException
   {
-    flush();
-    started.set(false);
-    exec.shutdown();
+    synchronized (started) {
+      flush();
+      exec.shutdown();
+      started.set(false);
+    }
   }
 
   protected static String sanitize(String namespace)

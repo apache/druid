@@ -30,7 +30,7 @@ import java.util.List;
 public class AmbariMetricsEmitterConfig
 {
   private final static int DEFAULT_BATCH_SIZE = 100;
-  private final static Long DEFAULT_FLUSH_PERIOD = (long) (60 * 1000); // flush every one minute
+  private final static Long DEFAULT_FLUSH_PERIOD_MILLIS = (long) (60 * 1000); // flush every one minute
   private final static long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
   private final static String DEFAULT_PROTOCOL = "http";
 
@@ -98,11 +98,11 @@ public class AmbariMetricsEmitterConfig
     this.trustStoreType = trustStoretype;
     this.trustStorePassword = trustStorePassword;
     this.batchSize = (batchSize == null) ? DEFAULT_BATCH_SIZE : batchSize;
-    this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD : flushPeriod;
+    this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD_MILLIS : flushPeriod;
     this.maxQueueSize = maxQueueSize == null ? Integer.MAX_VALUE : maxQueueSize;
     this.druidToTimelineEventConverter = Preconditions.checkNotNull(
         druidToTimelineEventConverter,
-        "Event converter can not ne null dude"
+        "Event converter can not be null"
     );
     this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
     this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;

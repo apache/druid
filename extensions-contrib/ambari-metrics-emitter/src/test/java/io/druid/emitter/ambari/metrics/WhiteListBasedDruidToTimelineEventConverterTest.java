@@ -25,10 +25,10 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
       new DefaultObjectMapper()
   );
   private ServiceMetricEvent event;
-  private DateTime createdTime = new DateTime();
-  private String hostname = "testHost:8080";
-  private String serviceName = "historical";
-  private String defaultNamespace = prefix + "." + serviceName;
+  private final DateTime createdTime = new DateTime();
+  private final String hostname = "testHost:8080";
+  private final String serviceName = "historical";
+  private final String defaultNamespace = prefix + "." + serviceName;
 
   @Before
   public void setUp()

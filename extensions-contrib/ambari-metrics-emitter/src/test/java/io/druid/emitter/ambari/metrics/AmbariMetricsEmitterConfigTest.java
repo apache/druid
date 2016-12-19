@@ -12,7 +12,7 @@ import java.util.Collections;
 
 public class AmbariMetricsEmitterConfigTest
 {
-  private ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
