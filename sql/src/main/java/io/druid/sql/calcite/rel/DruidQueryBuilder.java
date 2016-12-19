@@ -269,8 +269,7 @@ public class DruidQueryBuilder
           limitSpec == null || limitSpec.getColumns().isEmpty()
           || (limitSpec.getLimit() == Integer.MAX_VALUE
               && limitSpec.getColumns().size() == 1
-              && limitSpec.getColumns().get(0).getDimension().equals(dimensionSpec.getOutputName())
-              && limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.ASCENDING);
+              && limitSpec.getColumns().get(0).getDimension().equals(dimensionSpec.getOutputName()));
 
       if (sortingOnTime) {
         return ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
