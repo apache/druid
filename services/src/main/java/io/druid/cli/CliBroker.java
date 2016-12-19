@@ -49,6 +49,7 @@ import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.sql.guice.SqlModule;
 import org.eclipse.jetty.server.Server;
@@ -100,7 +101,9 @@ public class CliBroker extends ServerRunnable
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+
             Jerseys.addResource(binder, BrokerQueryResource.class);
+            binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
             LifecycleModule.register(binder, BrokerQueryResource.class);

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -34,6 +35,7 @@ import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.log.RequestLogger;
+import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import org.eclipse.jetty.client.HttpClient;
@@ -56,11 +58,12 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class does async query processing and should be merged with QueryResource at some point
  */
-public class AsyncQueryForwardingServlet extends AsyncProxyServlet
+public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements QueryCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
@@ -72,6 +75,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
   private static final int MAX_QUEUED_CANCELLATIONS = 64;
+  private final AtomicLong successfulQueryCount = new AtomicLong();
+  private final AtomicLong failedQueryCount = new AtomicLong();
+  private final AtomicLong interruptedQueryCount = new AtomicLong();
 
   private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
@@ -100,6 +106,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 
   private HttpClient broadcastClient;
 
+  @Inject
   public AsyncQueryForwardingServlet(
       QueryToolChestWarehouse warehouse,
       @Json ObjectMapper jsonMapper,
@@ -191,6 +198,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
                   }
               );
         }
+        interruptedQueryCount.incrementAndGet();
       }
     } else if (isQueryEndpoint && HttpMethod.POST.is(request.getMethod())) {
       // query request
@@ -317,6 +325,24 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     return new MetricsEmittingProxyResponseListener(request, response, query, start);
   }
 
+  @Override
+  public long getSuccessfulQueryCount()
+  {
+    return successfulQueryCount.get();
+  }
+
+  @Override
+  public long getFailedQueryCount()
+  {
+    return failedQueryCount.get();
+  }
+
+  @Override
+  public long getInterruptedQueryCount()
+  {
+    return interruptedQueryCount.get();
+  }
+
 
   private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
   {
@@ -345,11 +371,16 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     {
       final long requestTime = System.currentTimeMillis() - start;
       try {
+        boolean success = result.isSucceeded();
+        if (success) {
+          successfulQueryCount.incrementAndGet();
+        } else {
+          failedQueryCount.incrementAndGet();
+        }
         emitter.emit(
             DruidMetrics.makeQueryTimeMetric(warehouse.getToolChest(query), jsonMapper, query, req.getRemoteAddr())
                         .build("query/time", requestTime)
         );
-
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -360,12 +391,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
                         "query/time",
                         requestTime,
                         "success",
-                        result.isSucceeded()
+                        success
                         && result.getResponse().getStatus() == javax.ws.rs.core.Response.Status.OK.getStatusCode()
                     )
                 )
             )
         );
+
+
       }
       catch (Exception e) {
         log.error(e, "Unable to log query [%s]!", query);
@@ -379,6 +412,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     {
       try {
         final String errorMessage = failure.getMessage();
+        failedQueryCount.incrementAndGet();
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
