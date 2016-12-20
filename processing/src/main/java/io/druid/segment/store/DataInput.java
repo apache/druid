@@ -53,7 +53,7 @@ public abstract class DataInput
    *
    * @see DataOutput#writeByte(byte)
    */
-  public final short readShort() throws IOException
+  public short readShort() throws IOException
   {
     return (short) (((readByte() & 0xFF) << 8) | (readByte() & 0xFF));
   }
@@ -63,7 +63,7 @@ public abstract class DataInput
    *
    * @see DataOutput#writeInt(int)
    */
-  public final int readInt() throws IOException
+  public int readInt() throws IOException
   {
     return ((readByte() & 0xFF) << 24) | ((readByte() & 0xFF) << 16)
            | ((readByte() & 0xFF) << 8) | (readByte() & 0xFF);
@@ -75,7 +75,7 @@ public abstract class DataInput
    *
    * @see DataOutput#writeLong(long)
    */
-  public final long readLong() throws IOException
+  public long readLong() throws IOException
   {
     return (((long) readInt()) << 32) | (readInt() & 0xFFFFFFFFL);
   }

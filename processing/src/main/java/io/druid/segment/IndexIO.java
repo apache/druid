@@ -270,7 +270,6 @@ public class IndexIO
   }
 
   /**
-   * TODO .....
    *
    * @param indexFile
    *
@@ -278,12 +277,19 @@ public class IndexIO
    */
   public static void checkFileSize(File indexFile) throws IOException
   {
-    /**
-     final long fileSize = indexFile.length();
-     if (fileSize > Integer.MAX_VALUE) {
-     throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
-     }
-     */
+    final long fileSize = indexFile.length();
+    if (fileSize > Integer.MAX_VALUE) {
+      throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
+    }
+  }
+
+  public static void checkFileSize(Directory directory,String indexFile) throws IOException
+  {
+    IndexInput indexInput = directory.openInput(indexFile);
+    final long fileSize = indexInput.length();
+    if (fileSize > Integer.MAX_VALUE) {
+      throw new IOException(String.format("File[%s] too large[%s]", indexFile, fileSize));
+    }
   }
 
   public boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
