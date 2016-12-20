@@ -56,7 +56,7 @@ public class DerbyConnector extends SQLMetadataConnector
 
     this.dbi = new DBI(datasource);
     this.storage = storage;
-    log.info("Configured Derby as metadata storage");
+    log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
   }
 
   public DerbyConnector(
@@ -102,12 +102,14 @@ public class DerbyConnector extends SQLMetadataConnector
   @LifecycleStart
   public void start()
   {
+    log.info("Starting DerbyConnector...");
     storage.start();
   }
 
   @LifecycleStop
   public void stop()
   {
+    log.info("Stopping DerbyConnector...");
     storage.stop();
   }
 }

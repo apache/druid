@@ -33,7 +33,6 @@ import io.druid.metadata.MetadataSegmentManager;
 import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.metadata.MetadataSegmentPublisherProvider;
-import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
@@ -171,8 +170,6 @@ public class SQLMetadataStorageDruidModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(MetadataStorage.class).toProvider(NoopMetadataStorageProvider.class);
-
     PolyBind.optionBinder(binder, Key.get(MetadataSegmentManager.class))
             .addBinding(type)
             .to(SQLMetadataSegmentManager.class)

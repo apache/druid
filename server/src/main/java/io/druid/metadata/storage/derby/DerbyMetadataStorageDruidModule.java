@@ -24,8 +24,10 @@ import com.google.inject.Key;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.guice.SQLMetadataStorageDruidModule;
+import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
+import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 
 public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModule
@@ -42,6 +44,8 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
   {
     createBindingChoices(binder, TYPE);
     super.configure(binder);
+
+    binder.bind(MetadataStorage.class).toProvider(NoopMetadataStorageProvider.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageProvider.class))
             .addBinding(TYPE)
