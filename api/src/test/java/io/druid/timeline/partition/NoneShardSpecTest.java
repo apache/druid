@@ -5,6 +5,8 @@ import io.druid.TestObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class NoneShardSpecTest
 {
   @Test
@@ -27,5 +29,14 @@ public class NoneShardSpecTest
     // Serde should return same object instead of creating new one every time.
     Assert.assertTrue(serde1 == serde2);
     Assert.assertTrue(one == serde1);
+  }
+
+  @Test
+  public void testPartitionFieldIgnored() throws IOException
+  {
+    final String jsonStr = "{\"type\": \"none\",\"partitionNum\": 2}";
+    ObjectMapper mapper = new TestObjectMapper();
+    final ShardSpec noneShardSpec = mapper.readValue(jsonStr, ShardSpec.class);
+    noneShardSpec.equals(NoneShardSpec.instance());
   }
 }

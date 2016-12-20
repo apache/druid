@@ -58,7 +58,9 @@
     </scm>
 
     <properties>
-        <apache.curator.version>2.11.0</apache.curator.version>
+        <apache.curator.version>2.11.1</apache.curator.version>
+        <avatica.version>1.9.0</avatica.version>
+        <calcite.version>1.10.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
@@ -66,6 +68,7 @@
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.5</log4j.version>
+        <netty.version>4.1.6.Final</netty.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
@@ -80,6 +83,7 @@
         <module>indexing-service</module>
         <module>processing</module>
         <module>server</module>
+        <module>sql</module>
         <module>services</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
@@ -115,6 +119,8 @@
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/google-extensions</module>
         <module>extensions-contrib/virtual-columns</module>
+        <module>extensions-contrib/thrift-extensions</module>
+        <module>extensions-contrib/ambari-metrics-emitter</module>
     </modules>
 
     <dependencyManagement>
@@ -129,11 +135,6 @@
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
                 <version>1.0.6</version>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>bytebuffer-collections</artifactId>
-                <version>0.2.5</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -249,6 +250,26 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
                 <version>${apache.curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-core</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-linq4j</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite.avatica</groupId>
+                <artifactId>avatica-core</artifactId>
+                <version>${avatica.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite.avatica</groupId>
+                <artifactId>avatica-server</artifactId>
+                <version>${avatica.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -396,6 +417,16 @@
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
                 <version>2.8.2</version>
@@ -482,7 +513,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>2.5.0</version>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
                 <groupId>io.tesla.aether</groupId>
@@ -572,6 +603,27 @@
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
                 <version>7.0.13</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sf.opencsv</groupId>
+                <artifactId>opencsv</artifactId>
+                <version>2.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+                <version>2.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.6.4</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-core</artifactId>
+                <version>${calcite.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>
@@ -718,11 +770,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.19.1</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                         <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                            -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
@@ -883,6 +936,41 @@
                 <!-- distribution packaging -->
                 <module>distribution</module>
             </modules>
+        </profile>
+
+        <profile>
+            <id>parallel-test</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration combine.self="override">
+                            <forkCount>${maven.fork.count}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <trimStackTrace>false</trimStackTrace>
+                            <!-- locale settings must be set on the command line before startup -->
+                            <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
+                            <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            </argLine>
+                            <!-- our tests are very verbose, let's keep the volume down -->
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
