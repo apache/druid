@@ -21,6 +21,10 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
@@ -29,6 +33,7 @@ import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -226,12 +231,16 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         );
       }
 
-      final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
-          dimension,
-          columnSelectorFactory.getColumnCapabilities(dimension)
-      );
+      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
+          DimensionHandlerUtils.createColumnSelectorPluses(
+              STRATEGY_FACTORY,
+              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
+              columnSelectorFactory
+          );
 
-      return strategy.getValueMatcher(columnSelectorFactory, value);
+
+      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
+      return strategy.getValueMatcher(dimension, columnSelectorFactory, value);
     }
 
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
@@ -241,11 +250,16 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
-              dimension,
-              columnSelectorFactory.getColumnCapabilities(dimension)
-          );
-          return strategy.getValueMatcher(columnSelectorFactory, predicateFactory);
+          ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
+              DimensionHandlerUtils.createColumnSelectorPluses(
+                  STRATEGY_FACTORY,
+                  ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
+                  columnSelectorFactory
+              );
+
+
+          final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
+          return strategy.getValueMatcher(dimension, columnSelectorFactory, predicateFactory);
         default:
           return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
       }

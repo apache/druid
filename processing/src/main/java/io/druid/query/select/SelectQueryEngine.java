@@ -68,7 +68,7 @@ public class SelectQueryEngine
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        String columnName, ColumnCapabilities capabilities
+        ColumnCapabilities capabilities
     )
     {
       ValueType type = capabilities.getType();
@@ -178,10 +178,9 @@ public class SelectQueryEngine
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
             final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
-                DimensionHandlerUtils.getDimensionInfo(
+                DimensionHandlerUtils.createColumnSelectorPluses(
                     STRATEGY_FACTORY,
                     Lists.newArrayList(dims),
-                    adapter,
                     cursor
                 )
             );

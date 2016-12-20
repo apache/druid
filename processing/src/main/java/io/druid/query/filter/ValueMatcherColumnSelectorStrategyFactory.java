@@ -21,7 +21,6 @@ package io.druid.query.filter;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
-import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -30,14 +29,13 @@ public class ValueMatcherColumnSelectorStrategyFactory
 {
   @Override
   public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
-      String columnName, ColumnCapabilities capabilities
+      ColumnCapabilities capabilities
   )
   {
-    capabilities = DimensionHandlerUtils.getEffectiveCapabilities(columnName, capabilities, null);
     ValueType type = capabilities.getType();
     switch (type) {
       case STRING:
-        return new StringValueMatcherColumnSelectorStrategy(columnName);
+        return new StringValueMatcherColumnSelectorStrategy();
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }

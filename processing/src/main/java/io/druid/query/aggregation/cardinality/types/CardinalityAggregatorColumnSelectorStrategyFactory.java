@@ -24,17 +24,18 @@ import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
-public class CardinalityAggColumnSelectorStrategyFactory implements ColumnSelectorStrategyFactory<CardinalityAggColumnSelectorStrategy>
+public class CardinalityAggregatorColumnSelectorStrategyFactory
+    implements ColumnSelectorStrategyFactory<CardinalityAggregatorColumnSelectorStrategy>
 {
   @Override
-  public CardinalityAggColumnSelectorStrategy makeColumnSelectorStrategy(
-      String columnName, ColumnCapabilities capabilities
+  public CardinalityAggregatorColumnSelectorStrategy makeColumnSelectorStrategy(
+      ColumnCapabilities capabilities
   )
   {
     ValueType type = capabilities.getType();
     switch(type) {
       case STRING:
-        return new StringCardinalityAggColumnSelectorStrategy();
+        return new StringCardinalityAggregatorColumnSelectorStrategy();
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }

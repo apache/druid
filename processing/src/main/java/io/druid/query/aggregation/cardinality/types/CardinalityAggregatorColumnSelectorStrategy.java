@@ -24,7 +24,7 @@ import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.segment.ColumnValueSelector;
 
-public interface CardinalityAggColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends
+public interface CardinalityAggregatorColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends
     ColumnSelectorStrategy
 {
   /***

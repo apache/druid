@@ -85,7 +85,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     @Override
     public SearchColumnSelectorStrategy makeColumnSelectorStrategy(
-        String columnName, ColumnCapabilities capabilities
+        ColumnCapabilities capabilities
     )
     {
       ValueType type = capabilities.getType();
@@ -341,10 +341,9 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
             }
 
             List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
-                DimensionHandlerUtils.getDimensionInfo(
+                DimensionHandlerUtils.createColumnSelectorPluses(
                     STRATEGY_FACTORY,
                     nonBitmapDims,
-                    adapter,
                     cursor
                 )
             );

@@ -34,7 +34,9 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
@@ -1069,12 +1071,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
-          dimension,
-          cursor.getColumnCapabilities(dimension)
-      );
+      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
+          DimensionHandlerUtils.createColumnSelectorPluses(
+              STRATEGY_FACTORY,
+              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
+              cursor
+          );
 
-      return strategy.getValueMatcher(cursor, value);
+      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
+      return strategy.getValueMatcher(dimension, cursor, value);
     }
 
     @Override
@@ -1086,12 +1091,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
-          dimension,
-          cursor.getColumnCapabilities(dimension)
-      );
+      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
+          DimensionHandlerUtils.createColumnSelectorPluses(
+              STRATEGY_FACTORY,
+              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
+              cursor
+          );
 
-      return strategy.getValueMatcher(cursor, predicateFactory);
+      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
+      return strategy.getValueMatcher(dimension, cursor, predicateFactory);
     }
 
     private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)

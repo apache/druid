@@ -31,15 +31,8 @@ import java.util.Objects;
 
 public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy
 {
-  private final String columnName;
-
-  public StringValueMatcherColumnSelectorStrategy(String columnName)
-  {
-    this.columnName = columnName;
-  }
-
   @Override
-  public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final String value)
+  public ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, final String value)
   {
     final String valueStr = Strings.emptyToNull(value);
     final DimensionSelector selector = cursor.makeDimensionSelector(
@@ -101,7 +94,7 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   }
 
   @Override
-  public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory)
+  public ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory)
   {
     final DimensionSelector selector = cursor.makeDimensionSelector(
         new DefaultDimensionSpec(columnName, columnName)

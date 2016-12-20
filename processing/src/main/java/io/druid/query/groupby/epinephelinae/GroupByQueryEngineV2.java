@@ -66,7 +66,7 @@ public class GroupByQueryEngineV2
 {
   private static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
 
-  private static GroupByColumnSelectorPlus[] getGroupBySelectorPlus(ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] baseSelectorPlus)
+  private static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] baseSelectorPlus)
   {
     GroupByColumnSelectorPlus[] retInfo = new GroupByColumnSelectorPlus[baseSelectorPlus.length];
     int curPos = 0;
@@ -134,10 +134,9 @@ public class GroupByQueryEngineV2
                           @Override
                           public GroupByEngineIterator make()
                           {
-                            ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils.getDimensionInfo(
+                            ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils.createColumnSelectorPluses(
                                 STRATEGY_FACTORY,
                                 query.getDimensions(),
-                                storageAdapter,
                                 cursor
                             );
                             return new GroupByEngineIterator(
@@ -146,7 +145,7 @@ public class GroupByQueryEngineV2
                                 cursor,
                                 bufferHolder.get(),
                                 fudgeTimestamp,
-                                getGroupBySelectorPlus(selectorPlus)
+                                createGroupBySelectorPlus(selectorPlus)
                             );
                           }
 
@@ -176,7 +175,7 @@ public class GroupByQueryEngineV2
   {
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
-        String columnName, ColumnCapabilities capabilities
+        ColumnCapabilities capabilities
     )
     {
       ValueType type = capabilities.getType();
@@ -194,10 +193,8 @@ public class GroupByQueryEngineV2
    * GroupByQueryEngineV2.
    *
    * Each GroupByColumnSelectorStrategy is associated with a single dimension.
-   *
-   * @param <RowValuesType> The type of the row values object for this dimension
    */
-  private interface GroupByColumnSelectorStrategy<RowValuesType> extends ColumnSelectorStrategy
+  private interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   {
     /**
      * Return the size, in bytes, of this dimension's values in the grouping key.
@@ -269,7 +266,7 @@ public class GroupByQueryEngineV2
     boolean checkRowIndexAndAddValueToGroupingKey(int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer);
   }
 
-  private static class StringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy<IndexedInts>
+  private static class StringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
   {
     private static final int GROUP_BY_MISSING_VALUE = -1;
 

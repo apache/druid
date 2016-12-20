@@ -47,10 +47,9 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   @SuppressWarnings("unchecked")
   public Result<TopNResultValue> apply(Cursor cursor)
   {
-    final ColumnSelectorPlus[] selectorPlusArray = DimensionHandlerUtils.getDimensionInfo(
+    final ColumnSelectorPlus[] selectorPlusArray = DimensionHandlerUtils.createColumnSelectorPluses(
         STRATEGY_FACTORY,
         Lists.newArrayList(query.getDimensionSpec()),
-        null,
         cursor
     );
 

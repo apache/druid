@@ -29,8 +29,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import io.druid.query.ColumnSelectorPlus;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
-import io.druid.query.aggregation.cardinality.types.StringCardinalityAggColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.DimensionSelector;
@@ -44,7 +44,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
-  List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfoList;
+  List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfoList;
   ByteBuffer buf;
   int pos;
 
@@ -82,10 +82,10 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
     final DimensionSpec dimSpec1 = new DefaultDimensionSpec("dim1", "dim1");
     final CardinalityAggregatorTest.TestDimensionSelector dim1 =
         new CardinalityAggregatorTest.TestDimensionSelector(values, null);
-    final ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy> dimInfo1 = new ColumnSelectorPlus(
+    final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> dimInfo1 = new ColumnSelectorPlus(
         dimSpec1.getDimension(),
         dimSpec1.getOutputName(),
-        new StringCardinalityAggColumnSelectorStrategy(),
+        new StringCardinalityAggregatorColumnSelectorStrategy(),
         dim1
     );
 

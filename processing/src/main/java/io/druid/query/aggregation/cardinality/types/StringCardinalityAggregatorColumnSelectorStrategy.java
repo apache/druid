@@ -28,7 +28,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.util.Arrays;
 
-public class StringCardinalityAggColumnSelectorStrategy implements CardinalityAggColumnSelectorStrategy<DimensionSelector>
+public class StringCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy<DimensionSelector>
 {
   public static final String CARDINALITY_AGG_NULL_STRING = "\u0000";
   public static final char CARDINALITY_AGG_SEPARATOR = '\u0001';

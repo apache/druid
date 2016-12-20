@@ -32,8 +32,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategyFactory;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategyFactory;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -96,8 +96,8 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private static final byte CACHE_TYPE_ID = (byte) 0x8;
   private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
-  private static final CardinalityAggColumnSelectorStrategyFactory STRATEGY_FACTORY =
-      new CardinalityAggColumnSelectorStrategyFactory();
+  private static final CardinalityAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
+      new CardinalityAggregatorColumnSelectorStrategyFactory();
 
   private final String name;
   private final List<DimensionSpec> fields;
@@ -137,11 +137,10 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList =
-        Arrays.asList(DimensionHandlerUtils.getDimensionInfo(
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList =
+        Arrays.asList(DimensionHandlerUtils.createColumnSelectorPluses(
             STRATEGY_FACTORY,
             fields,
-            null,
             columnFactory
         ));
 
@@ -156,11 +155,10 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList =
-        Arrays.asList(DimensionHandlerUtils.getDimensionInfo(
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList =
+        Arrays.asList(DimensionHandlerUtils.createColumnSelectorPluses(
             STRATEGY_FACTORY,
             fields,
-            null,
             columnFactory
         ));
 

@@ -21,7 +21,7 @@ package io.druid.query.aggregation.cardinality;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.ColumnSelectorPlus;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.nio.ByteBuffer;
@@ -29,13 +29,13 @@ import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
-  private final List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList;
+  private final List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList;
   private final boolean byRow;
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
   public CardinalityBufferAggregator(
-      List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList,
+      List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
       boolean byRow
   )
   {

@@ -31,7 +31,7 @@ public interface ValueMatcherColumnSelectorStrategy extends ColumnSelectorStrate
    * @param value Value to match against
    * @return ValueMatcher that matches on 'value'
    */
-  ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, String value);
+  ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, String value);
 
 
   /**
@@ -41,5 +41,5 @@ public interface ValueMatcherColumnSelectorStrategy extends ColumnSelectorStrate
    * @param predicateFactory A DruidPredicateFactory that provides the filter predicates to be matched
    * @return A ValueMatcher that applies the predicate for this DimensionQueryHelper's value type from the predicateFactory
    */
-  ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory);
+  ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory);
 }

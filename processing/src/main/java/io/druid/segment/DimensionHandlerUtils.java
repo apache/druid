@@ -19,14 +19,12 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.IAE;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -52,10 +50,6 @@ public final class DimensionHandlerUtils
       return new StringDimensionHandler(dimensionName, multiValueHandling);
     }
 
-    if (dimensionName.equals(Column.TIME_COLUMN_NAME)) {
-      return new StringDimensionHandler(Column.TIME_COLUMN_NAME, MultiValueHandling.ARRAY);
-    }
-
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
 
     if (capabilities.getType() == ValueType.STRING) {
@@ -69,21 +63,26 @@ public final class DimensionHandlerUtils
     return new StringDimensionHandler(dimensionName, multiValueHandling);
   }
 
-  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
-      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
-      String dimName,
-      ColumnCapabilities capabilities,
-      List<String> availableDimensions
-  )
-  {
-    capabilities = getEffectiveCapabilities(dimName, capabilities, availableDimensions);
-    return strategyFactory.makeColumnSelectorStrategy(dimName, capabilities);
-  }
-
-  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass>[] getDimensionInfo(
+  /**
+   * Creates an array of ColumnSelectorPlus objects, selectors that handle type-specific operations within
+   * query processing engines, using a strategy factory provided by the query engine. One ColumnSelectorPlus
+   * will be created for each column specified in dimensionSpecs.
+   *
+   * The ColumnSelectorPlus provides access to a type strategy (e.g., how to group on a float column)
+   * and a value selector for a single column.
+   *
+   * A caller should define a strategy factory that provides an interface for type-specific operations
+   * in a query engine. See GroupByStrategyFactory for a reference.
+   *
+   * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
+   * @param strategyFactory A factory provided by query engines that generates type-handling strategies
+   * @param dimensionSpecs The set of columns to generate ColumnSelectorPlus objects for
+   * @param cursor Used to create value selectors for columns.
+   * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
+   */
+  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
-      StorageAdapter adapter,
       ColumnSelectorFactory cursor
   )
   {
@@ -95,13 +94,11 @@ public final class DimensionHandlerUtils
       ColumnSelectorStrategyClass strategy = makeStrategy(
           strategyFactory,
           dimName,
-          cursor.getColumnCapabilities(dimSpec.getDimension()),
-          adapter == null ? null : Lists.newArrayList(adapter.getAvailableDimensions())
+          cursor.getColumnCapabilities(dimSpec.getDimension())
       );
       final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
-          cursor,
-          adapter == null ? null : Lists.newArrayList(adapter.getAvailableDimensions())
+          cursor
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
           dimName,
@@ -117,21 +114,13 @@ public final class DimensionHandlerUtils
   // When determining the capabilites of a column during query processing, this function
   // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
   // (e.g., treating missing columns as empty String columns)
-  public static ColumnCapabilities getEffectiveCapabilities(
+  private static ColumnCapabilities getEffectiveCapabilities(
       String dimName,
-      ColumnCapabilities capabilities,
-      List<String> availableDimensions
+      ColumnCapabilities capabilities
   )
   {
     if (capabilities == null) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
-    }
-
-    // treat metrics as null for now
-    if (availableDimensions != null) {
-      if (!availableDimensions.contains(dimName)) {
-        capabilities = DEFAULT_STRING_CAPABILITIES;
-      }
     }
 
     // non-Strings aren't actually supported yet
@@ -142,20 +131,29 @@ public final class DimensionHandlerUtils
     return capabilities;
   }
 
-  public static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+  private static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
       DimensionSpec dimSpec,
-      ColumnSelectorFactory columnSelectorFactory,
-      List<String> availableDimensions
+      ColumnSelectorFactory columnSelectorFactory
   )
   {
-    String dimName = dimSpec.getOutputName();
+    String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimName, capabilities, availableDimensions);
+    capabilities = getEffectiveCapabilities(dimName, capabilities);
     switch (capabilities.getType()) {
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
       default:
         return null;
     }
+  }
+
+  private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
+      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
+      String dimName,
+      ColumnCapabilities capabilities
+  )
+  {
+    capabilities = getEffectiveCapabilities(dimName, capabilities);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities);
   }
 }

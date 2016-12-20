@@ -32,8 +32,8 @@ import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
-import io.druid.query.aggregation.cardinality.types.StringCardinalityAggColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
@@ -247,19 +247,19 @@ public class CardinalityAggregatorTest
     }
   }
 
-  List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfoList;
+  List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfoList;
   List<DimensionSelector> selectorList;
   CardinalityAggregatorFactory rowAggregatorFactory;
   CardinalityAggregatorFactory valueAggregatorFactory;
   final TestDimensionSelector dim1;
   final TestDimensionSelector dim2;
 
-  List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfoListWithExtraction;
+  List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfoListWithExtraction;
   List<DimensionSelector> selectorListWithExtraction;
   final TestDimensionSelector dim1WithExtraction;
   final TestDimensionSelector dim2WithExtraction;
 
-  List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfoListConstantVal;
+  List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfoListConstantVal;
   List<DimensionSelector> selectorListConstantVal;
   final TestDimensionSelector dim1ConstantVal;
   final TestDimensionSelector dim2ConstantVal;
@@ -273,15 +273,15 @@ public class CardinalityAggregatorTest
     dim2 = new TestDimensionSelector(values2, null);
 
     dimInfoList = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim1
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
         ),
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec2.getDimension(),
             dimSpec2.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim2
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
         )
     );
 
@@ -318,15 +318,15 @@ public class CardinalityAggregatorTest
         dim2WithExtraction
     );
     dimInfoListWithExtraction = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim1WithExtraction
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1WithExtraction
         ),
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim2WithExtraction
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2WithExtraction
         )
     );
 
@@ -339,15 +339,15 @@ public class CardinalityAggregatorTest
         dim2ConstantVal
     );
     dimInfoListConstantVal = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim1ConstantVal
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1ConstantVal
         ),
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim2ConstantVal
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2ConstantVal
         )
     );
 
@@ -431,18 +431,18 @@ public class CardinalityAggregatorTest
   {
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
-    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfo1 = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo1 = Lists.newArrayList(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim1
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
         )
     );
-    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfo2 = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo2 = Lists.newArrayList(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim2
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
         )
     );
 
@@ -477,18 +477,18 @@ public class CardinalityAggregatorTest
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
 
-    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfo1 = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo1 = Lists.newArrayList(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim1
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
         )
     );
-    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> dimInfo2 = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>(
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfo2 = Lists.newArrayList(
+        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
-            new StringCardinalityAggColumnSelectorStrategy(), dim2
+            new StringCardinalityAggregatorColumnSelectorStrategy(), dim2
         )
     );
 
