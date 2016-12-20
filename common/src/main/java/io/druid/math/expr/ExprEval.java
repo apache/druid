@@ -55,9 +55,9 @@ public abstract class ExprEval<T>
   {
     switch (type) {
       case DOUBLE:
-        return ExprEval.of(value ? 1D : 0D);
+        return ExprEval.of(Evals.asDouble(value));
       case LONG:
-        return ExprEval.of(value ? 1L : 0L);
+        return ExprEval.of(Evals.asLong(value));
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
@@ -162,7 +162,7 @@ public abstract class ExprEval<T>
     @Override
     public final boolean asBoolean()
     {
-      return asDouble() > 0;
+      return Evals.asBoolean(asDouble());
     }
 
     @Override
@@ -202,7 +202,7 @@ public abstract class ExprEval<T>
     @Override
     public final boolean asBoolean()
     {
-      return asLong() > 0;
+      return Evals.asBoolean(asLong());
     }
 
     @Override
@@ -266,7 +266,7 @@ public abstract class ExprEval<T>
     @Override
     public final boolean asBoolean()
     {
-      return Boolean.valueOf(value);
+      return Evals.asBoolean(value);
     }
 
     @Override

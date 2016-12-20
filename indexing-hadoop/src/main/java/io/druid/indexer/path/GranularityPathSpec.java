@@ -20,7 +20,6 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -113,13 +112,10 @@ public class GranularityPathSpec implements PathSpec
   @Override
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
-    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervals());
-    Optional<Set<Interval>> optionalIntervals = config.getSegmentGranularIntervals();
-    if (optionalIntervals.isPresent()) {
-      for (Interval segmentInterval : optionalIntervals.get()) {
-        for (Interval dataInterval : dataGranularity.getIterable(segmentInterval)) {
-          intervals.add(dataInterval);
-        }
+    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    for (Interval inputInterval : config.getInputIntervals()) {
+      for (Interval interval : dataGranularity.getIterable(inputInterval)) {
+        intervals.add(trim(inputInterval, interval));
       }
     }
 
@@ -158,4 +154,22 @@ public class GranularityPathSpec implements PathSpec
 
     return job;
   }
+
+  private Interval trim(Interval inputInterval, Interval interval)
+  {
+    long start = interval.getStartMillis();
+    long end = interval.getEndMillis();
+
+    boolean makeNew = false;
+    if (start < inputInterval.getStartMillis()) {
+      start = inputInterval.getStartMillis();
+      makeNew = true;
+    }
+    if (end > inputInterval.getEndMillis()) {
+      end = inputInterval.getEndMillis();
+      makeNew = true;
+    }
+    return makeNew ? new Interval(start, end) : interval;
+  }
+
 }

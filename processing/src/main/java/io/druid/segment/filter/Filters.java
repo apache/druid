@@ -43,6 +43,7 @@ import io.druid.segment.data.Indexed;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  */
@@ -141,26 +142,42 @@ public class Filters
           {
             return new Iterator<ImmutableBitmap>()
             {
-              int currIndex = 0;
+              private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
+              private int nextIndex = 0;
+              private ImmutableBitmap nextBitmap;
+
+              {
+                findNextBitmap();
+              }
+
+              private void findNextBitmap()
+              {
+                while (nextIndex < bitmapIndexCardinality) {
+                  if (predicate.apply(dimValues.get(nextIndex))) {
+                    nextBitmap = bitmapIndex.getBitmap(nextIndex);
+                    nextIndex++;
+                    return;
+                  }
+                  nextIndex++;
+                }
+                nextBitmap = null;
+              }
 
               @Override
               public boolean hasNext()
               {
-                return currIndex < bitmapIndex.getCardinality();
+                return nextBitmap != null;
               }
 
               @Override
               public ImmutableBitmap next()
               {
-                while (currIndex < bitmapIndex.getCardinality() && !predicate.apply(dimValues.get(currIndex))) {
-                  currIndex++;
+                ImmutableBitmap bitmap = nextBitmap;
+                if (bitmap == null) {
+                  throw new NoSuchElementException();
                 }
-
-                if (currIndex == bitmapIndex.getCardinality()) {
-                  return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
-                }
-
-                return bitmapIndex.getBitmap(currIndex++);
+                findNextBitmap();
+                return bitmap;
               }
 
               @Override

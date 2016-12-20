@@ -191,6 +191,7 @@ public class AppenderatorImpl implements Appenderator
     }
 
     final Sink sink = getOrCreateSink(identifier);
+    metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
     final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
     final int sinkRowsInMemoryAfterAdd;
 
@@ -269,6 +270,7 @@ public class AppenderatorImpl implements Appenderator
       }
 
       sinks.put(identifier, retVal);
+      metrics.setSinkCount(sinks.size());
       sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
 
@@ -905,6 +907,7 @@ public class AppenderatorImpl implements Appenderator
 
             log.info("Removing sink for segment[%s].", identifier);
             sinks.remove(identifier);
+            metrics.setSinkCount(sinks.size());
             droppingSinks.remove(identifier);
             sinkTimeline.remove(
                 sink.getInterval(),
