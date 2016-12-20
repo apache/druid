@@ -68,54 +68,12 @@ public abstract class BufferedIndexInput extends IndexInput implements RandomAcc
   }
 
 
-  /**
-   * Change the buffer size used by this IndexInput
-   */
-  public final void setBufferSize(int newSize)
-  {
-    assert buffer == null || bufferSize == buffer.length : "buffer="
-                                                           + buffer
-                                                           + " bufferSize="
-                                                           + bufferSize
-                                                           + " buffer.length="
-                                                           + (buffer != null ? buffer.length : 0);
-    if (newSize != bufferSize) {
-      checkBufferSize(newSize);
-      bufferSize = newSize;
-      if (buffer != null) {
-        // Resize the existing buffer and carefully save as
-        // many bytes as possible starting from the current
-        // bufferPosition
-        byte[] newBuffer = new byte[newSize];
-        final int leftInBuffer = bufferLength - bufferPosition;
-        final int numToCopy;
-        if (leftInBuffer > newSize) {
-          numToCopy = newSize;
-        } else {
-          numToCopy = leftInBuffer;
-        }
-        System.arraycopy(buffer, bufferPosition, newBuffer, 0, numToCopy);
-        bufferStart += bufferPosition;
-        bufferPosition = 0;
-        bufferLength = numToCopy;
-        newBuffer(newBuffer);
-      }
-    }
-  }
-
   protected void newBuffer(byte[] newBuffer)
   {
     // Subclasses can do something here
     buffer = newBuffer;
   }
 
-  /**
-   * Returns buffer size.  @see #setBufferSize
-   */
-  public final int getBufferSize()
-  {
-    return bufferSize;
-  }
 
   private void checkBufferSize(int bufferSize)
   {
