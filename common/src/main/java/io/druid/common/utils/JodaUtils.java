@@ -23,9 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import io.druid.java.util.common.guava.Comparators;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -60,8 +58,15 @@ public class JodaUtils
     while (intervalsIter.hasNext()) {
       Interval next = intervalsIter.next();
 
-      if (currInterval.overlaps(next) || currInterval.abuts(next)) {
+      if (currInterval.abuts(next)) {
         currInterval = new Interval(currInterval.getStart(), next.getEnd());
+      } else if(currInterval.overlaps(next)) {
+        DateTime nextEnd = next.getEnd();
+        DateTime currEnd = currInterval.getEnd();
+        currInterval = new Interval(
+            currInterval.getStart(),
+            nextEnd.isAfter(currEnd) ? nextEnd : currEnd
+        );
       } else {
         retVal.add(currInterval);
         currInterval = next;
