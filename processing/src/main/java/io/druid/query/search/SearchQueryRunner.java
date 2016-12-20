@@ -25,10 +25,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Accumulator;
@@ -45,6 +46,7 @@ import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.search.SearchQuery.Strategy;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.Cursor;
@@ -71,6 +73,12 @@ import java.util.TreeMap;
 public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
   private static final EmittingLogger log = new EmittingLogger(SearchQueryRunner.class);
+
+  private static final double HIGH_FILTER_SELECTIVITY_THRESHOLD_FOR_CONCISE = 0.99;
+  private static final double HIGH_FILTER_SELECTIVITY_THRESHOLD_FOR_ROARING = 0.65;
+  private static final int LOW_CARDINALITY_THRESHOLD_FOR_CONCISE = 5000;
+  private static final int LOW_CARDINALITY_THRESHOLD_FOR_ROARING = 1000;
+
   private final Segment segment;
 
   public SearchQueryRunner(Segment segment)
@@ -94,6 +102,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();
     final boolean descending = query.isDescending();
+    final Strategy strategy = query.getStrategy();
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     if (intervals.size() != 1) {
       throw new IAE("Should only have one interval, got[%s]", intervals);
@@ -103,22 +112,32 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
 
-    if (index != null) {
-      final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
+    final StorageAdapter adapter = segment.asStorageAdapter();
 
-      Iterable<DimensionSpec> dimsToSearch;
-      if (dimensions == null || dimensions.isEmpty()) {
-        dimsToSearch = Iterables.transform(index.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
-      } else {
-        dimsToSearch = dimensions;
-      }
+    if (adapter == null) {
+      log.makeAlert("WTF!? Unable to process search query on segment.")
+         .addData("segment", segment.getIdentifier())
+         .addData("query", query).emit();
+      throw new ISE(
+          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+      );
+    }
+
+    final Iterable<DimensionSpec> dimsToSearch;
+    if (dimensions == null || dimensions.isEmpty()) {
+      dimsToSearch = Iterables.transform(adapter.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
+    } else {
+      dimsToSearch = dimensions;
+    }
+
+    if (index != null) {
 
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       final ImmutableBitmap baseFilter =
           filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
 
-      ImmutableBitmap timeFilteredBitmap;
+      final ImmutableBitmap timeFilteredBitmap;
       if (!interval.contains(segment.getDataInterval())) {
         MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
         final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
@@ -142,61 +161,124 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         timeFilteredBitmap = baseFilter;
       }
 
-      for (DimensionSpec dimension : dimsToSearch) {
-        final Column column = index.getColumn(dimension.getDimension());
-        if (column == null) {
-          continue;
-        }
+      switch (strategy) {
+        case AUTO:
+          long totalCard = 0;
+          for (DimensionSpec dimension : dimsToSearch) {
+            final Column column = index.getColumn(dimension.getDimension());
+            if (column != null) {
+              final BitmapIndex bitmapIndex = column.getBitmapIndex();
+              if (bitmapIndex != null) {
+                totalCard += bitmapIndex.getCardinality();
+              }
+            }
+          }
 
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
-        ExtractionFn extractionFn = dimension.getExtractionFn();
-        if (extractionFn == null) {
-          extractionFn = IdentityExtractionFn.getInstance();
-        }
-        if (bitmapIndex != null) {
-          for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-            String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
-            if (!searchQuerySpec.accept(dimVal)) {
-              continue;
+          // Choose a search query execution strategy depending on the query.
+          // Index-only strategy is selected when
+          // 1) there is no filter,
+          // 2) the total cardinality is very low, or
+          // 3) the filter has a very high selectivity.
+          // The below thresholds are got from some experiments.
+          if (filter == null ||
+              isLowCardinality(bitmapFactory, totalCard) ||
+              isHighSelectivityFilter(index, bitmapFactory, timeFilteredBitmap)) {
+            return indexOnlyExecute(query, searchQuerySpec, timeFilteredBitmap, dimsToSearch, index, limit, bitmapFactory);
+          } else {
+            return cursorBasedExecute(query, searchQuerySpec, filter, dimsToSearch, adapter, limit, descending, interval);
+          }
+
+        case INDEX_ONLY:
+          return indexOnlyExecute(query, searchQuerySpec, timeFilteredBitmap, dimsToSearch, index, limit, bitmapFactory);
+
+        case CURSOR_BASED:
+          return cursorBasedExecute(query, searchQuerySpec, filter, dimsToSearch, adapter, limit, descending, interval);
+
+        default:
+          throw new IAE("Unknown strategy: " + strategy);
+      }
+
+    } else {
+      return cursorBasedExecute(query, searchQuerySpec, filter, dimsToSearch, adapter, limit, descending, interval);
+    }
+  }
+
+  private static boolean isLowCardinality(final BitmapFactory bitmapFactory, final long totalCard) {
+    if (bitmapFactory.getClass().equals(RoaringBitmapFactory.class)) {
+      return totalCard < LOW_CARDINALITY_THRESHOLD_FOR_ROARING;
+    } else {
+      return totalCard < LOW_CARDINALITY_THRESHOLD_FOR_CONCISE;
+    }
+  }
+
+  private static boolean isHighSelectivityFilter(final QueryableIndex index,
+                                                 final BitmapFactory bitmapFactory,
+                                                 final ImmutableBitmap bitmap) {
+    if (bitmapFactory.getClass().equals(RoaringBitmapFactory.class)) {
+      return index.getNumRows() * HIGH_FILTER_SELECTIVITY_THRESHOLD_FOR_ROARING < bitmap.size();
+    } else {
+      return index.getNumRows() * HIGH_FILTER_SELECTIVITY_THRESHOLD_FOR_CONCISE < bitmap.size();
+    }
+  }
+
+  private Sequence<Result<SearchResultValue>> indexOnlyExecute(final SearchQuery query,
+                                                               final SearchQuerySpec searchQuerySpec,
+                                                               final ImmutableBitmap timeFilteredBitmap,
+                                                               final Iterable<DimensionSpec> dimsToSearch,
+                                                               final QueryableIndex index,
+                                                               final int limit,
+                                                               final BitmapFactory bitmapFactory)
+  {
+    log.info("Index only query execution strategy is selected.");
+    final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
+    for (DimensionSpec dimension : dimsToSearch) {
+      final Column column = index.getColumn(dimension.getDimension());
+      if (column == null) {
+        continue;
+      }
+
+      final BitmapIndex bitmapIndex = column.getBitmapIndex();
+      ExtractionFn extractionFn = dimension.getExtractionFn();
+      if (extractionFn == null) {
+        extractionFn = IdentityExtractionFn.getInstance();
+      }
+      if (bitmapIndex != null) {
+        for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
+          String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
+          if (!searchQuerySpec.accept(dimVal)) {
+            continue;
+          }
+          ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+          if (timeFilteredBitmap != null) {
+            bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
+          }
+          if (bitmap.size() > 0) {
+            MutableInt counter = new MutableInt(bitmap.size());
+            MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
+            if (prev != null) {
+              counter.add(prev.intValue());
             }
-            ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-            if (timeFilteredBitmap != null) {
-              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
-            }
-            if (bitmap.size() > 0) {
-              MutableInt counter = new MutableInt(bitmap.size());
-              MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
-              if (prev != null) {
-                counter.add(prev.intValue());
-              }
-              if (retVal.size() >= limit) {
-                return makeReturnResult(limit, retVal);
-              }
+            if (retVal.size() >= limit) {
+              return makeReturnResult(limit, retVal);
             }
           }
         }
       }
-
-      return makeReturnResult(limit, retVal);
     }
 
-    final StorageAdapter adapter = segment.asStorageAdapter();
+    return makeReturnResult(limit, retVal);
+  }
 
-    if (adapter == null) {
-      log.makeAlert("WTF!? Unable to process search query on segment.")
-         .addData("segment", segment.getIdentifier())
-         .addData("query", query).emit();
-      throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-      );
-    }
-
-    final Iterable<DimensionSpec> dimsToSearch;
-    if (dimensions == null || dimensions.isEmpty()) {
-      dimsToSearch = Iterables.transform(adapter.getAvailableDimensions(), Druids.DIMENSION_IDENTITY);
-    } else {
-      dimsToSearch = dimensions;
-    }
+  private Sequence<Result<SearchResultValue>> cursorBasedExecute(final SearchQuery query,
+                                                                 final SearchQuerySpec searchQuerySpec,
+                                                                 final Filter filter,
+                                                                 final Iterable<DimensionSpec> dimsToSearch,
+                                                                 final StorageAdapter adapter,
+                                                                 final int limit,
+                                                                 final boolean descending,
+                                                                 final Interval interval)
+  {
+    log.info("Cursor-based query execution strategy is selected.");
 
     final Sequence<Cursor> cursors = adapter.makeCursors(
         filter,

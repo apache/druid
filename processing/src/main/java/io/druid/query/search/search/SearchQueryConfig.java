@@ -31,6 +31,10 @@ public class SearchQueryConfig
   @Min(1)
   private int maxSearchLimit = 1000;
 
+  public void setMaxSearchLimit(int maxSearchLimit) {
+    this.maxSearchLimit = maxSearchLimit;
+  }
+
   public int getMaxSearchLimit()
   {
     return maxSearchLimit;

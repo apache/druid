@@ -59,6 +59,7 @@ public class SearchQueryQueryToolChestTest
                 ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("dim1")),
                 new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
                 null,
+                null,
                 null
             )
         );

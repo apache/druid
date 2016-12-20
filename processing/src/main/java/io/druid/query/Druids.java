@@ -45,6 +45,7 @@ import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.search.SearchQuery.Strategy;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.select.PagingSpec;
@@ -549,6 +550,7 @@ public class Druids
     private SearchQuerySpec querySpec;
     private SearchSortSpec sortSpec;
     private Map<String, Object> context;
+    private Strategy strategy;
 
     public SearchQueryBuilder()
     {
@@ -560,6 +562,7 @@ public class Druids
       dimensions = null;
       querySpec = null;
       context = null;
+      strategy = null;
     }
 
     public SearchQuery build()
@@ -573,7 +576,8 @@ public class Druids
           dimensions,
           querySpec,
           sortSpec,
-          context
+          context,
+          strategy
       );
     }
 
@@ -587,7 +591,8 @@ public class Druids
           .limit(query.getLimit())
           .dimensions(query.getDimensions())
           .query(query.getQuery())
-          .context(query.getContext());
+          .context(query.getContext())
+          .strategy(query.getStrategy());
     }
 
     public SearchQueryBuilder copy(SearchQueryBuilder builder)
@@ -600,7 +605,8 @@ public class Druids
           .limit(builder.limit)
           .dimensions(builder.dimensions)
           .query(builder.querySpec)
-          .context(builder.context);
+          .context(builder.context)
+          .strategy(builder.strategy);
     }
 
     public SearchQueryBuilder dataSource(String d)
@@ -748,6 +754,11 @@ public class Druids
     public SearchQueryBuilder context(Map<String, Object> c)
     {
       context = c;
+      return this;
+    }
+
+    public SearchQueryBuilder strategy(Strategy strategy) {
+      this.strategy = strategy;
       return this;
     }
   }

@@ -49,6 +49,14 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
   private final int limit;
+  private final Strategy strategy;
+
+  public enum Strategy
+  {
+    AUTO,
+    INDEX_ONLY,
+    CURSOR_BASED
+  }
 
   @JsonCreator
   public SearchQuery(
@@ -60,7 +68,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("searchDimensions") List<DimensionSpec> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("strategy") Strategy strategy
   )
   {
     super(dataSource, querySegmentSpec, false, context);
@@ -70,6 +79,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
+    this.strategy = strategy == null ? Strategy.AUTO : strategy;
 
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
   }
@@ -104,7 +114,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext()
+        getContext(),
+        strategy
     );
   }
 
@@ -120,7 +131,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext()
+        getContext(),
+        strategy
     );
   }
 
@@ -136,7 +148,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        computeOverridenContext(contextOverrides)
+        computeOverridenContext(contextOverrides),
+        strategy
     );
   }
 
@@ -151,7 +164,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext()
+        getContext(),
+        strategy
     );
   }
 
@@ -191,6 +205,11 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     return sortSpec;
   }
 
+  @JsonProperty("strategy")
+  public Strategy getStrategy() {
+    return strategy;
+  }
+
   public SearchQuery withLimit(int newLimit)
   {
     return new SearchQuery(
@@ -202,7 +221,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext()
+        getContext(),
+        strategy
     );
   }
 
@@ -210,14 +230,15 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   public String toString()
   {
     return "SearchQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
-        ", dimensions=" + dimensions +
-        ", querySpec=" + querySpec +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", limit=" + limit +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", dimFilter=" + dimFilter +
+           ", granularity='" + granularity + '\'' +
+           ", dimensions=" + dimensions +
+           ", querySpec=" + querySpec +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", limit=" + limit +
+           ", strategy=" + strategy +
+           '}';
   }
 
   @Override
@@ -254,6 +275,10 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       return false;
     }
 
+    if (!strategy.equals(that.strategy)) {
+      return false;
+    }
+
     return true;
   }
 
@@ -267,6 +292,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (querySpec != null ? querySpec.hashCode() : 0);
     result = 31 * result + limit;
+    result = 31 * result + strategy.hashCode();
     return result;
   }
 }
