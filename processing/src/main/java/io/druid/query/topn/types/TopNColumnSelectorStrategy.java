@@ -20,7 +20,7 @@
 package io.druid.query.topn.types;
 
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.dimension.QueryTypeHelper;
+import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.segment.Capabilities;
@@ -29,8 +29,10 @@ import io.druid.segment.Cursor;
 
 import java.util.Map;
 
-public interface TopNTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
+public interface TopNColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
 {
+  int getCardinality(ValueSelectorType selector);
+
   /**
    * Used by DimExtractionTopNAlgorithm.
    *

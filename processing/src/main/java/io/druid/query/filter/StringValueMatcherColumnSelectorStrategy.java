@@ -17,49 +17,25 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.query.filter;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.filter.DruidPredicateFactory;
-import io.druid.query.filter.ValueMatcher;
-import io.druid.segment.data.EmptyIndexedInts;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
 import java.util.BitSet;
 import java.util.Objects;
 
-public class StringDimensionQueryHelper implements DimensionQueryHelper<IndexedInts, DimensionSelector>
+public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy
 {
-  private final String dimensionName;
+  private final String columnName;
 
-  public StringDimensionQueryHelper(String dimensionName) {
-    this.dimensionName = dimensionName;
-  }
-
-  @Override
-  public DimensionSelector getColumnValueSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory columnSelectorFactory)
+  public StringValueMatcherColumnSelectorStrategy(String columnName)
   {
-    return columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-  }
-
-  @Override
-  public IndexedInts getRowFromDimSelector(DimensionSelector selector) {
-    return selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
-  }
-
-  @Override
-  public int getRowSize(IndexedInts rowValues)
-  {
-    return rowValues.size();
-  }
-
-  @Override
-  public int getCardinality(DimensionSelector valueSelector)
-  {
-    return valueSelector.getValueCardinality();
+    this.columnName = columnName;
   }
 
   @Override
@@ -67,7 +43,7 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<IndexedI
   {
     final String valueStr = Strings.emptyToNull(value);
     final DimensionSelector selector = cursor.makeDimensionSelector(
-        new DefaultDimensionSpec(dimensionName, dimensionName)
+        new DefaultDimensionSpec(columnName, columnName)
     );
 
     // if matching against null, rows with size 0 should also match
@@ -128,7 +104,7 @@ public class StringDimensionQueryHelper implements DimensionQueryHelper<IndexedI
   public ValueMatcher getValueMatcher(ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory)
   {
     final DimensionSelector selector = cursor.makeDimensionSelector(
-        new DefaultDimensionSpec(dimensionName, dimensionName)
+        new DefaultDimensionSpec(columnName, columnName)
     );
 
     final Predicate<String> predicate = predicateFactory.makeStringPredicate();

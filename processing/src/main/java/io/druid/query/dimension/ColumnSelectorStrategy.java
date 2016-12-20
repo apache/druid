@@ -19,9 +19,9 @@
 
 package io.druid.query.dimension;
 
-import io.druid.segment.column.ColumnCapabilities;
-
-public interface QueryTypeHelperFactory<QueryTypeHelperClass extends QueryTypeHelper>
+/**
+ * Base type for strategy objects that handle value type operations pertaining to a specific query type
+ */
+public interface ColumnSelectorStrategy
 {
-  QueryTypeHelperClass makeQueryTypeHelper(String dimName, ColumnCapabilities capabilities);
 }

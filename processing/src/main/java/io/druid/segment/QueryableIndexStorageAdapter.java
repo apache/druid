@@ -43,6 +43,8 @@ import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
@@ -1038,6 +1040,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
   {
+    private static final ValueMatcherColumnSelectorStrategyFactory STRATEGY_FACTORY =
+        new ValueMatcherColumnSelectorStrategyFactory();
+
     private final StorageAdapter storageAdapter;
     private final ColumnSelectorFactory cursor;
     private final List<String> availableMetrics;
@@ -1064,12 +1069,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
+      final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
           dimension,
-          cursor.getColumnCapabilities(dimension),
-          Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
+          cursor.getColumnCapabilities(dimension)
       );
-      return queryHelper.getValueMatcher(cursor, value);
+
+      return strategy.getValueMatcher(cursor, value);
     }
 
     @Override
@@ -1081,12 +1086,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
+      final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
           dimension,
-          cursor.getColumnCapabilities(dimension),
-          Lists.<String>newArrayList(storageAdapter.getAvailableDimensions())
+          cursor.getColumnCapabilities(dimension)
       );
-      return queryHelper.getValueMatcher(cursor, predicateFactory);
+
+      return strategy.getValueMatcher(cursor, predicateFactory);
     }
 
     private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)

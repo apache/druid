@@ -22,10 +22,10 @@ package io.druid.query.topn;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.QueryDimensionInfo;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 
@@ -55,11 +55,11 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   @Override
   public TopNParams makeInitParams(
-      QueryDimensionInfo dimInfo, Cursor cursor
+      ColumnSelectorPlus selectorPlus, Cursor cursor
   )
   {
     return new TopNParams(
-        dimInfo,
+        selectorPlus,
         cursor,
         Integer.MAX_VALUE
     );
@@ -91,7 +91,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector = null;
     try {
-      singleMetricParam = singleMetricAlgo.makeInitParams(params.getDimInfo(), params.getCursor());
+      singleMetricParam = singleMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
       singleMetricAlgo.run(
           singleMetricParam,
           singleMetricResultBuilder,
@@ -109,7 +109,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
       // Run topN for all metrics for top N dimension values
-      allMetricsParam = allMetricAlgo.makeInitParams(params.getDimInfo(), params.getCursor());
+      allMetricsParam = allMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
       allMetricAlgo.run(
           allMetricsParam,
           resultBuilder,

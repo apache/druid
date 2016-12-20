@@ -34,14 +34,14 @@ import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
-import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.QueryTypeHelper;
-import io.druid.query.dimension.QueryTypeHelperFactory;
+import io.druid.query.dimension.ColumnSelectorStrategy;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.filter.Filter;
@@ -76,29 +76,29 @@ import java.util.Map;
  */
 public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
-  private static final SearchTypeHelperFactory TYPE_HELPER_FACTORY = new SearchTypeHelperFactory();
+  private static final SearchStrategyFactory STRATEGY_FACTORY = new SearchStrategyFactory();
 
   private static final EmittingLogger log = new EmittingLogger(SearchQueryRunner.class);
   private final Segment segment;
 
-  private static class SearchTypeHelperFactory implements QueryTypeHelperFactory<SearchTypeHelper>
+  private static class SearchStrategyFactory implements ColumnSelectorStrategyFactory<SearchColumnSelectorStrategy>
   {
     @Override
-    public SearchTypeHelper makeQueryTypeHelper(
-        String dimName, ColumnCapabilities capabilities
+    public SearchColumnSelectorStrategy makeColumnSelectorStrategy(
+        String columnName, ColumnCapabilities capabilities
     )
     {
       ValueType type = capabilities.getType();
       switch(type) {
         case STRING:
-          return new StringSearchTypeHelper();
+          return new StringSearchColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
   }
 
-  public interface SearchTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
+  public interface SearchColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
   {
     /**
      * Read the current row from dimSelector and update the search result set.
@@ -123,7 +123,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     );
   }
 
-  public static class StringSearchTypeHelper implements SearchTypeHelper<DimensionSelector>
+  public static class StringSearchColumnSelectorStrategy implements SearchColumnSelectorStrategy<DimensionSelector>
   {
     @Override
     public void updateSearchResultSet(
@@ -340,9 +340,9 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
               return set;
             }
 
-            List<QueryDimensionInfo<SearchTypeHelper>> dimInfoList = Arrays.asList(
+            List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                 DimensionHandlerUtils.getDimensionInfo(
-                    TYPE_HELPER_FACTORY,
+                    STRATEGY_FACTORY,
                     nonBitmapDims,
                     adapter,
                     cursor
@@ -350,10 +350,10 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
             );
 
             while (!cursor.isDone()) {
-              for (QueryDimensionInfo<SearchTypeHelper> dimInfo : dimInfoList) {
-                dimInfo.getQueryTypeHelper().updateSearchResultSet(
-                    dimInfo.getOutputName(),
-                    dimInfo.getSelector(),
+              for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+                selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
+                    selectorPlus.getOutputName(),
+                    selectorPlus.getSelector(),
                     searchQuerySpec,
                     limit,
                     set

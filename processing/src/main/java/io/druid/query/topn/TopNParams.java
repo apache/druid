@@ -19,8 +19,8 @@
 
 package io.druid.query.topn;
 
-import io.druid.query.QueryDimensionInfo;
-import io.druid.query.topn.types.TopNTypeHelper;
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Cursor;
 
 /**
@@ -30,17 +30,17 @@ public class TopNParams
   private final Cursor cursor;
   private final int cardinality;
   private final int numValuesPerPass;
-  private final QueryDimensionInfo<TopNTypeHelper> dimInfo;
+  private final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus;
 
   protected TopNParams(
-      QueryDimensionInfo<TopNTypeHelper> dimInfo,
+      ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus,
       Cursor cursor,
       int numValuesPerPass
   )
   {
-    this.dimInfo = dimInfo;
+    this.selectorPlus = selectorPlus;
     this.cursor = cursor;
-    this.cardinality = dimInfo.getCardinality();
+    this.cardinality = selectorPlus.getColumnSelectorStrategy().getCardinality(selectorPlus.getSelector());
     this.numValuesPerPass = numValuesPerPass;
 
     if (cardinality < 0) {
@@ -50,12 +50,12 @@ public class TopNParams
 
   public Object getDimSelector()
   {
-    return dimInfo.getSelector();
+    return selectorPlus.getSelector();
   }
 
-  public QueryDimensionInfo<TopNTypeHelper> getDimInfo()
+  public ColumnSelectorPlus<TopNColumnSelectorStrategy> getSelectorPlus()
   {
-    return dimInfo;
+    return selectorPlus;
   }
 
   public Cursor getCursor()

@@ -20,9 +20,9 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.QueryDimensionInfo;
-import io.druid.query.topn.types.TopNTypeHelper;
+import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 
@@ -47,12 +47,12 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
 
   @Override
   public TopNParams makeInitParams(
-      final QueryDimensionInfo<TopNTypeHelper> dimInfo,
+      final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus,
       final Cursor cursor
   )
   {
     return new TopNParams(
-        dimInfo,
+        selectorPlus,
         cursor,
         Integer.MAX_VALUE
     );
@@ -61,8 +61,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
-    QueryDimensionInfo<TopNTypeHelper> dimInfo = params.getDimInfo();
-    return dimInfo.getQueryTypeHelper().getDimExtractionRowSelector(query, params, capabilities);
+    ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, capabilities);
   }
 
   @Override
@@ -86,12 +86,12 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   )
   {
     final Cursor cursor = params.getCursor();
-    final QueryDimensionInfo<TopNTypeHelper> dimInfo = params.getDimInfo();
+    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
 
     while (!cursor.isDone()) {
-      dimInfo.getQueryTypeHelper().dimExtractionScanAndAggregate(
+      selectorPlus.getColumnSelectorStrategy().dimExtractionScanAndAggregate(
           query,
-          dimInfo.getSelector(),
+          selectorPlus.getSelector(),
           cursor,
           rowSelector,
           aggregatesStore

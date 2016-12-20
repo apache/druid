@@ -27,13 +27,13 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
-import io.druid.query.QueryDimensionInfo;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.QueryTypeHelper;
-import io.druid.query.dimension.QueryTypeHelperFactory;
+import io.druid.query.dimension.ColumnSelectorStrategy;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.filter.Filter;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
@@ -62,26 +62,26 @@ import java.util.Map;
  */
 public class SelectQueryEngine
 {
-  private static final SelectTypeHelperFactory TYPE_HELPER_FACTORY = new SelectTypeHelperFactory();
+  private static final SelectStrategyFactory STRATEGY_FACTORY = new SelectStrategyFactory();
 
-  private static class SelectTypeHelperFactory implements QueryTypeHelperFactory<SelectTypeHelper>
+  private static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
   {
     @Override
-    public SelectTypeHelper makeQueryTypeHelper(
-        String dimName, ColumnCapabilities capabilities
+    public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
+        String columnName, ColumnCapabilities capabilities
     )
     {
       ValueType type = capabilities.getType();
       switch(type) {
         case STRING:
-          return new StringSelectTypeHelper();
+          return new StringSelectColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
   }
 
-  public interface SelectTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
+  public interface SelectColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
   {
     /**
      * Read the current row from dimSelector and add the row values for a dimension to the result map.
@@ -99,7 +99,7 @@ public class SelectQueryEngine
     );
   }
 
-  public static class StringSelectTypeHelper implements SelectTypeHelper<DimensionSelector>
+  public static class StringSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<DimensionSelector>
   {
     @Override
     public void addRowValuesToSelectResult(String outputName, DimensionSelector selector, Map<String, Object> resultMap)
@@ -177,9 +177,9 @@ public class SelectQueryEngine
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-            final List<QueryDimensionInfo<SelectTypeHelper>> dimInfoList = Arrays.asList(
+            final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                 DimensionHandlerUtils.getDimensionInfo(
-                    TYPE_HELPER_FACTORY,
+                    STRATEGY_FACTORY,
                     Lists.newArrayList(dims),
                     adapter,
                     cursor
@@ -206,8 +206,8 @@ public class SelectQueryEngine
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
-              for (QueryDimensionInfo<SelectTypeHelper> dimInfo : dimInfoList) {
-                dimInfo.getQueryTypeHelper().addRowValuesToSelectResult(dimInfo.getOutputName(), dimInfo.getSelector(), theEvent);
+              for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+                selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);
               }
 
               for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {

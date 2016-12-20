@@ -213,10 +213,4 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   {
     return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
   }
-
-  @Override
-  public DimensionQueryHelper<IndexedInts, DimensionSelector> makeQueryHelper()
-  {
-    return new StringDimensionQueryHelper(dimensionName);
-  }
 }

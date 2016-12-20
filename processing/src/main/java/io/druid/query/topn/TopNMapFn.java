@@ -22,14 +22,14 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.query.Result;
-import io.druid.query.QueryDimensionInfo;
-import io.druid.query.topn.types.TopNTypeHelperFactory;
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.topn.types.TopNStrategyFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 
 public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
 {
-  private static final TopNTypeHelperFactory TYPE_HELPER_FACTORY = new TopNTypeHelperFactory();
+  private static final TopNStrategyFactory STRATEGY_FACTORY = new TopNStrategyFactory();
 
   private final TopNQuery query;
   private final TopNAlgorithm topNAlgorithm;
@@ -47,20 +47,20 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   @SuppressWarnings("unchecked")
   public Result<TopNResultValue> apply(Cursor cursor)
   {
-    final QueryDimensionInfo[] dimInfoArray = DimensionHandlerUtils.getDimensionInfo(
-        TYPE_HELPER_FACTORY,
+    final ColumnSelectorPlus[] selectorPlusArray = DimensionHandlerUtils.getDimensionInfo(
+        STRATEGY_FACTORY,
         Lists.newArrayList(query.getDimensionSpec()),
         null,
         cursor
     );
 
-    if (dimInfoArray[0].getSelector() == null) {
+    if (selectorPlusArray[0].getSelector() == null) {
       return null;
     }
 
     TopNParams params = null;
     try {
-      params = topNAlgorithm.makeInitParams(dimInfoArray[0], cursor);
+      params = topNAlgorithm.makeInitParams(selectorPlusArray[0], cursor);
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 

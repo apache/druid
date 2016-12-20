@@ -119,10 +119,6 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
       ProgressIndicator progress
   ) throws IOException;
 
-
-  public DimensionQueryHelper makeQueryHelper();
-
-
   /**
    * Given an array representing a single set of row value(s) for this dimension as an Object,
    * return the length of the array after appropriate type-casting.

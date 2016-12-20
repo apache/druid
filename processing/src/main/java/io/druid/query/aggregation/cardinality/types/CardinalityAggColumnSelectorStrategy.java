@@ -21,14 +21,13 @@ package io.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
-import io.druid.query.dimension.QueryTypeHelper;
+import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.segment.ColumnValueSelector;
 
-public interface CardinalityAggregatorTypeHelper<ValueSelectorType extends ColumnValueSelector> extends QueryTypeHelper
+public interface CardinalityAggColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends
+    ColumnSelectorStrategy
 {
-  /**
-   * Used by CardinalityAggregator.
-   *
+  /***
    * Retrieve the current row from dimSelector and add the row values to the hasher.
    *
    * @param dimSelector Dimension value selector
@@ -38,9 +37,8 @@ public interface CardinalityAggregatorTypeHelper<ValueSelectorType extends Colum
 
 
   /**
-   * Used by CardinalityAggregator.
+   * Retrieve the current row from dimSelector and add the row values to HyperLogLogCollector.
    *
-   * Retrieve the current row from dimSelector and add the row values to the hasher.
    * @param dimSelector Dimension value selector
    * @param collector HLL collector used for cardinality aggregator calculations
    */

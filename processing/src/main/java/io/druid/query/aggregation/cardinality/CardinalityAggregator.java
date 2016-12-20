@@ -23,8 +23,8 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.QueryDimensionInfo;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.util.List;
@@ -32,35 +32,35 @@ import java.util.List;
 public class CardinalityAggregator implements Aggregator
 {
   private final String name;
-  private final List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList;
+  private final List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList;
   private final boolean byRow;
 
   public static final HashFunction hashFn = Hashing.murmur3_128();
 
   protected static void hashRow(
-      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
+      List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList,
       HyperLogLogCollector collector
   )
   {
     final Hasher hasher = hashFn.newHasher();
-    for (int k = 0; k < dimInfoList.size(); ++k) {
+    for (int k = 0; k < selectorPlusList.size(); ++k) {
       if (k != 0) {
         hasher.putByte((byte) 0);
       }
 
-      QueryDimensionInfo<CardinalityAggregatorTypeHelper> dimInfo = dimInfoList.get(k);
-      dimInfo.getQueryTypeHelper().hashRow(dimInfo.getSelector(), hasher);
+      ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy> selectorPlus = selectorPlusList.get(k);
+      selectorPlus.getColumnSelectorStrategy().hashRow(selectorPlus.getSelector(), hasher);
     }
     collector.add(hasher.hash().asBytes());
   }
 
   protected static void hashValues(
-      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
+      List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList,
       HyperLogLogCollector collector
   )
   {
-    for (final QueryDimensionInfo<CardinalityAggregatorTypeHelper> dimInfo : dimInfoList) {
-      dimInfo.getQueryTypeHelper().hashValues(dimInfo.getSelector(), collector);
+    for (final ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+      selectorPlus.getColumnSelectorStrategy().hashValues(selectorPlus.getSelector(), collector);
     }
   }
 
@@ -68,12 +68,12 @@ public class CardinalityAggregator implements Aggregator
 
   public CardinalityAggregator(
       String name,
-      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
+      List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList,
       boolean byRow
   )
   {
     this.name = name;
-    this.dimInfoList = dimInfoList;
+    this.selectorPlusList = selectorPlusList;
     this.collector = HyperLogLogCollector.makeLatestCollector();
     this.byRow = byRow;
   }
@@ -82,9 +82,9 @@ public class CardinalityAggregator implements Aggregator
   public void aggregate()
   {
     if (byRow) {
-      hashRow(dimInfoList, collector);
+      hashRow(selectorPlusList, collector);
     } else {
-      hashValues(dimInfoList, collector);
+      hashValues(selectorPlusList, collector);
     }
   }
 
@@ -121,7 +121,7 @@ public class CardinalityAggregator implements Aggregator
   @Override
   public Aggregator clone()
   {
-    return new CardinalityAggregator(name, dimInfoList, byRow);
+    return new CardinalityAggregator(name, selectorPlusList, byRow);
   }
 
   @Override

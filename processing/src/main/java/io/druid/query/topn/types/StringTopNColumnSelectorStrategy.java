@@ -11,8 +11,14 @@ import io.druid.segment.data.IndexedInts;
 
 import java.util.Map;
 
-public class StringTopNTypeHelper implements TopNTypeHelper<DimensionSelector>
+public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrategy<DimensionSelector>
 {
+  @Override
+  public int getCardinality(DimensionSelector selector)
+  {
+    return selector.getValueCardinality();
+  }
+
   @Override
   public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, Capabilities capabilities)
   {

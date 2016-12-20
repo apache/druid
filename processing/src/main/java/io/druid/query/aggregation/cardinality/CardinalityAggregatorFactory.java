@@ -26,14 +26,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.QueryDimensionInfo;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelperFactory;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategyFactory;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -96,8 +96,8 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private static final byte CACHE_TYPE_ID = (byte) 0x8;
   private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
-  private static final CardinalityAggregatorTypeHelperFactory TYPE_HELPER_FACTORY =
-      new CardinalityAggregatorTypeHelperFactory();
+  private static final CardinalityAggColumnSelectorStrategyFactory STRATEGY_FACTORY =
+      new CardinalityAggColumnSelectorStrategyFactory();
 
   private final String name;
   private final List<DimensionSpec> fields;
@@ -137,38 +137,38 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList =
+    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList =
         Arrays.asList(DimensionHandlerUtils.getDimensionInfo(
-            TYPE_HELPER_FACTORY,
+            STRATEGY_FACTORY,
             fields,
             null,
             columnFactory
         ));
 
-    if (dimInfoList.isEmpty()) {
+    if (selectorPlusList.isEmpty()) {
       return Aggregators.noopAggregator();
     }
 
-    return new CardinalityAggregator(name, dimInfoList, byRow);
+    return new CardinalityAggregator(name, selectorPlusList, byRow);
   }
 
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList =
+    List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList =
         Arrays.asList(DimensionHandlerUtils.getDimensionInfo(
-            TYPE_HELPER_FACTORY,
+            STRATEGY_FACTORY,
             fields,
             null,
             columnFactory
         ));
 
-    if (dimInfoList.isEmpty()) {
+    if (selectorPlusList.isEmpty()) {
       return Aggregators.noopBufferAggregator();
     }
 
-    return new CardinalityBufferAggregator(dimInfoList, byRow);
+    return new CardinalityBufferAggregator(selectorPlusList, byRow);
   }
 
   @Override

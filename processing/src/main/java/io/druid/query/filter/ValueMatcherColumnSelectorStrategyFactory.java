@@ -1,3 +1,5 @@
+package io.druid.query.filter;
+
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
  * or more contributor license agreements. See the NOTICE file
@@ -17,24 +19,25 @@
  * under the License.
  */
 
-package io.druid.query.topn.types;
-
 import io.druid.java.util.common.IAE;
-import io.druid.query.dimension.QueryTypeHelperFactory;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
-public class TopNTypeHelperFactory implements QueryTypeHelperFactory<TopNTypeHelper>
+public class ValueMatcherColumnSelectorStrategyFactory
+    implements ColumnSelectorStrategyFactory<ValueMatcherColumnSelectorStrategy>
 {
   @Override
-  public TopNTypeHelper makeQueryTypeHelper(
-      String dimName, ColumnCapabilities capabilities
+  public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
+      String columnName, ColumnCapabilities capabilities
   )
   {
+    capabilities = DimensionHandlerUtils.getEffectiveCapabilities(columnName, capabilities, null);
     ValueType type = capabilities.getType();
-    switch(type) {
+    switch (type) {
       case STRING:
-        return new StringTopNTypeHelper();
+        return new StringValueMatcherColumnSelectorStrategy(columnName);
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }

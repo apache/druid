@@ -25,10 +25,10 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.DimensionQueryHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -206,6 +206,9 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 
   private static class FilteredAggregatorValueMatcherFactory implements ValueMatcherFactory
   {
+    private static final ValueMatcherColumnSelectorStrategyFactory STRATEGY_FACTORY =
+        new ValueMatcherColumnSelectorStrategyFactory();
+
     private final ColumnSelectorFactory columnSelectorFactory;
 
     public FilteredAggregatorValueMatcherFactory(ColumnSelectorFactory columnSelectorFactory)
@@ -223,13 +226,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         );
       }
 
-      final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
+      final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
           dimension,
-          columnSelectorFactory.getColumnCapabilities(dimension),
-          null
+          columnSelectorFactory.getColumnCapabilities(dimension)
       );
 
-      return queryHelper.getValueMatcher(columnSelectorFactory, value);
+      return strategy.getValueMatcher(columnSelectorFactory, value);
     }
 
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
@@ -239,12 +241,11 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          final DimensionQueryHelper queryHelper = DimensionHandlerUtils.makeBaseQueryHelper(
+          final ValueMatcherColumnSelectorStrategy strategy = STRATEGY_FACTORY.makeColumnSelectorStrategy(
               dimension,
-              columnSelectorFactory.getColumnCapabilities(dimension),
-              null
+              columnSelectorFactory.getColumnCapabilities(dimension)
           );
-          return queryHelper.getValueMatcher(columnSelectorFactory, predicateFactory);
+          return strategy.getValueMatcher(columnSelectorFactory, predicateFactory);
         default:
           return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
       }

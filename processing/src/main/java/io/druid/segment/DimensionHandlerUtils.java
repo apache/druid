@@ -22,10 +22,10 @@ package io.druid.segment;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.IAE;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import io.druid.query.QueryDimensionInfo;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.QueryTypeHelper;
-import io.druid.query.dimension.QueryTypeHelperFactory;
+import io.druid.query.dimension.ColumnSelectorStrategy;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -37,7 +37,7 @@ public final class DimensionHandlerUtils
 {
   private DimensionHandlerUtils() {}
 
-  private final static ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
+  public final static ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
       new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                   .setDictionaryEncoded(true)
                                   .setHasBitmapIndexes(true);
@@ -69,67 +69,55 @@ public final class DimensionHandlerUtils
     return new StringDimensionHandler(dimensionName, multiValueHandling);
   }
 
-  public static DimensionQueryHelper makeBaseQueryHelper(
+  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
+      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       String dimName,
       ColumnCapabilities capabilities,
       List<String> availableDimensions
   )
   {
-    capabilities = setDefaultForInvalidCapabilities(dimName, capabilities, availableDimensions);
-    if (capabilities.getType() == ValueType.STRING) {
-      return new StringDimensionQueryHelper(dimName);
-    }
-    return null;
+    capabilities = getEffectiveCapabilities(dimName, capabilities, availableDimensions);
+    return strategyFactory.makeColumnSelectorStrategy(dimName, capabilities);
   }
 
-  public static <QueryTypeHelperClass extends QueryTypeHelper> QueryTypeHelperClass makeQueryTypeHelper(
-      QueryTypeHelperFactory<QueryTypeHelperClass> typeHelperFactory,
-      String dimName,
-      ColumnCapabilities capabilities,
-      List<String> availableDimensions
-  )
-  {
-    capabilities = setDefaultForInvalidCapabilities(dimName, capabilities, availableDimensions);
-    return typeHelperFactory.makeQueryTypeHelper(dimName, capabilities);
-  }
-
-  public static <QueryTypeHelperClass extends QueryTypeHelper> QueryDimensionInfo<QueryTypeHelperClass>[] getDimensionInfo(
-      QueryTypeHelperFactory<QueryTypeHelperClass> typeHelperFactory,
+  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass>[] getDimensionInfo(
+      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
       StorageAdapter adapter,
       ColumnSelectorFactory cursor
   )
   {
     int dimCount = dimensionSpecs.size();
-    QueryDimensionInfo<QueryTypeHelperClass>[] dims = new QueryDimensionInfo[dimCount];
+    ColumnSelectorPlus<ColumnSelectorStrategyClass>[] dims = new ColumnSelectorPlus[dimCount];
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = dimensionSpecs.get(i);
       final String dimName = dimSpec.getDimension();
-      DimensionQueryHelper baseHelper = makeBaseQueryHelper(
+      ColumnSelectorStrategyClass strategy = makeStrategy(
+          strategyFactory,
           dimName,
           cursor.getColumnCapabilities(dimSpec.getDimension()),
           adapter == null ? null : Lists.newArrayList(adapter.getAvailableDimensions())
       );
-      QueryTypeHelperClass queryTypeHelper = makeQueryTypeHelper(
-          typeHelperFactory,
-          dimName,
-          cursor.getColumnCapabilities(dimSpec.getDimension()),
-          adapter == null ? null : Lists.newArrayList(adapter.getAvailableDimensions())
-      );
-
-      final ColumnValueSelector selector = baseHelper.getColumnValueSelector(dimSpec, cursor);
-      final QueryDimensionInfo<QueryTypeHelperClass> dimInfo = new QueryDimensionInfo<>(
+      final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
-          baseHelper,
-          queryTypeHelper,
+          cursor,
+          adapter == null ? null : Lists.newArrayList(adapter.getAvailableDimensions())
+      );
+      final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
+          dimName,
+          dimSpec.getOutputName(),
+          strategy,
           selector
       );
-      dims[i] = dimInfo;
+      dims[i] = selectorPlus;
     }
     return dims;
   }
 
-  private static ColumnCapabilities setDefaultForInvalidCapabilities(
+  // When determining the capabilites of a column during query processing, this function
+  // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
+  // (e.g., treating missing columns as empty String columns)
+  public static ColumnCapabilities getEffectiveCapabilities(
       String dimName,
       ColumnCapabilities capabilities,
       List<String> availableDimensions
@@ -152,5 +140,22 @@ public final class DimensionHandlerUtils
     }
 
     return capabilities;
+  }
+
+  public static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+      DimensionSpec dimSpec,
+      ColumnSelectorFactory columnSelectorFactory,
+      List<String> availableDimensions
+  )
+  {
+    String dimName = dimSpec.getOutputName();
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
+    capabilities = getEffectiveCapabilities(dimName, capabilities, availableDimensions);
+    switch (capabilities.getType()) {
+      case STRING:
+        return columnSelectorFactory.makeDimensionSelector(dimSpec);
+      default:
+        return null;
+    }
   }
 }

@@ -19,33 +19,21 @@
 
 package io.druid.query;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.QueryTypeHelper;
+import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.DimensionQueryHelper;
 
 /**
  * A grouping of various related objects used during query processing for a single dimension, used for convenience.
  *
- * Each QueryDimensionInfo is associated with a single dimension.
+ * Each ColumnSelectorPlus is associated with a single dimension.
  */
-public class QueryDimensionInfo<QueryTypeHelperClass extends QueryTypeHelper>
+public class ColumnSelectorPlus<ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
 {
-  /**
-   * The DimensionSpec representing this QueryDimensionInfo's dimension, taken from the query being processed.
-   */
-  private final DimensionSpec spec;
-
-  /**
-   * Helper object that handles general type-specific operations for this dimension within query processing engines.
-   */
-  private final DimensionQueryHelper queryHelper;
-
   /**
    * Helper object that handles row value operations that pertain to a specific query type for this
    * dimension within query processing engines.
    */
-  private final QueryTypeHelperClass queryTypeHelper;
+  private final ColumnSelectorStrategyClass columnSelectorStrategy;
 
   /**
    * Internal name of the dimension.
@@ -62,40 +50,22 @@ public class QueryDimensionInfo<QueryTypeHelperClass extends QueryTypeHelper>
    */
   private final ColumnValueSelector selector;
 
-  /**
-   * Cardinality of the dimension's value set, taken from the queryHelper.
-   */
-  private final int cardinality;
-
-  public QueryDimensionInfo(
-      DimensionSpec spec,
-      DimensionQueryHelper queryHelper,
-      QueryTypeHelperClass queryTypeHelper,
+  public ColumnSelectorPlus(
+      String columnName,
+      String outputName,
+      ColumnSelectorStrategyClass columnSelectorStrategy,
       ColumnValueSelector selector
   )
   {
-    this.spec = spec;
-    this.queryHelper = queryHelper;
-    this.queryTypeHelper = queryTypeHelper;
-    this.name = spec.getDimension();
-    this.outputName = spec.getOutputName();
+    this.columnSelectorStrategy = columnSelectorStrategy;
+    this.name = columnName;
+    this.outputName = outputName;
     this.selector = selector;
-    this.cardinality = queryHelper.getCardinality(selector);
   }
 
-  public DimensionSpec getSpec()
+  public ColumnSelectorStrategyClass getColumnSelectorStrategy()
   {
-    return spec;
-  }
-
-  public DimensionQueryHelper getQueryHelper()
-  {
-    return queryHelper;
-  }
-
-  public QueryTypeHelperClass getQueryTypeHelper()
-  {
-    return queryTypeHelper;
+    return columnSelectorStrategy;
   }
 
   public String getName()
@@ -111,10 +81,5 @@ public class QueryDimensionInfo<QueryTypeHelperClass extends QueryTypeHelper>
   public ColumnValueSelector getSelector()
   {
     return selector;
-  }
-
-  public int getCardinality()
-  {
-    return cardinality;
   }
 }

@@ -20,8 +20,8 @@
 package io.druid.query.aggregation.cardinality;
 
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.QueryDimensionInfo;
-import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorTypeHelper;
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggColumnSelectorStrategy;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.nio.ByteBuffer;
@@ -29,17 +29,17 @@ import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
-  private final List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList;
+  private final List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList;
   private final boolean byRow;
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
   public CardinalityBufferAggregator(
-      List<QueryDimensionInfo<CardinalityAggregatorTypeHelper>> dimInfoList,
+      List<ColumnSelectorPlus<CardinalityAggColumnSelectorStrategy>> selectorPlusList,
       boolean byRow
   )
   {
-    this.dimInfoList = dimInfoList;
+    this.selectorPlusList = selectorPlusList;
     this.byRow = byRow;
   }
 
@@ -63,9 +63,9 @@ public class CardinalityBufferAggregator implements BufferAggregator
     try {
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
       if (byRow) {
-        CardinalityAggregator.hashRow(dimInfoList, collector);
+        CardinalityAggregator.hashRow(selectorPlusList, collector);
       } else {
-        CardinalityAggregator.hashValues(dimInfoList, collector);
+        CardinalityAggregator.hashValues(selectorPlusList, collector);
       }
     }
     finally {
