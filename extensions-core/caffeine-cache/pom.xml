@@ -75,6 +75,17 @@
           <target>1.8</target>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <!-- Don't run Animal Sniffer for caffeine-cache, since it doesn't need to work on JDK7. -->
+          <execution>
+            <id>check-java-api</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>
