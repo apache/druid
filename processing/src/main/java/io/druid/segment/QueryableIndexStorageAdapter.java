@@ -23,19 +23,15 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
-
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -50,7 +46,6 @@ import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
@@ -76,8 +71,6 @@ import java.util.Map;
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
-  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
-
   private final QueryableIndex index;
 
   public QueryableIndexStorageAdapter(
@@ -436,6 +429,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         DimensionSpec dimensionSpec
                     )
                     {
+                      if (virtualColumns.exists(dimensionSpec.getDimension())) {
+                        return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+                      }
+
                       return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
                     }
 
@@ -448,7 +445,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
-                        return NULL_DIMENSION_SELECTOR;
+                        return NullDimensionSelector.instance();
                       }
 
                       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
@@ -469,7 +466,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final DictionaryEncodedColumn<String> column = cachedColumn;
 
                       if (column == null) {
-                        return NULL_DIMENSION_SELECTOR;
+                        return NullDimensionSelector.instance();
                       } else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
@@ -577,6 +574,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
+                      if (virtualColumns.exists(columnName)) {
+                        return virtualColumns.makeFloatColumnSelector(columnName, this);
+                      }
+
                       GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
@@ -590,14 +591,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
-                        return new FloatColumnSelector()
-                        {
-                          @Override
-                          public float get()
-                          {
-                            return 0.0f;
-                          }
-                        };
+                        return ZeroFloatColumnSelector.instance();
                       }
 
                       final GenericColumn metricVals = cachedMetricVals;
@@ -614,6 +608,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public LongColumnSelector makeLongColumnSelector(String columnName)
                     {
+                      if (virtualColumns.exists(columnName)) {
+                        return virtualColumns.makeLongColumnSelector(columnName, this);
+                      }
+
                       GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
@@ -627,14 +625,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
-                        return new LongColumnSelector()
-                        {
-                          @Override
-                          public long get()
-                          {
-                            return 0L;
-                          }
-                        };
+                        return ZeroLongColumnSelector.instance();
                       }
 
                       final GenericColumn metricVals = cachedMetricVals;
@@ -652,6 +643,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
+                      if (virtualColumns.exists(column)) {
+                        return virtualColumns.makeObjectColumnSelector(column, this);
+                      }
+
                       Object cachedColumnVals = objectColumnCache.get(column);
 
                       if (cachedColumnVals == null) {
@@ -676,10 +671,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals == null) {
-                        VirtualColumn vc = virtualColumns.getVirtualColumn(column);
-                        if (vc != null) {
-                          return vc.init(column, this);
-                        }
                         return null;
                       }
 
@@ -807,72 +798,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public NumericColumnSelector makeMathExpressionSelector(String expression)
+                    public ValueType getNativeType(String columnName)
                     {
-                      final Expr parsed = Parser.parse(expression);
-                      final List<String> required = Parser.findRequiredBindings(parsed);
-
-                      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-                      for (String columnName : index.getColumnNames()) {
-                        if (!required.contains(columnName)) {
-                          continue;
-                        }
-                        final GenericColumn column = index.getColumn(columnName).getGenericColumn();
-                        if (column == null) {
-                          continue;
-                        }
-                        closer.register(column);
-                        if (column.getType() == ValueType.FLOAT) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getFloatSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else if (column.getType() == ValueType.LONG) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getLongSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else {
-                          throw new UnsupportedOperationException(
-                              "Not supported type " + column.getType() + " for column " + columnName
-                          );
-                        }
-                      }
-                      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                      return new NumericColumnSelector()
-                      {
-                        @Override
-                        public Number get()
-                        {
-                          return parsed.eval(binding).numericValue();
-                        }
-                      };
-                    }
-
-                    @Override
-                    public ColumnCapabilities getColumnCapabilities(String columnName)
-                    {
-                      ColumnCapabilities capabilities = getColumnCapabilites(index, columnName);
-                      if (capabilities == null && !virtualColumns.isEmpty()) {
-                        VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
-                        if (virtualColumn != null) {
-                          Class clazz = virtualColumn.init(columnName, this).classOfObject();
-                          capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
-                        }
-                      }
-                      return capabilities;
+                      final ColumnCapabilities capabilities = getColumnCapabilites(index, columnName);
+                      return capabilities != null ? capabilities.getType() : virtualColumns.getNativeType(columnName);
                     }
                   }
 
@@ -1054,7 +983,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final String value)
     {
-      if (getTypeForDimension(dimension) == ValueType.LONG) {
+      if (cursor.getNativeType(dimension) == ValueType.LONG) {
         return Filters.getLongValueMatcher(
             cursor.makeLongColumnSelector(dimension),
             value
@@ -1095,14 +1024,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
     {
-      ValueType type = getTypeForDimension(dimension);
-      switch (type) {
-        case LONG:
-          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-        case STRING:
-          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
-        default:
-          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
+      final ValueType type = cursor.getNativeType(dimension);
+      if (type == ValueType.LONG) {
+        return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
+      } else if (type == ValueType.STRING) {
+        return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
+      } else {
+        return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
       }
     }
 
@@ -1139,12 +1067,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
           cursor.makeLongColumnSelector(dimension),
           predicate
       );
-    }
-
-    private ValueType getTypeForDimension(String dimension)
-    {
-      ColumnCapabilities capabilities = getColumnCapabilites(index, dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 

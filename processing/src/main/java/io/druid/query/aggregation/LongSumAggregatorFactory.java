@@ -22,11 +22,10 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import io.druid.common.utils.StringUtils;
-import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -42,46 +41,30 @@ public class LongSumAggregatorFactory extends AggregatorFactory
 
   private final String name;
   private final String fieldName;
-  private final String expression;
 
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("expression") String expression
+      @JsonProperty("fieldName") String fieldName
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkArgument(
-        fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression"
-    );
+    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
     this.name = name;
     this.fieldName = fieldName;
-    this.expression = expression;
-  }
-
-  public LongSumAggregatorFactory(String name, String fieldName)
-  {
-    this(name, fieldName, null);
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumAggregator(getLongColumnSelector(metricFactory));
+    return new LongSumAggregator(metricFactory.makeLongColumnSelector(fieldName));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumBufferAggregator(getLongColumnSelector(metricFactory));
-  }
-
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
-  {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, expression, 0L);
+    return new LongSumBufferAggregator(metricFactory.makeLongColumnSelector(fieldName));
   }
 
   @Override
@@ -99,7 +82,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name, null);
+    return new LongSumAggregatorFactory(name, name);
   }
 
   @Override
@@ -115,7 +98,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName, expression));
+    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName));
   }
 
   @Override
@@ -136,12 +119,6 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
   @Override
   @JsonProperty
   public String getName()
@@ -152,20 +129,17 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldName != null ? Arrays.asList(fieldName) : Parser.findRequiredBindings(expression);
+    return ImmutableList.of(fieldName);
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
-    byte[] expressionBytes = StringUtils.toUtf8WithNullToEmpty(expression);
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(fieldNameBytes)
-                     .put(AggregatorUtil.STRING_SEPARATOR)
-                     .put(expressionBytes)
                      .array();
   }
 
@@ -186,7 +160,6 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   {
     return "LongSumAggregatorFactory{" +
            "fieldName='" + fieldName + '\'' +
-           ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
   }
@@ -206,9 +179,6 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     if (!Objects.equals(fieldName, that.fieldName)) {
       return false;
     }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
     if (!Objects.equals(name, that.name)) {
       return false;
     }
@@ -220,7 +190,6 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   public int hashCode()
   {
     int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
     result = 31 * result + (name != null ? name.hashCode() : 0);
     return result;
   }

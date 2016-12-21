@@ -55,6 +55,7 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -330,18 +331,20 @@ public class Druids
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
+    private boolean descending;
+    private VirtualColumns virtualColumns;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
 
-    private boolean descending;
-
     private TimeseriesQueryBuilder()
     {
       dataSource = null;
       querySegmentSpec = null;
+      descending = false;
+      virtualColumns = null;
       dimFilter = null;
       granularity = QueryGranularities.ALL;
       aggregatorSpecs = Lists.newArrayList();
@@ -355,6 +358,7 @@ public class Druids
           dataSource,
           querySegmentSpec,
           descending,
+          virtualColumns,
           dimFilter,
           granularity,
           aggregatorSpecs,
@@ -457,6 +461,22 @@ public class Druids
     {
       querySegmentSpec = new LegacySegmentSpec(l);
       return this;
+    }
+
+    public TimeseriesQueryBuilder virtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder virtualColumns(List<VirtualColumn> virtualColumns)
+    {
+      return virtualColumns(VirtualColumns.create(virtualColumns));
+    }
+
+    public TimeseriesQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
+    {
+      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
     }
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value)
@@ -1104,7 +1124,7 @@ public class Druids
     private QueryGranularity granularity;
     private List<DimensionSpec> dimensions;
     private List<String> metrics;
-    private List<VirtualColumn> virtualColumns;
+    private VirtualColumns virtualColumns;
     private PagingSpec pagingSpec;
 
     public SelectQueryBuilder()
@@ -1233,10 +1253,20 @@ public class Druids
       return this;
     }
 
-    public SelectQueryBuilder virtualColumns(List<VirtualColumn> vcs)
+    public SelectQueryBuilder virtualColumns(VirtualColumns vcs)
     {
       virtualColumns = vcs;
       return this;
+    }
+
+    public SelectQueryBuilder virtualColumns(List<VirtualColumn> vcs)
+    {
+      return virtualColumns(VirtualColumns.create(vcs));
+    }
+
+    public SelectQueryBuilder virtualColumns(VirtualColumn... vcs)
+    {
+      return virtualColumns(VirtualColumns.create(Arrays.asList(vcs)));
     }
 
     public SelectQueryBuilder pagingSpec(PagingSpec p)

@@ -73,6 +73,7 @@ import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -1793,12 +1794,17 @@ public class TopNQueryRunnerTest
 
     assertExpectedResults(expectedResults, query);
 
-    query = query.withAggregatorSpecs(
-        Arrays.asList(
-            QueryRunnerTestHelper.rowsCount,
-            new DoubleSumAggregatorFactory("index", null, "-index + 100")
+    query = new TopNQueryBuilder(query)
+        .virtualColumns(
+            new ExpressionVirtualColumn("expr", "-index + 100")
         )
-    );
+        .aggregators(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new DoubleSumAggregatorFactory("index", "expr")
+            )
+        )
+        .build();
 
     expectedResults = Arrays.asList(
         TopNQueryRunnerTestHelper.createExpectedRows(

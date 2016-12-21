@@ -33,6 +33,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ import java.util.Map;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
+  private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
@@ -52,6 +54,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("descending") boolean descending,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
@@ -60,6 +63,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   )
   {
     super(dataSource, querySegmentSpec, descending, context);
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
@@ -84,6 +88,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public String getType()
   {
     return Query.TIMESERIES;
+  }
+
+  @JsonProperty
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   @JsonProperty("filter")
@@ -121,6 +131,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         getDataSource(),
         querySegmentSpec,
         isDescending(),
+        virtualColumns,
         dimFilter,
         granularity,
         aggregatorSpecs,
@@ -136,6 +147,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         dataSource,
         getQuerySegmentSpec(),
         isDescending(),
+        virtualColumns,
         dimFilter,
         granularity,
         aggregatorSpecs,
@@ -150,6 +162,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         getDataSource(),
         getQuerySegmentSpec(),
         isDescending(),
+        virtualColumns,
         dimFilter,
         granularity,
         aggregatorSpecs,
@@ -164,27 +177,13 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         getDataSource(),
         getQuerySegmentSpec(),
         isDescending(),
+        virtualColumns,
         dimFilter,
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
         getContext()
     );
-  }
-
-  @Override
-  public String toString()
-  {
-    return "TimeseriesQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", descending=" + isDescending() +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", context=" + getContext() +
-        '}';
   }
 
   @Override
@@ -202,7 +201,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
     TimeseriesQuery that = (TimeseriesQuery) o;
 
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null) {
+    if (!virtualColumns.equals(that.virtualColumns)) {
       return false;
     }
     if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
@@ -211,21 +210,35 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
       return false;
     }
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null) {
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null) {
       return false;
     }
-
-    return true;
+    return postAggregatorSpecs != null
+           ? postAggregatorSpecs.equals(that.postAggregatorSpecs)
+           : that.postAggregatorSpecs == null;
   }
 
   @Override
   public int hashCode()
   {
     int result = super.hashCode();
+    result = 31 * result + virtualColumns.hashCode();
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TimeseriesQuery{" +
+           "virtualColumns=" + virtualColumns +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + granularity +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           '}';
   }
 }

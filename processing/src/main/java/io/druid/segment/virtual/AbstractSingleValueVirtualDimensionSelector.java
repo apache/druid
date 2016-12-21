@@ -17,29 +17,18 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.virtual;
 
-import com.google.common.base.Strings;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 
-public class NullDimensionSelector implements DimensionSelector
+public abstract class AbstractSingleValueVirtualDimensionSelector implements DimensionSelector
 {
-  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
-
-  private NullDimensionSelector()
-  {
-  }
-
-  public static final NullDimensionSelector instance()
-  {
-    return INSTANCE;
-  }
-
-  private static final IndexedInts SINGLETON = new IndexedInts()
+  private static final IndexedInts ALWAYS_ZERO = new IndexedInts()
   {
     @Override
     public int size()
@@ -62,7 +51,7 @@ public class NullDimensionSelector implements DimensionSelector
     @Override
     public void fill(int index, int[] toFill)
     {
-      throw new UnsupportedOperationException("NullDimensionSelector does not support fill");
+      throw new UnsupportedOperationException("Cannot fill");
     }
 
     @Override
@@ -72,27 +61,29 @@ public class NullDimensionSelector implements DimensionSelector
     }
   };
 
+  protected abstract String getValue();
+
   @Override
   public IndexedInts getRow()
   {
-    return SINGLETON;
+    return ALWAYS_ZERO;
   }
 
   @Override
   public int getValueCardinality()
   {
-    return 1;
+    return DimensionSelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
   public String lookupName(int id)
   {
-    return null;
+    return getValue();
   }
 
   @Override
   public int lookupId(String name)
   {
-    return Strings.isNullOrEmpty(name) ? 0 : -1;
+    throw new UnsupportedOperationException("Cannot lookupId on virtual dimensions");
   }
 }

@@ -19,15 +19,25 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 
-/**
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+import java.util.List;
+
 /**
  * Virtual columns are "views" created over a ColumnSelectorFactory. They can potentially draw from multiple
  * underlying columns, although they always present themselves as if they were a single column.
+ *
+ * A virtual column object will be shared amongst threads and must be thread safe. The selectors returned
+ * from the various makeXXXSelector methods need not be thread safe.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class)
+})
 public interface VirtualColumn
 {
   /**
@@ -42,10 +52,70 @@ public interface VirtualColumn
    * virtual column was referenced with, which is useful if this column uses dot notation.
    *
    * @param columnName the name this virtual column was referenced with
-   * @param factory column selector factory
-   * @return the selector
+   * @param factory    column selector factory
+   *
+   * @return the selector, must not be null
    */
-  ObjectColumnSelector init(String columnName, ColumnSelectorFactory factory);
+  ObjectColumnSelector makeObjectColumnSelector(String columnName, ColumnSelectorFactory factory);
+
+  /**
+   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which
+   * is useful if this column uses dot notation. The virtual column is expected to apply any
+   * necessary decoration from the dimensionSpec.
+   *
+   * @param dimensionSpec the dimensionSpec this column was referenced with
+   * @param factory       column selector factory
+   *
+   * @return the selector, or null if we can't make a selector
+   */
+  DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory);
+
+  /**
+   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   *
+   * @param columnName the name this virtual column was referenced with
+   * @param factory    column selector factory
+   *
+   * @return the selector, or null if we can't make a selector
+   */
+  FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory);
+
+  /**
+   * Build a selector corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   *
+   * @param columnName the name this virtual column was referenced with
+   * @param factory    column selector factory
+   *
+   * @return the selector, or null if we can't make a selector
+   */
+  LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory);
+
+  /**
+   * Returns the native type of this virtual column, which should match the type returned
+   * by "makeObjectColumnSelector" and should correspond to the best performing selector.
+   * May vary based on columnName if this column uses dot notation.
+   *
+   * @param columnName the name this virtual column was referenced with
+   *
+   * @return native type, must not be null
+   */
+  ValueType nativeType(String columnName);
+
+  /**
+   * Returns a list of columns that this virtual column will access. This may include the
+   * names of other virtual columns. May be empty if a virtual column doesn't access any
+   * underlying columns.
+   *
+   * Does not pass columnName because there is an assumption that the list of columns
+   * needed by a dot-notation supporting virtual column will not vary based on the
+   * columnName.
+   *
+   * @return column names
+   */
+  List<String> requiredColumns();
 
   /**
    * Indicates that this virtual column can be referenced with dot notation. For example,

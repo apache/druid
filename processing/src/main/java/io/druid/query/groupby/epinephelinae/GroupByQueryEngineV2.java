@@ -41,7 +41,6 @@ import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
@@ -84,7 +83,7 @@ public class GroupByQueryEngineV2
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         Filters.toFilter(query.getDimFilter()),
         intervals.get(0),
-         VirtualColumns.EMPTY,
+        query.getVirtualColumns(),
         query.getGranularity(),
         false
     );

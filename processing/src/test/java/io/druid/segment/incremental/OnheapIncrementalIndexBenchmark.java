@@ -157,9 +157,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
         for (int i = 0; i < metrics.length; i++) {
           final AggregatorFactory agg = metrics[i];
-          aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, null)
-          );
+          aggs[i] = agg.factorize(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics));
         }
         Integer rowIndex;
 

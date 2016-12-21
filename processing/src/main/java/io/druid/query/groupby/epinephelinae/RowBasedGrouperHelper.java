@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
@@ -36,9 +35,6 @@ import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Accumulator;
-import io.druid.math.expr.Evals;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -50,10 +46,9 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
-import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
@@ -94,12 +89,14 @@ public class RowBasedGrouperHelper
         querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
     );
     final RowBasedColumnSelectorFactory columnSelectorFactory = new RowBasedColumnSelectorFactory();
+    final ColumnSelectorFactory virtualizedColumnSelectorFactory = query.getVirtualColumns()
+                                                                        .wrap(columnSelectorFactory);
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
           buffer,
           keySerdeFactory,
-          columnSelectorFactory,
+          virtualizedColumnSelectorFactory,
           aggregatorFactories,
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
@@ -112,7 +109,7 @@ public class RowBasedGrouperHelper
       grouper = new ConcurrentGrouper<>(
           buffer,
           keySerdeFactory,
-          columnSelectorFactory,
+          virtualizedColumnSelectorFactory,
           aggregatorFactories,
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
@@ -127,7 +124,7 @@ public class RowBasedGrouperHelper
     if (isInputRaw) {
       dimensionSelectors = new DimensionSelector[query.getDimensions().size()];
       for (int i = 0; i < dimensionSelectors.length; i++) {
-        dimensionSelectors[i] = columnSelectorFactory.makeDimensionSelector(query.getDimensions().get(i));
+        dimensionSelectors[i] = virtualizedColumnSelectorFactory.makeDimensionSelector(query.getDimensions().get(i));
       }
     } else {
       dimensionSelectors = null;
@@ -777,42 +774,17 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    public ValueType getNativeType(String columnName)
     {
-      final Expr parsed = Parser.parse(expression);
+      // This ColumnSelectorFactory implementation has no innate knowledge of column types. All it knows
+      // is that TIME_COLUMN_NAME is a long.
 
-      final List<String> required = Parser.findRequiredBindings(parsed);
-      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-
-      for (final String columnName : required) {
-        values.put(
-            columnName, new Supplier<Number>()
-            {
-              @Override
-              public Number get()
-              {
-                return Evals.toNumber(row.get().getRaw(columnName));
-              }
-            }
-        );
+      if (Column.TIME_COLUMN_NAME.equals(columnName)) {
+        return ValueType.LONG;
+      } else {
+        // Return null, caller will assume default types in this case.
+        return null;
       }
-      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-
-      return new NumericColumnSelector()
-      {
-        @Override
-        public Number get()
-        {
-          return parsed.eval(binding).numericValue();
-        }
-      };
-    }
-
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      // We don't have any information on the column value type, returning null defaults type to string
-      return null;
     }
   }
 

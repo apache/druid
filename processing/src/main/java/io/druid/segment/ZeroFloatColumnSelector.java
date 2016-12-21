@@ -19,26 +19,23 @@
 
 package io.druid.segment;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ValueType;
-
-/**
- * Factory class for MetricSelectors
- */
-public interface ColumnSelectorFactory
+public class ZeroFloatColumnSelector implements FloatColumnSelector
 {
-  DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  FloatColumnSelector makeFloatColumnSelector(String columnName);
-  LongColumnSelector makeLongColumnSelector(String columnName);
-  ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
 
-  /**
-   * Returns the native type of the named column, which should match the type returned, which
-   * should correspond to the best performing selector. May be null if unknown.
-   *
-   * @param columnName name of the column
-   *
-   * @return native type, or null if unknown
-   */
-  ValueType getNativeType(String columnName);
+  private ZeroFloatColumnSelector()
+  {
+    // No instantiation.
+  }
+
+  public static ZeroFloatColumnSelector instance()
+  {
+    return INSTANCE;
+  }
+
+  @Override
+  public float get()
+  {
+    return 0.0f;
+  }
 }
