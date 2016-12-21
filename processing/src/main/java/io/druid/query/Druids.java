@@ -45,9 +45,9 @@ import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQuery.Strategy;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.query.search.search.SearchSortSpec;
+import io.druid.query.search.search.SearchStrategy;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -550,7 +550,7 @@ public class Druids
     private SearchQuerySpec querySpec;
     private SearchSortSpec sortSpec;
     private Map<String, Object> context;
-    private Strategy strategy;
+    private SearchStrategy strategy;
 
     public SearchQueryBuilder()
     {
@@ -757,7 +757,7 @@ public class Druids
       return this;
     }
 
-    public SearchQueryBuilder strategy(Strategy strategy) {
+    public SearchQueryBuilder strategy(SearchStrategy strategy) {
       this.strategy = strategy;
       return this;
     }

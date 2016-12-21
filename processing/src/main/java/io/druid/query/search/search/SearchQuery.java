@@ -49,14 +49,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
   private final int limit;
-  private final Strategy strategy;
-
-  public enum Strategy
-  {
-    AUTO,
-    INDEX_ONLY,
-    CURSOR_BASED
-  }
+  private final SearchStrategy strategy;
 
   @JsonCreator
   public SearchQuery(
@@ -69,7 +62,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("strategy") Strategy strategy
+      @JsonProperty("strategy") SearchStrategy strategy
   )
   {
     super(dataSource, querySegmentSpec, false, context);
@@ -79,7 +72,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
-    this.strategy = strategy == null ? Strategy.AUTO : strategy;
+    this.strategy = strategy == null ? new AutoStrategy() : strategy;
 
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
   }
@@ -206,7 +199,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @JsonProperty("strategy")
-  public Strategy getStrategy() {
+  public SearchStrategy getStrategy() {
     return strategy;
   }
 

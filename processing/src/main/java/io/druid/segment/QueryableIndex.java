@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.query.search.search.SearchQueryDecisionHelper;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
@@ -31,17 +32,19 @@ import java.util.Map;
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {
-  public Interval getDataInterval();
-  public int getNumRows();
-  public Indexed<String> getAvailableDimensions();
-  public BitmapFactory getBitmapFactoryForDimensions();
-  public Metadata getMetadata();
-  public Map<String, DimensionHandler> getDimensionHandlers();
+  Interval getDataInterval();
+  int getNumRows();
+  Indexed<String> getAvailableDimensions();
+  BitmapFactory getBitmapFactoryForDimensions();
+  Metadata getMetadata();
+  Map<String, DimensionHandler> getDimensionHandlers();
+
+  SearchQueryDecisionHelper getDecisionHelper();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
    * @throws java.io.IOException if an exception was thrown closing the index
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
-  public void close() throws IOException;
+  void close() throws IOException;
 }

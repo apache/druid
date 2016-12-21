@@ -17,26 +17,38 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.collections.bitmap.BitmapFactory;
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.query.search.search.SearchQueryDecisionHelper;
+import io.druid.segment.Segment;
 
-/**
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = BitmapSerde.DefaultBitmapSerdeFactory.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "concise", value = ConciseBitmapSerdeFactory.class),
-    @JsonSubTypes.Type(name = "roaring", value = RoaringBitmapSerdeFactory.class)
+    @JsonSubTypes.Type(name = "auto", value = AutoStrategy.class),
+    @JsonSubTypes.Type(name = "indexOnly", value = IndexOnlyStrategy.class),
+    @JsonSubTypes.Type(name = "cursorBased", value = CursorBasedStrategy.class)
 })
-public interface BitmapSerdeFactory
+public abstract class SearchStrategy
 {
-  ObjectStrategy<ImmutableBitmap> getObjectStrategy();
+  public abstract SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment);
 
-  BitmapFactory getBitmapFactory();
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
-  SearchQueryDecisionHelper getDecisionHelper();
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return toString().hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName();
+  }
 }

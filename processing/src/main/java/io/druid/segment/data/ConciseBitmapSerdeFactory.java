@@ -27,6 +27,8 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.WrappedImmutableConciseBitmap;
+import io.druid.query.search.search.ConciseBitmapDecisionHelper;
+import io.druid.query.search.search.SearchQueryDecisionHelper;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
@@ -35,6 +37,7 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
 {
   private static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableConciseSetObjectStrategy();
   private static final BitmapFactory bitmapFactory = new ConciseBitmapFactory();
+  private static final SearchQueryDecisionHelper decisionHelper = ConciseBitmapDecisionHelper.getInstance();
 
   @Override
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy()
@@ -46,6 +49,12 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
   public BitmapFactory getBitmapFactory()
   {
     return bitmapFactory;
+  }
+
+  @Override
+  public SearchQueryDecisionHelper getDecisionHelper()
+  {
+    return decisionHelper;
   }
 
   private static Ordering<WrappedImmutableConciseBitmap> conciseComparator = new Ordering<WrappedImmutableConciseBitmap>()

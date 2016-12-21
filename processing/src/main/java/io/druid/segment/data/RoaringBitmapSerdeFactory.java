@@ -26,6 +26,8 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
+import io.druid.query.search.search.SearchQueryDecisionHelper;
+import io.druid.query.search.search.RoaringBitmapDecisionHelper;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 import java.nio.ByteBuffer;
@@ -36,6 +38,7 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 {
   private static final boolean DEFAULT_COMPRESS_RUN_ON_SERIALIZATION = true;
   private static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableRoaringBitmapObjectStrategy();
+  private static final SearchQueryDecisionHelper decisionHelper = RoaringBitmapDecisionHelper.getInstance();
 
   private final boolean compressRunOnSerialization;
   private final BitmapFactory bitmapFactory;
@@ -67,6 +70,12 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
   public BitmapFactory getBitmapFactory()
   {
     return bitmapFactory;
+  }
+
+  @Override
+  public SearchQueryDecisionHelper getDecisionHelper()
+  {
+    return decisionHelper;
   }
 
   private static Ordering<WrappedImmutableRoaringBitmap> roaringComparator = new Ordering<WrappedImmutableRoaringBitmap>()
