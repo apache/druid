@@ -178,6 +178,7 @@ public class CalciteTests
                 TopNQuery.class,
                 new TopNQueryRunnerFactory(
                     new StupidPool<>(
+                        "TopNQueryRunnerFactory-bufferPool",
                         new Supplier<ByteBuffer>()
                         {
                           @Override

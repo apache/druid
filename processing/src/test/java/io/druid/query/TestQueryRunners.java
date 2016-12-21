@@ -40,6 +40,7 @@ import java.nio.ByteBuffer;
 public class TestQueryRunners
 {
   public static final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
+      "TestQueryRunners-bufferPool",
       new Supplier<ByteBuffer>()
       {
         @Override
