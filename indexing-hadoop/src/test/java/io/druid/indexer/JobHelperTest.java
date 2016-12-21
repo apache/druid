@@ -31,6 +31,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.joda.time.Interval;
@@ -42,6 +44,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -144,7 +148,30 @@ public class JobHelperTest
     );
   }
 
+  @Test
+  public void testGoogleGetURIFromSegment() throws URISyntaxException
+  {
+    DataSegment segment = new DataSegment(
+        "test1",
+        Interval.parse("2000/3000"),
+        "ver",
+        ImmutableMap.<String, Object>of(
+            "type", "google",
+            "bucket", "test-test",
+            "path", "tmp/foo:bar/index1.zip"
+        ),
+        ImmutableList.<String>of(),
+        ImmutableList.<String>of(),
+        NoneShardSpec.instance(),
+        9,
+        1024
+    );
 
+    Assert.assertEquals(
+        new URI("gs://test-test/tmp/foo%3Abar/index1.zip"),
+        JobHelper.getURIFromSegment(segment)
+    );
+  }
 
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig
   {
