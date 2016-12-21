@@ -48,6 +48,7 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.helpers.OverlordHelperManager;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -183,7 +184,8 @@ public class OverlordTest
           }
         },
         serviceEmitter,
-        supervisorManager
+        supervisorManager,
+        EasyMock.createNiceMock(OverlordHelperManager.class)
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
