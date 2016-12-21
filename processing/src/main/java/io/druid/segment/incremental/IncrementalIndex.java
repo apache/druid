@@ -295,7 +295,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       @Override
-      public NumericColumnSelector makeMathExpressionSelector(String expression)
+      public NumericColumnSelector makeExpressionSelector(String expression)
       {
         final Expr parsed = Parser.parse(expression);
 
@@ -671,6 +671,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     synchronized (dimensionDescs) {
       return dimensionDescs.get(dimension);
     }
+  }
+
+  public MetricDesc getMetric(String metric)
+  {
+    return metricDescs.get(metric);
   }
 
   public String getMetricType(String metric)

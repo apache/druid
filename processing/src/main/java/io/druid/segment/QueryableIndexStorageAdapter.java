@@ -29,11 +29,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
-
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
@@ -807,7 +807,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public NumericColumnSelector makeMathExpressionSelector(String expression)
+                    public NumericColumnSelector makeExpressionSelector(String expression)
                     {
                       final Expr parsed = Parser.parse(expression);
                       final List<String> required = Parser.findRequiredBindings(parsed);
@@ -1139,6 +1139,20 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
           cursor.makeLongColumnSelector(dimension),
           predicate
       );
+    }
+
+    @Override
+    public ValueMatcher makeExpressionMatcher(String expression)
+    {
+      final NumericColumnSelector selector = cursor.makeExpressionSelector(expression);
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return Evals.asBoolean(selector.get());
+        }
+      };
     }
 
     private ValueType getTypeForDimension(String dimension)

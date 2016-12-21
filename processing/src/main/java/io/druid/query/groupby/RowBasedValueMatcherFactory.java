@@ -21,8 +21,13 @@ package io.druid.query.groupby;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Maps;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.Row;
+import io.druid.math.expr.Evals;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
@@ -31,6 +36,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.filter.BooleanValueMatcher;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class RowBasedValueMatcherFactory implements ValueMatcherFactory
@@ -108,6 +114,38 @@ public class RowBasedValueMatcherFactory implements ValueMatcherFactory
         }
       };
     }
+  }
+
+  @Override
+  public ValueMatcher makeExpressionMatcher(String expression)
+  {
+    final Expr parsed = Parser.parse(expression);
+
+    final List<String> required = Parser.findRequiredBindings(parsed);
+    final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+
+    for (final String columnName : required) {
+      values.put(
+          columnName, new Supplier<Number>()
+          {
+            @Override
+            public Number get()
+            {
+              return Evals.toNumber((row.getRaw(columnName)));
+            }
+          }
+      );
+    }
+    final Expr.ObjectBinding binding = Parser.withSuppliers(values);
+
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return parsed.eval(binding).asBoolean();
+      }
+    };
   }
 
   // Precondition: value must be run through Strings.emptyToNull

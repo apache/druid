@@ -275,6 +275,9 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    */
   public Object convertUnsortedEncodedArrayToActualArrayOrList(EncodedTypeArray key, boolean asList);
 
+  public ActualType convertUnsortedEncodedArrayToActualValue(EncodedTypeArray key, int index);
+
+  public int getLengthOfUnsortedEncodedArray(EncodedTypeArray key);
 
   /**
    * Given a row value array from a TimeAndDims key, as described in the documentation for compareUnsortedEncodedArrays(),

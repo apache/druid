@@ -511,6 +511,21 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
+  public String convertUnsortedEncodedArrayToActualValue(int[] key, int index)
+  {
+    if (key == null || key.length <= index) {
+      return null;
+    }
+    return getActualValue(key[index], false);
+  }
+
+  @Override
+  public int getLengthOfUnsortedEncodedArray(int[] key)
+  {
+    return key.length;
+  }
+
+  @Override
   public int[] convertUnsortedEncodedArrayToSortedEncodedArray(int[] key)
   {
     int[] sortedDimVals = new int[key.length];

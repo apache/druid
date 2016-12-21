@@ -410,9 +410,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    public NumericColumnSelector makeExpressionSelector(String expression)
     {
-      return delegate.makeMathExpressionSelector(expression);
+      return delegate.makeExpressionSelector(expression);
     }
   }
 

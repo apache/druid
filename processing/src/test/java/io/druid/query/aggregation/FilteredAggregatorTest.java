@@ -185,7 +185,7 @@ public class FilteredAggregatorTest
       }
 
       @Override
-      public NumericColumnSelector makeMathExpressionSelector(String expression)
+      public NumericColumnSelector makeExpressionSelector(String expression)
       {
         throw new UnsupportedOperationException();
       }

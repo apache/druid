@@ -19,14 +19,42 @@
 
 package io.druid.segment.column;
 
+import io.druid.data.input.impl.DimensionSchema;
+
 /**
-*/
+ */
 public enum ValueType
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX;
+  FLOAT {
+    @Override
+    public DimensionSchema.ValueType asDimensionType()
+    {
+      return DimensionSchema.ValueType.STRING;
+    }
+  },
+  LONG {
+    @Override
+    public DimensionSchema.ValueType asDimensionType()
+    {
+      return DimensionSchema.ValueType.LONG;
+    }
+  },
+  STRING {
+    @Override
+    public DimensionSchema.ValueType asDimensionType()
+    {
+      return DimensionSchema.ValueType.STRING;
+    }
+  },
+  COMPLEX {
+    @Override
+    public DimensionSchema.ValueType asDimensionType()
+    {
+      return DimensionSchema.ValueType.COMPLEX;
+    }
+  };
+
+  public abstract DimensionSchema.ValueType asDimensionType();
 
   public static ValueType typeFor(Class clazz)
   {

@@ -33,6 +33,7 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.ExpressionFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -128,6 +129,17 @@ public class SearchQueryRunnerTest
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 186));
+
+    checkSearchQuery(searchQuery, expectedHits);
+
+    searchQuery = searchQuery.withDimFilter(new ExpressionFilter("index < 100"));
+
+    expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 14));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 14));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "entertainment", 12));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "health", 24));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 23));
 
     checkSearchQuery(searchQuery, expectedHits);
   }

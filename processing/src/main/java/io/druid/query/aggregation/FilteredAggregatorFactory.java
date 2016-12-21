@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import io.druid.math.expr.Evals;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
@@ -34,6 +35,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
@@ -390,6 +392,20 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       }
       ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimension);
       return capabilities == null ? ValueType.STRING : capabilities.getType();
+    }
+
+    @Override
+    public ValueMatcher makeExpressionMatcher(String expression)
+    {
+      final NumericColumnSelector selector = columnSelectorFactory.makeExpressionSelector(expression);
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return Evals.asBoolean(selector.get());
+        }
+      };
     }
   }
 }
