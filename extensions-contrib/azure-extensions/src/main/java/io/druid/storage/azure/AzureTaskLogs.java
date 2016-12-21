@@ -120,4 +120,10 @@ public class AzureTaskLogs implements TaskLogs {
   {
     throw new UnsupportedOperationException("not implemented");
   }
+
+  @Override
+  public void killOlderThan(long timestamp) throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }

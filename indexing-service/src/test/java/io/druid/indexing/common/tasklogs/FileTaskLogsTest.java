@@ -86,4 +86,43 @@ public class FileTaskLogsTest
     expectedException.expectMessage("Unable to create task log dir");
     taskLogs.pushTaskLog("foo", logFile);
   }
+
+  @Test
+  public void testKill() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File logDir = new File(tmpDir, "logs");
+    final File logFile = new File(tmpDir, "log");
+    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+
+    Files.write("log1content", logFile, Charsets.UTF_8);
+    taskLogs.pushTaskLog("log1", logFile);
+    Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
+
+    //File modification timestamp is only maintained to seconds resolution, so artificial delay
+    //is necessary to separate 2 file creations by a timestamp that would result in only one
+    //of them getting deleted
+    Thread.sleep(1500);
+    long time = (System.currentTimeMillis()/1000)*1000;
+    Assert.assertTrue(new File(logDir, "log1.log").lastModified() < time);
+
+    Files.write("log2content", logFile, Charsets.UTF_8);
+    taskLogs.pushTaskLog("log2", logFile);
+    Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    Assert.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
+
+    taskLogs.killOlderThan(time);
+
+    Assert.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
+    Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+
+  }
+
+  private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
+  {
+    return new String(
+        ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()),
+        Charsets.UTF_8
+    );
+  }
 }

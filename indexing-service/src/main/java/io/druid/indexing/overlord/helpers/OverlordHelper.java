@@ -17,14 +17,14 @@
 * under the License.
 */
 
-package io.druid.tasklogs;
+package io.druid.indexing.overlord.helpers;
 
-import java.io.IOException;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public interface TaskLogKiller
+public interface OverlordHelper
 {
-  void killAll() throws IOException;
-  void killOlderThan(long timestamp) throws IOException;
+  boolean isEnabled();
+  void schedule(ScheduledExecutorService exec);
 }

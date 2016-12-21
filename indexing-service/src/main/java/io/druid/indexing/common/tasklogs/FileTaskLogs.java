@@ -29,6 +29,7 @@ import io.druid.tasklogs.TaskLogs;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -88,5 +89,39 @@ public class FileTaskLogs implements TaskLogs
   {
     log.info("Deleting all task logs from local dir [%s].", config.getDirectory().getAbsolutePath());
     FileUtils.deleteDirectory(config.getDirectory());
+  }
+
+  @Override
+  public void killOlderThan(final long timestamp) throws IOException
+  {
+    File taskLogDir = config.getDirectory();
+    if (taskLogDir.exists()) {
+
+      if (!taskLogDir.isDirectory()) {
+        throw new IOException(String.format("taskLogDir [%s] must be a directory.", taskLogDir));
+      }
+
+      File[] files = taskLogDir.listFiles(
+          new FileFilter()
+          {
+            @Override
+            public boolean accept(File f)
+            {
+              return f.lastModified() < timestamp;
+            }
+          }
+      );
+
+      for (File file : files) {
+        log.info("Deleting local task log [%s].", file.getAbsolutePath());
+        FileUtils.forceDelete(file);
+
+        if (Thread.currentThread().isInterrupted()) {
+          throw new IOException(
+              new InterruptedException("Thread interrupted. Couldn't delete all tasklogs.")
+          );
+        }
+      }
+    }
   }
 }
