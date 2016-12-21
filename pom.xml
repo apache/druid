@@ -764,6 +764,34 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <version>1.15</version>
+                <executions>
+                    <execution>
+                        <id>check-java-api</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <signature>
+                                <groupId>org.codehaus.mojo.signature
+                                </groupId>
+                                <artifactId>java17</artifactId>
+                                <version>1.0</version>
+                            </signature>
+                            <ignores>
+                                <!-- Some of our code uses DirectBuffer & Cleaner directly, which are not part of
+                                     the JDK signature (although they are there anyway). -->
+                                <ignore>sun.nio.ch.DirectBuffer</ignore>
+                                <ignore>sun.misc.Cleaner</ignore>
+                            </ignores>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>

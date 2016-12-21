@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.metadata.MetadataSupervisorManager;
@@ -56,7 +57,7 @@ public class SupervisorManager
 
   public Set<String> getSupervisorIds()
   {
-    return supervisors.keySet();
+    return JavaCompatUtils.keySet(supervisors);
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -114,7 +115,7 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
 
     synchronized (lock) {
-      for (String id : supervisors.keySet()) {
+      for (String id : JavaCompatUtils.keySet(supervisors)) {
         try {
           supervisors.get(id).lhs.stop(false);
         }

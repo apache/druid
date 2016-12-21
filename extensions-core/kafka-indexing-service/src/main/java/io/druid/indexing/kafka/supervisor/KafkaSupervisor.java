@@ -64,6 +64,7 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.metadata.EntryExistsException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -79,6 +80,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -133,6 +135,11 @@ public class KafkaSupervisor implements Supervisor
     {
       this.partitionOffsets = partitionOffsets;
       this.minimumMessageTime = minimumMessageTime;
+    }
+
+    Set<String> taskIds()
+    {
+      return JavaCompatUtils.keySet(tasks);
     }
   }
 
@@ -951,9 +958,9 @@ public class KafkaSupervisor implements Supervisor
         log.warn(
             "All tasks in group [%s] failed to transition to publishing state, killing tasks [%s]",
             groupId,
-            group.tasks.keySet()
+            group.taskIds()
         );
-        for (String id : group.tasks.keySet()) {
+        for (String id : group.taskIds()) {
           killTask(id);
         }
       }
@@ -1003,7 +1010,7 @@ public class KafkaSupervisor implements Supervisor
 
     // 2) Pause running tasks
     final List<ListenableFuture<Map<Integer, Long>>> pauseFutures = Lists.newArrayList();
-    final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.tasks.keySet());
+    final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
     for (final String taskId : pauseTaskIds) {
       pauseFutures.add(taskClient.pauseAsync(taskId));
     }
@@ -1039,7 +1046,7 @@ public class KafkaSupervisor implements Supervisor
             // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should
             //    finish reading and start publishing within a short period, depending on how in sync the tasks were.
             final List<ListenableFuture<Boolean>> setEndOffsetFutures = Lists.newArrayList();
-            final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.tasks.keySet());
+            final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
 
             if (setEndOffsetTaskIds.isEmpty()) {
               log.info("All tasks in taskGroup [%d] have failed, tasks will be re-created", groupId);
@@ -1124,7 +1131,7 @@ public class KafkaSupervisor implements Supervisor
           if (task.getValue().status.isSuccess()) {
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
-            log.info("Task [%s] completed successfully, stopping tasks %s", task.getKey(), group.tasks.keySet());
+            log.info("Task [%s] completed successfully, stopping tasks %s", task.getKey(), group.taskIds());
             futures.add(stopTasksInGroup(group));
             foundSuccess = true;
             toRemove.add(group); // remove the TaskGroup from the list of pending completion task groups
@@ -1138,7 +1145,7 @@ public class KafkaSupervisor implements Supervisor
           } else {
             log.makeAlert(
                 "No task in [%s] succeeded before the completion timeout elapsed [%s]!",
-                group.tasks.keySet(),
+                group.taskIds(),
                 ioConfig.getCompletionTimeout()
             ).emit();
           }
@@ -1181,7 +1188,7 @@ public class KafkaSupervisor implements Supervisor
       //   2) Remove any tasks that have failed from the list
       //   3) If any task completed successfully, stop all the tasks in this group and move to the next group
 
-      log.debug("Task group [%d] pre-pruning: %s", groupId, taskGroup.tasks.keySet());
+      log.debug("Task group [%d] pre-pruning: %s", groupId, taskGroup.taskIds());
 
       Iterator<Map.Entry<String, TaskData>> iTasks = taskGroup.tasks.entrySet().iterator();
       while (iTasks.hasNext()) {
@@ -1211,7 +1218,7 @@ public class KafkaSupervisor implements Supervisor
           break;
         }
       }
-      log.debug("Task group [%d] post-pruning: %s", groupId, taskGroup.tasks.keySet());
+      log.debug("Task group [%d] post-pruning: %s", groupId, taskGroup.taskIds());
     }
 
     // wait for all task shutdowns to complete before returning
@@ -1221,9 +1228,13 @@ public class KafkaSupervisor implements Supervisor
   void createNewTasks()
   {
     // check that there is a current task group for each group of partitions in [partitionGroups]
-    for (Integer groupId : partitionGroups.keySet()) {
+    for (Integer groupId : JavaCompatUtils.keySet(partitionGroups)) {
       if (!taskGroups.containsKey(groupId)) {
-        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
+        log.info(
+            "Creating new task group [%d] for partitions %s",
+            groupId,
+            JavaCompatUtils.keySet(partitionGroups.get(groupId))
+        );
 
         Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTime.now().minus(ioConfig.getLateMessageRejectionPeriod().get())
