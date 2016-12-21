@@ -34,11 +34,11 @@ import com.alibaba.rocketmq.remoting.exception.RemotingException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 
@@ -202,7 +202,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
         for (Map.Entry<String, Set<MessageQueue>> entry : topicQueueMap.entrySet()) {
           for (MessageQueue messageQueue : entry.getValue()) {
-            if (messageQueueTreeSetMap.keySet().contains(messageQueue)
+            if (JavaCompatUtils.keySet(messageQueueTreeSetMap).contains(messageQueue)
                 && !messageQueueTreeSetMap.get(messageQueue).isEmpty()) {
               hasMore = true;
             } else {
@@ -251,7 +251,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
             MessageExt message = entry.getValue().pollFirst();
             InputRow inputRow = theParser.parse(ByteBuffer.wrap(message.getBody()));
 
-            if (!windows.keySet().contains(entry.getKey())) {
+            if (!JavaCompatUtils.keySet(windows).contains(entry.getKey())) {
               windows.put(entry.getKey(), new ConcurrentSkipListSet<Long>());
             }
             windows.get(entry.getKey()).add(message.getQueueOffset());
@@ -434,7 +434,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
           switch (pullResult.getPullStatus()) {
             case FOUND:
               // Handle pull result.
-              if (!messageQueueTreeSetMap.keySet().contains(pullRequest.getMessageQueue())) {
+              if (!JavaCompatUtils.keySet(messageQueueTreeSetMap).contains(pullRequest.getMessageQueue())) {
                 messageQueueTreeSetMap.putIfAbsent(
                     pullRequest.getMessageQueue(),
                     new ConcurrentSkipListSet<>(new MessageComparator())
