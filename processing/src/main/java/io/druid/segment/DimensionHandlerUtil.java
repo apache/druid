@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -35,6 +36,11 @@ public final class DimensionHandlerUtil
   )
   {
     DimensionHandler handler = null;
+
+    if (dimensionName.equals(Column.TIME_COLUMN_NAME)) {
+      return new StringDimensionHandler(dimensionName, MultiValueHandling.ARRAY);
+    }
+
     if (capabilities.getType() == ValueType.STRING) {
       if (!capabilities.isDictionaryEncoded() || !capabilities.hasBitmapIndexes()) {
         throw new IAE("String column must have dictionary encoding and bitmap index.");
