@@ -26,8 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
 import io.druid.java.util.common.guava.Sequence;
@@ -205,7 +204,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       final Filter filter,
       final Interval interval,
       final VirtualColumns virtualColumns,
-      final QueryGranularity gran,
+      final Granularity gran,
       final boolean descending
   )
   {
@@ -217,7 +216,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval dataInterval = new Interval(
         getMinTime().getMillis(),
-        gran.next(gran.truncate(getMaxTime().getMillis()))
+        gran.increment(gran.truncate(getMaxTime())).getMillis()
     );
 
     if (!actualIntervalTmp.overlaps(dataInterval)) {
@@ -263,7 +262,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 cursorIterable = index.getFacts().timeRangeIterable(
                     descending,
                     timeStart,
-                    Math.min(actualInterval.getEndMillis(), gran.next(input))
+                    Math.min(actualInterval.getEndMillis(), gran.increment(new DateTime(input)).getMillis())
                 );
                 emptyRange = !cursorIterable.iterator().hasNext();
                 time = gran.toDateTime(input);

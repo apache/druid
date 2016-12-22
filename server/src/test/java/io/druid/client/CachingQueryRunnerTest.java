@@ -29,7 +29,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.ResourceClosingSequence;
@@ -99,7 +99,7 @@ public class CachingQueryRunnerTest
         .threshold(3)
         .intervals("2011-01-05/2011-01-10")
         .aggregators(AGGS)
-        .granularity(QueryGranularities.ALL);
+        .granularity(Granularity.ALL);
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

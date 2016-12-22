@@ -38,9 +38,9 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -297,7 +297,7 @@ public class AggregationTestHelper
       String parserJson,
       String aggregators,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount,
       String groupByQueryJson
   ) throws Exception
@@ -312,7 +312,7 @@ public class AggregationTestHelper
       String parserJson,
       String aggregators,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount,
       String groupByQueryJson
   ) throws Exception
@@ -328,7 +328,7 @@ public class AggregationTestHelper
       String aggregators,
       File outDir,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount
   ) throws Exception
   {
@@ -349,7 +349,7 @@ public class AggregationTestHelper
       String aggregators,
       File outDir,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount
   ) throws Exception
   {
@@ -386,7 +386,7 @@ public class AggregationTestHelper
       final AggregatorFactory[] metrics,
       File outDir,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       boolean deserializeComplexMetrics,
       int maxRowCount
   ) throws Exception

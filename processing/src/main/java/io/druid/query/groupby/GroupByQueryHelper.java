@@ -28,9 +28,10 @@ import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -42,6 +43,7 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -59,12 +61,16 @@ public class GroupByQueryHelper
   )
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
-    final QueryGranularity gran = query.getGranularity();
+    final Granularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
     // use gran.iterable instead of gran.truncate so that
     // AllGranularity returns timeStart instead of Long.MIN_VALUE
-    final long granTimeStart = gran.iterable(timeStart, timeStart + 1).iterator().next();
+    long granTimeStart = timeStart;
+    if (!(gran instanceof AllGranularity)) {
+      granTimeStart = gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStartMillis();
+    }
+//    final long granTimeStart = gran.iterable(timeStart, timeStart + 1).iterator().next();
 
     final List<AggregatorFactory> aggs = Lists.transform(
         query.getAggregatorSpecs(),

@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodQueryGranularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -194,7 +194,7 @@ public class VarianceGroupByQueryTest
             )
         )
         .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(VarianceTestHelper.stddevOfIndexPostAggr))
-        .setGranularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.<HavingSpec>of(

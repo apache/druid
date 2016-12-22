@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -86,7 +86,7 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_record_parser.json"),
         readFileFromClasspathAsString("oldapi/old_simple_test_data_aggregators.json"),
         0,
-        QueryGranularities.NONE,
+        Granularity.NONE,
         5,
         readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json")
     );
@@ -118,7 +118,7 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_aggregators.json"),
         0,
-        QueryGranularities.NONE,
+        Granularity.NONE,
         5,
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json")
     );

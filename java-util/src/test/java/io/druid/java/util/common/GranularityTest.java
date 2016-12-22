@@ -19,7 +19,7 @@
 
 package io.druid.java.util.common;
 
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.IllegalFieldValueException;
 import org.joda.time.Interval;
@@ -29,17 +29,17 @@ import org.junit.Test;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class SegmentGranularityTest {
+public class GranularityTest {
 
-    final SegmentGranularity SECOND = SegmentGranularity.SECOND;
-    final SegmentGranularity MINUTE = SegmentGranularity.MINUTE;
-    final SegmentGranularity HOUR = SegmentGranularity.HOUR;
-    final SegmentGranularity SIX_HOUR = SegmentGranularity.SIX_HOUR;
-    final SegmentGranularity FIFTEEN_MINUTE = SegmentGranularity.FIFTEEN_MINUTE;
-    final SegmentGranularity DAY = SegmentGranularity.DAY;
-    final SegmentGranularity WEEK = SegmentGranularity.WEEK;
-    final SegmentGranularity MONTH = SegmentGranularity.MONTH;
-    final SegmentGranularity YEAR = SegmentGranularity.YEAR;
+    final Granularity SECOND = Granularity.SECOND;
+    final Granularity MINUTE = Granularity.MINUTE;
+    final Granularity HOUR = Granularity.HOUR;
+    final Granularity SIX_HOUR = Granularity.SIX_HOUR;
+    final Granularity FIFTEEN_MINUTE = Granularity.FIFTEEN_MINUTE;
+    final Granularity DAY = Granularity.DAY;
+    final Granularity WEEK = Granularity.WEEK;
+    final Granularity MONTH = Granularity.MONTH;
+    final Granularity YEAR = Granularity.YEAR;
 
     @Test
     public void testHiveFormat() {
@@ -61,7 +61,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-10-33-20-42-24/Test11"),
                 new PathDate(null, IllegalFieldValueException.class, "error/dt=2011-13-20-20-42-24/Test11"),
         };
-        checkToDate(SECOND, SegmentGranularity.Formatter.HIVE, secondChecks);
+        checkToDate(SECOND, Granularity.Formatter.HIVE, secondChecks);
     }
 
     @Test
@@ -87,7 +87,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(SECOND, SegmentGranularity.Formatter.DEFAULT, secondChecks);
+        checkToDate(SECOND, Granularity.Formatter.DEFAULT, secondChecks);
     }
 
     @Test
@@ -114,7 +114,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(MINUTE, SegmentGranularity.Formatter.DEFAULT, minuteChecks);
+        checkToDate(MINUTE, Granularity.Formatter.DEFAULT, minuteChecks);
     }
 
     @Test
@@ -148,7 +148,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(FIFTEEN_MINUTE, SegmentGranularity.Formatter.DEFAULT, minuteChecks);
+        checkToDate(FIFTEEN_MINUTE, Granularity.Formatter.DEFAULT, minuteChecks);
     }
 
     @Test
@@ -174,7 +174,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(HOUR, SegmentGranularity.Formatter.DEFAULT, hourChecks);
+        checkToDate(HOUR, Granularity.Formatter.DEFAULT, hourChecks);
     }
 
     @Test
@@ -206,7 +206,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(SIX_HOUR, SegmentGranularity.Formatter.DEFAULT, hourChecks);
+        checkToDate(SIX_HOUR, Granularity.Formatter.DEFAULT, hourChecks);
     }
 
     @Test
@@ -232,7 +232,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(DAY, SegmentGranularity.Formatter.DEFAULT, dayChecks);
+        checkToDate(DAY, Granularity.Formatter.DEFAULT, dayChecks);
     }
 
     @Test
@@ -258,7 +258,7 @@ public class SegmentGranularityTest {
                 new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
 
-        checkToDate(MONTH, SegmentGranularity.Formatter.DEFAULT, monthChecks);
+        checkToDate(MONTH, Granularity.Formatter.DEFAULT, monthChecks);
     }
 
     @Test
@@ -283,11 +283,11 @@ public class SegmentGranularityTest {
                 new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
                 new PathDate(new DateTime(2011, 1, 1, 0, 0, 0, 0), null, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
         };
-        checkToDate(YEAR, SegmentGranularity.Formatter.DEFAULT, yearChecks);
+        checkToDate(YEAR, Granularity.Formatter.DEFAULT, yearChecks);
     }
 
 
-    private void checkToDate(SegmentGranularity granularity, SegmentGranularity.Formatter formatter, PathDate[] checks)
+    private void checkToDate(Granularity granularity, Granularity.Formatter formatter, PathDate[] checks)
     {
         for (PathDate pd : checks) {
             if (pd.exception == null) {
@@ -298,7 +298,7 @@ public class SegmentGranularityTest {
                         granularity.toDate(pd.path, formatter)
                 );
 
-                if(formatter.equals(SegmentGranularity.Formatter.DEFAULT)) {
+                if(formatter.equals(Granularity.Formatter.DEFAULT)) {
                     Assert.assertEquals(
                             String.format("[%s] Expected toDate(%s) to return the same as toDate(%s, DEFAULT)", granularity, pd.path, pd.path),
                             granularity.toDate(pd.path), granularity.toDate(pd.path, formatter)

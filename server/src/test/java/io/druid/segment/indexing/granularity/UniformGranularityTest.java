@@ -24,9 +24,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.PeriodSegmentGranularity;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 
 import org.joda.time.DateTime;
@@ -49,7 +48,7 @@ public class UniformGranularityTest
   public void testSimple()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
-        SegmentGranularity.DAY,
+        Granularity.DAY,
         null,
         Lists.newArrayList(
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
@@ -114,7 +113,7 @@ public class UniformGranularityTest
         new Interval("2012-01-03T00Z/2012-01-04T00Z"),
         new Interval("2012-01-01T00Z/2012-01-03T00Z")
     );
-    final GranularitySpec spec = new UniformGranularitySpec(SegmentGranularity.DAY, QueryGranularities.NONE, false, intervals);
+    final GranularitySpec spec = new UniformGranularitySpec(Granularity.DAY, Granularity.NONE, false, intervals);
 
     Assert.assertFalse(spec.isRollup());
   }
@@ -123,7 +122,7 @@ public class UniformGranularityTest
   public void testJson()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
-        SegmentGranularity.DAY,
+        Granularity.DAY,
         null,
         Lists.newArrayList(
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
@@ -156,7 +155,7 @@ public class UniformGranularityTest
   {
 
     final GranularitySpec spec = new UniformGranularitySpec(
-        SegmentGranularity.DAY,
+        Granularity.DAY,
         null,
         Lists.newArrayList(
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
@@ -168,7 +167,7 @@ public class UniformGranularityTest
 
     equalsCheck(
         spec, new UniformGranularitySpec(
-            SegmentGranularity.DAY,
+            Granularity.DAY,
             null,
             Lists.newArrayList(
                 new Interval("2012-01-08T00Z/2012-01-11T00Z"),
@@ -189,7 +188,7 @@ public class UniformGranularityTest
   public void testNotEquals()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
-        SegmentGranularity.DAY,
+        Granularity.DAY,
         null,
         Lists.newArrayList(
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
@@ -201,7 +200,7 @@ public class UniformGranularityTest
 
     notEqualsCheck(
         spec, new UniformGranularitySpec(
-            SegmentGranularity.YEAR,
+            Granularity.YEAR,
             null,
             Lists.newArrayList(
                 new Interval("2012-01-08T00Z/2012-01-11T00Z"),
@@ -213,7 +212,7 @@ public class UniformGranularityTest
     );
     notEqualsCheck(
         spec, new UniformGranularitySpec(
-            SegmentGranularity.DAY,
+            Granularity.DAY,
             null,
             Lists.newArrayList(
                 new Interval("2012-01-08T00Z/2012-01-12T00Z"),
@@ -225,8 +224,8 @@ public class UniformGranularityTest
     );
     notEqualsCheck(
         spec, new UniformGranularitySpec(
-            SegmentGranularity.DAY,
-            QueryGranularities.ALL,
+            Granularity.DAY,
+            Granularity.ALL,
             Lists.newArrayList(
                 new Interval("2012-01-08T00Z/2012-01-11T00Z"),
                 new Interval("2012-01-07T00Z/2012-01-08T00Z"),
@@ -240,7 +239,7 @@ public class UniformGranularityTest
   @Test
   public void testPeriodSegmentGranularity() {
     final GranularitySpec spec = new UniformGranularitySpec(
-            new PeriodSegmentGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")),
+            new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")),
             null,
             Lists.newArrayList(
                     new Interval("2012-01-08T00-08:00/2012-01-11T00-08:00"),

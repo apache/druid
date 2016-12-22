@@ -33,7 +33,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.math.expr.Evals;
@@ -164,7 +164,7 @@ public class RowBasedGrouperHelper
             if (query.getGranularity() instanceof AllGranularity) {
               timestamp = query.getIntervals().get(0).getStartMillis();
             } else {
-              timestamp = query.getGranularity().truncate(row.getTimestampFromEpoch());
+              timestamp = query.getGranularity().truncate(row.getTimestamp()).getMillis();
             }
           } else {
             timestamp = row.getTimestampFromEpoch();

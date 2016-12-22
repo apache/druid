@@ -29,7 +29,7 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.granularity.PeriodSegmentGranularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.DateTimeZone;
@@ -81,7 +81,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getSegmentGranularity",
-        new PeriodSegmentGranularity(new Period("PT1H"), null, null).toString(),
+        new PeriodGranularity(new Period("PT1H"), null, null).toString(),
         granularitySpec.getSegmentGranularity().toString()
     );
   }
@@ -115,7 +115,7 @@ public class HadoopIngestionSpecTest
 
         Assert.assertEquals(
                 "getSegmentGranularity",
-                new PeriodSegmentGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")).toString(),
+                new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")).toString(),
                 granularitySpec.getSegmentGranularity().toString()
         );
     }

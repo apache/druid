@@ -23,7 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
@@ -73,7 +73,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public OnheapIncrementalIndex(
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -96,7 +96,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public OnheapIncrementalIndex(
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       boolean rollup,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
@@ -119,7 +119,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public OnheapIncrementalIndex(
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       final AggregatorFactory[] metrics,
       int maxRowCount
   )

@@ -17,23 +17,46 @@
  * under the License.
  */
 
-package io.druid.granularity;
+package io.druid.java.util.common.granularity;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.RE;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
 
-public final class AllGranularity extends BaseQueryGranularity
+import static io.druid.java.util.common.JodaUtils.MAX_INSTANT;
+import static io.druid.java.util.common.JodaUtils.MIN_INSTANT;
+
+public final class AllGranularity extends Granularity
 {
   @Override
-  public long next(long offset)
+  public DateTimeFormatter getFormatter(Formatter type)
   {
-    return JodaUtils.MAX_INSTANT;
+    throw new RE("This method should not be invoked for this granularity type");
   }
 
   @Override
-  public long truncate(long offset)
+  public DateTime increment(DateTime time)
   {
-    return JodaUtils.MIN_INSTANT;
+    return new DateTime(MAX_INSTANT);
+  }
+
+  @Override
+  public DateTime decrement(DateTime time)
+  {
+    throw new RE("This method should not be invoked for this granularity type");
+  }
+
+  @Override
+  public DateTime truncate(DateTime time)
+  {
+    return new DateTime(MIN_INSTANT);
+  }
+
+  @Override
+  public DateTime toDate(String filePath, Formatter formatter)
+  {
+    throw new RE("This method should not be invoked for this granularity type");
   }
 
   @Override

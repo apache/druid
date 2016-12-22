@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
@@ -43,7 +43,7 @@ import java.util.Map;
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   private final DimFilter dimFilter;
-  private final QueryGranularity granularity;
+  private final Granularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
@@ -53,7 +53,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("descending") boolean descending,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("granularity") QueryGranularity granularity,
+      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("context") Map<String, Object> context
@@ -93,7 +93,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }

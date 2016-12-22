@@ -32,7 +32,7 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -159,7 +159,7 @@ public class SelectBenchmark
                 .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
                 .metrics(Arrays.<String>asList())
                 .intervals(intervalSpec)
-                .granularity(QueryGranularities.ALL)
+                .granularity(Granularity.ALL)
                 .descending(false);
 
       basicQueries.put("A", queryBuilderA);
@@ -240,7 +240,7 @@ public class SelectBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularity.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public class Metadata
   private TimestampSpec timestampSpec;
 
   @JsonProperty
-  private QueryGranularity queryGranularity;
+  private Granularity queryGranularity;
 
   @JsonProperty
   private Boolean rollup;
@@ -79,12 +79,12 @@ public class Metadata
     return this;
   }
 
-  public QueryGranularity getQueryGranularity()
+  public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }
 
-  public Metadata setQueryGranularity(QueryGranularity queryGranularity)
+  public Metadata setQueryGranularity(Granularity queryGranularity)
   {
     this.queryGranularity = queryGranularity;
     return this;
@@ -141,7 +141,7 @@ public class Metadata
                                                    : null;
 
     List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
-    List<QueryGranularity> gransToMerge = new ArrayList<>();
+    List<Granularity> gransToMerge = new ArrayList<>();
     List<Boolean> rollupToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
@@ -189,7 +189,7 @@ public class Metadata
     }
 
     if (gransToMerge != null) {
-      result.setQueryGranularity(QueryGranularity.mergeQueryGranularities(gransToMerge));
+      result.setQueryGranularity(Granularity.mergeGranularities(gransToMerge));
     }
 
     Boolean rollup = null;

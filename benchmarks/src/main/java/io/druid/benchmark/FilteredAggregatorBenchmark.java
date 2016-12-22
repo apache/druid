@@ -31,8 +31,8 @@ import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.query.QueryBenchmarkUtil;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -213,7 +213,7 @@ public class FilteredAggregatorBenchmark
 
     query = Druids.newTimeseriesQueryBuilder()
                   .dataSource("blah")
-                  .granularity(QueryGranularities.ALL)
+                  .granularity(Granularity.ALL)
                   .intervals(intervalSpec)
                   .aggregators(queryAggs)
                   .descending(false)
@@ -224,7 +224,7 @@ public class FilteredAggregatorBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularity.NONE)
             .withMetrics(metrics)
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

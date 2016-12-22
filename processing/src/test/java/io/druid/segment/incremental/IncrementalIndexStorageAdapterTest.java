@@ -29,7 +29,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
@@ -97,7 +97,7 @@ public class IncrementalIndexStorageAdapterTest
                   public IncrementalIndex createIndex()
                   {
                     return new OnheapIncrementalIndex(
-                        0, QueryGranularities.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
+                        0, Granularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
                     );
                   }
                 }
@@ -130,7 +130,7 @@ public class IncrementalIndexStorageAdapterTest
     final Sequence<Row> rows = engine.process(
         GroupByQuery.builder()
                     .setDataSource("test")
-                    .setGranularity(QueryGranularities.ALL)
+                    .setGranularity(Granularity.ALL)
                     .setInterval(new Interval(0, new DateTime().getMillis()))
                     .addDimension("billy")
                     .addDimension("sally")
@@ -177,7 +177,7 @@ public class IncrementalIndexStorageAdapterTest
     final Sequence<Row> rows = engine.process(
         GroupByQuery.builder()
                     .setDataSource("test")
-                    .setGranularity(QueryGranularities.ALL)
+                    .setGranularity(Granularity.ALL)
                     .setInterval(new Interval(0, new DateTime().getMillis()))
                     .addDimension("billy")
                     .addDimension("sally")
@@ -265,7 +265,7 @@ public class IncrementalIndexStorageAdapterTest
           new SelectorFilter("sally", "bo"),
           interval,
           null,
-          QueryGranularities.NONE,
+          Granularity.NONE,
           descending
       );
 
@@ -320,7 +320,7 @@ public class IncrementalIndexStorageAdapterTest
     final Iterable<Result<TopNResultValue>> results = Sequences.toList(
         engine.query(
             new TopNQueryBuilder().dataSource("test")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularity.ALL)
                                   .intervals(Lists.newArrayList(new Interval(0, new DateTime().getMillis())))
                                   .dimension("sally")
                                   .metric("cnt")
@@ -367,7 +367,7 @@ public class IncrementalIndexStorageAdapterTest
     final Sequence<Row> rows = engine.process(
         GroupByQuery.builder()
                     .setDataSource("test")
-                    .setGranularity(QueryGranularities.ALL)
+                    .setGranularity(Granularity.ALL)
                     .setInterval(new Interval(0, new DateTime().getMillis()))
                     .addDimension("billy")
                     .addDimension("sally")
@@ -404,7 +404,7 @@ public class IncrementalIndexStorageAdapterTest
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
     Sequence<Cursor> cursors = sa.makeCursors(
-        null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, QueryGranularities.ALL, false
+        null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularity.ALL, false
     );
 
     Sequences.toList(

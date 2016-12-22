@@ -32,8 +32,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -117,7 +116,7 @@ public class AppenderatorTester implements AutoCloseable
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("met", "met")
         },
-        new UniformGranularitySpec(SegmentGranularity.MINUTE, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularity.MINUTE, Granularity.NONE, null),
         objectMapper
     );
 

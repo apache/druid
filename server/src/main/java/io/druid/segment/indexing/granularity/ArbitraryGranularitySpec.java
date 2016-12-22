@@ -29,8 +29,7 @@ import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 
 import io.druid.common.utils.JodaUtils;
-import io.druid.granularity.QueryGranularity;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 
 import org.joda.time.DateTime;
@@ -43,12 +42,12 @@ import java.util.TreeSet;
 public class ArbitraryGranularitySpec implements GranularitySpec
 {
   private final TreeSet<Interval> intervals;
-  private final QueryGranularity queryGranularity;
+  private final Granularity queryGranularity;
   private final Boolean rollup;
 
   @JsonCreator
   public ArbitraryGranularitySpec(
-      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
+      @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup,
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
@@ -87,7 +86,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   public ArbitraryGranularitySpec(
-      QueryGranularity queryGranularity,
+      Granularity queryGranularity,
       List<Interval> inputIntervals
   )
   {
@@ -121,7 +120,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public SegmentGranularity getSegmentGranularity()
+  public Granularity getSegmentGranularity()
   {
     throw new UnsupportedOperationException();
   }
@@ -135,7 +134,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
 
   @Override
   @JsonProperty("queryGranularity")
-  public QueryGranularity getQueryGranularity()
+  public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }

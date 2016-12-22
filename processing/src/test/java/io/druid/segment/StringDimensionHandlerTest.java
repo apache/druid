@@ -3,7 +3,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -46,7 +46,7 @@ public class StringDimensionHandlerTest
   ) throws Exception {
     IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex(
         TEST_INTERVAL.getStartMillis(),
-        QueryGranularities.NONE,
+        Granularity.NONE,
         true,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
         new AggregatorFactory[]{
@@ -59,7 +59,7 @@ public class StringDimensionHandlerTest
 
     IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex(
         TEST_INTERVAL.getStartMillis(),
-        QueryGranularities.NONE,
+        Granularity.NONE,
         true,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
         new AggregatorFactory[]{

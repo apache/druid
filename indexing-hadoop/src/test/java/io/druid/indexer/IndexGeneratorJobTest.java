@@ -32,8 +32,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -491,7 +490,7 @@ public class IndexGeneratorJobTest
                 ),
                 aggs,
                 new UniformGranularitySpec(
-                    SegmentGranularity.DAY, QueryGranularities.NONE, ImmutableList.of(this.interval)
+                    Granularity.DAY, Granularity.NONE, ImmutableList.of(this.interval)
                 ),
                 mapper
             ),

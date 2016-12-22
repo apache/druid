@@ -35,6 +35,11 @@ import java.util.TreeSet;
  */
 public class JodaUtils
 {
+  // limit intervals such that duration millis fits in a long
+  public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
+  public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
+  public static final Interval ETERNITY = new Interval(MIN_INSTANT, MAX_INSTANT);
+
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
     ArrayList<Interval> retVal = Lists.newArrayList();

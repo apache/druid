@@ -17,25 +17,27 @@
  * under the License.
  */
 
-package io.druid.granularity;
+package io.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.nio.ByteBuffer;
 
-public class DurationGranularity extends BaseQueryGranularity
+public class DurationGranularity extends Granularity
 {
   private final long length;
   private final long origin;
 
   @JsonCreator
   public DurationGranularity(
-    @JsonProperty("duration") long duration,
-    @JsonProperty("origin") DateTime origin
+      @JsonProperty("duration") long duration,
+      @JsonProperty("origin") DateTime origin
   )
   {
     this(duration, origin == null ? 0 : origin.getMillis());
@@ -66,26 +68,57 @@ public class DurationGranularity extends BaseQueryGranularity
   }
 
   @Override
-  public long next(long t)
+  public DateTimeFormatter getFormatter(Formatter type)
   {
-    return t + getDurationMillis();
+    throw new RE("This method should not be invoked for this granularity type");
   }
 
   @Override
-  public long truncate(final long t)
+  public DateTime increment(DateTime time)
   {
+    return new DateTime(time.getMillis() + getDurationMillis());
+  }
+
+  @Override
+  public DateTime decrement(DateTime time)
+  {
+    return new DateTime(time.getMillis() - getDurationMillis());
+  }
+
+  @Override
+  public DateTime truncate(DateTime time)
+  {
+    long t = time.getMillis();
     final long duration = getDurationMillis();
     long offset = t % duration - origin % duration;
-    if(offset < 0) {
+    if (offset < 0) {
       offset += duration;
     }
-    return t - offset;
+    return new DateTime(t - offset);
+  }
+
+  @Override
+  public DateTime toDate(String filePath, Formatter formatter)
+  {
+    throw new RE("This method should not be invoked for this granularity type");
   }
 
   @Override
   public byte[] cacheKey()
   {
     return ByteBuffer.allocate(2 * Longs.BYTES).putLong(length).putLong(origin).array();
+  }
+
+  @Override
+  public DateTime toDateTime(long offset)
+  {
+    throw new RE("This method should not be invoked for this granularity type");
+  }
+
+  @Override
+  public Iterable<Long> iterable(long start, long end)
+  {
+    throw new RE("This method should not be invoked for this granularity type");
   }
 
   public long getDurationMillis()

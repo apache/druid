@@ -31,7 +31,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Expr;
@@ -211,7 +211,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       Filter filter,
       Interval interval,
       VirtualColumns virtualColumns,
-      QueryGranularity gran,
+      Granularity gran,
       boolean descending
   )
   {
@@ -221,7 +221,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     long maxDataTimestamp = getMaxTime().getMillis();
     final Interval dataInterval = new Interval(
         minDataTimestamp,
-        gran.next(gran.truncate(maxDataTimestamp))
+        gran.increment(gran.truncate(getMaxTime())).getMillis()
     );
 
     if (!actualInterval.overlaps(dataInterval)) {
@@ -332,7 +332,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final ColumnSelector index;
     private final Interval interval;
     private final VirtualColumns virtualColumns;
-    private final QueryGranularity gran;
+    private final Granularity gran;
     private final Offset offset;
     private final long minDataTimestamp;
     private final long maxDataTimestamp;
@@ -344,7 +344,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         ColumnSelector index,
         Interval interval,
         VirtualColumns virtualColumns,
-        QueryGranularity gran,
+        Granularity gran,
         Offset offset,
         long minDataTimestamp,
         long maxDataTimestamp,
@@ -379,6 +379,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       closer.register(timestamps);
 
       Iterable<Long> iterable = gran.iterable(interval.getStartMillis(), interval.getEndMillis());
+
       if (descending) {
         iterable = Lists.reverse(ImmutableList.copyOf(iterable));
       }
@@ -392,7 +393,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                 public Cursor apply(final Long input)
                 {
                   final long timeStart = Math.max(interval.getStartMillis(), input);
-                  final long timeEnd = Math.min(interval.getEndMillis(), gran.next(input));
+                  final long timeEnd = Math.min(interval.getEndMillis(), gran.increment(new DateTime(input)).getMillis());
 
                   if (descending) {
                     for (; baseOffset.withinBounds(); baseOffset.increment()) {

@@ -40,12 +40,12 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
@@ -94,11 +94,11 @@ public class IndexTask extends AbstractFixedIntervalTask
       final ShardSpec shardSpec,
       final Interval interval,
       final InputRow inputRow,
-      final QueryGranularity rollupGran
+      final Granularity rollupGran
   )
   {
     return interval.contains(inputRow.getTimestampFromEpoch())
-           && shardSpec.isInChunk(rollupGran.truncate(inputRow.getTimestampFromEpoch()), inputRow);
+           && shardSpec.isInChunk(rollupGran.truncate(inputRow.getTimestamp()).getMillis(), inputRow);
   }
 
   private static String makeId(String id, IndexIngestionSpec ingestionSchema)
@@ -275,7 +275,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   private List<ShardSpec> determinePartitions(
       final Interval interval,
       final int targetPartitionSize,
-      final QueryGranularity queryGranularity
+      final Granularity queryGranularity
   ) throws IOException
   {
     log.info("Determining partitions for interval[%s] with targetPartitionSize[%d]", interval, targetPartitionSize);
@@ -292,7 +292,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         final InputRow inputRow = firehose.nextRow();
         if (interval.contains(inputRow.getTimestampFromEpoch())) {
           final List<Object> groupKey = Rows.toGroupKey(
-              queryGranularity.truncate(inputRow.getTimestampFromEpoch()),
+              queryGranularity.truncate(inputRow.getTimestamp()).getMillis(),
               inputRow
           );
           collector.add(
@@ -404,7 +404,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         metrics
     );
 
-    final QueryGranularity rollupGran = ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity();
+    final Granularity rollupGran = ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity();
     try {
       plumber.startJob();
 

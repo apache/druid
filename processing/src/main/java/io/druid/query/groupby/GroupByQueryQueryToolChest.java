@@ -35,9 +35,9 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
@@ -420,7 +420,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         return new Function<Object, Row>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Row apply(Object input)

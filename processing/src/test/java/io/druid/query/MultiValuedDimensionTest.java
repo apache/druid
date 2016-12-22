@@ -31,7 +31,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -115,7 +115,7 @@ public class MultiValuedDimensionTest
   {
     incrementalIndex = new OnheapIncrementalIndex(
         0,
-        QueryGranularities.NONE,
+        Granularity.NONE,
         new AggregatorFactory[]{
             new CountAggregatorFactory("count")
         },
@@ -159,7 +159,7 @@ public class MultiValuedDimensionTest
         .builder()
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
-        .setGranularity(QueryGranularities.ALL)
+        .setGranularity(Granularity.ALL)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -199,7 +199,7 @@ public class MultiValuedDimensionTest
         .builder()
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
-        .setGranularity(QueryGranularities.ALL)
+        .setGranularity(Granularity.ALL)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -240,7 +240,7 @@ public class MultiValuedDimensionTest
         .builder()
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
-        .setGranularity(QueryGranularities.ALL)
+        .setGranularity(Granularity.ALL)
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new RegexFilteredDimensionSpec(
@@ -282,7 +282,7 @@ public class MultiValuedDimensionTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
-        .granularity(QueryGranularities.ALL)
+        .granularity(Granularity.ALL)
         .dimension(new ListFilteredDimensionSpec(
             new DefaultDimensionSpec("tags", "tags"),
             ImmutableSet.of("t3"),

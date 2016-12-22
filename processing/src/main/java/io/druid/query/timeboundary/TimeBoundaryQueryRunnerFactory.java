@@ -22,7 +22,7 @@ package io.druid.query.timeboundary;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;

@@ -20,7 +20,7 @@
 package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -77,7 +77,7 @@ public class TimeseriesBinaryFnTest
     );
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
-        QueryGranularities.ALL,
+        Granularity.ALL,
         aggregatorFactories
     ).apply(
         result1,
@@ -109,7 +109,7 @@ public class TimeseriesBinaryFnTest
     );
 
     Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
-        new DateTime(QueryGranularities.DAY.truncate(currTime.getMillis())),
+        Granularity.DAY.truncate(currTime),
         new TimeseriesResultValue(
             ImmutableMap.<String, Object>of(
                 "rows", 3L,
@@ -119,7 +119,7 @@ public class TimeseriesBinaryFnTest
     );
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         aggregatorFactories
     ).apply(
         result1,
@@ -145,7 +145,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> expected = result1;
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
-        QueryGranularities.ALL,
+        Granularity.ALL,
         aggregatorFactories
     ).apply(
         result1,
@@ -187,7 +187,7 @@ public class TimeseriesBinaryFnTest
     );
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
-        QueryGranularities.ALL,
+        Granularity.ALL,
         aggregatorFactories
     ).apply(
         result1,

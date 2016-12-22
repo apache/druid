@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.FSSpideringIterator;
 import io.druid.java.util.common.guava.Comparators;
@@ -72,7 +72,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
 
     final Path betaInput = new Path(getInputPath());
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
-    final SegmentGranularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
+    final Granularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
 
     Map<Long, Long> inputModifiedTimes = new TreeMap<>(
         Comparators.inverse(Comparators.comparable())

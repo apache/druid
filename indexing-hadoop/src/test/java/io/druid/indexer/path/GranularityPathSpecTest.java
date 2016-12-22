@@ -23,13 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -116,7 +115,7 @@ public class GranularityPathSpecTest
   @Test
   public void testSetDataGranularity()
   {
-    SegmentGranularity granularity = SegmentGranularity.DAY;
+    Granularity granularity = Granularity.DAY;
     granularityPathSpec.setDataGranularity(granularity);
     Assert.assertEquals(granularity, granularityPathSpec.getDataGranularity());
   }
@@ -124,13 +123,13 @@ public class GranularityPathSpecTest
   @Test
   public void testSerdeCustomInputFormat() throws Exception
   {
-    testSerde("/test/path", "*.test", "pat_pat", SegmentGranularity.SECOND, TextInputFormat.class);
+    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, TextInputFormat.class);
   }
 
   @Test
   public void testSerdeNoInputFormat() throws Exception
   {
-    testSerde("/test/path", "*.test", "pat_pat", SegmentGranularity.SECOND, null);
+    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
   }
 
   @Test
@@ -143,8 +142,8 @@ public class GranularityPathSpecTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                SegmentGranularity.DAY,
-                QueryGranularities.MINUTE,
+                Granularity.DAY,
+                Granularity.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
@@ -153,7 +152,7 @@ public class GranularityPathSpecTest
         DEFAULT_TUNING_CONFIG
     );
 
-    granularityPathSpec.setDataGranularity(SegmentGranularity.HOUR);
+    granularityPathSpec.setDataGranularity(Granularity.HOUR);
     granularityPathSpec.setFilePattern(".*");
     granularityPathSpec.setInputFormat(TextInputFormat.class);
 
@@ -194,8 +193,8 @@ public class GranularityPathSpecTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                SegmentGranularity.DAY,
-                QueryGranularities.ALL,
+                Granularity.DAY,
+                Granularity.ALL,
                 ImmutableList.of(new Interval("2015-01-01T11Z/2015-01-02T05Z"))
             ),
             jsonMapper
@@ -204,7 +203,7 @@ public class GranularityPathSpecTest
         DEFAULT_TUNING_CONFIG
     );
 
-    granularityPathSpec.setDataGranularity(SegmentGranularity.HOUR);
+    granularityPathSpec.setDataGranularity(Granularity.HOUR);
     granularityPathSpec.setPathFormat("yyyy/MM/dd/HH");
     granularityPathSpec.setFilePattern(".*");
     granularityPathSpec.setInputFormat(TextInputFormat.class);
@@ -249,7 +248,7 @@ public class GranularityPathSpecTest
       String inputPath,
       String filePattern,
       String pathFormat,
-      SegmentGranularity granularity,
+      Granularity granularity,
       Class inputFormat) throws Exception
   {
     StringBuilder sb = new StringBuilder();

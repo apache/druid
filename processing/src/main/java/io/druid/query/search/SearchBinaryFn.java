@@ -21,8 +21,8 @@ package io.druid.query.search;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.granularity.AllGranularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 import io.druid.query.search.search.SearchHit;
@@ -38,12 +38,12 @@ public class SearchBinaryFn
     implements BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>>
 {
   private final SearchSortSpec searchSortSpec;
-  private final QueryGranularity gran;
+  private final Granularity gran;
   private final int limit;
 
   public SearchBinaryFn(
       SearchSortSpec searchSortSpec,
-      QueryGranularity granularity,
+      Granularity granularity,
       int limit
   )
   {
@@ -113,7 +113,7 @@ public class SearchBinaryFn
 
     final DateTime timestamp = gran instanceof AllGranularity
                                ? arg1.getTimestamp()
-                               : gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis()));
+                               : gran.truncate(arg1.getTimestamp());
 
     return new Result<SearchResultValue>(timestamp, new SearchResultValue(results));
   }

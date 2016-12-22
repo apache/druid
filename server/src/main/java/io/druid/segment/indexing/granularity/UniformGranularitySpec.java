@@ -26,9 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -38,19 +36,19 @@ import java.util.SortedSet;
 
 public class UniformGranularitySpec implements GranularitySpec
 {
-  private static final SegmentGranularity DEFAULT_SEGMENT_GRANULARITY = SegmentGranularity.DAY;
-  private static final QueryGranularity DEFAULT_QUERY_GRANULARITY = QueryGranularities.NONE;
+  private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularity.DAY;
+  private static final Granularity DEFAULT_QUERY_GRANULARITY = Granularity.NONE;
 
-  private final SegmentGranularity segmentGranularity;
-  private final QueryGranularity queryGranularity;
+  private final Granularity segmentGranularity;
+  private final Granularity queryGranularity;
   private final Boolean rollup;
   private final List<Interval> inputIntervals;
   private final ArbitraryGranularitySpec wrappedSpec;
 
   @JsonCreator
   public UniformGranularitySpec(
-      @JsonProperty("segmentGranularity") SegmentGranularity segmentGranularity,
-      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup,
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
@@ -73,8 +71,8 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   public UniformGranularitySpec(
-      SegmentGranularity segmentGranularity,
-      QueryGranularity queryGranularity,
+      Granularity segmentGranularity,
+      Granularity queryGranularity,
       List<Interval> inputIntervals
   )
   {
@@ -105,7 +103,7 @@ public class UniformGranularitySpec implements GranularitySpec
 
   @Override
   @JsonProperty("segmentGranularity")
-  public SegmentGranularity getSegmentGranularity()
+  public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
   }
@@ -119,7 +117,7 @@ public class UniformGranularitySpec implements GranularitySpec
 
   @Override
   @JsonProperty("queryGranularity")
-  public QueryGranularity getQueryGranularity()
+  public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }

@@ -26,8 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
-import io.druid.granularity.QueryGranularity;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -61,16 +60,16 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
 
   private final String dataSource;
   private final DateTime timestamp;
-  private final QueryGranularity queryGranularity;
-  private final SegmentGranularity preferredSegmentGranularity;
+  private final Granularity queryGranularity;
+  private final Granularity preferredSegmentGranularity;
   private final String sequenceName;
   private final String previousSegmentId;
 
   public SegmentAllocateAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("timestamp") DateTime timestamp,
-      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
-      @JsonProperty("preferredSegmentGranularity") SegmentGranularity preferredSegmentGranularity,
+      @JsonProperty("queryGranularity") Granularity queryGranularity,
+      @JsonProperty("preferredSegmentGranularity") Granularity preferredSegmentGranularity,
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("previousSegmentId") String previousSegmentId
   )
@@ -99,13 +98,13 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   }
 
   @JsonProperty
-  public QueryGranularity getQueryGranularity()
+  public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }
 
   @JsonProperty
-  public SegmentGranularity getPreferredSegmentGranularity()
+  public Granularity getPreferredSegmentGranularity()
   {
     return preferredSegmentGranularity;
   }
@@ -152,8 +151,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       final List<Interval> tryIntervals = Lists.newArrayList();
 
       final Interval rowInterval = new Interval(
-          queryGranularity.truncate(timestamp.getMillis()),
-          queryGranularity.next(queryGranularity.truncate(timestamp.getMillis()))
+          queryGranularity.truncate(timestamp),
+          queryGranularity.increment(queryGranularity.truncate(timestamp))
       );
 
       final Set<DataSegment> usedSegmentsForRow = ImmutableSet.copyOf(
@@ -163,7 +162,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       if (usedSegmentsForRow.isEmpty()) {
         // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
         // segment granularity. Try that first, and then progressively smaller ones if it fails.
-        for (SegmentGranularity gran : SegmentGranularity.granularitiesFinerThan(preferredSegmentGranularity)) {
+        for (Granularity gran : Granularity.granularitiesFinerThan(preferredSegmentGranularity)) {
           tryIntervals.add(gran.bucket(timestamp));
         }
       } else {

@@ -28,8 +28,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.SegmentGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -79,7 +78,7 @@ public class IndexGeneratorCombinerTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host")
                 },
                 new UniformGranularitySpec(
-                    SegmentGranularity.DAY, QueryGranularities.NONE, ImmutableList.of(Interval.parse("2010/2011"))
+                    Granularity.DAY, Granularity.NONE, ImmutableList.of(Interval.parse("2010/2011"))
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),

@@ -27,7 +27,7 @@ import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -126,7 +126,7 @@ public class IncrementalIndexReadBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularity.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(rollup)
@@ -204,7 +204,7 @@ public class IncrementalIndexReadBenchmark
         filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         false
     );
   }

@@ -21,20 +21,18 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -129,8 +127,8 @@ public class IndexTaskTest
                     new LongSumAggregatorFactory("val", "val")
                 },
                 new UniformGranularitySpec(
-                    SegmentGranularity.DAY,
-                    QueryGranularities.MINUTE,
+                    Granularity.DAY,
+                    Granularity.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -215,8 +213,8 @@ public class IndexTaskTest
                     new LongSumAggregatorFactory("val", "val")
                 },
                 new UniformGranularitySpec(
-                    SegmentGranularity.DAY,
-                    QueryGranularities.MINUTE,
+                    Granularity.DAY,
+                    Granularity.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -301,7 +299,7 @@ public class IndexTaskTest
                     new LongSumAggregatorFactory("val", "val")
                 },
                 new ArbitraryGranularitySpec(
-                    QueryGranularities.MINUTE,
+                    Granularity.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -417,8 +415,8 @@ public class IndexTaskTest
                     new LongSumAggregatorFactory("val", "val")
                 },
                 new UniformGranularitySpec(
-                    SegmentGranularity.HOUR,
-                    QueryGranularities.HOUR,
+                    Granularity.HOUR,
+                    Granularity.HOUR,
                     Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
                 ),
                 jsonMapper

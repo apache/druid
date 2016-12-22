@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -35,8 +34,6 @@ import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -60,6 +57,7 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -1670,8 +1668,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
-            SegmentGranularity.HOUR,
-            QueryGranularities.NONE,
+            Granularity.HOUR,
+            Granularity.NONE,
             ImmutableList.<Interval>of()
         ),
         objectMapper
