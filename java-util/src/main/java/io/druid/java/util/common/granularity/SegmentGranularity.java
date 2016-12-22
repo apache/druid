@@ -165,60 +165,64 @@ public abstract class SegmentGranularity {
             GranularityType granularityType = GranularityType.valueOf(str);
 
             switch (granularityType) {
-                case SECOND: return new PeriodSegmentGranularity(new Period("PT1S"), origin, tz);
-                case MINUTE: return new PeriodSegmentGranularity(new Period("PT1M"), origin, tz);
-                case FIVE_MINUTE: return new PeriodSegmentGranularity(new Period("PT5M"), origin, tz);
-                case TEN_MINUTE: return new PeriodSegmentGranularity(new Period("PT10M"), origin, tz);
-                case FIFTEEN_MINUTE: return new PeriodSegmentGranularity(new Period("PT15M"), origin, tz);
-                case HOUR: return new PeriodSegmentGranularity(new Period("PT1H"), origin, tz);
-                case SIX_HOUR: return new PeriodSegmentGranularity(new Period("PT6H"), origin, tz);
-                case DAY: return new PeriodSegmentGranularity(new Period("P1D"), origin, tz);
-                case WEEK: return new PeriodSegmentGranularity(new Period("P1W"), origin, tz);
-                case MONTH: return new PeriodSegmentGranularity(new Period("P1M"), origin, tz);
-                case YEAR: return new PeriodSegmentGranularity(new Period("P1Y"), origin, tz);
+                case SECOND: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1S"), origin, tz);
+                    gran.setGranularityType(SECOND);
+                    return gran;
+                }
+                case MINUTE: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1M"), origin, tz);
+                    gran.setGranularityType(MINUTE);
+                    return gran;
+                }
+                case FIVE_MINUTE: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT5M"), origin, tz);
+                    gran.setGranularityType(FIVE_MINUTE);
+                    return gran;
+                }
+                case TEN_MINUTE: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT10M"), origin, tz);
+                    gran.setGranularityType(TEN_MINUTE);
+                    return gran;
+                }
+                case FIFTEEN_MINUTE: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT15M"), origin, tz);
+                    gran.setGranularityType(FIFTEEN_MINUTE);
+                    return gran;
+                }
+                case HOUR: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1H"), origin, tz);
+                    gran.setGranularityType(HOUR);
+                    return gran;
+                }
+                case SIX_HOUR: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT6H"), origin, tz);
+                    gran.setGranularityType(SIX_HOUR);
+                    return gran;
+                }
+                case DAY: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1D"), origin, tz);
+                    gran.setGranularityType(DAY);
+                    return gran;
+                }
+                case WEEK: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1W"), origin, tz);
+                    gran.setGranularityType(WEEK);
+                    return gran;
+                }
+                case MONTH: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1M"), origin, tz);
+                    gran.setGranularityType(MONTH);
+                    return gran;
+                }
+                case YEAR: {
+                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1Y"), origin, tz);
+                    gran.setGranularityType(YEAR);
+                    return gran;
+                }
                 default:
                     throw new IAE("[%s] granularity not supported with strings. Try with Period instead", str);
             }
-        }
-
-        static GranularityType get(Period period) {
-            int[] vals = period.getValues();
-
-            if (vals[0] == 1) {
-                return GranularityType.YEAR;
-            }
-            if (vals[1] == 1) {
-                return GranularityType.MONTH;
-            }
-            if (vals[2] == 1) {
-                return GranularityType.WEEK;
-            }
-            if (vals[3] == 1) {
-                return GranularityType.DAY;
-            }
-            if (vals[4] == 1) {
-                return GranularityType.HOUR;
-            }
-            if (vals[4] == 6) {
-                return GranularityType.SIX_HOUR;
-            }
-            if (vals[5] == 1) {
-                return GranularityType.MINUTE;
-            }
-            if (vals[5] == 5) {
-                return GranularityType.FIVE_MINUTE;
-            }
-            if (vals[5] == 10) {
-                return GranularityType.TEN_MINUTE;
-            }
-            if (vals[5] == 15) {
-                return GranularityType.FIFTEEN_MINUTE;
-            }
-            if (vals[6] == 1) {
-                return GranularityType.SECOND;
-            }
-
-            throw new IAE("Granularity is not supported. [%s]", period);
         }
 
         public String getHiveFormat() {

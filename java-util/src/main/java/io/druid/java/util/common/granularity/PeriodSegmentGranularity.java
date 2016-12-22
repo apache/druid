@@ -36,7 +36,7 @@ import org.joda.time.format.DateTimeFormatter;
 import java.io.IOException;
 
 public class PeriodSegmentGranularity extends SegmentGranularity implements JsonSerializable {
-    private final GranularityType granularityType;
+    private GranularityType granularityType;
     private final PeriodGranularity periodGranularity;
 
     @JsonCreator
@@ -47,7 +47,10 @@ public class PeriodSegmentGranularity extends SegmentGranularity implements Json
     )
     {
         this.periodGranularity = new PeriodGranularity(period, origin, tz);
-        this.granularityType = GranularityType.get(period);
+    }
+
+    public void setGranularityType(GranularityType granularityType) {
+        this.granularityType = granularityType;
     }
 
     @JsonProperty("period")
@@ -121,18 +124,12 @@ public class PeriodSegmentGranularity extends SegmentGranularity implements Json
 
         PeriodSegmentGranularity that = (PeriodSegmentGranularity) o;
 
-        if (granularityType != that.granularityType) {
-            return false;
-        }
         return periodGranularity.equals(that.periodGranularity);
-
     }
 
     @Override
     public int hashCode() {
-        int result = granularityType.hashCode();
-        result = 31 * result + periodGranularity.hashCode();
-        return result;
+        return periodGranularity.hashCode();
     }
 
     @Override
