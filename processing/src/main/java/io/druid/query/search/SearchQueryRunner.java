@@ -289,10 +289,6 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
     if (index != null) {
       for (DimensionSpec spec : dimsToSearch) {
-        if (spec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
-          bitmapDims.add(spec);
-          continue;
-        }
         ColumnCapabilities capabilities = storageAdapter.getColumnCapabilities(spec.getDimension());
         if (capabilities == null) {
           continue;

@@ -22,6 +22,7 @@ package io.druid.query.topn;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
 
 /**
  */
@@ -48,9 +49,11 @@ public class TopNParams
     }
   }
 
-  public Object getDimSelector()
+  // Only used by TopN algorithms that support String exclusively
+  // Otherwise, get an appropriately typed selector from getSelectorPlus()
+  public DimensionSelector getDimSelector()
   {
-    return selectorPlus.getSelector();
+    return (DimensionSelector) selectorPlus.getSelector();
   }
 
   public ColumnSelectorPlus<TopNColumnSelectorStrategy> getSelectorPlus()

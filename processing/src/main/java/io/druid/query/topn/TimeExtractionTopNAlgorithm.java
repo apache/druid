@@ -74,7 +74,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
   )
   {
     final Cursor cursor = params.getCursor();
-    final DimensionSelector dimSelector = (DimensionSelector) params.getDimSelector();
+    final DimensionSelector dimSelector = params.getDimSelector();
 
     while (!cursor.isDone()) {
       final String key = dimSelector.lookupName(dimSelector.getRow().get(0));

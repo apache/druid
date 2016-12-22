@@ -28,7 +28,7 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
     // not possible when applying an extraction function
 
     final BaseTopNAlgorithm.AggregatorArrayProvider provider = new BaseTopNAlgorithm.AggregatorArrayProvider(
-        (DimensionSelector) params.getDimSelector(),
+        (DimensionSelector) params.getSelectorPlus().getSelector(),
         query,
         params.getCardinality(),
         capabilities

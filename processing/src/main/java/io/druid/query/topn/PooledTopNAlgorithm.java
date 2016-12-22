@@ -194,7 +194,7 @@ public class PooledTopNAlgorithm
     final int numBytesPerRecord = params.getNumBytesPerRecord();
     final int[] aggregatorSizes = params.getAggregatorSizes();
     final Cursor cursor = params.getCursor();
-    final DimensionSelector dimSelector = (DimensionSelector) params.getDimSelector();
+    final DimensionSelector dimSelector = params.getDimSelector();
 
     final int[] aggregatorOffsets = new int[aggregatorSizes.length];
     for (int j = 0, offset = 0; j < aggregatorSizes.length; ++j) {
@@ -459,7 +459,7 @@ public class PooledTopNAlgorithm
   {
     final ByteBuffer resultsBuf = params.getResultsBuf();
     final int[] aggregatorSizes = params.getAggregatorSizes();
-    final DimensionSelector dimSelector = (DimensionSelector) params.getDimSelector();
+    final DimensionSelector dimSelector = params.getDimSelector();
 
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i];
