@@ -8,7 +8,7 @@ platform: java
 
 shared:
   notifications:
-    email: greyhawk@yahoo-inc.com
+    email: himanshg@yahoo-inc.com
 
   settings:
     SSH_OPTIONS: "-o StrictHostKeyChecking=no -o CheckHostIP=no -o UserKnownHostsFile=/dev/null"
