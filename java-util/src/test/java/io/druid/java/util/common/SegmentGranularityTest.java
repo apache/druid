@@ -292,6 +292,30 @@ public class SegmentGranularityTest
     checkToDate(YEAR, SegmentGranularity.Formatter.DEFAULT, yearChecks);
   }
 
+  @Test
+  public void testCustomPeriodToDate()
+  {
+    PathDate[] customChecks = {
+        new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+        new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+        new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1")
+    };
+    checkToDate(new PeriodSegmentGranularity(new Period("PT2S"), null, DateTimeZone.UTC), SegmentGranularity.Formatter.DEFAULT, customChecks);
+  }
+
+  @Test
+  public void testCustomNestedPeriodFail()
+  {
+    try {
+      Period p = Period.years(6).withMonths(3).withSeconds(23);
+      new PeriodSegmentGranularity(p, null, DateTimeZone.UTC);
+      Assert.fail("Complicated period creation should fail b/c of unsupported granularity type.");
+    }
+    catch (IAE e) {
+      // pass
+    }
+  }
+
   private void checkToDate(SegmentGranularity granularity, SegmentGranularity.Formatter formatter, PathDate[] checks)
   {
     for (PathDate pd : checks) {

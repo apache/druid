@@ -29,6 +29,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -186,64 +187,63 @@ public abstract class SegmentGranularity
       GranularityType granularityType = GranularityType.valueOf(str);
 
       switch (granularityType) {
-        case SECOND: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1S"), origin, tz);
-          gran.setGranularityType(SECOND);
-          return gran;
-        }
-        case MINUTE: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1M"), origin, tz);
-          gran.setGranularityType(MINUTE);
-          return gran;
-        }
-        case FIVE_MINUTE: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT5M"), origin, tz);
-          gran.setGranularityType(FIVE_MINUTE);
-          return gran;
-        }
-        case TEN_MINUTE: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT10M"), origin, tz);
-          gran.setGranularityType(TEN_MINUTE);
-          return gran;
-        }
-        case FIFTEEN_MINUTE: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT15M"), origin, tz);
-          gran.setGranularityType(FIFTEEN_MINUTE);
-          return gran;
-        }
-        case HOUR: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1H"), origin, tz);
-          gran.setGranularityType(HOUR);
-          return gran;
-        }
-        case SIX_HOUR: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT6H"), origin, tz);
-          gran.setGranularityType(SIX_HOUR);
-          return gran;
-        }
-        case DAY: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1D"), origin, tz);
-          gran.setGranularityType(DAY);
-          return gran;
-        }
-        case WEEK: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1W"), origin, tz);
-          gran.setGranularityType(WEEK);
-          return gran;
-        }
-        case MONTH: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1M"), origin, tz);
-          gran.setGranularityType(MONTH);
-          return gran;
-        }
-        case YEAR: {
-          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1Y"), origin, tz);
-          gran.setGranularityType(YEAR);
-          return gran;
-        }
+        case SECOND: return new PeriodSegmentGranularity(new Period("PT1S"), origin, tz);
+        case MINUTE: return new PeriodSegmentGranularity(new Period("PT1M"), origin, tz);
+        case FIVE_MINUTE: return new PeriodSegmentGranularity(new Period("PT5M"), origin, tz);
+        case TEN_MINUTE: return new PeriodSegmentGranularity(new Period("PT10M"), origin, tz);
+        case FIFTEEN_MINUTE: return new PeriodSegmentGranularity(new Period("PT15M"), origin, tz);
+        case HOUR: return new PeriodSegmentGranularity(new Period("PT1H"), origin, tz);
+        case SIX_HOUR: return new PeriodSegmentGranularity(new Period("PT6H"), origin, tz);
+        case DAY: return new PeriodSegmentGranularity(new Period("P1D"), origin, tz);
+        case WEEK: return new PeriodSegmentGranularity(new Period("P1W"), origin, tz);
+        case MONTH: return new PeriodSegmentGranularity(new Period("P1M"), origin, tz);
+        case YEAR: return new PeriodSegmentGranularity(new Period("P1Y"), origin, tz);
         default:
           throw new IAE("[%s] granularity not supported with strings. Try with Period instead", str);
       }
+    }
+
+    // Note: This is only an estimate based on the values in period.
+    // This will not work for complicated periods that represent say 1 year 1 day
+    static GranularityType estimatedGranularityType(Period period) {
+      int[] vals = period.getValues();
+      BitSet bs = new BitSet();
+      for (int i = 0; i < vals.length; i++) {
+        if (vals[i] != 0) {
+          bs.set(i);
+        }
+      }
+
+      if (bs.cardinality() == 0 || bs.cardinality() > 1) {
+        throw new IAE("Granularity is not supported. [%s]", period);
+      }
+      else {
+        final int index = bs.nextSetBit(0);
+
+        if (index == 0) {
+          return GranularityType.YEAR;
+        }
+        if (index == 1) {
+          return GranularityType.MONTH;
+        }
+        if (index == 2) {
+          return GranularityType.WEEK;
+        }
+        if (index == 3) {
+          return GranularityType.DAY;
+        }
+        if (index == 4) {
+          return GranularityType.HOUR;
+        }
+        if (index == 5) {
+          return GranularityType.MINUTE;
+        }
+        if (index == 6) {
+          return GranularityType.SECOND;
+        }
+      }
+
+      throw new IAE("Granularity is not supported. [%s]", period);
     }
 
     public String getHiveFormat()
