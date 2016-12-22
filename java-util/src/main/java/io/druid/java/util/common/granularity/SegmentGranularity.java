@@ -37,385 +37,414 @@ import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public abstract class SegmentGranularity {
+public abstract class SegmentGranularity
+{
 
-    // Default patterns for parsing paths.
-    final Pattern defaultPathPattern =
-            Pattern.compile(
-                    "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
-            );
-    final Pattern hivePathPattern =
-            Pattern.compile("^.*dt=(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})?)?)?)?)?)?/.*$");
+  // Default patterns for parsing paths.
+  final Pattern defaultPathPattern =
+      Pattern.compile(
+          "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
+      );
+  final Pattern hivePathPattern =
+      Pattern.compile("^.*dt=(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})?)?)?)?)?)?/.*$");
 
-    public enum Formatter
+  public enum Formatter
+  {
+    DEFAULT,
+    HIVE,
+    LOWER_DEFAULT
+  }
+
+  public static final SegmentGranularity SECOND = SegmentGranularity.fromString("SECOND");
+  public static final SegmentGranularity MINUTE = SegmentGranularity.fromString("MINUTE");
+  public static final SegmentGranularity FIVE_MINUTE = SegmentGranularity.fromString("FIVE_MINUTE");
+  public static final SegmentGranularity TEN_MINUTE = SegmentGranularity.fromString("TEN_MINUTE");
+  public static final SegmentGranularity FIFTEEN_MINUTE = SegmentGranularity.fromString("FIFTEEN_MINUTE");
+  public static final SegmentGranularity HOUR = SegmentGranularity.fromString("HOUR");
+  public static final SegmentGranularity SIX_HOUR = SegmentGranularity.fromString("SIX_HOUR");
+  public static final SegmentGranularity DAY = SegmentGranularity.fromString("DAY");
+  public static final SegmentGranularity WEEK = SegmentGranularity.fromString("WEEK");
+  public static final SegmentGranularity MONTH = SegmentGranularity.fromString("MONTH");
+  public static final SegmentGranularity YEAR = SegmentGranularity.fromString("YEAR");
+
+  @JsonCreator
+  public static SegmentGranularity fromString(String str)
+  {
+    String name = str.toUpperCase();
+    return GranularityType.createSegmentGranularity(name);
+  }
+
+  public abstract DateTimeFormatter getFormatter(Formatter type);
+
+  public abstract DateTime increment(DateTime time);
+
+  public abstract DateTime decrement(DateTime time);
+
+  public abstract DateTime truncate(DateTime time);
+
+  public abstract DateTime toDate(String filePath, Formatter formatter);
+
+  public DateTime toDate(String filePath)
+  {
+    return toDate(filePath, Formatter.DEFAULT);
+  }
+
+  public final String toPath(DateTime time)
+  {
+    return toPath(time, "default");
+  }
+
+  private final String toPath(DateTime time, String type)
+  {
+    return toPath(time, Formatter.valueOf(type.toUpperCase()));
+  }
+
+  private final String toPath(DateTime time, Formatter type)
+  {
+    return getFormatter(type).print(time);
+  }
+
+  /**
+   * Return a granularity-sized Interval containing a particular DateTime.
+   */
+  public final Interval bucket(DateTime t)
+  {
+    DateTime start = truncate(t);
+    return new Interval(start, increment(start));
+  }
+
+  // Only to create a mapping of the granularity and all the supported file patterns
+  // namely: default, lowerDefault and hive.
+  protected enum GranularityType
+  {
+    SECOND(
+        "'dt'=yyyy-MM-dd-HH-mm-ss",
+        "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH/'m'=mm/'s'=ss",
+        "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH/'M'=mm/'S'=ss"
+    ),
+    MINUTE(
+        "'dt'=yyyy-MM-dd-HH-mm",
+        "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH/'m'=mm",
+        "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH/'M'=mm"
+    ),
+    FIVE_MINUTE(MINUTE),
+    TEN_MINUTE(MINUTE),
+    FIFTEEN_MINUTE(MINUTE),
+    HOUR(
+        "'dt'=yyyy-MM-dd-HH",
+        "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH",
+        "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"
+    ),
+    SIX_HOUR(HOUR),
+    DAY(
+        "'dt'=yyyy-MM-dd",
+        "'y'=yyyy/'m'=MM/'d'=dd",
+        "'y'=yyyy/'m'=MM/'d'=dd"
+    ),
+    WEEK(DAY),
+    MONTH(
+        "'dt'=yyyy-MM",
+        "'y'=yyyy/'m'=MM",
+        "'y'=yyyy/'m'=MM"
+    ),
+    YEAR(
+        "'dt'=yyyy",
+        "'y'=yyyy",
+        "'y'=yyyy"
+    );
+
+    private final String hiveFormat;
+    private final String lowerDefaultFormat;
+    private final String defaultFormat;
+
+    GranularityType(
+        final String hiveFormat,
+        final String lowerDefaultFormat, final String defaultFormat
+    )
     {
-        DEFAULT,
-        HIVE,
-        LOWER_DEFAULT
+      this.hiveFormat = hiveFormat;
+      this.lowerDefaultFormat = lowerDefaultFormat;
+      this.defaultFormat = defaultFormat;
     }
 
-    public static final SegmentGranularity SECOND = SegmentGranularity.fromString("SECOND");
-    public static final SegmentGranularity MINUTE = SegmentGranularity.fromString("MINUTE");
-    public static final SegmentGranularity FIVE_MINUTE = SegmentGranularity.fromString("FIVE_MINUTE");
-    public static final SegmentGranularity TEN_MINUTE = SegmentGranularity.fromString("TEN_MINUTE");
-    public static final SegmentGranularity FIFTEEN_MINUTE = SegmentGranularity.fromString("FIFTEEN_MINUTE");
-    public static final SegmentGranularity HOUR = SegmentGranularity.fromString("HOUR");
-    public static final SegmentGranularity SIX_HOUR = SegmentGranularity.fromString("SIX_HOUR");
-    public static final SegmentGranularity DAY = SegmentGranularity.fromString("DAY");
-    public static final SegmentGranularity WEEK = SegmentGranularity.fromString("WEEK");
-    public static final SegmentGranularity MONTH = SegmentGranularity.fromString("MONTH");
-    public static final SegmentGranularity YEAR = SegmentGranularity.fromString("YEAR");
-
-    @JsonCreator
-    public static SegmentGranularity fromString(String str)
+    GranularityType(GranularityType granularityType)
     {
-        String name = str.toUpperCase();
-        return GranularityType.createSegmentGranularity(name);
+      this(
+          granularityType.getHiveFormat(),
+          granularityType.getLowerDefaultFormat(),
+          granularityType.getDefaultFormat()
+      );
     }
 
-    public abstract DateTimeFormatter getFormatter(Formatter type);
-
-    public abstract DateTime increment(DateTime time);
-
-    public abstract DateTime decrement(DateTime time);
-
-    public abstract DateTime truncate(DateTime time);
-
-    public abstract DateTime toDate(String filePath, Formatter formatter);
-
-    public DateTime toDate(String filePath)
+    static SegmentGranularity createSegmentGranularity(String str)
     {
-        return toDate(filePath, Formatter.DEFAULT);
+      return createSegmentGranularity(str, null, null);
     }
 
-    public final String toPath(DateTime time)
+    static SegmentGranularity createSegmentGranularity(String str, DateTime origin, DateTimeZone tz)
     {
-        return toPath(time, "default");
+      GranularityType granularityType = GranularityType.valueOf(str);
+
+      switch (granularityType) {
+        case SECOND: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1S"), origin, tz);
+          gran.setGranularityType(SECOND);
+          return gran;
+        }
+        case MINUTE: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1M"), origin, tz);
+          gran.setGranularityType(MINUTE);
+          return gran;
+        }
+        case FIVE_MINUTE: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT5M"), origin, tz);
+          gran.setGranularityType(FIVE_MINUTE);
+          return gran;
+        }
+        case TEN_MINUTE: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT10M"), origin, tz);
+          gran.setGranularityType(TEN_MINUTE);
+          return gran;
+        }
+        case FIFTEEN_MINUTE: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT15M"), origin, tz);
+          gran.setGranularityType(FIFTEEN_MINUTE);
+          return gran;
+        }
+        case HOUR: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1H"), origin, tz);
+          gran.setGranularityType(HOUR);
+          return gran;
+        }
+        case SIX_HOUR: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT6H"), origin, tz);
+          gran.setGranularityType(SIX_HOUR);
+          return gran;
+        }
+        case DAY: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1D"), origin, tz);
+          gran.setGranularityType(DAY);
+          return gran;
+        }
+        case WEEK: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1W"), origin, tz);
+          gran.setGranularityType(WEEK);
+          return gran;
+        }
+        case MONTH: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1M"), origin, tz);
+          gran.setGranularityType(MONTH);
+          return gran;
+        }
+        case YEAR: {
+          PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1Y"), origin, tz);
+          gran.setGranularityType(YEAR);
+          return gran;
+        }
+        default:
+          throw new IAE("[%s] granularity not supported with strings. Try with Period instead", str);
+      }
     }
 
-    private final String toPath(DateTime time, String type)
+    public String getHiveFormat()
     {
-        return toPath(time, Formatter.valueOf(type.toUpperCase()));
+      return hiveFormat;
     }
 
-    private final String toPath(DateTime time, Formatter type)
+    public String getLowerDefaultFormat()
     {
-        return getFormatter(type).print(time);
+      return lowerDefaultFormat;
     }
 
-    /**
-     * Return a granularity-sized Interval containing a particular DateTime.
-     */
-    public final Interval bucket(DateTime t)
+    public String getDefaultFormat()
     {
-        DateTime start = truncate(t);
-        return new Interval(start, increment(start));
+      return defaultFormat;
     }
 
-    // Only to create a mapping of the granularity and all the supported file patterns
-    // namely: default, lowerDefault and hive.
-    protected enum GranularityType
+    static DateTime getDateTime(GranularityType gran, Integer[] vals)
     {
-        SECOND("'dt'=yyyy-MM-dd-HH-mm-ss",
-                "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH/'m'=mm/'s'=ss",
-                "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH/'M'=mm/'S'=ss"),
-        MINUTE("'dt'=yyyy-MM-dd-HH-mm",
-                "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH/'m'=mm",
-                "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH/'M'=mm"),
-        FIVE_MINUTE(MINUTE),
-        TEN_MINUTE(MINUTE),
-        FIFTEEN_MINUTE(MINUTE),
-        HOUR("'dt'=yyyy-MM-dd-HH",
-                "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH",
-                "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"),
-        SIX_HOUR(HOUR),
-        DAY("'dt'=yyyy-MM-dd",
-                "'y'=yyyy/'m'=MM/'d'=dd",
-                "'y'=yyyy/'m'=MM/'d'=dd"),
-        WEEK(DAY),
-        MONTH("'dt'=yyyy-MM",
-                "'y'=yyyy/'m'=MM",
-                "'y'=yyyy/'m'=MM"),
-        YEAR("'dt'=yyyy",
-                "'y'=yyyy",
-                "'y'=yyyy");
+      switch (gran) {
+        case SECOND: {
+          DateTime date = null;
+          if (vals[1] != null
+              && vals[2] != null
+              && vals[3] != null
+              && vals[4] != null
+              && vals[5] != null
+              && vals[6] != null) {
+            date = new DateTime(vals[1], vals[2], vals[3], vals[4], vals[5], vals[6], 0);
+          }
 
-        private final String hiveFormat;
-        private final String lowerDefaultFormat;
-        private final String defaultFormat;
-
-        GranularityType(final String hiveFormat,
-                    final String lowerDefaultFormat, final String defaultFormat) {
-            this.hiveFormat = hiveFormat;
-            this.lowerDefaultFormat = lowerDefaultFormat;
-            this.defaultFormat = defaultFormat;
+          return date;
         }
-
-        GranularityType(GranularityType granularityType) {
-            this(granularityType.getHiveFormat(),
-                    granularityType.getLowerDefaultFormat(),
-                    granularityType.getDefaultFormat());
+        case MINUTE:
+        case FIVE_MINUTE:
+        case TEN_MINUTE:
+        case FIFTEEN_MINUTE: {
+          DateTime date = null;
+          if (vals[1] != null && vals[2] != null && vals[3] != null && vals[4] != null && vals[5] != null) {
+            date = new DateTime(vals[1], vals[2], vals[3], vals[4], vals[5], 0, 0);
+          }
+          return date;
         }
+        case HOUR:
+        case SIX_HOUR: {
+          DateTime date = null;
+          if (vals[1] != null && vals[2] != null && vals[3] != null && vals[4] != null) {
+            date = new DateTime(vals[1], vals[2], vals[3], vals[4], 0, 0, 0);
+          }
 
-        static SegmentGranularity createSegmentGranularity(String str) {
-            return createSegmentGranularity(str, null, null);
+          return date;
         }
+        case DAY:
+        case WEEK: {
+          DateTime date = null;
+          if (vals[1] != null && vals[2] != null && vals[3] != null) {
+            date = new DateTime(vals[1], vals[2], vals[3], 0, 0, 0, 0);
+          }
 
-        static SegmentGranularity createSegmentGranularity(String str, DateTime origin, DateTimeZone tz) {
-            GranularityType granularityType = GranularityType.valueOf(str);
-
-            switch (granularityType) {
-                case SECOND: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1S"), origin, tz);
-                    gran.setGranularityType(SECOND);
-                    return gran;
-                }
-                case MINUTE: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1M"), origin, tz);
-                    gran.setGranularityType(MINUTE);
-                    return gran;
-                }
-                case FIVE_MINUTE: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT5M"), origin, tz);
-                    gran.setGranularityType(FIVE_MINUTE);
-                    return gran;
-                }
-                case TEN_MINUTE: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT10M"), origin, tz);
-                    gran.setGranularityType(TEN_MINUTE);
-                    return gran;
-                }
-                case FIFTEEN_MINUTE: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT15M"), origin, tz);
-                    gran.setGranularityType(FIFTEEN_MINUTE);
-                    return gran;
-                }
-                case HOUR: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT1H"), origin, tz);
-                    gran.setGranularityType(HOUR);
-                    return gran;
-                }
-                case SIX_HOUR: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("PT6H"), origin, tz);
-                    gran.setGranularityType(SIX_HOUR);
-                    return gran;
-                }
-                case DAY: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1D"), origin, tz);
-                    gran.setGranularityType(DAY);
-                    return gran;
-                }
-                case WEEK: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1W"), origin, tz);
-                    gran.setGranularityType(WEEK);
-                    return gran;
-                }
-                case MONTH: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1M"), origin, tz);
-                    gran.setGranularityType(MONTH);
-                    return gran;
-                }
-                case YEAR: {
-                    PeriodSegmentGranularity gran = new PeriodSegmentGranularity(new Period("P1Y"), origin, tz);
-                    gran.setGranularityType(YEAR);
-                    return gran;
-                }
-                default:
-                    throw new IAE("[%s] granularity not supported with strings. Try with Period instead", str);
-            }
+          return date;
         }
+        case MONTH: {
+          DateTime date = null;
+          if (vals[1] != null && vals[2] != null) {
+            date = new DateTime(vals[1], vals[2], 1, 0, 0, 0, 0);
+          }
 
-        public String getHiveFormat() {
-            return hiveFormat;
+          return date;
         }
+        case YEAR: {
+          DateTime date = null;
+          if (vals[1] != null) {
+            date = new DateTime(vals[1], 1, 1, 0, 0, 0, 0);
+          }
 
-        public String getLowerDefaultFormat() {
-            return lowerDefaultFormat;
+          return date;
         }
+      }
 
-        public String getDefaultFormat() {
-            return defaultFormat;
-        }
-
-        static DateTime getDateTime(GranularityType gran, Integer[] vals) {
-            switch (gran) {
-                case SECOND: {
-                    DateTime date = null;
-                    if (vals[1] != null
-                            && vals[2] != null
-                            && vals[3] != null
-                            && vals[4] != null
-                            && vals[5] != null
-                            && vals[6] != null) {
-                        date = new DateTime(vals[1], vals[2], vals[3], vals[4], vals[5], vals[6], 0);
-                    }
-
-                    return date;
-                }
-                case MINUTE:
-                case FIVE_MINUTE:
-                case TEN_MINUTE:
-                case FIFTEEN_MINUTE: {
-                    DateTime date = null;
-                    if (vals[1] != null && vals[2] != null && vals[3] != null && vals[4] != null && vals[5] != null) {
-                        date = new DateTime(vals[1], vals[2], vals[3], vals[4], vals[5], 0, 0);
-                    }
-                    return date;
-                }
-                case HOUR:
-                case SIX_HOUR: {
-                    DateTime date = null;
-                    if (vals[1] != null && vals[2] != null && vals[3] != null && vals[4] != null) {
-                        date = new DateTime(vals[1], vals[2], vals[3], vals[4], 0, 0, 0);
-                    }
-
-                    return date;
-                }
-                case DAY:
-                case WEEK: {
-                    DateTime date = null;
-                    if (vals[1] != null && vals[2] != null && vals[3] != null) {
-                        date = new DateTime(vals[1], vals[2], vals[3], 0, 0, 0, 0);
-                    }
-
-                    return date;
-                }
-                case MONTH: {
-                    DateTime date = null;
-                    if (vals[1] != null && vals[2] != null) {
-                        date = new DateTime(vals[1], vals[2], 1, 0, 0, 0, 0);
-                    }
-
-                    return date;
-                }
-                case YEAR: {
-                    DateTime date = null;
-                    if (vals[1] != null) {
-                        date = new DateTime(vals[1], 1, 1, 0, 0, 0, 0);
-                    }
-
-                    return date;
-                }
-            }
-
-            return null;
-        }
+      return null;
     }
+  }
 
-    public static List<SegmentGranularity> granularitiesFinerThan(final SegmentGranularity gran0)
-    {
-        final DateTime epoch = new DateTime(0);
-        final List<SegmentGranularity> retVal = Lists.newArrayList();
-        final DateTime origin = (gran0 instanceof PeriodSegmentGranularity) ? ((PeriodSegmentGranularity) gran0).getOrigin() : null;
-        final DateTimeZone tz = (gran0 instanceof PeriodSegmentGranularity) ? ((PeriodSegmentGranularity) gran0).getTimeZone() : null;
-        for (GranularityType gran : GranularityType.values()) {
-            final SegmentGranularity segmentGranularity = GranularityType.createSegmentGranularity(gran.name(), origin, tz);
-            if (segmentGranularity.bucket(epoch).toDurationMillis() <= gran0.bucket(epoch).toDurationMillis()) {
-                retVal.add(segmentGranularity);
-            }
-        }
-        Collections.sort(
-                retVal,
-                new Comparator<SegmentGranularity>()
-                {
-                    @Override
-                    public int compare(SegmentGranularity g1, SegmentGranularity g2)
-                    {
-                        return Longs.compare(g2.bucket(epoch).toDurationMillis(), g1.bucket(epoch).toDurationMillis());
-                    }
-                }
-        );
-        return retVal;
+  public static List<SegmentGranularity> granularitiesFinerThan(final SegmentGranularity gran0)
+  {
+    final DateTime epoch = new DateTime(0);
+    final List<SegmentGranularity> retVal = Lists.newArrayList();
+    final DateTime origin = (gran0 instanceof PeriodSegmentGranularity)
+                            ? ((PeriodSegmentGranularity) gran0).getOrigin()
+                            : null;
+    final DateTimeZone tz = (gran0 instanceof PeriodSegmentGranularity)
+                            ? ((PeriodSegmentGranularity) gran0).getTimeZone()
+                            : null;
+    for (GranularityType gran : GranularityType.values()) {
+      final SegmentGranularity segmentGranularity = GranularityType.createSegmentGranularity(gran.name(), origin, tz);
+      if (segmentGranularity.bucket(epoch).toDurationMillis() <= gran0.bucket(epoch).toDurationMillis()) {
+        retVal.add(segmentGranularity);
+      }
     }
-
-    // Used by the toDate implementations.
-    final Integer[] getDateValues(String filePath, Formatter formatter)
-    {
-        Pattern pattern = defaultPathPattern;
-        switch (formatter) {
-            case DEFAULT:
-            case LOWER_DEFAULT:
-                break;
-            case HIVE:
-                pattern = hivePathPattern;
-                break;
-            default:
-                throw new IAE("Format %s not supported", formatter);
-        }
-
-        Matcher matcher = pattern.matcher(filePath);
-
-        Integer[] vals = new Integer[7];
-        if (matcher.matches()) {
-            for (int i = 1; i <= matcher.groupCount(); i++) {
-                vals[i] = (matcher.group(i) != null) ? Integer.parseInt(matcher.group(i)) : null;
-            }
-        }
-
-        return vals;
-    }
-
-    public Iterable<Interval> getIterable(final Interval input)
-    {
-        return new IntervalIterable(input);
-    }
-
-    public class IntervalIterable implements Iterable<Interval>
-    {
-        private final Interval inputInterval;
-
-        public IntervalIterable(Interval inputInterval)
+    Collections.sort(
+        retVal,
+        new Comparator<SegmentGranularity>()
         {
-            this.inputInterval = inputInterval;
+          @Override
+          public int compare(SegmentGranularity g1, SegmentGranularity g2)
+          {
+            return Longs.compare(g2.bucket(epoch).toDurationMillis(), g1.bucket(epoch).toDurationMillis());
+          }
         }
+    );
+    return retVal;
+  }
 
-        @Override
-        public Iterator<Interval> iterator()
-        {
-            return new IntervalIterator(inputInterval);
-        }
-
+  // Used by the toDate implementations.
+  final Integer[] getDateValues(String filePath, Formatter formatter)
+  {
+    Pattern pattern = defaultPathPattern;
+    switch (formatter) {
+      case DEFAULT:
+      case LOWER_DEFAULT:
+        break;
+      case HIVE:
+        pattern = hivePathPattern;
+        break;
+      default:
+        throw new IAE("Format %s not supported", formatter);
     }
 
-    public class IntervalIterator implements Iterator<Interval>
+    Matcher matcher = pattern.matcher(filePath);
+
+    Integer[] vals = new Integer[7];
+    if (matcher.matches()) {
+      for (int i = 1; i <= matcher.groupCount(); i++) {
+        vals[i] = (matcher.group(i) != null) ? Integer.parseInt(matcher.group(i)) : null;
+      }
+    }
+
+    return vals;
+  }
+
+  public Iterable<Interval> getIterable(final Interval input)
+  {
+    return new IntervalIterable(input);
+  }
+
+  public class IntervalIterable implements Iterable<Interval>
+  {
+    private final Interval inputInterval;
+
+    public IntervalIterable(Interval inputInterval)
     {
-        private final Interval inputInterval;
-
-        private DateTime currStart;
-        private DateTime currEnd;
-
-        public IntervalIterator(Interval inputInterval)
-        {
-            this.inputInterval = inputInterval;
-
-            currStart = truncate(inputInterval.getStart());
-            currEnd = increment(currStart);
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-            return currStart.isBefore(inputInterval.getEnd());
-        }
-
-        @Override
-        public Interval next()
-        {
-            if (!hasNext()) {
-                throw new NoSuchElementException("There are no more intervals");
-            }
-            Interval retVal = new Interval(currStart, currEnd);
-
-            currStart = currEnd;
-            currEnd = increment(currStart);
-
-            return retVal;
-        }
-
-        @Override
-        public void remove()
-        {
-            throw new UnsupportedOperationException();
-        }
+      this.inputInterval = inputInterval;
     }
+
+    @Override
+    public Iterator<Interval> iterator()
+    {
+      return new IntervalIterator(inputInterval);
+    }
+
+  }
+
+  public class IntervalIterator implements Iterator<Interval>
+  {
+    private final Interval inputInterval;
+
+    private DateTime currStart;
+    private DateTime currEnd;
+
+    public IntervalIterator(Interval inputInterval)
+    {
+      this.inputInterval = inputInterval;
+
+      currStart = truncate(inputInterval.getStart());
+      currEnd = increment(currStart);
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return currStart.isBefore(inputInterval.getEnd());
+    }
+
+    @Override
+    public Interval next()
+    {
+      if (!hasNext()) {
+        throw new NoSuchElementException("There are no more intervals");
+      }
+      Interval retVal = new Interval(currStart, currEnd);
+
+      currStart = currEnd;
+      currEnd = increment(currStart);
+
+      return retVal;
+    }
+
+    @Override
+    public void remove()
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
 }

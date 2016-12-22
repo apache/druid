@@ -36,9 +36,9 @@ public class PeriodQueryGranularity extends BaseQueryGranularity
 
   @JsonCreator
   public PeriodQueryGranularity(
-    @JsonProperty("period") Period period,
-    @JsonProperty("origin") DateTime origin,
-    @JsonProperty("timeZone") DateTimeZone tz
+      @JsonProperty("period") Period period,
+      @JsonProperty("origin") DateTime origin,
+      @JsonProperty("timeZone") DateTimeZone tz
   )
   {
     this.periodGranularity = new PeriodGranularity(period, origin, tz);
@@ -84,12 +84,13 @@ public class PeriodQueryGranularity extends BaseQueryGranularity
   public byte[] cacheKey()
   {
     return StringUtils.toUtf8(periodGranularity.getPeriod().toString() + ":" +
-            periodGranularity.getTimeZone().toString() + ":" + periodGranularity.getOrigin());
+                              periodGranularity.getTimeZone().toString() + ":" + periodGranularity.getOrigin());
   }
 
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(Object o)
+  {
     if (this == o) {
       return true;
     }
@@ -104,16 +105,18 @@ public class PeriodQueryGranularity extends BaseQueryGranularity
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return periodGranularity.hashCode();
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "{type=period, " +
-            "period=" + getPeriod() +
-            ", timeZone=" + getTimeZone() +
-            ", origin=" + getOrigin() +
-            '}';
+           "period=" + getPeriod() +
+           ", timeZone=" + getTimeZone() +
+           ", origin=" + getOrigin() +
+           '}';
   }
 }

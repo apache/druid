@@ -171,13 +171,14 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "UniformGranularitySpec{" +
-            "segmentGranularity=" + segmentGranularity +
-            ", queryGranularity=" + queryGranularity +
-            ", rollup=" + rollup +
-            ", inputIntervals=" + inputIntervals +
-            ", wrappedSpec=" + wrappedSpec +
-            '}';
+           "segmentGranularity=" + segmentGranularity +
+           ", queryGranularity=" + queryGranularity +
+           ", rollup=" + rollup +
+           ", inputIntervals=" + inputIntervals +
+           ", wrappedSpec=" + wrappedSpec +
+           '}';
   }
 }
