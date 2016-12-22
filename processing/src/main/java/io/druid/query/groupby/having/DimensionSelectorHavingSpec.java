@@ -31,7 +31,7 @@ import io.druid.query.extraction.IdentityExtractionFn;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class DimensionSelectorHavingSpec implements HavingSpec
+public class DimensionSelectorHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = (byte) 0x8;
   private static final byte STRING_SEPARATOR = (byte) 0xFF;

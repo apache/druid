@@ -136,6 +136,7 @@ public class GroupByQuery extends BaseQuery<Row>
         this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     if (havingSpec != null) {
+      havingSpec.setRowType(GroupByQueryHelper.rowTypeFor(this));
       postProcFn = Functions.compose(
           postProcFn,
           new Function<Sequence<Row>, Sequence<Row>>()

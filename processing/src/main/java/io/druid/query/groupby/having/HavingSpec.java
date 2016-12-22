@@ -22,6 +22,9 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.Row;
+import io.druid.segment.column.ValueType;
+
+import java.util.Map;
 
 /**
  * A "having" clause that filters aggregated/dimension value. This is similar to SQL's "having"
@@ -45,6 +48,12 @@ public interface HavingSpec
   // for testing.
   public static final HavingSpec NEVER = new NeverHavingSpec();
   public static final HavingSpec ALWAYS = new AlwaysHavingSpec();
+
+  /**
+   * Informs this HavingSpec that rows passed to "eval" will have a certain type.
+   * @param rowType
+   */
+  public void setRowType(Map<String, ValueType> rowType);
 
   /**
    * Evaluates if a given row satisfies the having spec.

@@ -25,6 +25,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.filter.BooleanValueMatcher;
 
 import java.util.BitSet;
 import java.util.Objects;
@@ -32,7 +33,7 @@ import java.util.Objects;
 public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy
 {
   @Override
-  public ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, final String value)
+  public ValueMatcher makeValueMatcher(String columnName, ColumnSelectorFactory cursor, final String value)
   {
     final String valueStr = Strings.emptyToNull(value);
     final DimensionSelector selector = cursor.makeDimensionSelector(
@@ -44,7 +45,10 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
 
     final int cardinality = selector.getValueCardinality();
 
-    if (cardinality >= 0) {
+    if (cardinality == 0 || (cardinality == 1 && selector.lookupName(0) == null)) {
+      // All values are null or empty rows (which match nulls anyway). No need to check each row.
+      return new BooleanValueMatcher(matchNull);
+    } else if (cardinality >= 0) {
       // Dictionary-encoded dimension. Compare by id instead of by value to save time.
       final int valueId = selector.lookupId(valueStr);
 
@@ -94,7 +98,11 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   }
 
   @Override
-  public ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory)
+  public ValueMatcher makeValueMatcher(
+      final String columnName,
+      final ColumnSelectorFactory cursor,
+      final DruidPredicateFactory predicateFactory
+  )
   {
     final DimensionSelector selector = cursor.makeDimensionSelector(
         new DefaultDimensionSpec(columnName, columnName)
@@ -104,7 +112,10 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
     final int cardinality = selector.getValueCardinality();
     final boolean matchNull = predicate.apply(null);
 
-    if (cardinality >= 0) {
+    if (cardinality == 0 || (cardinality == 1 && selector.lookupName(0) == null)) {
+      // All values are null or empty rows (which match nulls anyway). No need to check each row.
+      return new BooleanValueMatcher(matchNull);
+    } else if (cardinality >= 0) {
       // Dictionary-encoded dimension. Check every value; build a bitset of matching ids.
       final BitSet valueIds = new BitSet(cardinality);
       for (int i = 0; i < cardinality; i++) {

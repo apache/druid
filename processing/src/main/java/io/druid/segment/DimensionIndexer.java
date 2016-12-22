@@ -22,8 +22,6 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.filter.DruidPredicateFactory;
-import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -210,7 +208,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  Object makeColumnValueSelector(
+  ColumnValueSelector makeColumnValueSelector(
       DimensionSpec spec,
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc
@@ -308,46 +306,4 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param factory bitmap factory
    */
   void fillBitmapsFromUnsortedEncodedArray(EncodedTypeArray key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory);
-
-
-  /**
-   * Return a ValueMatcher that accepts an EntryHolder containing the current TimeAndDims key and the array index of this
-   * indexer's dimension within the TimeAndDims key.
-   *
-   * The implementer should read the dimension array Object from the TimeAndDims key and cast it to the appropriate
-   * type, as described in the documentation for compareUnsortedEncodedArrays().
-   *
-   * The returned ValueMatcher should match the dimension values against matchValue.
-   *
-   * See StringDimensionIndexer for a reference implementation.
-   *
-   * @param matchValue value to match on
-   * @param holder holds the current TimeAndDims key during row iteration
-   * @param dimIndex the array index of this indexer's dimension within the TimeAndDims key
-   * @return A ValueMatcher that matches a dimension value array from a TimeAndDims key against "matchValue"
-   */
-  ValueMatcher makeIndexingValueMatcher(String matchValue, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
-
-  /**
-   * Return a ValueMatcher that accepts an EntryHolder containing the current TimeAndDims key and the array index of this
-   * indexer's dimension within the TimeAndDims key.
-   *
-   * The implementer should read the dimension array Object from the TimeAndDims key and cast it to the appropriate
-   * type, as described in the documentation for compareUnsortedEncodedArrays().
-   *
-   * Based on the type of the indexer, this method should get a predicate of the same type from the supplied
-   * predicateFactory.
-   *
-   * For example, a StringDimensionIndexer would call predicateFactory.makeStringPredicate().
-   *
-   * The returned ValueMatcher should apply the generated predicate to the dimension values.
-   *
-   * See StringDimensionIndexer for a reference implementation.
-   *
-   * @param predicateFactory Factory object that can generate predicates for each supported dimension type
-   * @param holder holds the current TimeAndDims key during row iteration
-   * @param dimIndex the array index of this indexer's dimension within the TimeAndDims key
-   * @return A ValueMatcher that applies a predicate from the predicateFactory to the dimension values in the TimeAndDim keys
-   */
-  ValueMatcher makeIndexingValueMatcher(DruidPredicateFactory predicateFactory, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
 }

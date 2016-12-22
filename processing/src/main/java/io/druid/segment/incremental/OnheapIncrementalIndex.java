@@ -158,7 +158,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
-          new ObjectCachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, getColumnCapabilities()))
+          new ObjectCachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics))
       );
     }
 

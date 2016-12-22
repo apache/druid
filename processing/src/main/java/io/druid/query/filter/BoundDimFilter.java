@@ -385,12 +385,12 @@ public class BoundDimFilter implements DimFilter
           if (hasLowerBound()) {
             final Long lowerLong = GuavaUtils.tryParseLong(lower);
             if (lowerLong == null) {
-              matchesAnything = false;
-              return;
+              // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
+              hasLowerLongBoundVolatile = false;
+            } else {
+              hasLowerLongBoundVolatile = true;
+              lowerLongBoundVolatile = lowerLong;
             }
-
-            hasLowerLongBoundVolatile = true;
-            lowerLongBoundVolatile = lowerLong;
           } else {
             hasLowerLongBoundVolatile = false;
           }
@@ -398,6 +398,7 @@ public class BoundDimFilter implements DimFilter
           if (hasUpperBound()) {
             Long upperLong = GuavaUtils.tryParseLong(upper);
             if (upperLong == null) {
+              // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
               matchesAnything = false;
               return;
             }

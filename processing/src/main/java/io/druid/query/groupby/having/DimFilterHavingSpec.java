@@ -25,17 +25,21 @@ import com.google.common.base.Preconditions;
 import io.druid.data.input.Row;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.groupby.RowBasedValueMatcherFactory;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
-public class DimFilterHavingSpec implements HavingSpec
+public class DimFilterHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = (byte) 0x9;
 
   private final DimFilter dimFilter;
-  private final RowBasedValueMatcherFactory valueMatcherFactory;
-  private final ValueMatcher valueMatcher;
+  private final ThreadLocal<Row> rowSupplier;
+
+  private final Object valueMatcherMonitor = new Object();
+  private volatile ValueMatcher valueMatcher;
 
   @JsonCreator
   public DimFilterHavingSpec(
@@ -43,8 +47,7 @@ public class DimFilterHavingSpec implements HavingSpec
   )
   {
     this.dimFilter = Preconditions.checkNotNull(dimFilter, "filter");
-    this.valueMatcherFactory = new RowBasedValueMatcherFactory();
-    this.valueMatcher = dimFilter.toFilter().makeMatcher(valueMatcherFactory);
+    this.rowSupplier = new ThreadLocal<>();
   }
 
   @JsonProperty("filter")
@@ -54,16 +57,21 @@ public class DimFilterHavingSpec implements HavingSpec
   }
 
   @Override
+  public void setRowType(Map<String, ValueType> rowType)
+  {
+    synchronized (valueMatcherMonitor) {
+      if (valueMatcher == null) {
+        this.valueMatcher = dimFilter.toFilter()
+                                     .makeMatcher(RowBasedColumnSelectorFactory.create(rowSupplier, rowType));
+      }
+    }
+  }
+
+  @Override
   public boolean eval(final Row row)
   {
-    // Not thread safe, but it doesn't have to be.
-    valueMatcherFactory.setRow(row);
-    try {
-      return valueMatcher.matches();
-    }
-    finally {
-      valueMatcherFactory.setRow(null);
-    }
+    rowSupplier.set(row);
+    return valueMatcher.matches();
   }
 
   @Override
