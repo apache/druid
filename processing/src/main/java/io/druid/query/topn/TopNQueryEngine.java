@@ -94,7 +94,6 @@ public class TopNQueryEngine
   {
     final Capabilities capabilities = adapter.getCapabilities();
     final String dimension = query.getDimensionSpec().getDimension();
-
     final int cardinality = adapter.getDimensionCardinality(dimension);
 
     int numBytesPerRecord = 0;

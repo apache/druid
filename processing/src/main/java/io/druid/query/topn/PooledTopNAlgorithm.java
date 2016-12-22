@@ -24,6 +24,7 @@ import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -57,13 +58,14 @@ public class PooledTopNAlgorithm
 
   @Override
   public PooledTopNParams makeInitParams(
-      DimensionSelector dimSelector, Cursor cursor
+      ColumnSelectorPlus selectorPlus, Cursor cursor
   )
   {
     ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
     ByteBuffer resultsBuf = resultsBufHolder.get();
     resultsBuf.clear();
 
+    final DimensionSelector dimSelector = (DimensionSelector) selectorPlus.getSelector();
     final int cardinality = dimSelector.getValueCardinality();
 
     if (cardinality < 0) {
@@ -103,7 +105,7 @@ public class PooledTopNAlgorithm
     final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
     return PooledTopNParams.builder()
-                           .withDimSelector(dimSelector)
+                           .withSelectorPlus(selectorPlus)
                            .withCursor(cursor)
                            .withResultsBufHolder(resultsBufHolder)
                            .withResultsBuf(resultsBuf)
@@ -507,7 +509,7 @@ public class PooledTopNAlgorithm
     private final TopNMetricSpecBuilder<int[]> arrayProvider;
 
     public PooledTopNParams(
-        DimensionSelector dimSelector,
+        ColumnSelectorPlus selectorPlus,
         Cursor cursor,
         ResourceHolder<ByteBuffer> resultsBufHolder,
         ByteBuffer resultsBuf,
@@ -517,7 +519,7 @@ public class PooledTopNAlgorithm
         TopNMetricSpecBuilder<int[]> arrayProvider
     )
     {
-      super(dimSelector, cursor, numValuesPerPass);
+      super(selectorPlus, cursor, numValuesPerPass);
 
       this.resultsBufHolder = resultsBufHolder;
       this.resultsBuf = resultsBuf;
@@ -558,7 +560,7 @@ public class PooledTopNAlgorithm
 
     public static class Builder
     {
-      private DimensionSelector dimSelector;
+      private ColumnSelectorPlus selectorPlus;
       private Cursor cursor;
       private ResourceHolder<ByteBuffer> resultsBufHolder;
       private ByteBuffer resultsBuf;
@@ -569,7 +571,7 @@ public class PooledTopNAlgorithm
 
       public Builder()
       {
-        dimSelector = null;
+        selectorPlus = null;
         cursor = null;
         resultsBufHolder = null;
         resultsBuf = null;
@@ -579,9 +581,9 @@ public class PooledTopNAlgorithm
         arrayProvider = null;
       }
 
-      public Builder withDimSelector(DimensionSelector dimSelector)
+      public Builder withSelectorPlus(ColumnSelectorPlus selectorPlus)
       {
-        this.dimSelector = dimSelector;
+        this.selectorPlus = selectorPlus;
         return this;
       }
 
@@ -630,7 +632,7 @@ public class PooledTopNAlgorithm
       public PooledTopNParams build()
       {
         return new PooledTopNParams(
-            dimSelector,
+            selectorPlus,
             cursor,
             resultsBufHolder,
             resultsBuf,

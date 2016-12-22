@@ -124,7 +124,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   {
     for (String dim : availableDimensions) {
       ColumnCapabilities capabilities = getColumn(dim).getCapabilities();
-      DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dim, capabilities, null);
+      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
       dimensionHandlers.put(dim, handler);
     }
   }

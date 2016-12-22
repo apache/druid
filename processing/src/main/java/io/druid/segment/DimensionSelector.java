@@ -21,7 +21,7 @@ package io.druid.segment;import io.druid.segment.data.IndexedInts;
 
 /**
  */
-public interface DimensionSelector
+public interface DimensionSelector extends ColumnValueSelector
 {
   public static int CARDINALITY_UNKNOWN = -1;
 

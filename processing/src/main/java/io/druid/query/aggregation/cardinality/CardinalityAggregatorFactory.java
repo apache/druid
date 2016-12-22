@@ -23,26 +23,28 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
+import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategyFactory;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -94,6 +96,8 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private static final byte CACHE_TYPE_ID = (byte) 0x8;
   private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
+  private static final CardinalityAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
+      new CardinalityAggregatorColumnSelectorStrategyFactory();
 
   private final String name;
   private final List<DimensionSpec> fields;
@@ -133,44 +137,36 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    List<DimensionSelector> selectors = makeDimensionSelectors(columnFactory);
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList =
+        Arrays.asList(DimensionHandlerUtils.createColumnSelectorPluses(
+            STRATEGY_FACTORY,
+            fields,
+            columnFactory
+        ));
 
-    if (selectors.isEmpty()) {
+    if (selectorPlusList.isEmpty()) {
       return Aggregators.noopAggregator();
     }
 
-    return new CardinalityAggregator(selectors, byRow);
+    return new CardinalityAggregator(name, selectorPlusList, byRow);
   }
 
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    List<DimensionSelector> selectors = makeDimensionSelectors(columnFactory);
+    List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList =
+        Arrays.asList(DimensionHandlerUtils.createColumnSelectorPluses(
+            STRATEGY_FACTORY,
+            fields,
+            columnFactory
+        ));
 
-    if (selectors.isEmpty()) {
+    if (selectorPlusList.isEmpty()) {
       return Aggregators.noopBufferAggregator();
     }
 
-    return new CardinalityBufferAggregator(selectors, byRow);
-  }
-
-  private List<DimensionSelector> makeDimensionSelectors(final ColumnSelectorFactory columnFactory)
-  {
-    return Lists.newArrayList(
-        Iterables.filter(
-            Iterables.transform(
-                fields, new Function<DimensionSpec, DimensionSelector>()
-            {
-              @Override
-              public DimensionSelector apply(DimensionSpec input)
-              {
-                return columnFactory.makeDimensionSelector(input);
-              }
-            }
-            ), Predicates.notNull()
-        )
-    );
+    return new CardinalityBufferAggregator(selectorPlusList, byRow);
   }
 
   @Override

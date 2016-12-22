@@ -68,7 +68,7 @@ public interface DimensionMerger<EncodedTypedArray>
    * @param adapters List of adapters to be merged.
    * @throws IOException
    */
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException;
+  void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException;
 
 
   /**
@@ -86,7 +86,7 @@ public interface DimensionMerger<EncodedTypedArray>
    * @param segmentRow A row from a segment to be converted to its representation within the merged sequence of rows.
    * @param segmentIndexNumber Integer indicating which segment the row originated from.
    */
-  public EncodedTypedArray convertSegmentRowValuesToMergedRowValues(EncodedTypedArray segmentRow, int segmentIndexNumber);
+  EncodedTypedArray convertSegmentRowValuesToMergedRowValues(EncodedTypedArray segmentRow, int segmentIndexNumber);
 
 
   /**
@@ -101,7 +101,7 @@ public interface DimensionMerger<EncodedTypedArray>
    * @param rowValues The row values to be added.
    * @throws IOException
    */
-  public void processMergedRow(EncodedTypedArray rowValues) throws IOException;
+  void processMergedRow(EncodedTypedArray rowValues) throws IOException;
 
 
   /**
@@ -125,7 +125,7 @@ public interface DimensionMerger<EncodedTypedArray>
    * @param closer Add Closeables for resource cleanup to this Closer if needed
    * @throws IOException
    */
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException;
+  void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException;
 
 
   /**
@@ -135,5 +135,5 @@ public interface DimensionMerger<EncodedTypedArray>
    *
    * @return true if this dimension can be excluded from the merged segment.
    */
-  public boolean canSkip();
+  boolean canSkip();
 }

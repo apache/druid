@@ -19,6 +19,8 @@
 
 package io.druid.query.topn;
 
+import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 
@@ -26,20 +28,20 @@ import io.druid.segment.DimensionSelector;
  */
 public class TopNParams
 {
-  private final DimensionSelector dimSelector;
   private final Cursor cursor;
   private final int cardinality;
   private final int numValuesPerPass;
+  private final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus;
 
   protected TopNParams(
-      DimensionSelector dimSelector,
+      ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus,
       Cursor cursor,
       int numValuesPerPass
   )
   {
-    this.dimSelector = dimSelector;
+    this.selectorPlus = selectorPlus;
     this.cursor = cursor;
-    this.cardinality = dimSelector.getValueCardinality();
+    this.cardinality = selectorPlus.getColumnSelectorStrategy().getCardinality(selectorPlus.getSelector());
     this.numValuesPerPass = numValuesPerPass;
 
     if (cardinality < 0) {
@@ -47,9 +49,16 @@ public class TopNParams
     }
   }
 
+  // Only used by TopN algorithms that support String exclusively
+  // Otherwise, get an appropriately typed selector from getSelectorPlus()
   public DimensionSelector getDimSelector()
   {
-    return dimSelector;
+    return (DimensionSelector) selectorPlus.getSelector();
+  }
+
+  public ColumnSelectorPlus<TopNColumnSelectorStrategy> getSelectorPlus()
+  {
+    return selectorPlus;
   }
 
   public Cursor getCursor()

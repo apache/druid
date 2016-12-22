@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -40,10 +41,10 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
 
 
   @Override
-  public TopNParams makeInitParams(DimensionSelector dimSelector, Cursor cursor)
+  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
   {
     return new TopNParams(
-        dimSelector,
+        selectorPlus,
         cursor,
         Integer.MAX_VALUE
     );

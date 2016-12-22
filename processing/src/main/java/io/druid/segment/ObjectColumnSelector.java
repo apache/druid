@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-public interface ObjectColumnSelector<T>
+public interface ObjectColumnSelector<T> extends ColumnValueSelector
 {
   public Class<T> classOfObject();
   public T get();
