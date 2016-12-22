@@ -17,28 +17,26 @@
  * under the License.
  */
 
-package io.druid.query.topn;
+package io.druid.query.topn.types;
 
-import io.druid.query.ColumnSelectorPlus;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.topn.types.TopNColumnSelectorStrategy;
-import io.druid.segment.Cursor;
+import io.druid.java.util.common.IAE;
+import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 
-/**
- */
-public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
+public class TopNStrategyFactory implements ColumnSelectorStrategyFactory<TopNColumnSelectorStrategy>
 {
-  public static final Aggregator[] EMPTY_ARRAY = {};
-  public static final int INIT_POSITION_VALUE = -1;
-  public static final int SKIP_POSITION_VALUE = -2;
-
-  public TopNParams makeInitParams(ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus, Cursor cursor);
-
-  public void run(
-      Parameters params,
-      TopNResultBuilder resultBuilder,
-      DimValSelector dimValSelector
-  );
-
-  public void cleanup(Parameters params);
+  @Override
+  public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
+      ColumnCapabilities capabilities
+  )
+  {
+    ValueType type = capabilities.getType();
+    switch(type) {
+      case STRING:
+        return new StringTopNColumnSelectorStrategy();
+      default:
+        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+    }
+  }
 }

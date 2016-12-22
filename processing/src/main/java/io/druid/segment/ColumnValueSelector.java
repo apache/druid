@@ -17,28 +17,11 @@
  * under the License.
  */
 
-package io.druid.query.topn;
-
-import io.druid.query.ColumnSelectorPlus;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.topn.types.TopNColumnSelectorStrategy;
-import io.druid.segment.Cursor;
+package io.druid.segment;
 
 /**
+ * Base type for interfaces that manage column value selection, e.g. DimensionSelector, LongColumnSelector
  */
-public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
+public interface ColumnValueSelector
 {
-  public static final Aggregator[] EMPTY_ARRAY = {};
-  public static final int INIT_POSITION_VALUE = -1;
-  public static final int SKIP_POSITION_VALUE = -2;
-
-  public TopNParams makeInitParams(ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus, Cursor cursor);
-
-  public void run(
-      Parameters params,
-      TopNResultBuilder resultBuilder,
-      DimValSelector dimValSelector
-  );
-
-  public void cleanup(Parameters params);
 }

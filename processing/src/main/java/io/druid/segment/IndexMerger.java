@@ -691,7 +691,7 @@ public class IndexMerger
         mergers.add(merger);
         merger.writeMergedValueMetadata(indexes);
 
-        FileOutputSupplier dimOut = new FileOutputSupplier(IndexIO.makeDimFile(v8OutDir, mergedDimensions.get(i)), true);
+        FileOutputSupplier dimOut = new FileOutputSupplier(merger.makeDimFile(), true);
         merger.writeValueMetadataToFile(dimOut);
         dimOuts.add(dimOut);
       }
@@ -912,7 +912,7 @@ public class IndexMerger
     for (int i = 0; i < mergedDimensions.size(); i++) {
       ColumnCapabilities capabilities = dimCapabilities.get(i);
       String dimName = mergedDimensions.get(i);
-      handlers[i] = DimensionHandlerUtil.getHandlerFromCapabilities(dimName, capabilities, null);
+      handlers[i] = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null);
     }
     return handlers;
   }

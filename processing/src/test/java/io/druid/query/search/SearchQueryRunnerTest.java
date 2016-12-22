@@ -31,6 +31,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
@@ -44,6 +45,7 @@ import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -598,6 +600,33 @@ public class SearchQueryRunnerTest
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 186));
+
+    checkSearchQuery(searchQuery, expectedHits);
+  }
+
+  @Test
+  public void testSearchOnTime()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .query("Friday")
+                                    .dimensions(new ExtractionDimensionSpec(
+                                        Column.TIME_COLUMN_NAME,
+                                        "__time2",
+                                        new TimeFormatExtractionFn(
+                                            "EEEE",
+                                            null,
+                                            null,
+                                            null,
+                                            false
+                                        )
+                                    ))
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit("__time2", "Friday", 169));
 
     checkSearchQuery(searchQuery, expectedHits);
   }
