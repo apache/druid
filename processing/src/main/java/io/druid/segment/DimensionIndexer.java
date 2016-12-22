@@ -119,7 +119,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    *
    * @return An array containing an encoded representation of the input row value.
    */
-  public EncodedTypeArray processRowValsToUnsortedEncodedArray(Object dimValues);
+  EncodedTypeArray processRowValsToUnsortedEncodedArray(Object dimValues);
 
 
   /**
@@ -132,7 +132,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param unsortedIntermediateValue value to convert
    * @return converted value
    */
-  public EncodedType getSortedEncodedValueFromUnsorted(EncodedType unsortedIntermediateValue);
+  EncodedType getSortedEncodedValueFromUnsorted(EncodedType unsortedIntermediateValue);
 
 
   /**
@@ -145,7 +145,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param sortedIntermediateValue value to convert
    * @return converted value
    */
-  public EncodedType getUnsortedEncodedValueFromSorted(EncodedType sortedIntermediateValue);
+  EncodedType getUnsortedEncodedValueFromSorted(EncodedType sortedIntermediateValue);
 
 
   /**
@@ -159,7 +159,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    *
    * @return Sorted index of actual values
    */
-  public Indexed<ActualType> getSortedIndexedValues();
+  Indexed<ActualType> getSortedIndexedValues();
 
 
   /**
@@ -177,7 +177,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    *
    * @return min value
    */
-  public ActualType getMinValue();
+  ActualType getMinValue();
 
 
   /**
@@ -185,7 +185,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    *
    * @return max value
    */
-  public ActualType getMaxValue();
+  ActualType getMaxValue();
 
 
   /**
@@ -193,7 +193,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    *
    * @return value cardinality
    */
-  public int getCardinality();
+  int getCardinality();
 
 
   /**
@@ -210,7 +210,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  public Object makeColumnValueSelector(
+  Object makeColumnValueSelector(
       DimensionSpec spec,
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc
@@ -239,7 +239,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param rhs dimension value array from a TimeAndDims key
    * @return comparison of the two arrays
    */
-  public int compareUnsortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
+  int compareUnsortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
 
 
   /**
@@ -249,7 +249,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param rhs dimension value array from a TimeAndDims key
    * @return true if the two arrays are equal
    */
-  public boolean checkUnsortedEncodedArraysEqual(EncodedTypeArray lhs, EncodedTypeArray rhs);
+  boolean checkUnsortedEncodedArraysEqual(EncodedTypeArray lhs, EncodedTypeArray rhs);
 
 
   /**
@@ -257,10 +257,10 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param key dimension value array from a TimeAndDims key
    * @return hashcode of the array
    */
-  public int getUnsortedEncodedArrayHashCode(EncodedTypeArray key);
+  int getUnsortedEncodedArrayHashCode(EncodedTypeArray key);
 
-  public static final boolean LIST = true;
-  public static final boolean ARRAY = false;
+  boolean LIST = true;
+  boolean ARRAY = false;
 
   /**
    * Given a row value array from a TimeAndDims key, as described in the documentation for compareUnsortedEncodedArrays(),
@@ -273,7 +273,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param asList if true, return an array; if false, return a list
    * @return single value, array, or list containing the actual values corresponding to the encoded values in the input array
    */
-  public Object convertUnsortedEncodedArrayToActualArrayOrList(EncodedTypeArray key, boolean asList);
+  Object convertUnsortedEncodedArrayToActualArrayOrList(EncodedTypeArray key, boolean asList);
 
 
   /**
@@ -283,7 +283,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param key dimension value array from a TimeAndDims key
    * @return array containing the sorted encoded values corresponding to the unsorted encoded values in the input array
    */
-  public EncodedTypeArray convertUnsortedEncodedArrayToSortedEncodedArray(EncodedTypeArray key);
+  EncodedTypeArray convertUnsortedEncodedArrayToSortedEncodedArray(EncodedTypeArray key);
 
 
   /**
@@ -307,7 +307,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param bitmapIndexes array of bitmaps, indexed by integer dimension value
    * @param factory bitmap factory
    */
-  public void fillBitmapsFromUnsortedEncodedArray(EncodedTypeArray key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory);
+  void fillBitmapsFromUnsortedEncodedArray(EncodedTypeArray key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory);
 
 
   /**
@@ -326,8 +326,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param dimIndex the array index of this indexer's dimension within the TimeAndDims key
    * @return A ValueMatcher that matches a dimension value array from a TimeAndDims key against "matchValue"
    */
-  public ValueMatcher makeIndexingValueMatcher(String matchValue, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
-
+  ValueMatcher makeIndexingValueMatcher(String matchValue, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
 
   /**
    * Return a ValueMatcher that accepts an EntryHolder containing the current TimeAndDims key and the array index of this
@@ -350,5 +349,5 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param dimIndex the array index of this indexer's dimension within the TimeAndDims key
    * @return A ValueMatcher that applies a predicate from the predicateFactory to the dimension values in the TimeAndDim keys
    */
-  public ValueMatcher makeIndexingValueMatcher(DruidPredicateFactory predicateFactory, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
+  ValueMatcher makeIndexingValueMatcher(DruidPredicateFactory predicateFactory, IncrementalIndexStorageAdapter.EntryHolder holder, int dimIndex);
 }
