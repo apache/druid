@@ -235,7 +235,7 @@ public class SmooshedFileMapper implements Closeable
     IndexInput indexInput = indexInputList.get(fileNum);
     if (indexInput == null) {
       File smoothFile = outFiles.get(fileNum);
-      String fileName = smoothFile.toString();
+      String fileName = smoothFile.getName();
       indexInput = directory.openInput(fileName);
       indexInputList.set(fileNum, indexInput);
     }

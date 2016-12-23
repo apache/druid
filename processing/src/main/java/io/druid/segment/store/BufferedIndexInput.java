@@ -130,7 +130,7 @@ public abstract class BufferedIndexInput extends IndexInput implements RandomAcc
         // here, because there's no need to reread what we
         // had in the buffer.
         long after = bufferStart + bufferPosition + len;
-        if (after > length()) {
+        if (len > remaining()) {
           throw new EOFException("read past EOF: " + this);
         }
         readInternal(b, offset, len);
@@ -317,6 +317,24 @@ public abstract class BufferedIndexInput extends IndexInput implements RandomAcc
    * @see #readInternal(byte[], int, int)
    */
   protected abstract void seekInternal(long pos) throws IOException;
+
+  /**
+   *
+   * create a duplicated one ,which offset position and available length should be the same with the initial one.
+   * @return
+   */
+  public final IndexInput duplicate() throws IOException{
+    long position = this.getFilePointer();
+    return duplicateWithFixedPosition(position);
+  }
+
+  /**
+   * duplicate according to the assigned 、fixed start position
+   * @param startPosition
+   * @return
+   * @throws IOException
+   */
+  public abstract IndexInput duplicateWithFixedPosition(long startPosition)throws IOException;
 
 
 }
