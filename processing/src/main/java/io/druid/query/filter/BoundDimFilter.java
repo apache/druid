@@ -317,19 +317,24 @@ public class BoundDimFilter implements DimFilter
     return new Supplier<DruidLongPredicate>()
     {
       private final Object initLock = new Object();
+
+      // longsInitialized is volatile since it establishes the happens-before relationship on
+      // writes/reads to the rest of the fields (it's written last and read first).
       private volatile boolean longsInitialized = false;
-      private volatile boolean matchesAnything = true;
-      private volatile boolean hasLowerLongBoundVolatile;
-      private volatile boolean hasUpperLongBoundVolatile;
-      private volatile long lowerLongBoundVolatile;
-      private volatile long upperLongBoundVolatile;
+
+      // Other fields are not volatile.
+      private boolean matchesNothing;
+      private boolean hasLowerLongBoundVolatile;
+      private boolean hasUpperLongBoundVolatile;
+      private long lowerLongBoundVolatile;
+      private long upperLongBoundVolatile;
 
       @Override
       public DruidLongPredicate get()
       {
         initLongData();
 
-        if (!matchesAnything) {
+        if (matchesNothing) {
           return new DruidLongPredicate()
           {
             @Override
@@ -382,6 +387,8 @@ public class BoundDimFilter implements DimFilter
             return;
           }
 
+          matchesNothing = false;
+
           if (hasLowerBound()) {
             final Long lowerLong = GuavaUtils.tryParseLong(lower);
             if (lowerLong == null) {
@@ -399,7 +406,7 @@ public class BoundDimFilter implements DimFilter
             Long upperLong = GuavaUtils.tryParseLong(upper);
             if (upperLong == null) {
               // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
-              matchesAnything = false;
+              matchesNothing = true;
               return;
             }
 

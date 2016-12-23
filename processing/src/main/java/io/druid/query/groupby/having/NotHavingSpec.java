@@ -49,9 +49,9 @@ public class NotHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public void setRowType(Map<String, ValueType> rowType)
+  public void setRowSignature(Map<String, ValueType> rowSignature)
   {
-    havingSpec.setRowType(rowType);
+    havingSpec.setRowSignature(rowSignature);
   }
 
   @Override

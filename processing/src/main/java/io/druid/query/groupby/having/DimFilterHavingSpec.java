@@ -22,6 +22,7 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.data.input.Row;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ValueMatcher;
@@ -36,10 +37,9 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   private static final byte CACHE_KEY = (byte) 0x9;
 
   private final DimFilter dimFilter;
-  private final ThreadLocal<Row> rowSupplier;
-
-  private final Object valueMatcherMonitor = new Object();
-  private volatile ValueMatcher valueMatcher;
+  private final SettableSupplier<Row> rowSupplier;
+  private ValueMatcher valueMatcher;
+  private int evalCount;
 
   @JsonCreator
   public DimFilterHavingSpec(
@@ -47,7 +47,7 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   )
   {
     this.dimFilter = Preconditions.checkNotNull(dimFilter, "filter");
-    this.rowSupplier = new ThreadLocal<>();
+    this.rowSupplier = new SettableSupplier<>();
   }
 
   @JsonProperty("filter")
@@ -57,21 +57,24 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public void setRowType(Map<String, ValueType> rowType)
+  public void setRowSignature(Map<String, ValueType> rowSignature)
   {
-    synchronized (valueMatcherMonitor) {
-      if (valueMatcher == null) {
-        this.valueMatcher = dimFilter.toFilter()
-                                     .makeMatcher(RowBasedColumnSelectorFactory.create(rowSupplier, rowType));
-      }
-    }
+    this.valueMatcher = dimFilter.toFilter()
+                                 .makeMatcher(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature));
   }
 
   @Override
   public boolean eval(final Row row)
   {
+    int newEvalCount = evalCount + 1;
+    evalCount = newEvalCount;
     rowSupplier.set(row);
-    return valueMatcher.matches();
+    final boolean retVal = valueMatcher.matches();
+    if (evalCount != newEvalCount) {
+      // Oops, someone was using this from two different threads, bad caller.
+      throw new IllegalStateException("concurrent 'eval' calls not permitted!");
+    }
+    return retVal;
   }
 
   @Override

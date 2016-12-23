@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularities;
@@ -420,15 +421,15 @@ public abstract class BaseFilterTest
   )
   {
     // Generate rowType
-    final Map<String, ValueType> rowType = Maps.newHashMap();
+    final Map<String, ValueType> rowSignature = Maps.newHashMap();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowType.put(columnName, adapter.getColumnCapabilities(columnName).getType());
+      rowSignature.put(columnName, adapter.getColumnCapabilities(columnName).getType());
     }
 
     // Perform test
-    final ThreadLocal<InputRow> rowSupplier = new ThreadLocal<>();
+    final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
-        RowBasedColumnSelectorFactory.create(rowSupplier, rowType)
+        RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature)
     );
     final List<String> values = Lists.newArrayList();
     for (InputRow row : rows) {

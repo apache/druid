@@ -208,7 +208,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final Sequence<Row> results = GroupByRowProcessor.process(
         query,
         subqueryResult,
-        GroupByQueryHelper.rowTypeFor(subquery),
+        GroupByQueryHelper.rowSignatureFor(subquery),
         configSupplier.get(),
         mergeBufferPool,
         spillMapper

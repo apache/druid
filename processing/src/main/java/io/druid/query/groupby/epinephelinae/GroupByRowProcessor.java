@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Pair;
@@ -63,7 +64,7 @@ public class GroupByRowProcessor
   public static Sequence<Row> process(
       final Query queryParam,
       final Sequence<Row> rows,
-      final Map<String, ValueType> rowType,
+      final Map<String, ValueType> rowSignature,
       final GroupByQueryConfig config,
       final BlockingPool<ByteBuffer> mergeBufferPool,
       final ObjectMapper spillMapper
@@ -90,10 +91,10 @@ public class GroupByRowProcessor
         Filters.toFilter(query.getDimFilter())
     );
 
-    final ThreadLocal<Row> rowSupplier = new ThreadLocal<>();
+    final SettableSupplier<Row> rowSupplier = new SettableSupplier<>();
     final RowBasedColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
         rowSupplier,
-        rowType
+        rowSignature
     );
     final ValueMatcher filterMatcher = filter == null
                                        ? new BooleanValueMatcher(true)

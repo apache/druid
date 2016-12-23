@@ -51,10 +51,10 @@ public class AndHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public void setRowType(Map<String, ValueType> rowType)
+  public void setRowSignature(Map<String, ValueType> rowSignature)
   {
     for (HavingSpec havingSpec : havingSpecs) {
-      havingSpec.setRowType(rowType);
+      havingSpec.setRowSignature(rowSignature);
     }
   }
 

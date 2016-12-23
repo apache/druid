@@ -17,35 +17,57 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.data;
 
-import com.google.common.base.Strings;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.ZeroIndexedInts;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
-public class NullDimensionSelector implements DimensionSelector
+import java.io.IOException;
+
+/**
+ * An IndexedInts that always returns a row containing a single zero.
+ */
+public class ZeroIndexedInts implements IndexedInts
 {
-  @Override
-  public IndexedInts getRow()
+  private final static ZeroIndexedInts INSTANCE = new ZeroIndexedInts();
+
+  private ZeroIndexedInts()
   {
-    return ZeroIndexedInts.instance();
+    // Singleton.
+  }
+
+  public static ZeroIndexedInts instance()
+  {
+    return INSTANCE;
   }
 
   @Override
-  public int getValueCardinality()
+  public int size()
   {
     return 1;
   }
 
   @Override
-  public String lookupName(int id)
+  public int get(int index)
   {
-    return null;
+    return 0;
   }
 
   @Override
-  public int lookupId(String name)
+  public void fill(int index, int[] toFill)
   {
-    return Strings.isNullOrEmpty(name) ? 0 : -1;
+    throw new UnsupportedOperationException("fill");
+  }
+
+  @Override
+  public IntIterator iterator()
+  {
+    return IntIterators.singleton(0);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+
   }
 }

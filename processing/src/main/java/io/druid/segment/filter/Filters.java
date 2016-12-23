@@ -31,7 +31,6 @@ import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Query;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.DimFilter;
@@ -126,11 +125,11 @@ public class Filters
     }
 
     final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-        DimensionHandlerUtils.createColumnSelectorPluses(
+        DimensionHandlerUtils.createColumnSelectorPlus(
             ValueMatcherColumnSelectorStrategyFactory.instance(),
-            ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(columnName)),
+            DefaultDimensionSpec.of(columnName),
             columnSelectorFactory
-        )[0];
+        );
 
     return selector.getColumnSelectorStrategy().makeValueMatcher(columnName, columnSelectorFactory, value);
   }
@@ -167,11 +166,11 @@ public class Filters
     }
 
     final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-        DimensionHandlerUtils.createColumnSelectorPluses(
+        DimensionHandlerUtils.createColumnSelectorPlus(
             ValueMatcherColumnSelectorStrategyFactory.instance(),
-            ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(columnName)),
+            DefaultDimensionSpec.of(columnName),
             columnSelectorFactory
-        )[0];
+        );
 
     return selector.getColumnSelectorStrategy().makeValueMatcher(columnName, columnSelectorFactory, predicateFactory);
   }

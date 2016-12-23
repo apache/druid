@@ -232,7 +232,7 @@ public class GroupByQueryHelper
    *
    * @return row types
    */
-  public static Map<String, ValueType> rowTypeFor(final GroupByQuery query)
+  public static Map<String, ValueType> rowSignatureFor(final GroupByQuery query)
   {
     final ImmutableMap.Builder<String, ValueType> types = ImmutableMap.builder();
 

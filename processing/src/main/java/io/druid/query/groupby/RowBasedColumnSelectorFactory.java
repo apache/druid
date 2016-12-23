@@ -40,9 +40,11 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.ZeroIndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -50,25 +52,28 @@ import java.util.Map;
 public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final Supplier<? extends Row> row;
-  private final Map<String, ValueType> columnTypes;
+  private final Map<String, ValueType> rowSignature;
 
-  public RowBasedColumnSelectorFactory(final Supplier<? extends Row> row, final Map<String, ValueType> columnTypes)
+  private RowBasedColumnSelectorFactory(
+      final Supplier<? extends Row> row,
+      @Nullable final Map<String, ValueType> rowSignature
+  )
   {
     this.row = row;
-    this.columnTypes = columnTypes != null ? columnTypes : ImmutableMap.<String, ValueType>of();
+    this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.<String, ValueType>of();
   }
 
   public static RowBasedColumnSelectorFactory create(
       final Supplier<? extends Row> row,
-      final Map<String, ValueType> columnTypes
+      @Nullable final Map<String, ValueType> rowSignature
   )
   {
-    return new RowBasedColumnSelectorFactory(row, columnTypes);
+    return new RowBasedColumnSelectorFactory(row, rowSignature);
   }
 
   public static RowBasedColumnSelectorFactory create(
       final ThreadLocal<? extends Row> row,
-      final Map<String, ValueType> columnTypes
+      @Nullable final Map<String, ValueType> rowSignature
   )
   {
     return new RowBasedColumnSelectorFactory(
@@ -80,16 +85,15 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
             return row.get();
           }
         },
-        columnTypes
+        rowSignature
     );
   }
 
-  // This dimension selector does not have an associated lookup dictionary, which means lookup can only be done
-  // on the same row. This dimension selector is used for applying the extraction function on dimension, which
-  // requires a DimensionSelector implementation
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
+    // This dimension selector does not have an associated lookup dictionary, which means lookup can only be done
+    // on the same row. Hence it returns CARDINALITY_UNKNOWN from getValueCardinality.
     return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
   }
 
@@ -97,86 +101,104 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   {
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-    final boolean isTimeColumn = dimensionSpec.getDimension().equals(Column.TIME_COLUMN_NAME);
 
-    if (isTimeColumn && extractionFn == null) {
-      throw new UnsupportedOperationException("time dimension must provide an extraction function");
-    }
+    if (Column.TIME_COLUMN_NAME.equals(dimensionSpec.getDimension())) {
+      if (extractionFn == null) {
+        throw new UnsupportedOperationException("time dimension must provide an extraction function");
+      }
 
-    return new DimensionSelector()
-    {
-      @Override
-      public IndexedInts getRow()
+      return new DimensionSelector()
       {
-        final int dimensionValuesSize;
-
-        if (isTimeColumn) {
-          dimensionValuesSize = 1;
-        } else {
-          final List<String> dimensionValues = row.get().getDimension(dimension);
-          dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
+        @Override
+        public IndexedInts getRow()
+        {
+          return ZeroIndexedInts.instance();
         }
 
-        return new IndexedInts()
+        @Override
+        public int getValueCardinality()
         {
-          @Override
-          public int size()
-          {
-            return dimensionValuesSize;
-          }
+          return DimensionSelector.CARDINALITY_UNKNOWN;
+        }
 
-          @Override
-          public int get(int index)
-          {
-            if (index < 0 || index >= dimensionValuesSize) {
-              throw new IndexOutOfBoundsException("index: " + index);
-            }
-            return index;
-          }
-
-          @Override
-          public IntIterator iterator()
-          {
-            return IntIterators.fromTo(0, dimensionValuesSize);
-          }
-
-          @Override
-          public void close() throws IOException
-          {
-
-          }
-
-          @Override
-          public void fill(int index, int[] toFill)
-          {
-            throw new UnsupportedOperationException("fill not supported");
-          }
-        };
-      }
-
-      @Override
-      public int getValueCardinality()
-      {
-        return DimensionSelector.CARDINALITY_UNKNOWN;
-      }
-
-      @Override
-      public String lookupName(int id)
-      {
-        if (isTimeColumn) {
+        @Override
+        public String lookupName(int id)
+        {
           return extractionFn.apply(row.get().getTimestampFromEpoch());
-        } else {
+        }
+
+        @Override
+        public int lookupId(String name)
+        {
+          throw new UnsupportedOperationException("lookupId");
+        }
+      };
+    } else {
+      return new DimensionSelector()
+      {
+        @Override
+        public IndexedInts getRow()
+        {
+          final List<String> dimensionValues = row.get().getDimension(dimension);
+          final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
+
+          return new IndexedInts()
+          {
+            @Override
+            public int size()
+            {
+              return dimensionValuesSize;
+            }
+
+            @Override
+            public int get(int index)
+            {
+              if (index < 0 || index >= dimensionValuesSize) {
+                throw new IndexOutOfBoundsException("index: " + index);
+              }
+              return index;
+            }
+
+            @Override
+            public IntIterator iterator()
+            {
+              return IntIterators.fromTo(0, dimensionValuesSize);
+            }
+
+            @Override
+            public void close() throws IOException
+            {
+
+            }
+
+            @Override
+            public void fill(int index, int[] toFill)
+            {
+              throw new UnsupportedOperationException("fill not supported");
+            }
+          };
+        }
+
+        @Override
+        public int getValueCardinality()
+        {
+          return DimensionSelector.CARDINALITY_UNKNOWN;
+        }
+
+        @Override
+        public String lookupName(int id)
+        {
           final String value = Strings.emptyToNull(row.get().getDimension(dimension).get(id));
           return extractionFn == null ? value : extractionFn.apply(value);
         }
-      }
 
-      @Override
-      public int lookupId(String name)
-      {
-        throw new UnsupportedOperationException("cannot lookup names to ids");
-      }
-    };
+        @Override
+        public int lookupId(String name)
+        {
+          throw new UnsupportedOperationException("lookupId");
+        }
+      };
+    }
   }
 
   @Override
@@ -299,10 +321,10 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (Column.TIME_COLUMN_NAME.equals(columnName)) {
-      // TIME_COLUMN_NAME is handled specially; override the provided columnTypes.
+      // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
       return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
     } else {
-      final ValueType valueType = columnTypes.get(columnName);
+      final ValueType valueType = rowSignature.get(columnName);
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
       return valueType != null

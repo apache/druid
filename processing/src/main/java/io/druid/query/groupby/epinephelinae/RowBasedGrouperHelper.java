@@ -83,7 +83,7 @@ public class RowBasedGrouperHelper
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
     final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
         columnSelectorRow,
-        GroupByQueryHelper.rowTypeFor(query)
+        GroupByQueryHelper.rowSignatureFor(query)
     );
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {

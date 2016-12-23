@@ -17,17 +17,34 @@
  * under the License.
  */
 
-package io.druid.query.groupby.having;
+package io.druid.common.guava;
 
-import io.druid.segment.column.ValueType;
+import com.google.common.base.Supplier;
 
-import java.util.Map;
-
-public abstract class BaseHavingSpec implements HavingSpec
+/**
+ * A settable Supplier. Not thread safe.
+ */
+public class SettableSupplier<T> implements Supplier<T>
 {
-  @Override
-  public void setRowSignature(Map<String, ValueType> rowSignature)
+  private T obj;
+
+  public SettableSupplier()
   {
-    // Do nothing.
+  }
+
+  public SettableSupplier(T initialValue)
+  {
+    obj = initialValue;
+  }
+
+  public void set(T obj)
+  {
+    this.obj = obj;
+  }
+
+  @Override
+  public T get()
+  {
+    return obj;
   }
 }

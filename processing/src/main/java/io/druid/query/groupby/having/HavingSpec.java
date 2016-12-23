@@ -28,7 +28,8 @@ import java.util.Map;
 
 /**
  * A "having" clause that filters aggregated/dimension value. This is similar to SQL's "having"
- * clause.
+ * clause. HavingSpec objects are *not* thread-safe and must not be used simultaneously by multiple
+ * threads.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -50,10 +51,12 @@ public interface HavingSpec
   public static final HavingSpec ALWAYS = new AlwaysHavingSpec();
 
   /**
-   * Informs this HavingSpec that rows passed to "eval" will have a certain type.
-   * @param rowType
+   * Informs this HavingSpec that rows passed to "eval" will have a certain signature. Will be called
+   * before "eval".
+   *
+   * @param rowSignature signature of the rows
    */
-  public void setRowType(Map<String, ValueType> rowType);
+  public void setRowSignature(Map<String, ValueType> rowSignature);
 
   /**
    * Evaluates if a given row satisfies the having spec.
