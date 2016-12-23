@@ -50,6 +50,8 @@ public class ZeroIndexedInts implements IndexedInts
   @Override
   public int get(int index)
   {
+    // Skip range check in production, assume "index" was 0 like it really should have been.
+    assert index == 0;
     return 0;
   }
 
