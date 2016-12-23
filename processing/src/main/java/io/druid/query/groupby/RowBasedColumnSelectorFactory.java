@@ -40,12 +40,10 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.RangeIndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -140,43 +138,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         public IndexedInts getRow()
         {
           final List<String> dimensionValues = row.get().getDimension(dimension);
-          final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
-
-          return new IndexedInts()
-          {
-            @Override
-            public int size()
-            {
-              return dimensionValuesSize;
-            }
-
-            @Override
-            public int get(int index)
-            {
-              if (index < 0 || index >= dimensionValuesSize) {
-                throw new IndexOutOfBoundsException("index: " + index);
-              }
-              return index;
-            }
-
-            @Override
-            public IntIterator iterator()
-            {
-              return IntIterators.fromTo(0, dimensionValuesSize);
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-
-            }
-
-            @Override
-            public void fill(int index, int[] toFill)
-            {
-              throw new UnsupportedOperationException("fill not supported");
-            }
-          };
+          return RangeIndexedInts.create(dimensionValues != null ? dimensionValues.size() : 0);
         }
 
         @Override
