@@ -66,11 +66,11 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   @Override
   public boolean eval(final Row row)
   {
-    int newEvalCount = evalCount + 1;
-    evalCount = newEvalCount;
+    int oldEvalCount = evalCount;
+    evalCount++;
     rowSupplier.set(row);
     final boolean retVal = valueMatcher.matches();
-    if (evalCount != newEvalCount) {
+    if (evalCount != oldEvalCount + 1) {
       // Oops, someone was using this from two different threads, bad caller.
       throw new IllegalStateException("concurrent 'eval' calls not permitted!");
     }
