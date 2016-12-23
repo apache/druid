@@ -131,7 +131,7 @@ public class Filters
             columnSelectorFactory
         );
 
-    return selector.getColumnSelectorStrategy().makeValueMatcher(columnName, columnSelectorFactory, value);
+    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), value);
   }
 
   /**
@@ -172,7 +172,7 @@ public class Filters
             columnSelectorFactory
         );
 
-    return selector.getColumnSelectorStrategy().makeValueMatcher(columnName, columnSelectorFactory, predicateFactory);
+    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), predicateFactory);
   }
 
   public static ImmutableBitmap allFalse(final BitmapIndexSelector selector)

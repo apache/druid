@@ -21,8 +21,6 @@ package io.druid.query.filter;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -30,15 +28,12 @@ import io.druid.segment.filter.BooleanValueMatcher;
 import java.util.BitSet;
 import java.util.Objects;
 
-public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy
+public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DimensionSelector>
 {
   @Override
-  public ValueMatcher makeValueMatcher(String columnName, ColumnSelectorFactory cursor, final String value)
+  public ValueMatcher makeValueMatcher(final DimensionSelector selector, final String value)
   {
     final String valueStr = Strings.emptyToNull(value);
-    final DimensionSelector selector = cursor.makeDimensionSelector(
-        new DefaultDimensionSpec(columnName, columnName)
-    );
 
     // if matching against null, rows with size 0 should also match
     final boolean matchNull = Strings.isNullOrEmpty(valueStr);
@@ -99,15 +94,10 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
 
   @Override
   public ValueMatcher makeValueMatcher(
-      final String columnName,
-      final ColumnSelectorFactory cursor,
+      final DimensionSelector selector,
       final DruidPredicateFactory predicateFactory
   )
   {
-    final DimensionSelector selector = cursor.makeDimensionSelector(
-        new DefaultDimensionSpec(columnName, columnName)
-    );
-
     final Predicate<String> predicate = predicateFactory.makeStringPredicate();
     final int cardinality = selector.getValueCardinality();
     final boolean matchNull = predicate.apply(null);
