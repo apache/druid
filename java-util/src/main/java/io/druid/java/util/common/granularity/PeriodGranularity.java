@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -46,6 +47,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   private final long origin;
   private final boolean hasOrigin;
   private final boolean isCompound;
+  private final GranularityType granularityType;
 
   @JsonCreator
   public PeriodGranularity(
@@ -66,6 +68,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       this.hasOrigin = true;
     }
     this.isCompound = isCompoundPeriod(period);
+    this.granularityType = GranularityType.estimatedGranularityType(period);
   }
 
   private static boolean isCompoundPeriod(Period period)
@@ -104,7 +107,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
-    final GranularityType granularityType = GranularityType.get(period);
     switch (type) {
       case DEFAULT:
         return DateTimeFormat.forPattern(granularityType.getDefaultFormat());
@@ -139,7 +141,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   public DateTime toDate(String filePath, Formatter formatter)
   {
     Integer[] vals = getDateValues(filePath, formatter);
-    final GranularityType granularityType = GranularityType.get(period);
 
     DateTime date = GranularityType.getDateTime(granularityType, vals);
 
@@ -217,8 +218,8 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       throws IOException, JsonProcessingException
   {
     // Retain the same behavior as old code.
-    if (getTimeZone() == DateTimeZone.UTC && getOrigin() == null) {
-      final GranularityType granularityType = GranularityType.get(period);
+    if (equalsPredefinedGranularities()) {
+      final GranularityType granularityType = GranularityType.estimatedGranularityType(period);
       jsonGenerator.writeObject(granularityType.toString());
     } else {
       jsonGenerator.writeStartObject();
@@ -238,6 +239,65 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   ) throws IOException, JsonProcessingException
   {
     serialize(jsonGenerator, serializerProvider);
+  }
+
+  private boolean equalsPredefinedGranularities() {
+    final GranularityType[] values = GranularityType.values();
+    boolean isEqual = false;
+    int i = 0;
+
+    while (!isEqual && i != values.length) {
+      GranularityType type = values[i];
+      switch (type) {
+        case SECOND: {
+          isEqual = this.equals(Granularity.SECOND);
+          break;
+        }
+        case MINUTE: {
+          isEqual =  this.equals(Granularity.MINUTE);
+          break;
+        }
+        case FIVE_MINUTE: {
+          isEqual =  this.equals(Granularity.FIVE_MINUTE);
+          break;
+        }
+        case TEN_MINUTE: {
+          isEqual =  this.equals(Granularity.TEN_MINUTE);
+          break;
+        }
+        case FIFTEEN_MINUTE: {
+          isEqual =  this.equals(Granularity.FIFTEEN_MINUTE);
+          break;
+        }
+        case HOUR: {
+          isEqual =  this.equals(Granularity.HOUR);
+          break;
+        }
+        case SIX_HOUR: {
+          isEqual =  this.equals(Granularity.SIX_HOUR);
+          break;
+        }
+        case DAY: {
+          isEqual =  this.equals(Granularity.DAY);
+          break;
+        }
+        case WEEK: {
+          isEqual =  this.equals(Granularity.WEEK);
+          break;
+        }
+        case MONTH: {
+          isEqual =  this.equals(Granularity.MONTH);
+          break;
+        }
+        case YEAR: {
+          isEqual =  this.equals(Granularity.YEAR);
+          break;
+        }
+        default: throw new RE("Unrecognized type.");
+      }
+      i++;
+    }
+    return isEqual;
   }
 
   private long increment(long t)

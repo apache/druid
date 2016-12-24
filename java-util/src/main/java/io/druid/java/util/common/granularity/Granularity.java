@@ -29,6 +29,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -242,48 +243,44 @@ public abstract class Granularity
       }
     }
 
-    static GranularityType get(Period period)
-    {
+    // Note: This is only an estimate based on the values in period.
+    // This will not work for complicated periods that represent say 1 year 1 day
+    static GranularityType estimatedGranularityType(Period period) {
       int[] vals = period.getValues();
+      BitSet bs = new BitSet();
+      for (int i = 0; i < vals.length; i++) {
+        if (vals[i] != 0) {
+          bs.set(i);
+        }
+      }
 
-      if (vals[0] == 1) {
-        return GranularityType.YEAR;
+      if (bs.cardinality() == 0 || bs.cardinality() > 1) {
+        throw new IAE("Granularity is not supported. [%s]", period);
       }
-      if (vals[1] == 3) {
-        return GranularityType.QUARTER;
-      }
-      if (vals[1] == 1) {
-        return GranularityType.MONTH;
-      }
-      if (vals[2] == 1) {
-        return GranularityType.WEEK;
-      }
-      if (vals[3] == 1) {
-        return GranularityType.DAY;
-      }
-      if (vals[4] == 1) {
-        return GranularityType.HOUR;
-      }
-      if (vals[4] == 6) {
-        return GranularityType.SIX_HOUR;
-      }
-      if (vals[5] == 1) {
-        return GranularityType.MINUTE;
-      }
-      if (vals[5] == 5) {
-        return GranularityType.FIVE_MINUTE;
-      }
-      if (vals[5] == 10) {
-        return GranularityType.TEN_MINUTE;
-      }
-      if (vals[5] == 15) {
-        return GranularityType.FIFTEEN_MINUTE;
-      }
-      if (vals[5] == 30) {
-        return GranularityType.THIRTY_MINUTE;
-      }
-      if (vals[6] == 1) {
-        return GranularityType.SECOND;
+      else {
+        final int index = bs.nextSetBit(0);
+
+        if (index == 0) {
+          return GranularityType.YEAR;
+        }
+        if (index == 1) {
+          return GranularityType.MONTH;
+        }
+        if (index == 2) {
+          return GranularityType.WEEK;
+        }
+        if (index == 3) {
+          return GranularityType.DAY;
+        }
+        if (index == 4) {
+          return GranularityType.HOUR;
+        }
+        if (index == 5) {
+          return GranularityType.MINUTE;
+        }
+        if (index == 6) {
+          return GranularityType.SECOND;
+        }
       }
 
       throw new IAE("Granularity is not supported. [%s]", period);
