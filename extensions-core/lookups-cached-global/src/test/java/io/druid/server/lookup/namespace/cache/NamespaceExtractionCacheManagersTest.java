@@ -19,196 +19,118 @@
 
 package io.druid.server.lookup.namespace.cache;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-
-import io.druid.data.SearchableVersionedDataFinder;
-import io.druid.jackson.DefaultObjectMapper;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.java.util.common.logger.Logger;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.lookup.namespace.URIExtractionNamespace;
-import io.druid.segment.loading.LocalFileTimestampVersionFinder;
-import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
-import io.druid.server.metrics.NoopServiceEmitter;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
-/**
- *
- */
 @RunWith(Parameterized.class)
 public class NamespaceExtractionCacheManagersTest
 {
-  private static final Logger log = new Logger(NamespaceExtractionCacheManagersTest.class);
-  private static final Lifecycle lifecycle = new Lifecycle();
-  private static final Map<String, SearchableVersionedDataFinder> PULLERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
-      "file",
-      new LocalFileTimestampVersionFinder()
-  );
-  private static final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> CACHE_FACTORIES = ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
-      URIExtractionNamespace.class, new URIExtractionNamespaceCacheFactory(PULLERS)
-  );
-
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> getParameters()
+  @Parameterized.Parameters
+  public static Collection<Object[]> data()
   {
-    ArrayList<Object[]> params = new ArrayList<>();
-    params.add(
-        new Object[]{
-            new OffHeapNamespaceExtractionCacheManager(
-                lifecycle,
-                new NoopServiceEmitter(),
-                CACHE_FACTORIES
-            )
-        }
-    );
-    params.add(
-        new Object[]{
-            new OnHeapNamespaceExtractionCacheManager(
-                lifecycle,
-                new NoopServiceEmitter(),
-                CACHE_FACTORIES
-            )
-        }
-    );
-    return params;
+    return Arrays.asList(new Object[][]{
+        {NamespaceExtractionCacheManagerExecutorsTest.CREATE_ON_HEAP_CACHE_MANAGER},
+        {NamespaceExtractionCacheManagerExecutorsTest.CREATE_OFF_HEAP_CACHE_MANAGER}
+    });
   }
 
-  private final NamespaceExtractionCacheManager extractionCacheManager;
+  private final Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
+  private Lifecycle lifecycle;
+  private NamespaceExtractionCacheManager manager;
 
-  public NamespaceExtractionCacheManagersTest(
-      NamespaceExtractionCacheManager extractionCacheManager
-  )
+  public NamespaceExtractionCacheManagersTest(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager)
   {
-    this.extractionCacheManager = extractionCacheManager;
-  }
 
-  private static final List<String> nsList = ImmutableList.<String>of("testNs", "test.ns", "//tes-tn!s");
+    this.createCacheManager = createCacheManager;
+  }
 
   @Before
-  public void setup()
+  public void setUp() throws Exception
   {
-    // prepopulate caches
-    for (String ns : nsList) {
-      final ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
-      map.put("oldNameSeed1", "oldNameSeed2");
-    }
+    lifecycle = new Lifecycle();
+    lifecycle.start();
+    manager = createCacheManager.apply(lifecycle);
   }
 
-  @Test
-  public void testSimpleCacheCreate()
+  @Test(timeout = 30000L)
+  public void testRacyCreation() throws Exception
   {
-    for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
-      map.put("key", "val");
-      Assert.assertEquals("val", map.get("key"));
-      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
-    }
-  }
-
-  @Test
-  public void testSimpleCacheSwap()
-  {
-    for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns + "old_cache");
-      map.put("key", "val");
-      extractionCacheManager.swapAndClearCache(ns, ns + "old_cache");
-      Assert.assertEquals("val", map.get("key"));
-      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
-
-      ConcurrentMap<String, String> map2 = extractionCacheManager.getCacheMap(ns + "cache");
-      map2.put("key", "val2");
-      Assert.assertTrue(extractionCacheManager.swapAndClearCache(ns, ns + "cache"));
-      Assert.assertEquals("val2", map2.get("key"));
-      Assert.assertEquals("val2", extractionCacheManager.getCacheMap(ns).get("key"));
-    }
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testMissingCacheThrowsIAE()
-  {
-    for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
-      map.put("key", "val");
-      Assert.assertEquals("val", map.get("key"));
-      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
-      Assert.assertFalse(extractionCacheManager.swapAndClearCache(ns, "I don't exist"));
-    }
-  }
-
-  @Test
-  public void testCacheList()
-  {
-    List<String> nsList = new ArrayList<String>(NamespaceExtractionCacheManagersTest.nsList);
-    for (String ns : nsList) {
-      extractionCacheManager.implData.put(ns, new NamespaceExtractionCacheManager.NamespaceImplData(null, null, null));
-    }
-    List<String> retvalList = Lists.newArrayList(extractionCacheManager.getKnownIDs());
-    Collections.sort(nsList);
-    Collections.sort(retvalList);
-    Assert.assertArrayEquals(nsList.toArray(), retvalList.toArray());
-  }
-
-  @Test
-  public void testNoDeleteNonexistant()
-  {
-    Assert.assertFalse(extractionCacheManager.delete("I don't exist"));
-  }
-
-  @Test
-  public void testDeleteOnScheduleFail() throws Exception
-  {
-    final String id = "SOME_ID";
-    Assert.assertFalse(extractionCacheManager.scheduleAndWait(
-        id,
-        new URIExtractionNamespace(
-            new URI("file://tmp/I_DONT_REALLY_EXIST" +
-                    UUID.randomUUID().toString()),
-            null,
-            null,
-            new URIExtractionNamespace.JSONFlatDataParser(
-                new DefaultObjectMapper(),
-                "key",
-                "val"
-            ),
-            Period.millis(10000),
-            null
-        ),
-        500
+    final int concurrentThreads = 10;
+    final ListeningExecutorService service = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+        concurrentThreads,
+        "offheaptest-%s"
     ));
-    Assert.assertEquals(ImmutableSet.copyOf(nsList), extractionCacheManager.getKnownIDs());
+    final List<ListenableFuture<?>> futures = new ArrayList<>();
+    final CountDownLatch thunder = new CountDownLatch(1);
+    try {
+      for (int i = 0; i < concurrentThreads; ++i) {
+        futures.add(service.submit(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                try {
+                  thunder.await();
+                }
+                catch (InterruptedException e) {
+                  throw Throwables.propagate(e);
+                }
+                for (int i = 0; i < 1000; ++i) {
+                  CacheHandler cacheHandler = manager.createCache();
+                  cacheHandler.close();
+                }
+              }
+            }
+        ));
+      }
+      thunder.countDown();
+      Futures.allAsList(futures).get();
+    }
+    finally {
+      service.shutdown();
+      service.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+    }
+
+    Assert.assertEquals(0, manager.cacheCount());
   }
 
-  public static void waitFor(Future<?> future) throws InterruptedException
+  /**
+   * Tests that even if CacheHandler.close() wasn't called, the cache is cleaned up when it becomes unreachable.
+   */
+  @Test(timeout = 60_000)
+  public void testCacheCloseForgotten() throws InterruptedException
   {
-    while (!future.isDone()) {
-      try {
-        future.get();
-      }
-      catch (ExecutionException e) {
-        log.error(e.getCause(), "Error waiting");
-        throw Throwables.propagate(e.getCause());
-      }
+    Assert.assertEquals(0, manager.cacheCount());
+    createDanglingCache();
+    Assert.assertEquals(1, manager.cacheCount());
+    while (manager.cacheCount() > 0) {
+      System.gc();
+      Thread.sleep(1000);
     }
+    Assert.assertEquals(0, manager.cacheCount());
+  }
+
+  private void createDanglingCache()
+  {
+    manager.createCache();
   }
 }

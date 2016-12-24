@@ -24,6 +24,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
@@ -31,6 +32,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
+import javax.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -42,32 +44,34 @@ import java.util.concurrent.ConcurrentMap;
 /**
  *
  */
-public class JDBCExtractionNamespaceCacheFactory
+public final class JDBCExtractionNamespaceCacheFactory
     implements ExtractionNamespaceCacheFactory<JDBCExtractionNamespace>
 {
   private static final Logger LOG = new Logger(JDBCExtractionNamespaceCacheFactory.class);
-  private final ConcurrentMap<String, DBI> dbiCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<CacheScheduler.EntryImpl<JDBCExtractionNamespace>, DBI> dbiCache =
+      new ConcurrentHashMap<>();
 
   @Override
-  public String populateCache(
-      final String id,
+  @Nullable
+  public CacheScheduler.VersionedCache populateCache(
       final JDBCExtractionNamespace namespace,
+      final CacheScheduler.EntryImpl<JDBCExtractionNamespace> entryId,
       final String lastVersion,
-      final Map<String, String> cache
-  ) throws Exception
+      final CacheScheduler scheduler
+  )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
-    final Long lastDBUpdate = lastUpdates(id, namespace);
+    final Long lastDBUpdate = lastUpdates(entryId, namespace);
     if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
-      return lastVersion;
+      return null;
     }
     final long dbQueryStart = System.currentTimeMillis();
-    final DBI dbi = ensureDBI(id, namespace);
+    final DBI dbi = ensureDBI(entryId, namespace);
     final String table = namespace.getTable();
     final String valueColumn = namespace.getValueColumn();
     final String keyColumn = namespace.getKeyColumn();
 
-    LOG.debug("Updating [%s]", id);
+    LOG.debug("Updating %s", entryId);
     final List<Pair<String, String>> pairs = dbi.withHandle(
         new HandleCallback<List<Pair<String, String>>>()
         {
@@ -102,20 +106,35 @@ public class JDBCExtractionNamespaceCacheFactory
           }
         }
     );
-    for (Pair<String, String> pair : pairs) {
-      cache.put(pair.lhs, pair.rhs);
-    }
-    LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
+    final String newVersion;
     if (lastDBUpdate != null) {
-      return lastDBUpdate.toString();
+      newVersion = lastDBUpdate.toString();
     } else {
-      return String.format("%d", dbQueryStart);
+      newVersion = String.format("%d", dbQueryStart);
+    }
+    final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
+    try {
+      final Map<String, String> cache = versionedCache.getCache();
+      for (Pair<String, String> pair : pairs) {
+        cache.put(pair.lhs, pair.rhs);
+      }
+      LOG.info("Finished loading %d values for %s", cache.size(), entryId);
+      return versionedCache;
+    }
+    catch (Throwable t) {
+      try {
+        versionedCache.close();
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
     }
   }
 
-  private DBI ensureDBI(String id, JDBCExtractionNamespace namespace)
+  private DBI ensureDBI(CacheScheduler.EntryImpl<JDBCExtractionNamespace> id, JDBCExtractionNamespace namespace)
   {
-    final String key = id;
+    final CacheScheduler.EntryImpl<JDBCExtractionNamespace> key = id;
     DBI dbi = null;
     if (dbiCache.containsKey(key)) {
       dbi = dbiCache.get(key);
@@ -132,7 +151,7 @@ public class JDBCExtractionNamespaceCacheFactory
     return dbi;
   }
 
-  private Long lastUpdates(String id, JDBCExtractionNamespace namespace)
+  private Long lastUpdates(CacheScheduler.EntryImpl<JDBCExtractionNamespace> id, JDBCExtractionNamespace namespace)
   {
     final DBI dbi = ensureDBI(id, namespace);
     final String table = namespace.getTable();

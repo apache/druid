@@ -68,7 +68,6 @@ public class JDBCExtractionNamespaceTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private static final Logger log = new Logger(JDBCExtractionNamespaceTest.class);
-  private static final String namespace = "testNamespace";
   private static final String tableName = "abstractDbRenameTest";
   private static final String keyName = "keyName";
   private static final String valName = "valName";
@@ -97,18 +96,23 @@ public class JDBCExtractionNamespaceTest
   }
 
   private final String tsColumn;
-  private OnHeapNamespaceExtractionCacheManager extractionCacheManager;
-  private final Lifecycle lifecycle = new Lifecycle();
-  private final AtomicLong updates = new AtomicLong(0L);
-  private final Lock updateLock = new ReentrantLock(true);
-  private final Closer closer = Closer.create();
-  private final ListeningExecutorService setupTeardownService =
-      MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "JDBCExtractionNamespaceTeardown--%s"));
+  private CacheScheduler scheduler;
+  private Lifecycle lifecycle;
+  private AtomicLong updates;
+  private Lock updateLock;
+  private Closer closer;
+  private ListeningExecutorService setupTeardownService;
   private Handle handleRef = null;
 
   @Before
   public void setup() throws Exception
   {
+    lifecycle = new Lifecycle();
+    updates = new AtomicLong(0L);
+    updateLock = new ReentrantLock(true);
+    closer = Closer.create();
+    setupTeardownService =
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "JDBCExtractionNamespaceTeardown--%s"));
     final ListenableFuture<Handle> setupFuture = setupTeardownService.submit(
         new Callable<Handle>()
         {
@@ -164,15 +168,10 @@ public class JDBCExtractionNamespaceTest
               @Override
               public void close() throws IOException
               {
-                if (extractionCacheManager == null) {
+                if (scheduler == null) {
                   return;
                 }
-                final NamespaceExtractionCacheManager.NamespaceImplData implData = extractionCacheManager.implData.get(
-                    namespace);
-                if (implData != null && implData.future != null) {
-                  implData.future.cancel(true);
-                  Assert.assertTrue(implData.future.isDone());
-                }
+                Assert.assertEquals(0, scheduler.getActiveEntries());
               }
             });
             for (Map.Entry<String, String> entry : renames.entrySet()) {
@@ -185,31 +184,28 @@ public class JDBCExtractionNamespaceTest
               }
             }
 
-            extractionCacheManager = new OnHeapNamespaceExtractionCacheManager(
-                lifecycle,
-                new NoopServiceEmitter(),
+            NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
+            scheduler = new CacheScheduler(
+                noopServiceEmitter,
                 ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
                     JDBCExtractionNamespace.class,
-                    new JDBCExtractionNamespaceCacheFactory()
+                    new ExtractionNamespaceCacheFactory<JDBCExtractionNamespace>()
                     {
+                      private final JDBCExtractionNamespaceCacheFactory delegate =
+                          new JDBCExtractionNamespaceCacheFactory();
                       @Override
-                      public String populateCache(
-                          final String id,
+                      public CacheScheduler.VersionedCache populateCache(
                           final JDBCExtractionNamespace namespace,
+                          final CacheScheduler.EntryImpl<JDBCExtractionNamespace> id,
                           final String lastVersion,
-                          final Map<String, String> cache
-                      ) throws Exception
+                          final CacheScheduler scheduler
+                      ) throws InterruptedException
                       {
                         updateLock.lockInterruptibly();
                         try {
                           log.debug("Running cache populator");
                           try {
-                            return super.populateCache(
-                                id,
-                                namespace,
-                                lastVersion,
-                                cache
-                            );
+                            return delegate.populateCache(namespace, id, lastVersion, scheduler);
                           }
                           finally {
                             updates.incrementAndGet();
@@ -220,7 +216,8 @@ public class JDBCExtractionNamespaceTest
                         }
                       }
                     }
-                )
+                ),
+                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter)
             );
             try {
               lifecycle.start();
@@ -367,46 +364,44 @@ public class JDBCExtractionNamespaceTest
         tsColumn,
         new Period(0)
     );
-    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(namespace, extractionNamespace));
-    final Map<String, String> map = extractionCacheManager.getCacheMap(namespace);
+    try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
+      NamespaceExtractionCacheManagerExecutorsTest.waitFor(entry);
+      final Map<String, String> map = entry.getCache();
 
-    for (Map.Entry<String, String> entry : renames.entrySet()) {
-      String key = entry.getKey();
-      String val = entry.getValue();
-      Assert.assertEquals("non-null check", Strings.emptyToNull(val), Strings.emptyToNull(map.get(key)));
+      for (Map.Entry<String, String> e : renames.entrySet()) {
+        String key = e.getKey();
+        String val = e.getValue();
+        Assert.assertEquals("non-null check", Strings.emptyToNull(val), Strings.emptyToNull(map.get(key)));
+      }
+      Assert.assertEquals("null check", null, map.get("baz"));
     }
-    Assert.assertEquals("null check", null, map.get("baz"));
   }
 
   @Test(timeout = 10_000L)
   public void testSkipOld()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
-    final JDBCExtractionNamespace extractionNamespace = ensureNamespace();
-
-    assertUpdated(namespace, "foo", "bar");
-
-    if (tsColumn != null) {
-      insertValues(handleRef, "foo", "baz", "1900-01-01 00:00:00");
+    try (final CacheScheduler.Entry entry = ensureEntry()) {
+      assertUpdated(entry, "foo", "bar");
+      if (tsColumn != null) {
+        insertValues(handleRef, "foo", "baz", "1900-01-01 00:00:00");
+      }
+      assertUpdated(entry, "foo", "bar");
     }
-
-    assertUpdated(namespace, "foo", "bar");
   }
 
   @Test(timeout = 60_000L)
   public void testFindNew()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
-    final JDBCExtractionNamespace extractionNamespace = ensureNamespace();
-
-    assertUpdated(namespace, "foo", "bar");
-
-    insertValues(handleRef, "foo", "baz", "2900-01-01 00:00:00");
-
-    assertUpdated(namespace, "foo", "baz");
+    try (final CacheScheduler.Entry entry = ensureEntry()) {
+      assertUpdated(entry, "foo", "bar");
+      insertValues(handleRef, "foo", "baz", "2900-01-01 00:00:00");
+      assertUpdated(entry, "foo", "baz");
+    }
   }
 
-  private JDBCExtractionNamespace ensureNamespace()
+  private CacheScheduler.Entry ensureEntry()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException
   {
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
@@ -417,16 +412,16 @@ public class JDBCExtractionNamespaceTest
         tsColumn,
         new Period(10)
     );
-    extractionCacheManager.schedule(namespace, extractionNamespace);
+    CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace);
 
     waitForUpdates(1_000L, 2L);
 
     Assert.assertEquals(
         "sanity check not correct",
         "bar",
-        extractionCacheManager.getCacheMap(namespace).get("foo")
+        entry.getCache().get("foo")
     );
-    return extractionNamespace;
+    return entry;
   }
 
   private void waitForUpdates(long timeout, long numUpdates) throws InterruptedException
@@ -456,16 +451,16 @@ public class JDBCExtractionNamespaceTest
     } while (post < pre + numUpdates);
   }
 
-  private void assertUpdated(String namespace, String key, String expected) throws InterruptedException
+  private void assertUpdated(CacheScheduler.Entry entry, String key, String expected) throws InterruptedException
   {
     waitForUpdates(1_000L, 2L);
 
-    Map<String, String> map = extractionCacheManager.getCacheMap(namespace);
+    Map<String, String> map = entry.getCache();
 
     // rely on test timeout to break out of this loop
     while (!expected.equals(map.get(key))) {
       Thread.sleep(100);
-      map = extractionCacheManager.getCacheMap(namespace);
+      map = entry.getCache();
     }
 
     Assert.assertEquals(

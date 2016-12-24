@@ -21,32 +21,45 @@ package io.druid.server.lookup.namespace;
 
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
 
-import java.util.Map;
+import javax.annotation.Nullable;
 import java.util.UUID;
 
-public class StaticMapExtractionNamespaceCacheFactory
-    implements ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
+public final class StaticMapExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
 {
   private final String version = UUID.randomUUID().toString();
 
   @Override
-  public String populateCache(
-      final String id,
-      final StaticMapExtractionNamespace extractionNamespace,
+  @Nullable
+  public CacheScheduler.VersionedCache populateCache(
+      final StaticMapExtractionNamespace namespace,
+      final CacheScheduler.EntryImpl<StaticMapExtractionNamespace> id,
       final String lastVersion,
-      final Map<String, String> swap
+      final CacheScheduler scheduler
   )
   {
     if (lastVersion != null) {
-      // Throwing AssertionError, because NamespaceExtractionCacheManager doesn't suppress Errors and will stop trying
-      // to update the cache periodically.
+      // Throwing AssertionError, because CacheScheduler doesn't suppress Errors and will stop trying to update
+      // the cache periodically.
       throw new AssertionError(
-          "StaticMapExtractionNamespaceCacheFactory could only be configured for a namespace which is scheduled " +
-          "to be updated once, not periodically. Last version: `" + lastVersion + "`");
+          "StaticMapExtractionNamespaceCacheFactory could only be configured for a namespace which is scheduled "
+          + "to be updated once, not periodically. Last version: `" + lastVersion + "`");
     }
-    swap.putAll(extractionNamespace.getMap());
-    return version;
+    CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
+    try {
+      versionedCache.getCache().putAll(namespace.getMap());
+      return versionedCache;
+    }
+    catch (Throwable t) {
+      try {
+        versionedCache.close();
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
+    }
   }
 
   String getVersion()

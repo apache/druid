@@ -20,33 +20,64 @@
 package io.druid.server.lookup.namespace;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
+import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
+import io.druid.server.metrics.NoopServiceEmitter;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 public class StaticMapExtractionNamespaceCacheFactoryTest
 {
   private static final Map<String, String> MAP = ImmutableMap.<String, String>builder().put("foo", "bar").build();
 
+  private Lifecycle lifecycle;
+  private CacheScheduler scheduler;
+
+  @Before
+  public void setup() throws Exception
+  {
+    lifecycle = new Lifecycle();
+    lifecycle.start();
+    NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
+    scheduler = new CacheScheduler(
+        noopServiceEmitter,
+        Collections.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>emptyMap(),
+        new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter)
+    );
+  }
+
+  @After
+  public void tearDown()
+  {
+    lifecycle.stop();
+  }
+
   @Test
   public void testSimplePopulator() throws Exception
   {
     final StaticMapExtractionNamespaceCacheFactory factory = new StaticMapExtractionNamespaceCacheFactory();
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
-    final Map<String, String> cache = new HashMap<>();
-    Assert.assertEquals(factory.getVersion(), factory.populateCache(null, namespace, null, cache));
-    Assert.assertEquals(MAP, cache);
+    CacheScheduler.VersionedCache versionedCache = factory.populateCache(namespace, null, null, scheduler);
+    Assert.assertNotNull(versionedCache);
+    Assert.assertEquals(factory.getVersion(), versionedCache.getVersion());
+    Assert.assertEquals(MAP, versionedCache.getCache());
+
   }
 
   @Test(expected = AssertionError.class)
-  public void testNonNullLastVersionCausesAssertionError() throws Exception
+  public void testNonNullLastVersionCausesAssertionError()
   {
     final StaticMapExtractionNamespaceCacheFactory factory = new StaticMapExtractionNamespaceCacheFactory();
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
-    final Map<String, String> cache = new HashMap<>();
-    Assert.assertNull(factory.populateCache(null, namespace, factory.getVersion(), cache));
+    factory.populateCache(namespace, null, factory.getVersion(), scheduler);
   }
 }

@@ -20,21 +20,18 @@
 package io.druid.server.lookup.namespace.cache;
 
 import com.google.common.primitives.Chars;
-import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
-import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 
+import java.lang.ref.WeakReference;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.Lock;
 
 /**
  *
@@ -42,88 +39,85 @@ import java.util.concurrent.locks.Lock;
 public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
   private static final Logger LOG = new Logger(OnHeapNamespaceExtractionCacheManager.class);
-  private final ConcurrentMap<String, ConcurrentMap<String, String>> mapMap = new ConcurrentHashMap<>();
-  private final Striped<Lock> nsLocks = Striped.lock(32);
+
+  /**
+   * Weak collection of caches is "the second level of defence". Normally all users of {@link #createCache()} must call
+   * {@link CacheHandler#close()} on the returned CacheHandler instance manually. But if they don't do this for
+   * whatever reason, JVM will cleanup the cache itself.
+   *
+   * <p>{@link WeakReference} doesn't override Object's identity equals() and hashCode(), so effectively this map plays
+   * like concurrent {@link java.util.IdentityHashMap}.
+   */
+  private final ConcurrentHashMap<WeakReference<ConcurrentMap<String, String>>, Boolean> caches =
+      new ConcurrentHashMap<>();
 
   @Inject
-  public OnHeapNamespaceExtractionCacheManager(
-      final Lifecycle lifecycle,
-      final ServiceEmitter emitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap
-  )
+  public OnHeapNamespaceExtractionCacheManager(Lifecycle lifecycle, ServiceEmitter serviceEmitter)
   {
-    super(lifecycle, emitter, namespaceFunctionFactoryMap);
+    super(lifecycle, serviceEmitter);
   }
 
-  @Override
-  protected boolean swapAndClearCache(String namespaceKey, String cacheKey)
+  private void expungeCollectedCaches()
   {
-    final Lock lock = nsLocks.get(namespaceKey);
-    lock.lock();
-    try {
-      ConcurrentMap<String, String> cacheMap = mapMap.get(cacheKey);
-      if (cacheMap == null) {
-        throw new IAE("Extraction Cache [%s] does not exist", cacheKey);
-      }
-      ConcurrentMap<String, String> prior = mapMap.put(namespaceKey, cacheMap);
-      mapMap.remove(cacheKey);
-      if (prior != null) {
-        // Old map will get GC'd when it is not used anymore
-        return true;
-      } else {
-        return false;
+    for (Iterator<WeakReference<ConcurrentMap<String, String>>> iterator = caches.keySet().iterator();
+         iterator.hasNext(); ) {
+      WeakReference<?> cacheRef = iterator.next();
+      if (cacheRef.get() == null) {
+        // This may not necessarily mean leak of CacheHandler, because disposeCache() may be called concurrently with
+        // this iteration, and cacheHandler (hence the cache) could be already claimed by the GC. That is why we emit
+        // no warning here. Also, "soft leak" (close() not called, but the objects becomes unreachable and claimed by
+        // the GC) of on-heap cache is effectively harmless and logging may be useful here only for identifying bugs in
+        // the code which uses NamespaceExtractionCacheManager, if there are plans to switch to
+        // OffHeapNamespaceExtractionCacheManager. However in OffHeapNamespaceExtractionCacheManager CacheHandler leaks
+        // are identified and logged better than in this class.
+        iterator.remove();
       }
     }
-    finally {
-      lock.unlock();
-    }
   }
 
   @Override
-  public ConcurrentMap<String, String> getCacheMap(String namespaceOrCacheKey)
+  public CacheHandler createCache()
   {
-    ConcurrentMap<String, String> map = mapMap.get(namespaceOrCacheKey);
-    if (map == null) {
-      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<String, String>());
-      map = mapMap.get(namespaceOrCacheKey);
-    }
-    return map;
+    ConcurrentMap<String, String> cache = new ConcurrentHashMap<>();
+    WeakReference<ConcurrentMap<String, String>> cacheRef = new WeakReference<>(cache);
+    expungeCollectedCaches();
+    caches.put(cacheRef, true);
+    return new CacheHandler(this, cache, cacheRef);
   }
 
   @Override
-  public boolean delete(final String namespaceKey)
+  void disposeCache(CacheHandler cacheHandler)
   {
-    // `super.delete` has a synchronization in it, don't call it in the lock.
-    if (!super.delete(namespaceKey)) {
-      return false;
+    if (!(cacheHandler.id instanceof WeakReference)) {
+      throw new ISE("Expected WeakReference, got: %s", cacheHandler.id);
     }
-    final Lock lock = nsLocks.get(namespaceKey);
-    lock.lock();
-    try {
-      return mapMap.remove(namespaceKey) != null;
-    }
-    finally {
-      lock.unlock();
-    }
+    caches.remove(cacheHandler.id);
   }
 
   @Override
-  protected void monitor(ServiceEmitter serviceEmitter)
+  int cacheCount()
+  {
+    expungeCollectedCaches();
+    return caches.size();
+  }
+
+  @Override
+  void monitor(ServiceEmitter serviceEmitter)
   {
     long numEntries = 0;
     long size = 0;
-    for (Map.Entry<String, ConcurrentMap<String, String>> entry : mapMap.entrySet()) {
-      final ConcurrentMap<String, String> map = entry.getValue();
-      if (map == null) {
-        LOG.debug("missing cache key for reporting [%s]", entry.getKey());
+    expungeCollectedCaches();
+    for (WeakReference<ConcurrentMap<String, String>> cacheRef : caches.keySet()) {
+      final Map<String, String> cache = cacheRef.get();
+      if (cache == null) {
         continue;
       }
-      numEntries += map.size();
-      for (Map.Entry<String, String> sEntry : map.entrySet()) {
+      numEntries += cache.size();
+      for (Map.Entry<String, String> sEntry : cache.entrySet()) {
         final String key = sEntry.getKey();
         final String value = sEntry.getValue();
         if (key == null || value == null) {
-          LOG.debug("Missing entries for cache key [%s]", entry.getKey());
+          LOG.debug("Missing entries for cache key");
           continue;
         }
         size += key.length() + value.length();

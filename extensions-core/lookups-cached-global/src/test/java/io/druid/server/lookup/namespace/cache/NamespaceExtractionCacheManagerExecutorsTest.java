@@ -20,22 +20,18 @@
 package io.druid.server.lookup.namespace.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.Execs;
-import io.druid.data.SearchableVersionedDataFinder;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
-import io.druid.segment.loading.LocalFileTimestampVersionFinder;
-import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -44,91 +40,118 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
  */
+@RunWith(Parameterized.class)
 public class NamespaceExtractionCacheManagerExecutorsTest
 {
+  public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_ON_HEAP_CACHE_MANAGER =
+      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      {
+        @Nullable
+        @Override
+        public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
+        {
+          return new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+        }
+      };
+  public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
+      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      {
+        @Nullable
+        @Override
+        public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
+        {
+          return new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+        }
+      };
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data()
+  {
+    return Arrays.asList(new Object[][]{{CREATE_ON_HEAP_CACHE_MANAGER}});
+  }
+
+  public static void waitFor(CacheScheduler.Entry entry) throws InterruptedException
+  {
+    entry.awaitTotalUpdates(1);
+  }
+
+
   private static final String KEY = "foo";
   private static final String VALUE = "bar";
+
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private final Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
   private Lifecycle lifecycle;
-  private NamespaceExtractionCacheManager manager;
+  private NamespaceExtractionCacheManager cacheManager;
+  private CacheScheduler scheduler;
   private File tmpFile;
-  private final ConcurrentMap<String, Object> cacheUpdateAlerts = new ConcurrentHashMap<>();
 
-  private final AtomicLong numRuns = new AtomicLong(0L);
+  public NamespaceExtractionCacheManagerExecutorsTest(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  )
+  {
+    this.createCacheManager = createCacheManager;
+  }
 
   @Before
   public void setUp() throws Exception
   {
-    final Path tmpDir = temporaryFolder.newFolder().toPath();
     lifecycle = new Lifecycle();
-    // Lifecycle stop is used to shut down executors. Start does nothing, so it's ok to call it here.
     lifecycle.start();
-    final URIExtractionNamespaceCacheFactory factory = new URIExtractionNamespaceCacheFactory(
-        ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
-    )
+    cacheManager = createCacheManager.apply(lifecycle);
+    final Path tmpDir = temporaryFolder.newFolder().toPath();
+    final ExtractionNamespaceCacheFactory<URIExtractionNamespace> cachePopulator = new
+        ExtractionNamespaceCacheFactory<URIExtractionNamespace>()
     {
       @Override
-      public String populateCache(
-          final String id,
+      public CacheScheduler.VersionedCache populateCache(
           final URIExtractionNamespace extractionNamespace,
+          final CacheScheduler.EntryImpl<URIExtractionNamespace> id,
           final String lastVersion,
-          final Map<String, String> cache
-      ) throws Exception
+          final CacheScheduler scheduler
+      ) throws InterruptedException
       {
-        // Don't actually read off disk because TravisCI doesn't like that
-        cache.put(KEY,VALUE);
         Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
-        return Long.toString(System.currentTimeMillis());
+        String version = Long.toString(System.currentTimeMillis());
+        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
+        // Don't actually read off disk because TravisCI doesn't like that
+        versionedCache.getCache().put(KEY, VALUE);
+        return versionedCache;
       }
     };
-    manager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle, new NoopServiceEmitter(),
+    scheduler = new CacheScheduler(
+        new NoopServiceEmitter(),
         ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
             URIExtractionNamespace.class,
-            factory
-        )
-    )
-    {
-      @Override
-      protected void updateNamespace(final String id, final String cacheId, final String newVersion)
-      {
-        cacheUpdateAlerts.putIfAbsent(id, new Object());
-        final Object cacheUpdateAlerter = cacheUpdateAlerts.get(id);
-        synchronized (cacheUpdateAlerter) {
-          try {
-            super.updateNamespace(id, cacheId, newVersion);
-            numRuns.incrementAndGet();
-          }
-          finally {
-            cacheUpdateAlerter.notifyAll();
-          }
-        }
-      }
-    };
+            cachePopulator
+        ),
+        cacheManager
+    );
     tmpFile = Files.createTempFile(tmpDir, "druidTestURIExtractionNS", ".dat").toFile();
     try (OutputStream ostream = new FileOutputStream(tmpFile)) {
       try (OutputStreamWriter out = new OutputStreamWriter(ostream)) {
@@ -146,35 +169,9 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     lifecycle.stop();
   }
 
-  @Test(expected = IAE.class)
-  public void testDoubleSubmission()
-  {
-    final String namespaceID = "ns";
-    URIExtractionNamespace namespace = new URIExtractionNamespace(
-        tmpFile.toURI(),
-        null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
-        ),
-        new Period(0),
-        null
-    );
-    final ListenableFuture<?> future = manager.schedule(namespaceID, namespace);
-    Assert.assertFalse(future.isDone());
-    Assert.assertFalse(future.isCancelled());
-    try {
-      manager.schedule(namespaceID, namespace).cancel(true);
-    }
-    finally {
-      future.cancel(true);
-    }
-  }
-
-
-  @Test(timeout = 60_000)
+  @Test(timeout = 10_000)
   public void testSimpleSubmission() throws ExecutionException, InterruptedException
   {
-    final String namespaceID = "ns";
     URIExtractionNamespace namespace = new URIExtractionNamespace(
         tmpFile.toURI(),
         null, null,
@@ -184,70 +181,48 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new Period(0),
         null
     );
-    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespaceID, namespace));
+    CacheScheduler.Entry entry = scheduler.schedule(namespace);
+    waitFor(entry);
+    Map<String, String> cache = entry.getCache();
+    Assert.assertNull(cache.put("key", "val"));
+    Assert.assertEquals("val", cache.get("key"));
   }
 
-  @Test(timeout = 60_000)
-  public void testRepeatSubmission() throws ExecutionException, InterruptedException
+  @Test(timeout = 10_000)
+  public void testPeriodicUpdatesScheduled() throws ExecutionException, InterruptedException
   {
     final int repeatCount = 5;
     final long delay = 5;
-    final long totalRunCount;
-    final long start;
-    final String namespaceID = "ns";
     try {
-      final URIExtractionNamespace namespace = new URIExtractionNamespace(
-          tmpFile.toURI(),
-          null, null,
-          new URIExtractionNamespace.ObjectMapperFlatDataParser(
-              URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
-          ),
-          new Period(delay),
-          null
-      );
-      cacheUpdateAlerts.putIfAbsent(namespaceID, new Object());
-      start = System.currentTimeMillis();
-      ListenableFuture<?> future = manager.schedule(namespaceID, namespace);
+      final URIExtractionNamespace namespace = getUriExtractionNamespace(delay);
+      final long start = System.currentTimeMillis();
+      try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
 
-      Assert.assertFalse(future.isDone());
-      Assert.assertFalse(future.isCancelled());
+        Assert.assertFalse(entry.getUpdaterFuture().isDone());
+        Assert.assertFalse(entry.getUpdaterFuture().isCancelled());
 
-      final long preRunCount;
-      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespaceID);
-      synchronized (cacheUpdateAlerter) {
-        preRunCount = numRuns.get();
+        entry.awaitTotalUpdates(repeatCount);
+
+        long minEnd = start + ((repeatCount - 1) * delay);
+        long end = System.currentTimeMillis();
+        Assert.assertTrue(
+            String.format(
+                "Didn't wait long enough between runs. Expected more than %d was %d",
+                minEnd - start,
+                end - start
+            ), minEnd <= end
+        );
       }
-      for (; ; ) {
-        synchronized (cacheUpdateAlerter) {
-          if (numRuns.get() - preRunCount >= repeatCount) {
-            break;
-          } else {
-            cacheUpdateAlerter.wait();
-          }
-        }
-      }
-
-      long minEnd = start + ((repeatCount - 1) * delay);
-      long end = System.currentTimeMillis();
-      Assert.assertTrue(
-          String.format(
-              "Didn't wait long enough between runs. Expected more than %d was %d",
-              minEnd - start,
-              end - start
-          ), minEnd <= end
-      );
     }
     finally {
       lifecycle.stop();
+      cacheManager.waitForServiceToEnd(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
-
-    totalRunCount = numRuns.get();
-    Thread.sleep(delay * 10);
-    Assert.assertEquals(totalRunCount, numRuns.get(), 1);
+    checkNoMoreRunning();
   }
 
 
-  @Test(timeout = 600_000) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
+  @Test(timeout = 10_000) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
   public void testConcurrentAddDelete() throws ExecutionException, InterruptedException, TimeoutException
   {
     final int threads = 10;
@@ -261,7 +236,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final CountDownLatch latch = new CountDownLatch(threads);
     Collection<ListenableFuture<?>> futures = new ArrayList<>();
     for (int i = 0; i < threads; ++i) {
-      final int ii = i;
       futures.add(
           executorService.submit(
               new Runnable()
@@ -275,7 +249,12 @@ public class NamespaceExtractionCacheManagerExecutorsTest
                       throw new RuntimeException(new TimeoutException("Took too long to wait for more tasks"));
                     }
                     for (int j = 0; j < deletesPerThread; ++j) {
-                      testDelete(String.format("ns-%d-%d", ii, j));
+                      try {
+                        testDelete();
+                      }
+                      catch (Exception e) {
+                        throw Throwables.propagate(e);
+                      }
                     }
                   }
                   catch (InterruptedException e) {
@@ -310,74 +289,32 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       }
     }
     finally {
-      executorService.shutdownNow();
+      executorService.shutdown();
+      executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
     checkNoMoreRunning();
   }
 
-  @Test(timeout = 60_000L)
-  public void testSimpleDelete() throws InterruptedException
+  @Test(timeout = 10_000L)
+  public void testSimpleDelete() throws InterruptedException, TimeoutException, ExecutionException
   {
-    testDelete("someNamespace");
+    testDelete();
   }
 
-  public void testDelete(final String ns)
-      throws InterruptedException
+  public void testDelete()
+      throws InterruptedException, TimeoutException, ExecutionException
   {
-    cacheUpdateAlerts.putIfAbsent(ns, new Object());
-    final Object cacheUpdateAlerter = cacheUpdateAlerts.get(ns);
-
     final long period = 1_000L;// Give it some time between attempts to update
-    final URIExtractionNamespace namespace = new URIExtractionNamespace(
-        tmpFile.toURI(),
-        null, null,
-        new URIExtractionNamespace.ObjectMapperFlatDataParser(
-            URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
-        ),
-        new Period(period),
-        null
-    );
-    Assert.assertTrue(manager.scheduleAndWait(ns, namespace, 10_000));
-    final ListenableFuture<?> future = manager.implData.get(ns).future;
+    final URIExtractionNamespace namespace = getUriExtractionNamespace(period);
+    CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000);
+    Assert.assertNotNull(entry);
+    final Future<?> future = entry.getUpdaterFuture();
     Assert.assertFalse(future.isCancelled());
     Assert.assertFalse(future.isDone());
+    entry.awaitTotalUpdates(1);
 
-    long start = 0L;
-
-    final long timeout = 45_000L;
-    do {
-      synchronized (cacheUpdateAlerter) {
-        if (!manager.implData.containsKey(ns)) {
-          cacheUpdateAlerter.wait(10_000);
-        }
-      }
-      if (future.isDone()) {
-        try {
-          // Bubble up the exception
-          Assert.assertNull(future.get());
-          Assert.fail("Task finished");
-        }
-        catch (ExecutionException e) {
-          throw Throwables.propagate(e);
-        }
-      }
-      if (!manager.implData.containsKey(ns) && System.currentTimeMillis() - start > timeout) {
-        throw new RuntimeException(
-            new TimeoutException(
-                String.format(
-                    "Namespace took too long to appear in cache for %s",
-                    namespace
-                )
-            )
-        );
-      }
-    } while (!manager.implData.containsKey(ns) || !manager.implData.get(ns).enabled.get());
-
-    Assert.assertEquals(VALUE, manager.getCacheMap(ns).get(KEY));
-
-    Assert.assertTrue(manager.implData.containsKey(ns));
-
-    Assert.assertTrue(manager.delete(ns));
+    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+    entry.close();
 
     try {
       Assert.assertNull(future.get());
@@ -391,105 +328,104 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       }
     }
 
-    Assert.assertFalse(manager.implData.containsKey(ns));
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(future.isDone());
   }
 
-  @Test(timeout = 60_000)
+  private URIExtractionNamespace getUriExtractionNamespace(long period)
+  {
+    return new URIExtractionNamespace(
+        tmpFile.toURI(),
+        null, null,
+        new URIExtractionNamespace.ObjectMapperFlatDataParser(
+            URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
+        ),
+        new Period(period),
+        null
+    );
+  }
+
+  @Test(timeout = 10_000)
   public void testShutdown()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
   {
     final long period = 5L;
-    final ListenableFuture future;
-    long prior = 0;
-    final String namespaceID = "ns";
     try {
 
-      final URIExtractionNamespace namespace = new URIExtractionNamespace(
-          tmpFile.toURI(),
-          null, null,
-          new URIExtractionNamespace.ObjectMapperFlatDataParser(
-              URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
-          ),
-          new Period(period),
-          null
-      );
-      cacheUpdateAlerts.putIfAbsent(namespaceID, new Object());
+      final URIExtractionNamespace namespace = getUriExtractionNamespace(period);
 
-      future = manager.schedule(namespaceID, namespace);
+      try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
+        final Future<?> future = entry.getUpdaterFuture();
+        entry.awaitNextUpdates(1);
 
-      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespaceID);
-      synchronized (cacheUpdateAlerter) {
-        cacheUpdateAlerter.wait();
+        Assert.assertFalse(future.isCancelled());
+        Assert.assertFalse(future.isDone());
+
+        final long prior = scheduler.updatesStarted();
+        entry.awaitNextUpdates(1);
+        Assert.assertTrue(scheduler.updatesStarted() > prior);
       }
-
-      Assert.assertFalse(future.isCancelled());
-      Assert.assertFalse(future.isDone());
-
-      synchronized (cacheUpdateAlerter) {
-        prior = numRuns.get();
-        cacheUpdateAlerter.wait();
-      }
-      Assert.assertTrue(numRuns.get() > prior);
     }
     finally {
       lifecycle.stop();
     }
-    while (!manager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
+    while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
     }
 
     checkNoMoreRunning();
 
-    Field execField = NamespaceExtractionCacheManager.class.getDeclaredField("listeningScheduledExecutorService");
-    execField.setAccessible(true);
-    Assert.assertTrue(((ListeningScheduledExecutorService) execField.get(manager)).isShutdown());
-    Assert.assertTrue(((ListeningScheduledExecutorService) execField.get(manager)).isTerminated());
+    Assert.assertTrue(cacheManager.scheduledExecutorService().isShutdown());
+    Assert.assertTrue(cacheManager.scheduledExecutorService().isTerminated());
   }
 
-  @Test(timeout = 60_000)
-  public void testRunCount()
-      throws InterruptedException, ExecutionException
+  @Test(timeout = 10_000)
+  public void testRunCount() throws InterruptedException, ExecutionException
   {
-    final long numWaits = 5;
-    final ListenableFuture<?> future;
-    final String namespaceID = "ns";
+    final int numWaits = 5;
     try {
-      final URIExtractionNamespace namespace = new URIExtractionNamespace(
-          tmpFile.toURI(),
-          null, null,
-          new URIExtractionNamespace.ObjectMapperFlatDataParser(
-              URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
-          ),
-          new Period(5L),
-          null
-      );
-
-      cacheUpdateAlerts.putIfAbsent(namespaceID, new Object());
-      future = manager.schedule(namespaceID, namespace);
-      Assert.assertFalse(future.isDone());
-
-      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespaceID);
-      for (int i = 0; i < numWaits; ++i) {
-        synchronized (cacheUpdateAlerter) {
-          cacheUpdateAlerter.wait();
-        }
+      final URIExtractionNamespace namespace = getUriExtractionNamespace((long) 5);
+      try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
+        final Future<?> future = entry.getUpdaterFuture();
+        entry.awaitNextUpdates(numWaits);
+        Assert.assertFalse(future.isDone());
       }
-      Assert.assertFalse(future.isDone());
     }
     finally {
       lifecycle.stop();
     }
-    while (!manager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
+    while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
     }
-    Assert.assertTrue(numRuns.get() >= numWaits);
+    Assert.assertTrue(scheduler.updatesStarted() >= numWaits);
     checkNoMoreRunning();
+  }
+
+  /**
+   * Tests that even if entry.close() wasn't called, the scheduled task is cancelled when the entry becomes
+   * unreachable.
+   */
+  @Test(timeout = 60_000)
+  public void testEntryCloseForgotten() throws InterruptedException
+  {
+    scheduleDanglingEntry();
+    Assert.assertEquals(1, scheduler.getActiveEntries());
+    while (scheduler.getActiveEntries() > 0) {
+      System.gc();
+      Thread.sleep(1000);
+    }
+    Assert.assertEquals(0, scheduler.getActiveEntries());
+  }
+
+  private void scheduleDanglingEntry() throws InterruptedException
+  {
+    CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(5));
+    entry.awaitTotalUpdates(1);
   }
 
   private void checkNoMoreRunning() throws InterruptedException
   {
-    final long pre = numRuns.get();
+    Assert.assertEquals(0, scheduler.getActiveEntries());
+    final long pre = scheduler.updatesStarted();
     Thread.sleep(100L);
-    Assert.assertEquals(pre, numRuns.get(), 1); // since we don't synchronize here we might have an extra increment
+    Assert.assertEquals(pre, scheduler.updatesStarted());
   }
 }
