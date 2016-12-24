@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.query.extraction.MapLookupExtractor;
-import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -36,17 +36,12 @@ import java.util.Map;
 public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
 {
   private final NamespaceLookupExtractorFactory factory;
-  private final String extractorID;
-  private final NamespaceExtractionCacheManager manager;
-  public NamespaceLookupIntrospectHandler(
-      NamespaceLookupExtractorFactory factory,
-      NamespaceExtractionCacheManager manager,
-      String extractorID
-  ) {
+
+  public NamespaceLookupIntrospectHandler(NamespaceLookupExtractorFactory factory)
+  {
     this.factory = factory;
-    this.extractorID = extractorID;
-    this.manager = manager;
   }
+
   @GET
   @Path("/keys")
   @Produces(MediaType.APPLICATION_JSON)
@@ -78,11 +73,11 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response getVersion()
   {
-    final String version = manager.getVersion(extractorID);
-    if (null == version) {
-      // Handle race between delete and this method being called
+    final CacheScheduler.CacheState cacheState = factory.entry.getCacheState();
+    if (cacheState instanceof CacheScheduler.NoCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
+      String version = ((CacheScheduler.VersionedCache) cacheState).getVersion();
       return Response.ok(ImmutableMap.of("version", version)).build();
     }
   }
