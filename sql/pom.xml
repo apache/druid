@@ -48,10 +48,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.calcite.avatica</groupId>
-      <artifactId>avatica-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.calcite.avatica</groupId>
       <artifactId>avatica-server</artifactId>
     </dependency>
     <dependency>
