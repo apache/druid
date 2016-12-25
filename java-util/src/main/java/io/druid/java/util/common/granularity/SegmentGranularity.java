@@ -20,6 +20,7 @@
 package io.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.IAE;
@@ -68,6 +69,11 @@ public abstract class SegmentGranularity
   public static final SegmentGranularity MONTH = SegmentGranularity.fromString("MONTH");
   public static final SegmentGranularity YEAR = SegmentGranularity.fromString("YEAR");
 
+  static final List<SegmentGranularity> PREDEFINED_SEGMENT_GRANULARITIES = ImmutableList.of(
+    SECOND, MINUTE, FIVE_MINUTE, TEN_MINUTE, FIFTEEN_MINUTE,
+    HOUR, SIX_HOUR, DAY, WEEK, MONTH, YEAR
+  );
+
   @JsonCreator
   public static SegmentGranularity fromString(String str)
   {
@@ -114,8 +120,10 @@ public abstract class SegmentGranularity
     return new Interval(start, increment(start));
   }
 
-  // Only to create a mapping of the granularity and all the supported file patterns
-  // namely: default, lowerDefault and hive.
+  /**
+   * Only to create a mapping of the granularity and all the supported file patterns
+   * namely: default, lowerDefault and hive.
+   */
   protected enum GranularityType
   {
     SECOND(
@@ -203,9 +211,14 @@ public abstract class SegmentGranularity
       }
     }
 
-    // Note: This is only an estimate based on the values in period.
-    // This will not work for complicated periods that represent say 1 year 1 day
-    static GranularityType estimatedGranularityType(Period period) {
+    /**
+     * Note: This is only an estimate based on the values in period.
+     * This will not work for compound periods that represent say 1 year 1 day
+     * This function is used in tandom to either
+     * a. determine the format for a granularityType
+     * b. get {@code getDateTime}
+     */
+    static GranularityType fromPeriod(Period period) {
       int[] vals = period.getValues();
       BitSet bs = new BitSet();
       for (int i = 0; i < vals.length; i++) {

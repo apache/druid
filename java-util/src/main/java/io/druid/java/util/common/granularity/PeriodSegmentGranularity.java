@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -49,7 +48,7 @@ public class PeriodSegmentGranularity extends SegmentGranularity implements Json
   )
   {
     this.periodGranularity = new PeriodGranularity(period, origin, tz);
-    this.granularityType = GranularityType.estimatedGranularityType(period);
+    this.granularityType = GranularityType.fromPeriod(period);
   }
 
   @JsonProperty("period")
@@ -154,13 +153,17 @@ public class PeriodSegmentGranularity extends SegmentGranularity implements Json
            '}';
   }
 
+  /**
+   * This serialization code can be removed if we don't support rolling upgrade
+   * in 0.10.0 release
+   * */
   @Override
   public void serialize(JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
       throws IOException, JsonProcessingException
   {
     // Retain the same behavior as pre-refactor granularity code.
     // i.e. when Granularity class was an enum.
-    if (equalsPredefinedGranularities()) {
+    if (PREDEFINED_SEGMENT_GRANULARITIES.contains(this)) {
       jsonGenerator.writeString(granularityType.toString());
     } else {
       jsonGenerator.writeStartObject();
@@ -180,64 +183,5 @@ public class PeriodSegmentGranularity extends SegmentGranularity implements Json
   ) throws IOException, JsonProcessingException
   {
     serialize(jsonGenerator, serializerProvider);
-  }
-
-  private boolean equalsPredefinedGranularities() {
-    final GranularityType[] values = GranularityType.values();
-    boolean isEqual = false;
-    int i = 0;
-
-    while (!isEqual && i != values.length) {
-      GranularityType type = values[i];
-      switch (type) {
-        case SECOND: {
-          isEqual = this.equals(SegmentGranularity.SECOND);
-          break;
-        }
-        case MINUTE: {
-          isEqual =  this.equals(SegmentGranularity.MINUTE);
-          break;
-        }
-        case FIVE_MINUTE: {
-          isEqual =  this.equals(SegmentGranularity.FIVE_MINUTE);
-          break;
-        }
-        case TEN_MINUTE: {
-          isEqual =  this.equals(SegmentGranularity.TEN_MINUTE);
-          break;
-        }
-        case FIFTEEN_MINUTE: {
-          isEqual =  this.equals(SegmentGranularity.FIFTEEN_MINUTE);
-          break;
-        }
-        case HOUR: {
-          isEqual =  this.equals(SegmentGranularity.HOUR);
-          break;
-        }
-        case SIX_HOUR: {
-          isEqual =  this.equals(SegmentGranularity.SIX_HOUR);
-          break;
-        }
-        case DAY: {
-          isEqual =  this.equals(SegmentGranularity.DAY);
-          break;
-        }
-        case WEEK: {
-          isEqual =  this.equals(SegmentGranularity.WEEK);
-          break;
-        }
-        case MONTH: {
-          isEqual =  this.equals(SegmentGranularity.MONTH);
-          break;
-        }
-        case YEAR: {
-          isEqual =  this.equals(SegmentGranularity.YEAR);
-          break;
-        }
-        default: throw new RE("Unrecognized type.");
-      }
-      i++;
-    }
-    return isEqual;
   }
 }

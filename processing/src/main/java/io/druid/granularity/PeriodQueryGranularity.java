@@ -27,9 +27,11 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
-// This class was earlier called PeriodGranularity.
-// Renaming this to be more specific and inline with PeriodSegmentGranularity
-// If you want to use granualrity for non-segment or non-query purposes, the please use PeriodGranularity
+/**
+ * This class was earlier called PeriodGranularity.
+ * Renaming this to be more specific and inline with PeriodSegmentGranularity
+ * If you want to use granularity for non-segment or non-query purposes, the please use PeriodGranularity
+ */
 public class PeriodQueryGranularity extends BaseQueryGranularity
 {
   private final PeriodGranularity periodGranularity;
