@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.HasDependentAggFactories;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -63,15 +64,8 @@ public class Queries
         Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined", postAgg.getName());
 
         if (postAgg instanceof HasDependentAggFactories) {
-          HasDependentAggFactories richPostAgg = (HasDependentAggFactories)postAgg;
-          richPostAgg.setDependentAggFactories(Maps.filterKeys(aggsFactoryMap, new Predicate<String>()
-          {
-            @Override
-            public boolean apply(@Nullable String input)
-            {
-              return postAgg.getDependentFields().contains(input);
-            }
-          }));
+          HasDependentAggFactories richPostAgg = (HasDependentAggFactories) postAgg;
+          richPostAgg.setDependentAggFactories(aggsFactoryMap);
         }
       }
     }
