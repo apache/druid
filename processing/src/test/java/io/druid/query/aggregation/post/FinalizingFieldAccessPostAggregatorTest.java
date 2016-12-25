@@ -107,7 +107,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testIngestAndQuery() throws Exception
+  public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(new AggregatorsModule()),
@@ -115,11 +115,8 @@ public class FinalizingFieldAccessPostAggregatorTest
         tempFoler
     );
 
-    String metricSpec = "[{"
-                        + "\"type\": \"hyperUnique\","
-                        + "\"name\": \"index_hll\","
-                        + "\"fieldName\": \"market\""
-                        + "}]";
+    String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
+                        + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
 
     String parseSpec = "{"
                        + "\"type\" : \"string\","
@@ -144,10 +141,14 @@ public class FinalizingFieldAccessPostAggregatorTest
                    + "\"granularity\": \"ALL\","
                    + "\"dimensions\": [],"
                    + "\"aggregations\": ["
-                   + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
+                   + "  { \"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"hll_market\" },"
+                   + "  { \"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"hll_quality\" }"
                    + "],"
                    + "\"postAggregations\": ["
-                   + "  { \"type\": \"finalizingFieldAccess\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
+                   + "  { \"type\": \"arithmetic\", \"name\": \"uniq_add\", \"fn\": \"+\", \"fields\":["
+                   + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_market\", \"fieldName\": \"hll_market\" },"
+                   + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_quality\", \"fieldName\": \"hll_quality\" }]"
+                   + "  }"
                    + "],"
                    + "\"intervals\": [ \"1970/2050\" ]"
                    + "}";
@@ -163,7 +164,8 @@ public class FinalizingFieldAccessPostAggregatorTest
     );
 
     MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
-    Assert.assertEquals(3.0, row.getFloatMetric("index_hll"), 0.1);
-    Assert.assertEquals(3.0, row.getFloatMetric("index_unique_count"), 0.1);
+    Assert.assertEquals(3.0, row.getFloatMetric("hll_market"), 0.1);
+    Assert.assertEquals(9.0, row.getFloatMetric("hll_quality"), 0.1);
+    Assert.assertEquals(12.0, row.getFloatMetric("uniq_add"), 0.1);
   }
 }
