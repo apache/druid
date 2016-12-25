@@ -28,7 +28,7 @@ public final class NoneGranularity extends Granularity
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
-    return null;
+    throw new RE("This method should not be invoked for this granularity type");
   }
 
   @Override

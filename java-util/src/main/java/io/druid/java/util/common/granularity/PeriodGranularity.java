@@ -40,14 +40,13 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
 
-public class PeriodGranularity extends Granularity implements JsonSerializable
+public class PeriodGranularity extends Granularity
 {
   private final Period period;
   private final Chronology chronology;
   private final long origin;
   private final boolean hasOrigin;
   private final boolean isCompound;
-  private final GranularityType granularityType;
 
   @JsonCreator
   public PeriodGranularity(
@@ -68,22 +67,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       this.hasOrigin = true;
     }
     this.isCompound = isCompoundPeriod(period);
-    this.granularityType = GranularityType.estimatedGranularityType(period);
-  }
-
-  private static boolean isCompoundPeriod(Period period)
-  {
-    int[] values = period.getValues();
-    boolean single = false;
-    for (int v : values) {
-      if (v > 0) {
-        if (single) {
-          return true;
-        }
-        single = true;
-      }
-    }
-    return false;
   }
 
   @JsonProperty("period")
@@ -104,9 +87,11 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     return hasOrigin ? new DateTime(origin) : null;
   }
 
+  // Used only for Segments. Not for Queries
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
+    GranularityType granularityType = GranularityType.estimatedGranularityType(period);
     switch (type) {
       case DEFAULT:
         return DateTimeFormat.forPattern(granularityType.getDefaultFormat());
@@ -137,10 +122,12 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     return new DateTime(truncate(time.getMillis()));
   }
 
+  // Used only for Segments. Not for Queries
   @Override
   public DateTime toDate(String filePath, Formatter formatter)
   {
     Integer[] vals = getDateValues(filePath, formatter);
+    GranularityType granularityType = GranularityType.estimatedGranularityType(period);
 
     DateTime date = GranularityType.getDateTime(granularityType, vals);
 
@@ -213,91 +200,19 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
            '}';
   }
 
-  @Override
-  public void serialize(JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-      throws IOException, JsonProcessingException
+  private static boolean isCompoundPeriod(Period period)
   {
-    // Retain the same behavior as old code.
-    if (equalsPredefinedGranularities()) {
-      final GranularityType granularityType = GranularityType.estimatedGranularityType(period);
-      jsonGenerator.writeObject(granularityType.toString());
-    } else {
-      jsonGenerator.writeStartObject();
-      jsonGenerator.writeStringField("type", "period");
-      jsonGenerator.writeObjectField("period", getPeriod());
-      jsonGenerator.writeObjectField("timeZone", getTimeZone());
-      jsonGenerator.writeObjectField("origin", getOrigin());
-      jsonGenerator.writeEndObject();
-    }
-  }
-
-  @Override
-  public void serializeWithType(
-      JsonGenerator jsonGenerator,
-      SerializerProvider serializerProvider,
-      TypeSerializer typeSerializer
-  ) throws IOException, JsonProcessingException
-  {
-    serialize(jsonGenerator, serializerProvider);
-  }
-
-  private boolean equalsPredefinedGranularities() {
-    final GranularityType[] values = GranularityType.values();
-    boolean isEqual = false;
-    int i = 0;
-
-    while (!isEqual && i != values.length) {
-      GranularityType type = values[i];
-      switch (type) {
-        case SECOND: {
-          isEqual = this.equals(Granularity.SECOND);
-          break;
+    int[] values = period.getValues();
+    boolean single = false;
+    for (int v : values) {
+      if (v > 0) {
+        if (single) {
+          return true;
         }
-        case MINUTE: {
-          isEqual =  this.equals(Granularity.MINUTE);
-          break;
-        }
-        case FIVE_MINUTE: {
-          isEqual =  this.equals(Granularity.FIVE_MINUTE);
-          break;
-        }
-        case TEN_MINUTE: {
-          isEqual =  this.equals(Granularity.TEN_MINUTE);
-          break;
-        }
-        case FIFTEEN_MINUTE: {
-          isEqual =  this.equals(Granularity.FIFTEEN_MINUTE);
-          break;
-        }
-        case HOUR: {
-          isEqual =  this.equals(Granularity.HOUR);
-          break;
-        }
-        case SIX_HOUR: {
-          isEqual =  this.equals(Granularity.SIX_HOUR);
-          break;
-        }
-        case DAY: {
-          isEqual =  this.equals(Granularity.DAY);
-          break;
-        }
-        case WEEK: {
-          isEqual =  this.equals(Granularity.WEEK);
-          break;
-        }
-        case MONTH: {
-          isEqual =  this.equals(Granularity.MONTH);
-          break;
-        }
-        case YEAR: {
-          isEqual =  this.equals(Granularity.YEAR);
-          break;
-        }
-        default: throw new RE("Unrecognized type.");
+        single = true;
       }
-      i++;
     }
-    return isEqual;
+    return false;
   }
 
   private long increment(long t)
