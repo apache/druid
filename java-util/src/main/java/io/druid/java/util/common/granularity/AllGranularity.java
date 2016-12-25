@@ -24,9 +24,6 @@ import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 
-import static io.druid.java.util.common.JodaUtils.MAX_INSTANT;
-import static io.druid.java.util.common.JodaUtils.MIN_INSTANT;
-
 public final class AllGranularity extends Granularity
 {
   @Override
@@ -38,7 +35,7 @@ public final class AllGranularity extends Granularity
   @Override
   public DateTime increment(DateTime time)
   {
-    return new DateTime(MAX_INSTANT);
+    return new DateTime(Long.MAX_VALUE / 2);
   }
 
   @Override
@@ -50,7 +47,7 @@ public final class AllGranularity extends Granularity
   @Override
   public DateTime truncate(DateTime time)
   {
-    return new DateTime(MIN_INSTANT);
+    return new DateTime(Long.MIN_VALUE / 2);
   }
 
   @Override

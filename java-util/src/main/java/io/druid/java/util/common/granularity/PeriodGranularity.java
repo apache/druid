@@ -21,14 +21,8 @@ package io.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializable;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -37,8 +31,6 @@ import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-
-import java.io.IOException;
 
 public class PeriodGranularity extends Granularity
 {
