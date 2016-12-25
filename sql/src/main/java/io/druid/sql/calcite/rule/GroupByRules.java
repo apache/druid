@@ -56,10 +56,10 @@ import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.rel.DruidNestedGroupBy;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.Grouping;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.DruidTables;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -91,6 +91,7 @@ public class GroupByRules
     return ImmutableList.of(
         new DruidAggregateRule(plannerConfig.isUseApproximateCountDistinct()),
         new DruidAggregateProjectRule(plannerConfig.isUseApproximateCountDistinct()),
+        new DruidAggregateProjectFilterRule(plannerConfig.isUseApproximateCountDistinct()),
         new DruidProjectAfterAggregationRule(),
         new DruidFilterAfterAggregationRule(),
         new DruidGroupBySortRule()
@@ -169,6 +170,7 @@ public class GroupByRules
       final DruidRel newDruidRel = GroupByRules.applyAggregate(
           druidRel,
           null,
+          null,
           aggregate,
           approximateCountDistinct
       );
@@ -196,6 +198,37 @@ public class GroupByRules
       final DruidRel druidRel = call.rel(2);
       final DruidRel newDruidRel = GroupByRules.applyAggregate(
           druidRel,
+          null,
+          project,
+          aggregate,
+          approximateCountDistinct
+      );
+      if (newDruidRel != null) {
+        call.transformTo(newDruidRel);
+      }
+    }
+  }
+
+  public static class DruidAggregateProjectFilterRule extends RelOptRule
+  {
+    final boolean approximateCountDistinct;
+
+    private DruidAggregateProjectFilterRule(final boolean approximateCountDistinct)
+    {
+      super(operand(Aggregate.class, operand(Project.class, operand(Filter.class, operand(DruidRel.class, none())))));
+      this.approximateCountDistinct = approximateCountDistinct;
+    }
+
+    @Override
+    public void onMatch(RelOptRuleCall call)
+    {
+      final Aggregate aggregate = call.rel(0);
+      final Project project = call.rel(1);
+      final Filter filter = call.rel(2);
+      final DruidRel druidRel = call.rel(3);
+      final DruidRel newDruidRel = GroupByRules.applyAggregate(
+          druidRel,
+          filter,
           project,
           aggregate,
           approximateCountDistinct
@@ -265,22 +298,50 @@ public class GroupByRules
 
   private static DruidRel applyAggregate(
       final DruidRel druidRel,
+      final Filter filter0,
       final Project project0,
       final Aggregate aggregate,
       final boolean approximateCountDistinct
   )
   {
-    if ((project0 != null && druidRel.getQueryBuilder().getSelectProjection() != null /* can't project twice */)
-        || druidRel.getQueryBuilder().getGrouping() != null
+    if ((filter0 != null && druidRel.getQueryBuilder().getFilter() != null /* can't filter twice */)
+        || (project0 != null && druidRel.getQueryBuilder().getSelectProjection() != null /* can't project twice */)
         || aggregate.indicator
         || aggregate.getGroupSets().size() != 1) {
       return null;
     }
 
+    final RowSignature sourceRowSignature;
+    final boolean isNestedQuery = druidRel.getQueryBuilder().getGrouping() != null;
+
+    if (isNestedQuery) {
+      // Nested groupBy; source row signature is the output signature of druidRel.
+      sourceRowSignature = druidRel.getQueryBuilder().getOutputRowSignature();
+    } else {
+      sourceRowSignature = druidRel.getSourceRowSignature();
+    }
+
+    // Filter that should be applied before aggregating.
+    final DimFilter filter;
+    if (filter0 != null) {
+      filter = Expressions.toFilter(sourceRowSignature, filter0.getCondition());
+      if (filter == null) {
+        // Can't plan this filter.
+        return null;
+      }
+    } else if (druidRel.getQueryBuilder().getFilter() != null && !isNestedQuery) {
+      // We're going to replace the existing druidRel, so inherit its filter.
+      filter = druidRel.getQueryBuilder().getFilter();
+    } else {
+      filter = null;
+    }
+
+    // Projection that should be applied before aggregating.
     final Project project;
     if (project0 != null) {
       project = project0;
-    } else if (druidRel.getQueryBuilder().getSelectProjection() != null) {
+    } else if (druidRel.getQueryBuilder().getSelectProjection() != null && !isNestedQuery) {
+      // We're going to replace the existing druidRel, so inherit its projection.
       project = druidRel.getQueryBuilder().getSelectProjection().getProject();
     } else {
       project = null;
@@ -302,10 +363,10 @@ public class GroupByRules
         rowOrder.add(dimOutputName(dimOutputNameCounter++));
       } else {
         final DimensionSpec dimensionSpec = toDimensionSpec(
-            druidRel.getDruidTable(),
+            sourceRowSignature,
             Expressions.toRowExtraction(
-                DruidTables.rowOrder(druidRel.getDruidTable()),
-                Expressions.fromFieldAccess(druidRel.getDruidTable(), project, i)
+                sourceRowSignature.getRowOrder(),
+                Expressions.fromFieldAccess(sourceRowSignature, project, i)
             ),
             dimOutputName(dimOutputNameCounter++)
         );
@@ -321,7 +382,7 @@ public class GroupByRules
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
       final AggregateCall aggCall = aggregate.getAggCallList().get(i);
       final Aggregation aggregation = translateAggregateCall(
-          druidRel,
+          sourceRowSignature,
           project,
           aggCall,
           i,
@@ -336,14 +397,27 @@ public class GroupByRules
       rowOrder.add(aggregation.getOutputName());
     }
 
-    return druidRel.withQueryBuilder(
-        druidRel.getQueryBuilder()
-                .withGrouping(
-                    Grouping.create(dimensions, aggregations),
-                    aggregate.getRowType(),
-                    rowOrder
-                )
-    );
+    if (isNestedQuery) {
+      // Nested groupBy.
+      return DruidNestedGroupBy.from(
+          druidRel,
+          filter,
+          Grouping.create(dimensions, aggregations),
+          aggregate.getRowType(),
+          rowOrder
+      );
+    } else {
+      // groupBy on a base dataSource.
+      return druidRel.withQueryBuilder(
+          druidRel.getQueryBuilder()
+                  .withFilter(filter)
+                  .withGrouping(
+                      Grouping.create(dimensions, aggregations),
+                      aggregate.getRowType(),
+                      rowOrder
+                  )
+      );
+    }
   }
 
   private static DruidRel applyProjectAfterAggregate(
@@ -423,8 +497,7 @@ public class GroupByRules
     }
 
     final DimFilter dimFilter = Expressions.toFilter(
-        null, // null table; this filter is being applied as a HAVING on result rows
-        druidRel.getQueryBuilder().getRowOrder(),
+        druidRel.getQueryBuilder().getOutputRowSignature(),
         postFilter.getCondition()
     );
 
@@ -543,7 +616,7 @@ public class GroupByRules
   }
 
   private static DimensionSpec toDimensionSpec(
-      final DruidTable druidTable,
+      final RowSignature rowSignature,
       final RowExtraction rex,
       final String name
   )
@@ -552,15 +625,12 @@ public class GroupByRules
       return null;
     }
 
-    final int columnNumber = druidTable.getColumnNumber(rex.getColumn());
-    if (columnNumber < 0) {
+    final ValueType columnType = rowSignature.getColumnType(rex.getColumn());
+
+    if (columnType == null) {
       return null;
-    }
-
-    final ValueType columnType = druidTable.getColumnType(columnNumber);
-
-    if (columnType == ValueType.STRING ||
-        (rex.getColumn().equals(Column.TIME_COLUMN_NAME) && rex.getExtractionFn() != null)) {
+    } else if (columnType == ValueType.STRING ||
+               (rex.getColumn().equals(Column.TIME_COLUMN_NAME) && rex.getExtractionFn() != null)) {
       return rex.getExtractionFn() == null
              ? new DefaultDimensionSpec(rex.getColumn(), name)
              : new ExtractionDimensionSpec(rex.getColumn(), name, rex.getExtractionFn());
@@ -576,7 +646,7 @@ public class GroupByRules
    * @return translated aggregation, or null if translation failed.
    */
   private static Aggregation translateAggregateCall(
-      final DruidRel druidRel,
+      final RowSignature sourceRowSignature,
       final Project project,
       final AggregateCall call,
       final int aggNumber,
@@ -584,7 +654,7 @@ public class GroupByRules
   )
   {
     final List<DimFilter> filters = Lists.newArrayList();
-    final List<String> rowOrder = DruidTables.rowOrder(druidRel.getDruidTable());
+    final List<String> rowOrder = sourceRowSignature.getRowOrder();
     final String name = aggOutputName(aggNumber);
     final SqlKind kind = call.getAggregation().getKind();
     final SqlTypeName outputType = call.getType().getSqlTypeName();
@@ -598,7 +668,7 @@ public class GroupByRules
       }
 
       final RexNode expression = project.getChildExps().get(call.filterArg);
-      final DimFilter filter = Expressions.toFilter(druidRel.getDruidTable(), rowOrder, expression);
+      final DimFilter filter = Expressions.toFilter(sourceRowSignature, expression);
       if (filter == null) {
         return null;
       }
@@ -612,11 +682,11 @@ public class GroupByRules
     } else if (call.getAggregation().getKind() == SqlKind.COUNT && call.isDistinct() && approximateCountDistinct) {
       // COUNT(DISTINCT x)
       final DimensionSpec dimensionSpec = toDimensionSpec(
-          druidRel.getDruidTable(),
+          sourceRowSignature,
           Expressions.toRowExtraction(
               rowOrder,
               Expressions.fromFieldAccess(
-                  druidRel.getDruidTable(),
+                  sourceRowSignature,
                   project,
                   Iterables.getOnlyElement(call.getArgList())
               )
@@ -648,7 +718,7 @@ public class GroupByRules
       final FieldOrExpression input;
 
       final int inputField = Iterables.getOnlyElement(call.getArgList());
-      final RexNode rexNode = Expressions.fromFieldAccess(druidRel.getDruidTable(), project, inputField);
+      final RexNode rexNode = Expressions.fromFieldAccess(sourceRowSignature, project, inputField);
       final FieldOrExpression foe = FieldOrExpression.fromRexNode(rowOrder, rexNode);
 
       if (foe != null) {
@@ -668,8 +738,7 @@ public class GroupByRules
 
         // Operand 1: Filter
         final DimFilter filter = Expressions.toFilter(
-            druidRel.getDruidTable(),
-            rowOrder,
+            sourceRowSignature,
             caseCall.getOperands().get(0)
         );
         if (filter == null) {
@@ -764,7 +833,7 @@ public class GroupByRules
     final DimFilter filter = filters.isEmpty()
                              ? null
                              : Filtration.create(new AndDimFilter(filters))
-                                         .optimizeFilterOnly(druidRel.getDruidTable())
+                                         .optimizeFilterOnly(sourceRowSignature)
                                          .getDimFilter();
 
     return retVal != null ? retVal.filter(filter) : null;

@@ -28,6 +28,7 @@ import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -94,50 +95,72 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final Iterable<Interval> intervals
   )
   {
-    final VersionedIntervalTimeline<String, Segment> timeline = getTimeline(query);
-    if (timeline == null) {
-      return new NoopQueryRunner<>();
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    if (factory == null) {
+      throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
-    final Iterable<SegmentDescriptor> specs = FunctionalIterable
-        .create(intervals)
-        .transformCat(
-            new Function<Interval, Iterable<TimelineObjectHolder<String, Segment>>>()
-            {
-              @Override
-              public Iterable<TimelineObjectHolder<String, Segment>> apply(final Interval interval)
-              {
-                return timeline.lookup(interval);
-              }
-            }
-        )
-        .transformCat(
-            new Function<TimelineObjectHolder<String, Segment>, Iterable<SegmentDescriptor>>()
-            {
-              @Override
-              public Iterable<SegmentDescriptor> apply(final TimelineObjectHolder<String, Segment> holder)
-              {
-                return FunctionalIterable
-                    .create(holder.getObject())
-                    .transform(
-                        new Function<PartitionChunk<Segment>, SegmentDescriptor>()
-                        {
-                          @Override
-                          public SegmentDescriptor apply(final PartitionChunk<Segment> chunk)
-                          {
-                            return new SegmentDescriptor(
-                                holder.getInterval(),
-                                holder.getVersion(),
-                                chunk.getChunkNumber()
-                            );
-                          }
-                        }
-                    );
-              }
-            }
-        );
+    final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    return getQueryRunnerForSegments(query, specs);
+    return new FinalizeResultsQueryRunner<>(
+        toolChest.postMergeQueryDecoration(
+            toolChest.mergeResults(
+                toolChest.preMergeQueryDecoration(
+                    new QueryRunner<T>()
+                    {
+                      @Override
+                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+                      {
+                        final VersionedIntervalTimeline<String, Segment> timeline = getTimelineForTableDataSource(query);
+                        return makeBaseRunner(
+                            query,
+                            toolChest,
+                            factory,
+                            FunctionalIterable
+                                .create(intervals)
+                                .transformCat(
+                                    new Function<Interval, Iterable<TimelineObjectHolder<String, Segment>>>()
+                                    {
+                                      @Override
+                                      public Iterable<TimelineObjectHolder<String, Segment>> apply(final Interval interval)
+                                      {
+                                        return timeline.lookup(interval);
+                                      }
+                                    }
+                                )
+                                .transformCat(
+                                    new Function<TimelineObjectHolder<String, Segment>, Iterable<SegmentDescriptor>>()
+                                    {
+                                      @Override
+                                      public Iterable<SegmentDescriptor> apply(final TimelineObjectHolder<String, Segment> holder)
+                                      {
+                                        return FunctionalIterable
+                                            .create(holder.getObject())
+                                            .transform(
+                                                new Function<PartitionChunk<Segment>, SegmentDescriptor>()
+                                                {
+                                                  @Override
+                                                  public SegmentDescriptor apply(final PartitionChunk<Segment> chunk)
+                                                  {
+                                                    return new SegmentDescriptor(
+                                                        holder.getInterval(),
+                                                        holder.getVersion(),
+                                                        chunk.getChunkNumber()
+                                                    );
+                                                  }
+                                                }
+                                            );
+                                      }
+                                    }
+                                )
+                        ).run(query, responseContext);
+                      }
+                    }
+                )
+            )
+        ),
+        toolChest
+    );
   }
 
   @Override
@@ -146,17 +169,55 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final Iterable<SegmentDescriptor> specs
   )
   {
-    final VersionedIntervalTimeline<String, Segment> timeline = getTimeline(query);
-    if (timeline == null) {
-      return new NoopQueryRunner<>();
-    }
-
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
+
+    return new FinalizeResultsQueryRunner<>(
+        toolChest.postMergeQueryDecoration(
+            toolChest.mergeResults(
+                toolChest.preMergeQueryDecoration(
+                    makeBaseRunner(query, toolChest, factory, specs)
+                )
+            )
+        ),
+        toolChest
+    );
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    for (Closeable closeable : closeables) {
+      Closeables.close(closeable, true);
+    }
+  }
+
+  private <T> VersionedIntervalTimeline<String, Segment> getTimelineForTableDataSource(Query<T> query)
+  {
+    if (query.getDataSource() instanceof TableDataSource) {
+      return timelines.get(((TableDataSource) query.getDataSource()).getName());
+    } else {
+      throw new UnsupportedOperationException(
+          String.format("DataSource type[%s] unsupported", query.getDataSource().getClass().getName())
+      );
+    }
+  }
+
+  private <T> QueryRunner<T> makeBaseRunner(
+      final Query<T> query,
+      final QueryToolChest<T, Query<T>> toolChest,
+      final QueryRunnerFactory<T, Query<T>> factory,
+      final Iterable<SegmentDescriptor> specs
+  )
+  {
+    final VersionedIntervalTimeline<String, Segment> timeline = getTimelineForTableDataSource(query);
+    if (timeline == null) {
+      return new NoopQueryRunner<>();
+    }
 
     return new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
@@ -196,22 +257,5 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         ),
         toolChest
     );
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    for (Closeable closeable : closeables) {
-      Closeables.close(closeable, true);
-    }
-  }
-
-  private <T> VersionedIntervalTimeline<String, Segment> getTimeline(Query<T> query)
-  {
-    if (query.getDataSource() instanceof TableDataSource) {
-      return timelines.get(((TableDataSource) query.getDataSource()).getName());
-    } else {
-      return null;
-    }
   }
 }

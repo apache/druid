@@ -66,6 +66,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -224,7 +225,7 @@ public class CalciteTests
 
   public static DruidTable createDruidTable(final QuerySegmentWalker walker, final PlannerConfig plannerConfig)
   {
-    return new DruidTable(walker, new TableDataSource(DATASOURCE), plannerConfig, COLUMN_TYPES);
+    return new DruidTable(new QueryMaker(walker, plannerConfig), new TableDataSource(DATASOURCE), COLUMN_TYPES);
   }
 
   public static Schema createMockSchema(final QuerySegmentWalker walker, final PlannerConfig plannerConfig)

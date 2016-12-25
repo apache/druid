@@ -50,6 +50,7 @@ import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.column.ValueType;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.timeline.DataSegment;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -77,6 +78,7 @@ public class DruidSchema extends AbstractSchema
   private final TimelineServerView serverView;
   private final PlannerConfig config;
   private final ExecutorService cacheExec;
+  private final QueryMaker queryMaker;
   private final ConcurrentMap<String, Table> tables;
 
   // For awaitInitialization.
@@ -102,6 +104,7 @@ public class DruidSchema extends AbstractSchema
     this.serverView = Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
+    this.queryMaker = new QueryMaker(walker, config);
     this.tables = Maps.newConcurrentMap();
   }
 
@@ -349,9 +352,8 @@ public class DruidSchema extends AbstractSchema
     }
 
     return new DruidTable(
-        walker,
+        queryMaker,
         new TableDataSource(dataSource),
-        config,
         columnValueTypes
     );
   }

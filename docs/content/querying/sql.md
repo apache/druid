@@ -77,6 +77,20 @@ If `druid.sql.planner.useFallback` is enabled, full SQL is possible on metadata 
 recommended in production since it can generate unscalable query plans. The JDBC driver allows accessing
 table and column metadata through `connection.getMetaData()` even if useFallback is off.
 
+### Approximate queries
+
+The following SQL queries and features may be executed using approximate algorithms:
+
+- `COUNT(DISTINCT col)` aggregations use [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf), a
+fast approximate distinct counting algorithm. If you need exact distinct counts, you can instead use
+`SELECT COUNT(*) FROM (SELECT DISTINCT col FROM druid.foo)`, which will use a slower and more resource intensive exact
+algorithm.
+- TopN-style queries with a single grouping column, like
+`SELECT col1, SUM(col2) FROM druid.foo GROUP BY col1 ORDER BY SUM(col2) DESC LIMIT 100`, by default will be executed
+as [TopN queries](topnquery.html), which use an approximate algorithm. To disable this behavior, and use exact
+algorithms for topN-style queries, set
+[druid.sql.planner.useApproximateTopN](../configuration/broker.html#sql-planner-configuration) to "false".
+
 ### Time functions
 
 Druid's SQL language supports a number of time operations, including:
@@ -85,12 +99,26 @@ Druid's SQL language supports a number of time operations, including:
 - `EXTRACT(<granularity> FROM __time)` for grouping or filtering on time parts, like `SELECT EXTRACT(HOUR FROM __time), SUM(cnt) FROM druid.foo GROUP BY EXTRACT(HOUR FROM __time)`
 - Comparisons to `TIMESTAMP '<time string>'` for time filters, like `SELECT COUNT(*) FROM druid.foo WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2001-01-01 00:00:00'`
 
-### Semi-joins
+### Subqueries
 
-Semi-joins involving `IN (SELECT ...)`, like the following, are planned with a special process.
+Druid's SQL layer supports many types of subqueries, including the ones listed below.
+
+#### Nested groupBy
+
+Subqueries involving `FROM (SELECT ... GROUP BY ...)` may be executed as
+[nested groupBys](groupbyquery.html#nested-groupbys). For example, the following query can be used to perform an
+exact distinct count using a nested groupBy.
 
 ```sql
-SELECT x, count(*)
+SELECT COUNT(*) FROM (SELECT DISTINCT col FROM druid.foo)
+```
+
+#### Semi-joins
+
+Semi-join subqueries involving `WHERE ... IN (SELECT ...)`, like the following, are executed with a special process.
+
+```sql
+SELECT x, COUNT(*)
 FROM druid.foo
 WHERE x IN (SELECT x FROM druid.bar WHERE y = 'baz')
 GROUP BY x
@@ -121,7 +149,6 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 - [Multi-value dimensions](multi-value-dimensions.html).
 - [Query-time lookups](lookups.html).
-- [Nested groupBy queries](groupbyquery.html#nested-groupbys).
 - Extensions, including [approximate histograms](../development/extensions-core/approximate-histograms.html) and
 [DataSketches](../development/extensions-core/datasketches-aggregators.html).
 

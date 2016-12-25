@@ -22,8 +22,11 @@ package io.druid.sql.calcite.rel;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import io.druid.query.QueryDataSource;
+import io.druid.query.groupby.GroupByQuery;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.interpreter.Row;
 import org.apache.calcite.plan.RelOptCluster;
@@ -49,7 +52,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final DruidQueryBuilder queryBuilder
   )
   {
-    super(cluster, traitSet);
+    super(cluster, traitSet, druidTable.getQueryMaker());
     this.table = Preconditions.checkNotNull(table, "table");
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
     this.queryBuilder = Preconditions.checkNotNull(queryBuilder, "queryBuilder");
@@ -70,10 +73,29 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         traitSet,
         table,
         druidTable,
-        DruidQueryBuilder.fullScan(druidTable, cluster.getTypeFactory())
+        DruidQueryBuilder.fullScan(druidTable.getRowSignature(), cluster.getTypeFactory())
     );
   }
 
+  @Override
+  public QueryDataSource asDataSource()
+  {
+    final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(
+        druidTable.getDataSource(),
+        druidTable.getRowSignature()
+    );
+
+    if (groupByQuery == null) {
+      // QueryDataSources must currently embody groupBy queries. This will thrown an exception if the query
+      // cannot be converted to a groupBy, but that's OK because we really shouldn't get into that situation anyway.
+      // That would be a bug in our planner rules.
+      throw new IllegalStateException("WTF?! Tried to convert query to QueryDataSource but couldn't make a groupBy?");
+    }
+
+    return new QueryDataSource(groupByQuery);
+  }
+
+  @Override
   public DruidQueryRel asBindable()
   {
     return new DruidQueryRel(
@@ -85,16 +107,19 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     );
   }
 
-  public DruidTable getDruidTable()
+  @Override
+  public RowSignature getSourceRowSignature()
   {
-    return druidTable;
+    return druidTable.getRowSignature();
   }
 
+  @Override
   public DruidQueryBuilder getQueryBuilder()
   {
     return queryBuilder;
   }
 
+  @Override
   public DruidQueryRel withQueryBuilder(final DruidQueryBuilder newQueryBuilder)
   {
     return new DruidQueryRel(
@@ -109,7 +134,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public void accumulate(final Function<Row, Void> sink)
   {
-    queryBuilder.accumulate(druidTable, sink);
+    getQueryMaker().accumulate(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder, sink);
   }
 
   @Override
@@ -135,7 +160,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     pw.item("dataSource", druidTable.getDataSource());
     if (queryBuilder != null) {
-      final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(druidTable);
+      final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(getSourceRowSignature());
       if (!filtration.getIntervals().equals(ImmutableList.of(Filtration.eternity()))) {
         pw.item("intervals", filtration.getIntervals());
       }
@@ -163,6 +188,20 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    return super.computeSelfCost(planner, mq).multiplyBy(0.1);
+    double cost = 1.0;
+
+    if (queryBuilder.getFilter() != null) {
+      cost *= 0.1;
+    }
+
+    if (queryBuilder.getGrouping() != null) {
+      cost *= 0.5;
+    }
+
+    if (queryBuilder.getLimitSpec() != null) {
+      cost *= 0.5;
+    }
+
+    return planner.getCostFactory().makeCost(cost, 0, 0);
   }
 }
