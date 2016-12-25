@@ -42,21 +42,6 @@ import java.util.regex.Pattern;
 public abstract class Granularity
 {
 
-  // Default patterns for parsing paths.
-  final Pattern defaultPathPattern =
-      Pattern.compile(
-          "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
-      );
-  final Pattern hivePathPattern =
-      Pattern.compile("^.*dt=(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})?)?)?)?)?)?/.*$");
-
-  public enum Formatter
-  {
-    DEFAULT,
-    HIVE,
-    LOWER_DEFAULT
-  }
-
   public static final Granularity SECOND = Granularity.fromString("SECOND");
   public static final Granularity MINUTE = Granularity.fromString("MINUTE");
   public static final Granularity FIVE_MINUTE = Granularity.fromString("FIVE_MINUTE");
@@ -72,12 +57,66 @@ public abstract class Granularity
   public static final Granularity YEAR = Granularity.fromString("YEAR");
   public static final Granularity ALL = Granularity.fromString("ALL");
   public static final Granularity NONE = Granularity.fromString("NONE");
+  // Default patterns for parsing paths.
+  final Pattern defaultPathPattern =
+      Pattern.compile(
+          "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
+      );
+  final Pattern hivePathPattern =
+      Pattern.compile("^.*dt=(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})?)?)?)?)?)?/.*$");
 
   @JsonCreator
   public static Granularity fromString(String str)
   {
     String name = str.toUpperCase();
     return GranularityType.createGranularity(name);
+  }
+
+  //simple merge strategy on query granularity that checks if all are equal or else
+  //returns null. this can be improved in future but is good enough for most use-cases.
+  public static Granularity mergeGranularities(List<Granularity> toMerge)
+  {
+    if (toMerge == null || toMerge.size() == 0) {
+      return null;
+    }
+
+    Granularity result = toMerge.get(0);
+    for (int i = 1; i < toMerge.size(); i++) {
+      if (!Objects.equals(result, toMerge.get(i))) {
+        return null;
+      }
+    }
+
+    return result;
+  }
+
+  public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
+  {
+    final DateTime epoch = new DateTime(0);
+    final List<Granularity> retVal = Lists.newArrayList();
+    final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
+    final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
+    for (GranularityType gran : GranularityType.values()) {
+      if (gran == GranularityType.ALL || gran == GranularityType.NONE) {
+        continue;
+      }
+      final Granularity segmentGranularity = GranularityType.createGranularity(gran.name(), origin, tz);
+      if (segmentGranularity.bucket(epoch).toDurationMillis() <= gran0.bucket(epoch).toDurationMillis()) {
+        retVal.add(segmentGranularity);
+      }
+    }
+    Collections.sort(
+        retVal,
+        new Comparator<Granularity>()
+        {
+          @Override
+          public int compare(Granularity g1, Granularity g2)
+          {
+            return Longs.compare(g2.bucket(epoch).toDurationMillis(), g1.bucket(epoch).toDurationMillis());
+          }
+        }
+    );
+    return retVal;
   }
 
   public abstract DateTimeFormatter getFormatter(Formatter type);
@@ -124,6 +163,88 @@ public abstract class Granularity
   {
     DateTime start = truncate(t);
     return new Interval(start, increment(start));
+  }
+
+  // Used by the toDate implementations.
+  final Integer[] getDateValues(String filePath, Formatter formatter)
+  {
+    Pattern pattern = defaultPathPattern;
+    switch (formatter) {
+      case DEFAULT:
+      case LOWER_DEFAULT:
+        break;
+      case HIVE:
+        pattern = hivePathPattern;
+        break;
+      default:
+        throw new IAE("Format %s not supported", formatter);
+    }
+
+    Matcher matcher = pattern.matcher(filePath);
+
+    Integer[] vals = new Integer[7];
+    if (matcher.matches()) {
+      for (int i = 1; i <= matcher.groupCount(); i++) {
+        vals[i] = (matcher.group(i) != null) ? Integer.parseInt(matcher.group(i)) : null;
+      }
+    }
+
+    return vals;
+  }
+
+  public Iterable<Interval> getIterable(final Interval input)
+  {
+    return new IntervalIterable(input);
+  }
+
+  public Iterable<Long> iterable(final long start, final long end)
+  {
+    return new Iterable<Long>()
+    {
+      @Override
+      public Iterator<Long> iterator()
+      {
+        return new Iterator<Long>()
+        {
+          long curr = truncate(new DateTime(start)).getMillis();
+          long next = increment(new DateTime(curr)).getMillis();
+
+          @Override
+          public boolean hasNext()
+          {
+            return curr < end;
+          }
+
+          @Override
+          public Long next()
+          {
+            if (!hasNext()) {
+              throw new NoSuchElementException();
+            }
+
+            long retVal = curr;
+
+            curr = next;
+            next = increment(new DateTime(curr)).getMillis();
+
+            return retVal;
+          }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+  }
+
+  public enum Formatter
+  {
+    DEFAULT,
+    HIVE,
+    LOWER_DEFAULT
   }
 
   // Only to create a mapping of the granularity and all the supported file patterns
@@ -245,7 +366,8 @@ public abstract class Granularity
 
     // Note: This is only an estimate based on the values in period.
     // This will not work for complicated periods that represent say 1 year 1 day
-    static GranularityType estimatedGranularityType(Period period) {
+    static GranularityType estimatedGranularityType(Period period)
+    {
       int[] vals = period.getValues();
       BitSet bs = new BitSet();
       for (int i = 0; i < vals.length; i++) {
@@ -256,8 +378,7 @@ public abstract class Granularity
 
       if (bs.cardinality() == 0 || bs.cardinality() > 1) {
         throw new IAE("Granularity is not supported. [%s]", period);
-      }
-      else {
+      } else {
         final int index = bs.nextSetBit(0);
 
         if (index == 0) {
@@ -284,21 +405,6 @@ public abstract class Granularity
       }
 
       throw new IAE("Granularity is not supported. [%s]", period);
-    }
-
-    public String getHiveFormat()
-    {
-      return hiveFormat;
-    }
-
-    public String getLowerDefaultFormat()
-    {
-      return lowerDefaultFormat;
-    }
-
-    public String getDefaultFormat()
-    {
-      return defaultFormat;
     }
 
     static DateTime getDateTime(GranularityType gran, Integer[] vals)
@@ -367,125 +473,21 @@ public abstract class Granularity
 
       return null;
     }
-  }
 
-  //simple merge strategy on query granularity that checks if all are equal or else
-  //returns null. this can be improved in future but is good enough for most use-cases.
-  public static Granularity mergeGranularities(List<Granularity> toMerge)
-  {
-    if (toMerge == null || toMerge.size() == 0) {
-      return null;
-    }
-
-    Granularity result = toMerge.get(0);
-    for (int i = 1; i < toMerge.size(); i++) {
-      if (!Objects.equals(result, toMerge.get(i))) {
-        return null;
-      }
-    }
-
-    return result;
-  }
-
-  public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
-  {
-    final DateTime epoch = new DateTime(0);
-    final List<Granularity> retVal = Lists.newArrayList();
-    final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
-    final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
-    for (GranularityType gran : GranularityType.values()) {
-      final Granularity segmentGranularity = GranularityType.createGranularity(gran.name(), origin, tz);
-      if (segmentGranularity.bucket(epoch).toDurationMillis() <= gran0.bucket(epoch).toDurationMillis()) {
-        retVal.add(segmentGranularity);
-      }
-    }
-    Collections.sort(
-        retVal,
-        new Comparator<Granularity>()
-        {
-          @Override
-          public int compare(Granularity g1, Granularity g2)
-          {
-            return Longs.compare(g2.bucket(epoch).toDurationMillis(), g1.bucket(epoch).toDurationMillis());
-          }
-        }
-    );
-    return retVal;
-  }
-
-  // Used by the toDate implementations.
-  final Integer[] getDateValues(String filePath, Formatter formatter)
-  {
-    Pattern pattern = defaultPathPattern;
-    switch (formatter) {
-      case DEFAULT:
-      case LOWER_DEFAULT:
-        break;
-      case HIVE:
-        pattern = hivePathPattern;
-        break;
-      default:
-        throw new IAE("Format %s not supported", formatter);
-    }
-
-    Matcher matcher = pattern.matcher(filePath);
-
-    Integer[] vals = new Integer[7];
-    if (matcher.matches()) {
-      for (int i = 1; i <= matcher.groupCount(); i++) {
-        vals[i] = (matcher.group(i) != null) ? Integer.parseInt(matcher.group(i)) : null;
-      }
-    }
-
-    return vals;
-  }
-
-  public Iterable<Interval> getIterable(final Interval input)
-  {
-    return new IntervalIterable(input);
-  }
-
-  public Iterable<Long> iterable(final long start, final long end)
-  {
-    return new Iterable<Long>()
+    public String getHiveFormat()
     {
-      @Override
-      public Iterator<Long> iterator()
-      {
-        return new Iterator<Long>()
-        {
-          long curr = truncate(new DateTime(start)).getMillis();
-          long next = increment(new DateTime(curr)).getMillis();
+      return hiveFormat;
+    }
 
-          @Override
-          public boolean hasNext()
-          {
-            return curr < end;
-          }
+    public String getLowerDefaultFormat()
+    {
+      return lowerDefaultFormat;
+    }
 
-          @Override
-          public Long next()
-          {
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-
-            long retVal = curr;
-
-            curr = next;
-            next = increment(new DateTime(curr)).getMillis();
-
-            return retVal;
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-    };
+    public String getDefaultFormat()
+    {
+      return defaultFormat;
+    }
   }
 
   public class IntervalIterable implements Iterable<Interval>
