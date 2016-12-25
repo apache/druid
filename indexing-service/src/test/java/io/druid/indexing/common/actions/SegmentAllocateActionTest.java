@@ -63,6 +63,7 @@ public class SegmentAllocateActionTest
             Granularity.DAY,
             Granularity.SIX_HOUR,
             Granularity.HOUR,
+            Granularity.THIRTY_MINUTE,
             Granularity.FIFTEEN_MINUTE,
             Granularity.TEN_MINUTE,
             Granularity.FIVE_MINUTE,
@@ -79,6 +80,7 @@ public class SegmentAllocateActionTest
     Assert.assertEquals(
         ImmutableList.of(
             Granularity.HOUR,
+            Granularity.THIRTY_MINUTE,
             Granularity.FIFTEEN_MINUTE,
             Granularity.TEN_MINUTE,
             Granularity.FIVE_MINUTE,

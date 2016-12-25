@@ -29,6 +29,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
@@ -220,7 +221,7 @@ public class DataSchemaTest
     );
     Assert.assertEquals(
         actual.getGranularitySpec(),
-        new ArbitraryGranularitySpec(Granularity.DAY, ImmutableList.of(Interval.parse("2014/2015")))
+        new ArbitraryGranularitySpec(new DurationGranularity(86400000, null), ImmutableList.of(Interval.parse("2014/2015")))
     );
   }
 }

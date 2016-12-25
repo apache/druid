@@ -611,7 +611,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       dims = newDims;
     }
 
-    long truncated = gran.truncate(row.getTimestamp()).getMillis();
+    long truncated = 0;
+    if (row.getTimestamp() != null) {
+      truncated = gran.truncate(row.getTimestamp()).getMillis();
+    }
     return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
   }
 

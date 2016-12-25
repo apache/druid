@@ -46,6 +46,10 @@ public final class NoneGranularity extends Granularity
   @Override
   public DateTime truncate(DateTime time)
   {
+    if (time == null) {
+      return null;
+    }
+
     return new DateTime(time.getMillis());
   }
 
