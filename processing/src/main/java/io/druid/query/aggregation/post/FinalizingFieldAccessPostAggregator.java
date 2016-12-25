@@ -96,14 +96,24 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasD
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator)o;
 
-    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) return false;
-    if (name != null ? !name.equals(that.name) : that.name != null) return false;
-    if (aggFactoryMap != null ? !aggFactoryMap.equals(that.aggFactoryMap) : that.aggFactoryMap != null) return false;
+    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
+      return false;
+    }
+    if (name != null ? !name.equals(that.name) : that.name != null) {
+      return false;
+    }
+    if (aggFactoryMap != null ? !aggFactoryMap.equals(that.aggFactoryMap) : that.aggFactoryMap != null) {
+      return false;
+    }
 
     return true;
   }
