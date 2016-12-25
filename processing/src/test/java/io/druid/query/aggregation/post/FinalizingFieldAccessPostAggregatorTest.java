@@ -22,16 +22,17 @@ package io.druid.query.aggregation.post;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregator;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -50,7 +51,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Test
   public void testComputeWithoutFinalizing()
   {
-    Aggregator agg = new CountAggregator("rows");
+    Aggregator agg = new CountAggregator();
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
@@ -106,10 +107,11 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void tesstIngestAndQuery() throws Exception
+  public void testIngestAndQuery() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(new AggregatorsModule()),
+        GroupByQueryRunnerTest.testConfigs().get(0),
         tempFoler
     );
 
