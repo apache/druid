@@ -223,6 +223,7 @@ public class IncrementalIndexStorageAdapterTest
             }
         ),
         new StupidPool(
+            "GroupByQueryEngine-bufferPool",
             new Supplier<ByteBuffer>()
             {
               @Override
@@ -306,6 +307,7 @@ public class IncrementalIndexStorageAdapterTest
 
     TopNQueryEngine engine = new TopNQueryEngine(
         new StupidPool<ByteBuffer>(
+            "TopNQueryEngine-bufferPool",
             new Supplier<ByteBuffer>()
             {
               @Override

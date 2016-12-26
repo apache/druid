@@ -116,16 +116,22 @@ public class IncrementalIndexTest
                 public IncrementalIndex createIndex()
                 {
                   return new OffheapIncrementalIndex(
-                      schema, true, true, sortFacts, 1000000, new StupidPool<ByteBuffer>(
-                      new Supplier<ByteBuffer>()
-                      {
-                        @Override
-                        public ByteBuffer get()
-                        {
-                          return ByteBuffer.allocate(256 * 1024);
-                        }
-                      }
-                  )
+                      schema,
+                      true,
+                      true,
+                      sortFacts,
+                      1000000,
+                      new StupidPool<ByteBuffer>(
+                          "OffheapIncrementalIndex-bufferPool",
+                          new Supplier<ByteBuffer>()
+                          {
+                            @Override
+                            public ByteBuffer get()
+                            {
+                              return ByteBuffer.allocate(256 * 1024);
+                            }
+                          }
+                      )
                   );
                 }
               }
