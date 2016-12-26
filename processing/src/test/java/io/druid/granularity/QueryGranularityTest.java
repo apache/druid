@@ -32,6 +32,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
 import org.joda.time.Hours;
+import org.joda.time.Interval;
 import org.joda.time.Minutes;
 import org.joda.time.Months;
 import org.joda.time.Period;
@@ -52,12 +53,11 @@ public class QueryGranularityTest
   @Test
   public void testIterableNone() throws Exception
   {
-    List<Long> millis = Lists.newArrayList(Granularity.NONE.iterable(0, 1000));
+    final Iterator<Interval> iterator = Granularity.NONE.getIterable(new Interval(0, 1000)).iterator();
     int count = 0;
-    Assert.assertEquals(1000, millis.size());
-    for (Long milli : millis) {
-      Assert.assertEquals(count, milli.longValue());
-      ++count;
+    while (iterator.hasNext()) {
+      Assert.assertEquals(count, iterator.next().getStartMillis());
+      count++;
     }
   }
 
@@ -66,13 +66,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T09:38:00.000Z"),
             new DateTime("2011-01-01T09:39:00.000Z"),
             new DateTime("2011-01-01T09:40:00.000Z")
         ),
-            Granularity.MINUTE.iterable(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis())
+        Granularity.MINUTE.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis()))
     );
   }
 
@@ -81,14 +81,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T09:38:00.000Z"),
             new DateTime("2011-01-01T09:39:00.000Z"),
             new DateTime("2011-01-01T09:40:00.000Z"),
             new DateTime("2011-01-01T09:41:00.000Z")
         ),
-            Granularity.MINUTE.iterable(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis())
+        Granularity.MINUTE.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis()))
     );
   }
 
@@ -97,16 +97,16 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:30:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T09:30:00.000Z"),
             new DateTime("2011-01-01T09:45:00.000Z"),
             new DateTime("2011-01-01T10:00:00.000Z")
         ),
-            Granularity.fromString("FIFTEEN_MINUTE").iterable(
-            baseTime.getMillis(),
-            baseTime.plus(Minutes.minutes(45)).getMillis()
-        )
+            Granularity.FIFTEEN_MINUTE.getIterable(
+            new Interval(
+                baseTime.getMillis(), baseTime.plus(Minutes.minutes(45)).getMillis()
+            ))
     );
   }
 
@@ -115,13 +115,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T09:30:00.000Z"),
             new DateTime("2011-01-01T09:45:00.000Z"),
             new DateTime("2011-01-01T10:00:00.000Z"),
             new DateTime("2011-01-01T10:15:00.000Z")
-        ), Granularity.fromString("FIFTEEN_MINUTE").iterable(baseTime.getMillis(), baseTime.plus(Minutes.minutes(45)).getMillis())
+        ),
+        Granularity.FIFTEEN_MINUTE.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Minutes.minutes(45)).getMillis()))
     );
   }
 
@@ -130,12 +131,12 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T09:00:00.000Z"),
             new DateTime("2011-01-01T10:00:00.000Z"),
             new DateTime("2011-01-01T11:00:00.000Z")
-        ), Granularity.HOUR.iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis())
+        ), Granularity.HOUR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis()))
     );
   }
 
@@ -144,13 +145,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T09:00:00.000Z"),
             new DateTime("2011-01-01T10:00:00.000Z"),
             new DateTime("2011-01-01T11:00:00.000Z"),
             new DateTime("2011-01-01T12:00:00.000Z")
-        ), Granularity.HOUR.iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis())
+        ), Granularity.HOUR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis()))
     );
   }
 
@@ -159,13 +160,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2011-01-02T00:00:00.000Z"),
             new DateTime("2011-01-03T00:00:00.000Z")
         ),
-        Granularity.DAY.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        Granularity.DAY.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
     );
   }
 
@@ -174,14 +175,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2011-01-02T00:00:00.000Z"),
             new DateTime("2011-01-03T00:00:00.000Z"),
             new DateTime("2011-01-04T00:00:00.000Z")
         ),
-        Granularity.DAY.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        Granularity.DAY.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
     );
   }
 
@@ -190,13 +191,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-03T00:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-03T00:00:00.000Z"),
             new DateTime("2011-01-10T00:00:00.000Z"),
             new DateTime("2011-01-17T00:00:00.000Z")
         ),
-        Granularity.WEEK.iterable(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis())
+        Granularity.WEEK.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis()))
     );
   }
 
@@ -205,14 +206,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2010-12-27T00:00:00.000Z"),
             new DateTime("2011-01-03T00:00:00.000Z"),
             new DateTime("2011-01-10T00:00:00.000Z"),
             new DateTime("2011-01-17T00:00:00.000Z")
         ),
-        Granularity.WEEK.iterable(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis())
+        Granularity.WEEK.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis()))
     );
   }
 
@@ -221,13 +222,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2011-02-01T00:00:00.000Z"),
             new DateTime("2011-03-01T00:00:00.000Z")
         ),
-        Granularity.MONTH.iterable(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis())
+        Granularity.MONTH.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis()))
     );
   }
 
@@ -236,14 +237,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2011-02-01T00:00:00.000Z"),
             new DateTime("2011-03-01T00:00:00.000Z"),
             new DateTime("2011-04-01T00:00:00.000Z")
         ),
-        Granularity.MONTH.iterable(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis())
+        Granularity.MONTH.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis()))
     );
   }
 
@@ -252,13 +253,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2011-04-01T00:00:00.000Z"),
             new DateTime("2011-07-01T00:00:00.000Z")
         ),
-        Granularity.QUARTER.iterable(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis())
+        Granularity.QUARTER.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis()))
     );
   }
 
@@ -267,14 +268,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2011-04-01T00:00:00.000Z"),
             new DateTime("2011-07-01T00:00:00.000Z"),
             new DateTime("2011-10-01T00:00:00.000Z")
         ),
-        Granularity.QUARTER.iterable(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis())
+        Granularity.QUARTER.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis()))
     );
   }
 
@@ -283,13 +284,13 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2012-01-01T00:00:00.000Z"),
             new DateTime("2013-01-01T00:00:00.000Z")
         ),
-        Granularity.YEAR.iterable(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis())
+        Granularity.YEAR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis()))
     );
   }
 
@@ -298,14 +299,14 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2011-01-01T00:00:00.000Z"),
             new DateTime("2012-01-01T00:00:00.000Z"),
             new DateTime("2013-01-01T00:00:00.000Z"),
             new DateTime("2014-01-01T00:00:00.000Z")
         ),
-        Granularity.YEAR.iterable(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis())
+        Granularity.YEAR.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis()))
     );
   }
 
@@ -314,17 +315,17 @@ public class QueryGranularityTest
   {
     final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-04T00:00:00", tz);
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2012-11-04T00:00:00.000-07:00"),
             new DateTime("2012-11-05T00:00:00.000-08:00"),
             new DateTime("2012-11-06T00:00:00.000-08:00")
         ),
         new PeriodGranularity(new Period("P1D"), null, tz)
-            .iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
     );
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2012-11-04T00:00:00.000-07:00"),
             new DateTime("2012-11-04T01:00:00.000-07:00"),
@@ -333,7 +334,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-04T03:00:00.000-08:00")
         ),
         new PeriodGranularity(new Period("PT1H"), null, tz)
-            .iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(5)).getMillis())
+            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Hours.hours(5)).getMillis()))
     );
 
     final PeriodGranularity hour = new PeriodGranularity(new Period("PT1H"), null, tz);
@@ -360,7 +361,7 @@ public class QueryGranularityTest
   {
     final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2012-11-01T00:00:00.000-07:00"),
             new DateTime("2012-12-01T00:00:00.000-08:00"),
@@ -368,7 +369,7 @@ public class QueryGranularityTest
             new DateTime("2013-02-01T00:00:00.000-08:00")
         ),
         new PeriodGranularity(new Period("P1M"), null, tz)
-            .iterable(baseTime.getMillis(), baseTime.plus(Months.months(3)).getMillis())
+            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Months.months(3)).getMillis()))
     );
   }
 
@@ -377,7 +378,7 @@ public class QueryGranularityTest
   {
     final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2012-10-29T00:00:00.000-07:00"),
             new DateTime("2012-11-05T00:00:00.000-08:00"),
@@ -385,17 +386,17 @@ public class QueryGranularityTest
             new DateTime("2012-11-19T00:00:00.000-08:00")
         ),
         new PeriodGranularity(new Period("P1W"), null, tz)
-            .iterable(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis())
+            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis()))
     );
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(
             new DateTime("2012-11-03T10:00:00.000-07:00"),
             new DateTime("2012-11-10T10:00:00.000-08:00"),
             new DateTime("2012-11-17T10:00:00.000-08:00")
         ),
         new PeriodGranularity(new Period("P1W"), baseTime, tz)
-            .iterable(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis())
+            .getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Weeks.weeks(3)).getMillis()))
     );
   }
 
@@ -603,9 +604,9 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(baseTime),
-        Granularity.ALL.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        Granularity.ALL.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
     );
   }
 
@@ -614,9 +615,9 @@ public class QueryGranularityTest
   {
     final DateTime baseTime = new DateTime("2011-01-01T09:38:02.992Z");
 
-    assertSame(
+    assertSameInterval(
         Lists.newArrayList(baseTime),
-        Granularity.ALL.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        Granularity.ALL.getIterable(new Interval(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis()))
     );
   }
 
@@ -652,30 +653,30 @@ public class QueryGranularityTest
     }
   }
 
-//  @Test
-//  public void testSerializeDuration() throws Exception
-//  {
-//    ObjectMapper mapper = new DefaultObjectMapper();
-//
-//    String json = "{ \"type\": \"duration\", \"duration\": \"3600000\" }";
-//    Granularity gran = mapper.readValue(json, Granularity.class);
-//    Assert.assertEquals(new DurationGranularity(3600000, null), gran);
-//
-//    json = "{ \"type\": \"duration\", \"duration\": \"5\", \"origin\": \"2012-09-01T00:00:00.002Z\" }";
-//    gran = mapper.readValue(json, Granularity.class);
-//    Assert.assertEquals(new DurationGranularity(5, 2), gran);
-//
-//    DurationGranularity expected = new DurationGranularity(5, 2);
-//    Assert.assertEquals(expected, mapper.readValue(mapper.writeValueAsString(expected), Granularity.class));
-//
-//    String illegalJson = "{ \"type\": \"duration\", \"duration\": \"0\" }";
-//    try {
-//      mapper.readValue(illegalJson, Granularity.class);
-//      Assert.fail();
-//    }
-//    catch (JsonMappingException e) {
-//    }
-//  }
+  @Test
+  public void testSerializeDuration() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+    String json = "{ \"type\": \"duration\", \"duration\": \"3600000\" }";
+    Granularity gran = mapper.readValue(json, Granularity.class);
+    Assert.assertEquals(new DurationGranularity(3600000, null), gran);
+
+    json = "{ \"type\": \"duration\", \"duration\": \"5\", \"origin\": \"2012-09-01T00:00:00.002Z\" }";
+    gran = mapper.readValue(json, Granularity.class);
+    Assert.assertEquals(new DurationGranularity(5, 2), gran);
+
+    DurationGranularity expected = new DurationGranularity(5, 2);
+    Assert.assertEquals(expected, mapper.readValue(mapper.writeValueAsString(expected), Granularity.class));
+
+    String illegalJson = "{ \"type\": \"duration\", \"duration\": \"0\" }";
+    try {
+      mapper.readValue(illegalJson, Granularity.class);
+      Assert.fail();
+    }
+    catch (JsonMappingException e) {
+    }
+  }
 
   @Test
   public void testSerializeSimple() throws Exception
@@ -759,15 +760,14 @@ public class QueryGranularityTest
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
   }
 
-  private void assertSame(List<DateTime> expected, Iterable<Long> actual)
+  private void assertSameInterval(List<DateTime> expected, Iterable<Interval> actual)
   {
     Assert.assertEquals(expected.size(), Iterables.size(actual));
-    Iterator<Long> actualIter = actual.iterator();
+    Iterator<Interval> actualIter = actual.iterator();
     Iterator<DateTime> expectedIter = expected.iterator();
 
     while (actualIter.hasNext() && expectedIter.hasNext()) {
-      long a = actualIter.next().longValue();
-      Assert.assertEquals(expectedIter.next(), new DateTime(a));
+      Assert.assertEquals(expectedIter.next(), actualIter.next().getStart());
     }
     Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());

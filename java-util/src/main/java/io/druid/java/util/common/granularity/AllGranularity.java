@@ -22,6 +22,7 @@ package io.druid.java.util.common.granularity;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
 public final class AllGranularity extends Granularity
@@ -63,9 +64,9 @@ public final class AllGranularity extends Granularity
   }
 
   @Override
-  public Iterable<Long> iterable(long start, long end)
+  public Iterable<Interval> getIterable(Interval input)
   {
-    return ImmutableList.of(start);
+    return ImmutableList.of(input);
   }
 
   @Override

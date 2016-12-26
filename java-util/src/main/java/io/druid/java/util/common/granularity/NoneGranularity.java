@@ -40,7 +40,7 @@ public final class NoneGranularity extends Granularity
   @Override
   public DateTime decrement(DateTime time)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    return new DateTime(time.getMillis() - 1);
   }
 
   @Override

@@ -197,49 +197,6 @@ public abstract class Granularity
     return new IntervalIterable(input);
   }
 
-  public Iterable<Long> iterable(final long start, final long end)
-  {
-    return new Iterable<Long>()
-    {
-      @Override
-      public Iterator<Long> iterator()
-      {
-        return new Iterator<Long>()
-        {
-          long curr = truncate(new DateTime(start)).getMillis();
-          long next = increment(new DateTime(curr)).getMillis();
-
-          @Override
-          public boolean hasNext()
-          {
-            return curr < end;
-          }
-
-          @Override
-          public Long next()
-          {
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-
-            long retVal = curr;
-
-            curr = next;
-            next = increment(new DateTime(curr)).getMillis();
-
-            return retVal;
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-    };
-  }
-
   public enum Formatter
   {
     DEFAULT,

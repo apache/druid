@@ -53,6 +53,7 @@ import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -104,7 +105,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       return new DateTime(Long.parseLong(timestampStringFromContext));
     } else if (Granularity.ALL.equals(gran)) {
       final long timeStart = query.getIntervals().get(0).getStartMillis();
-      return new DateTime(gran.iterable(timeStart, timeStart + 1).iterator().next());
+      return gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStart();
     } else {
       return null;
     }

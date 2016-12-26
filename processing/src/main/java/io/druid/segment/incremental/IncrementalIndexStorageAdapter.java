@@ -27,10 +27,10 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -232,21 +232,21 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval actualInterval = actualIntervalTmp;
 
-    Iterable<Long> iterable = gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis());
+    Iterable<Interval> iterable = gran.getIterable(actualInterval);
     if (descending) {
-      // might be better to be included in granularity#iterable
       iterable = Lists.reverse(ImmutableList.copyOf(iterable));
     }
+
     return Sequences.map(
         Sequences.simple(iterable),
-        new Function<Long, Cursor>()
+        new Function<Interval, Cursor>()
         {
           EntryHolder currEntry = new EntryHolder();
 
           @Override
-          public Cursor apply(@Nullable final Long input)
+          public Cursor apply(@Nullable final Interval interval)
           {
-            final long timeStart = Math.max(input, actualInterval.getStartMillis());
+            final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
 
             return new Cursor()
             {
@@ -262,10 +262,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 cursorIterable = index.getFacts().timeRangeIterable(
                     descending,
                     timeStart,
-                    Math.min(actualInterval.getEndMillis(), gran.increment(new DateTime(input)).getMillis())
+                    Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
                 );
                 emptyRange = !cursorIterable.iterator().hasNext();
-                time = gran.toDateTime(input);
+                time = gran.toDateTime(interval.getStartMillis());
 
                 reset();
               }

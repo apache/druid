@@ -115,12 +115,6 @@ public class DurationGranularity extends Granularity
     throw new RE("This method should not be invoked for this granularity type");
   }
 
-  @Override
-  public Iterable<Long> iterable(long start, long end)
-  {
-    throw new RE("This method should not be invoked for this granularity type");
-  }
-
   public long getDurationMillis()
   {
     return length;

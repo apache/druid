@@ -29,7 +29,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
-
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
@@ -378,8 +377,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       final Closer closer = Closer.create();
       closer.register(timestamps);
 
-      Iterable<Long> iterable = gran.iterable(interval.getStartMillis(), interval.getEndMillis());
-
+      Iterable<Interval> iterable = gran.getIterable(interval);
       if (descending) {
         iterable = Lists.reverse(ImmutableList.copyOf(iterable));
       }
@@ -387,13 +385,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return Sequences.withBaggage(
           Sequences.map(
               Sequences.simple(iterable),
-              new Function<Long, Cursor>()
+              new Function<Interval, Cursor>()
               {
                 @Override
-                public Cursor apply(final Long input)
+                public Cursor apply(final Interval inputInterval)
                 {
-                  final long timeStart = Math.max(interval.getStartMillis(), input);
-                  final long timeEnd = Math.min(interval.getEndMillis(), gran.increment(new DateTime(input)).getMillis());
+                  final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
+                  final long timeEnd = Math.min(interval.getEndMillis(), gran.increment(inputInterval.getStart()).getMillis());
 
                   if (descending) {
                     for (; baseOffset.withinBounds(); baseOffset.increment()) {
@@ -425,7 +423,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
 
                   final Offset initOffset = offset.clone();
-                  final DateTime myBucket = gran.toDateTime(input);
+                  final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
                   final CursorOffsetHolder cursorOffsetHolder = new CursorOffsetHolder();
 
                   abstract class QueryableIndexBaseCursor implements Cursor
