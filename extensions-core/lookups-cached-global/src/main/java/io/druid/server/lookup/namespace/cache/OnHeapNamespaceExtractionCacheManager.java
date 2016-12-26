@@ -28,8 +28,10 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 
 import java.lang.ref.WeakReference;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -48,8 +50,9 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
    * <p>{@link WeakReference} doesn't override Object's identity equals() and hashCode(), so effectively this map plays
    * like concurrent {@link java.util.IdentityHashMap}.
    */
-  private final ConcurrentHashMap<WeakReference<ConcurrentMap<String, String>>, Boolean> caches =
-      new ConcurrentHashMap<>();
+  private final Set<WeakReference<ConcurrentMap<String, String>>> caches = Collections.newSetFromMap(
+      new ConcurrentHashMap<WeakReference<ConcurrentMap<String, String>>, Boolean>()
+  );
 
   @Inject
   public OnHeapNamespaceExtractionCacheManager(Lifecycle lifecycle, ServiceEmitter serviceEmitter)
@@ -59,8 +62,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
 
   private void expungeCollectedCaches()
   {
-    for (Iterator<WeakReference<ConcurrentMap<String, String>>> iterator = caches.keySet().iterator();
-         iterator.hasNext(); ) {
+    for (Iterator<WeakReference<ConcurrentMap<String, String>>> iterator = caches.iterator(); iterator.hasNext(); ) {
       WeakReference<?> cacheRef = iterator.next();
       if (cacheRef.get() == null) {
         // This may not necessarily mean leak of CacheHandler, because disposeCache() may be called concurrently with
@@ -81,7 +83,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     ConcurrentMap<String, String> cache = new ConcurrentHashMap<>();
     WeakReference<ConcurrentMap<String, String>> cacheRef = new WeakReference<>(cache);
     expungeCollectedCaches();
-    caches.put(cacheRef, true);
+    caches.add(cacheRef);
     return new CacheHandler(this, cache, cacheRef);
   }
 
@@ -107,7 +109,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     long numEntries = 0;
     long size = 0;
     expungeCollectedCaches();
-    for (WeakReference<ConcurrentMap<String, String>> cacheRef : caches.keySet()) {
+    for (WeakReference<ConcurrentMap<String, String>> cacheRef : caches) {
       final Map<String, String> cache = cacheRef.get();
       if (cache == null) {
         continue;
