@@ -76,6 +76,7 @@ public class TopNUnionQueryTest
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
                     new StupidPool<ByteBuffer>(
+                        "TopNQueryRunnerFactory-bufferPool",
                         new Supplier<ByteBuffer>()
                         {
                           @Override

@@ -256,6 +256,7 @@ public class AggregationTestHelper
 
     TopNQueryRunnerFactory factory = new TopNQueryRunnerFactory(
         new StupidPool<>(
+            "TopNQueryRunnerFactory-bufferPool",
             new Supplier<ByteBuffer>()
             {
               @Override
