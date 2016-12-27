@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.query.search.search.SearchQueryDecisionHelper;
 
 /**
  */
@@ -37,6 +36,4 @@ public interface BitmapSerdeFactory
   ObjectStrategy<ImmutableBitmap> getObjectStrategy();
 
   BitmapFactory getBitmapFactory();
-
-  SearchQueryDecisionHelper getDecisionHelper();
 }

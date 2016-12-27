@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Sequence;
@@ -62,10 +63,19 @@ import java.util.Map;
 public class SearchQueryRunnerTest
 {
   private static final Logger LOG = new Logger(SearchQueryRunnerTest.class);
+  private static final SearchQueryConfig config = new SearchQueryConfig();
   private static final SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest(
-      new SearchQueryConfig(),
+      config,
       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
   );
+  private static final SearchStrategySelector selector = new SearchStrategySelector(new Supplier<SearchQueryConfig>()
+  {
+    @Override
+    public SearchQueryConfig get()
+    {
+      return config;
+    }
+  });
 
   @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
@@ -73,6 +83,7 @@ public class SearchQueryRunnerTest
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
             new SearchQueryRunnerFactory(
+                selector,
                 toolChest,
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )

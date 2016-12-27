@@ -19,36 +19,44 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ConciseBitmapFactory;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.java.util.common.IAE;
+import io.druid.query.filter.Filter;
+import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.filter.Filters;
+import org.joda.time.Interval;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "auto", value = AutoStrategy.class),
-    @JsonSubTypes.Type(name = "indexOnly", value = IndexOnlyStrategy.class),
-    @JsonSubTypes.Type(name = "cursorBased", value = CursorBasedStrategy.class)
-})
+import java.util.List;
+
 public abstract class SearchStrategy
 {
+  protected final Filter filter;
+  protected final Interval interval;
+
+  protected SearchStrategy(SearchQuery query)
+  {
+    this.filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+    final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
+    if (intervals.size() != 1) {
+      throw new IAE("Should only have one interval, got[%s]", intervals);
+    }
+    this.interval = intervals.get(0);
+  }
+
   public abstract SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment);
 
-  @Override
-  public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+  public SearchQueryDecisionHelper getDecisionHelper(QueryableIndex index)
+  {
+    final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+    if (bitmapFactory.getClass().equals(ConciseBitmapFactory.class)) {
+      return new ConciseBitmapDecisionHelper();
+    } else if (bitmapFactory.getClass().equals(RoaringBitmapFactory.class)) {
+      return new RoaringBitmapDecisionHelper();
+    } else {
+      throw new IAE("Unknown bitmap type[%s]", bitmapFactory.getClass().getCanonicalName());
     }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return toString().hashCode();
-  }
-
-  @Override
-  public String toString() {
-    return getClass().getSimpleName();
   }
 }

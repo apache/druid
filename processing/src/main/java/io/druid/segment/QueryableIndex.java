@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
-import io.druid.query.search.search.SearchQueryDecisionHelper;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
@@ -38,8 +37,6 @@ public interface QueryableIndex extends ColumnSelector, Closeable
   BitmapFactory getBitmapFactoryForDimensions();
   Metadata getMetadata();
   Map<String, DimensionHandler> getDimensionHandlers();
-
-  SearchQueryDecisionHelper getDecisionHelper();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

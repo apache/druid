@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.query.search.search.SearchQueryDecisionHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
@@ -44,14 +43,12 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final SmooshedFileMapper fileMapper;
   private final Metadata metadata;
   private final Map<String, DimensionHandler> dimensionHandlers;
-  private final SearchQueryDecisionHelper decisionHelper;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
       Indexed<String> columnNames,
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
-      SearchQueryDecisionHelper decisionHelper,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper,
       Metadata metadata
@@ -62,7 +59,6 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.columnNames = columnNames;
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
-    this.decisionHelper = decisionHelper;
     this.columns = columns;
     this.fileMapper = fileMapper;
     this.metadata = metadata;
@@ -122,12 +118,6 @@ public class SimpleQueryableIndex implements QueryableIndex
   public Map<String, DimensionHandler> getDimensionHandlers()
   {
     return dimensionHandlers;
-  }
-
-  @Override
-  public SearchQueryDecisionHelper getDecisionHelper()
-  {
-    return decisionHelper;
   }
 
   private void initDimensionHandlers()

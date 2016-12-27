@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
+import io.druid.query.search.SearchStrategySelector;
 import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
@@ -93,8 +94,18 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(
-          new SearchQueryConfig(),
+    final SearchQueryConfig config = new SearchQueryConfig();
+    QueryRunnerFactory factory = new SearchQueryRunnerFactory(
+        new SearchStrategySelector(new Supplier<SearchQueryConfig>()
+        {
+          @Override
+          public SearchQueryConfig get()
+          {
+            return config;
+          }
+        }),
+        new SearchQueryQueryToolChest(
+          config,
           QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER);
     return new FinalizeResultsQueryRunner<T>(

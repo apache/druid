@@ -25,7 +25,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchStrategy;
 import io.druid.segment.Segment;
 
 import java.util.Map;
@@ -35,10 +34,12 @@ import java.util.Map;
 public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
   private final Segment segment;
+  private final SearchStrategySelector strategySelector;
 
-  public SearchQueryRunner(Segment segment)
+  public SearchQueryRunner(Segment segment, SearchStrategySelector strategySelector)
   {
     this.segment = segment;
+    this.strategySelector = strategySelector;
   }
 
   @Override
@@ -52,8 +53,6 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     final SearchQuery query = (SearchQuery) input;
-    final SearchStrategy strategy = query.getStrategy();
-
-    return strategy.getExecutionPlan(query, segment).execute();
+    return strategySelector.strategize(query).getExecutionPlan(query, segment).execute();
   }
 }

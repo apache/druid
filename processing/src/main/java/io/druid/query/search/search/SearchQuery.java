@@ -49,7 +49,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
   private final int limit;
-  private final SearchStrategy strategy;
 
   @JsonCreator
   public SearchQuery(
@@ -61,20 +60,18 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("searchDimensions") List<DimensionSpec> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
-      @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("strategy") SearchStrategy strategy
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, false, context);
+    Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
+
     this.dimFilter = dimFilter;
     this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
     this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
-    this.strategy = strategy == null ? new AutoStrategy() : strategy;
-
-    Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
   }
 
   @Override
@@ -107,8 +104,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext(),
-        strategy
+        getContext()
     );
   }
 
@@ -124,8 +120,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext(),
-        strategy
+        getContext()
     );
   }
 
@@ -141,8 +136,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        computeOverridenContext(contextOverrides),
-        strategy
+        computeOverridenContext(contextOverrides)
     );
   }
 
@@ -157,8 +151,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext(),
-        strategy
+        getContext()
     );
   }
 
@@ -198,11 +191,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     return sortSpec;
   }
 
-  @JsonProperty("strategy")
-  public SearchStrategy getStrategy() {
-    return strategy;
-  }
-
   public SearchQuery withLimit(int newLimit)
   {
     return new SearchQuery(
@@ -214,8 +202,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         dimensions,
         querySpec,
         sortSpec,
-        getContext(),
-        strategy
+        getContext()
     );
   }
 
@@ -230,7 +217,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
            ", querySpec=" + querySpec +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", limit=" + limit +
-           ", strategy=" + strategy +
            '}';
   }
 
@@ -268,10 +254,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       return false;
     }
 
-    if (!strategy.equals(that.strategy)) {
-      return false;
-    }
-
     return true;
   }
 
@@ -285,7 +267,6 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (querySpec != null ? querySpec.hashCode() : 0);
     result = 31 * result + limit;
-    result = 31 * result + strategy.hashCode();
     return result;
   }
 }

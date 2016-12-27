@@ -29,7 +29,14 @@ import java.util.TreeMap;
 
 public class IndexOnlyStrategy extends SearchStrategy
 {
+  public static final String NAME = "indexOnly";
+
   private static final EmittingLogger log = new EmittingLogger(IndexOnlyStrategy.class);
+
+  public IndexOnlyStrategy(SearchQuery query)
+  {
+    super(query);
+  }
 
   @Override
   public SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment)
@@ -37,18 +44,89 @@ public class IndexOnlyStrategy extends SearchStrategy
     final QueryableIndex index = segment.asQueryableIndex();
 
     if (index == null) {
-      log.info("Index doesn't exist. Fall back to cursor-based execution strategy");
-      return new CursorBasedExecutor(query, segment);
+      log.debug("Index doesn't exist. Fall back to cursor-based execution strategy");
+      return new CursorBasedExecutor(query, segment, filter, interval);
     } else {
-      return new IndexOnlyExecutor(query, segment);
+      log.debug("Index-only execution strategy is selected");
+      final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(index, segment, filter, interval);
+      return new IndexOnlyExecutor(query, segment, timeFilteredBitmap);
     }
+  }
+
+  static ImmutableBitmap makeTimeFilteredBitmap(final QueryableIndex index,
+                                                final Segment segment,
+                                                final Filter filter,
+                                                final Interval interval)
+  {
+    final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+    final ImmutableBitmap baseFilter =
+        filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
+
+    final ImmutableBitmap timeFilteredBitmap;
+    if (!interval.contains(segment.getDataInterval())) {
+      MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
+      final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
+      try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
+
+        int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
+        int endIndex = Math.min(
+            timeValues.length() - 1,
+            getStartIndexOfTime(timeValues, interval.getEndMillis(), false)
+        );
+
+        for (int i = startIndex; i <= endIndex; i++) {
+          timeBitmap.add(i);
+        }
+
+        final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
+        timeFilteredBitmap =
+            (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
+      }
+    } else {
+      timeFilteredBitmap = baseFilter;
+    }
+
+    return timeFilteredBitmap;
+  }
+
+  private static int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
+  {
+    int low = 0;
+    int high = timeValues.length() - 1;
+
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      long midVal = timeValues.getLongSingleValueRow(mid);
+
+      if (midVal < time) {
+        low = mid + 1;
+      } else if (midVal > time) {
+        high = mid - 1;
+      } else { // key found
+        int i;
+        // rewind the index of the same time values
+        for (i = mid - 1; i >= 0; i--) {
+          long prev = timeValues.getLongSingleValueRow(i);
+          if (time != prev) {
+            break;
+          }
+        }
+        return inclusive ? i + 1 : i;
+      }
+    }
+    // key not found.
+    // return insert index
+    return inclusive ? low : low - 1;
   }
 
   public static class IndexOnlyExecutor extends SearchQueryExecutor {
 
-    public IndexOnlyExecutor(SearchQuery query, Segment segment)
+    private final ImmutableBitmap timeFilteredBitmap;
+
+    public IndexOnlyExecutor(SearchQuery query, Segment segment, ImmutableBitmap timeFilteredBitmap)
     {
       super(query, segment);
+      this.timeFilteredBitmap = timeFilteredBitmap;
     }
 
     @Override
@@ -58,7 +136,6 @@ public class IndexOnlyStrategy extends SearchStrategy
       Preconditions.checkArgument(index != null, "Index should not be null");
 
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
-      final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(index, segment, filter, interval);
 
       final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
       for (DimensionSpec dimension : dimsToSearch) {
@@ -97,71 +174,6 @@ public class IndexOnlyStrategy extends SearchStrategy
       }
 
       return makeReturnResult(segment, limit, retVal);
-    }
-
-    static ImmutableBitmap makeTimeFilteredBitmap(final QueryableIndex index,
-                                                         final Segment segment,
-                                                         final Filter filter,
-                                                         final Interval interval) {
-      final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
-      final ImmutableBitmap baseFilter =
-          filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
-
-      final ImmutableBitmap timeFilteredBitmap;
-      if (!interval.contains(segment.getDataInterval())) {
-        MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-        final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-        try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
-
-          int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
-          int endIndex = Math.min(
-              timeValues.length() - 1,
-              getStartIndexOfTime(timeValues, interval.getEndMillis(), false)
-          );
-
-          for (int i = startIndex; i <= endIndex; i++) {
-            timeBitmap.add(i);
-          }
-
-          final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
-          timeFilteredBitmap =
-              (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
-        }
-      } else {
-        timeFilteredBitmap = baseFilter;
-      }
-
-      return timeFilteredBitmap;
-    }
-
-    private static int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
-    {
-      int low = 0;
-      int high = timeValues.length() - 1;
-
-      while (low <= high) {
-        int mid = (low + high) >>> 1;
-        long midVal = timeValues.getLongSingleValueRow(mid);
-
-        if (midVal < time) {
-          low = mid + 1;
-        } else if (midVal > time) {
-          high = mid - 1;
-        } else { // key found
-          int i;
-          // rewind the index of the same time values
-          for (i = mid - 1; i >= 0; i--) {
-            long prev = timeValues.getLongSingleValueRow(i);
-            if (time != prev) {
-              break;
-            }
-          }
-          return inclusive ? i + 1 : i;
-        }
-      }
-      // key not found.
-      // return insert index
-      return inclusive ? low : low - 1;
     }
   }
 }

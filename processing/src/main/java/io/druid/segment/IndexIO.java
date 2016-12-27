@@ -50,7 +50,6 @@ import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.search.search.ConciseBitmapDecisionHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
@@ -950,7 +949,6 @@ public class IndexIO
           new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
-          ConciseBitmapDecisionHelper.getInstance(),
           columns,
           index.getFileMapper(),
           null
@@ -1033,7 +1031,6 @@ public class IndexIO
           cols,
           dims,
           segmentBitmapSerdeFactory.getBitmapFactory(),
-          segmentBitmapSerdeFactory.getDecisionHelper(),
           columns,
           smooshedFiles,
           metadata

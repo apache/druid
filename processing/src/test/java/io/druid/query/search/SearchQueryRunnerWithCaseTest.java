@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -27,6 +28,8 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
+import io.druid.query.search.search.CursorBasedStrategy;
+import io.druid.query.search.search.IndexOnlyStrategy;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
@@ -68,13 +71,11 @@ public class SearchQueryRunnerWithCaseTest
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    SearchQueryRunnerFactory factory = new SearchQueryRunnerFactory(
-        new SearchQueryQueryToolChest(
-            new SearchQueryConfig(),
-            NoopIntervalChunkingQueryRunnerDecorator()
-        ),
-        NOOP_QUERYWATCHER
-    );
+    final SearchQueryConfig[] configs = new SearchQueryConfig[2];
+    configs[0] = new SearchQueryConfig();
+    configs[0].setSearchStrategy(IndexOnlyStrategy.NAME);
+    configs[1] = new SearchQueryConfig();
+    configs[1].setSearchStrategy(CursorBasedStrategy.NAME);
 
     CharSource input = CharSource.wrap(
         "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\tPREFERRED\ta\u0001preferred\t100.000000\n" +
@@ -91,11 +92,58 @@ public class SearchQueryRunnerWithCaseTest
 
     return transformToConstructionFeeder(
         Arrays.asList(
-            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1"), "index1"),
-            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2"), "index2"),
-            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3), "index3"),
-            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4), "index4")
+            makeQueryRunner(makeRunnerFactory(configs[0]),
+                            "index1",
+                            new IncrementalIndexSegment(index1, "index1"),
+                            "index1"),
+            makeQueryRunner(makeRunnerFactory(configs[0]),
+                            "index2",
+                            new IncrementalIndexSegment(index2, "index2"),
+                            "index2"),
+            makeQueryRunner(makeRunnerFactory(configs[0]),
+                            "index3",
+                            new QueryableIndexSegment("index3", index3),
+                            "index3"),
+            makeQueryRunner(makeRunnerFactory(configs[0]),
+                            "index4",
+                            new QueryableIndexSegment("index4", index4),
+                            "index4"),
+            makeQueryRunner(makeRunnerFactory(configs[1]),
+                            "index1",
+                            new IncrementalIndexSegment(index1, "index1"),
+                            "index1"),
+            makeQueryRunner(makeRunnerFactory(configs[1]),
+                            "index2",
+                            new IncrementalIndexSegment(index2, "index2"),
+                            "index2"),
+            makeQueryRunner(makeRunnerFactory(configs[1]),
+                            "index3",
+                            new QueryableIndexSegment("index3", index3),
+                            "index3"),
+            makeQueryRunner(makeRunnerFactory(configs[1]),
+                            "index4",
+                            new QueryableIndexSegment("index4", index4),
+                            "index4")
         )
+    );
+  }
+
+  static SearchQueryRunnerFactory makeRunnerFactory(final SearchQueryConfig config)
+  {
+    return new SearchQueryRunnerFactory(
+        new SearchStrategySelector(new Supplier<SearchQueryConfig>()
+        {
+          @Override
+          public SearchQueryConfig get()
+          {
+            return config;
+          }
+        }),
+        new SearchQueryQueryToolChest(
+            config,
+            NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        NOOP_QUERYWATCHER
     );
   }
 

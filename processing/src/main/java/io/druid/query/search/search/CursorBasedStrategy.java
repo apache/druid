@@ -1,10 +1,12 @@
 package io.druid.query.search.search;
 
 import com.google.common.collect.Maps;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.Filter;
 import io.druid.query.search.SearchResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -13,24 +15,40 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
 import org.apache.commons.lang.mutable.MutableInt;
+import org.joda.time.Interval;
 
 import java.util.Map;
 import java.util.TreeMap;
 
 public class CursorBasedStrategy extends SearchStrategy
 {
+  public static final String NAME = "cursorBased";
+
+  private static final EmittingLogger log = new EmittingLogger(CursorBasedStrategy.class);
+
+  public CursorBasedStrategy(SearchQuery query)
+  {
+    super(query);
+  }
 
   @Override
   public SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment)
   {
-    return new CursorBasedExecutor(query, segment);
+    log.debug("Cursor-based execution strategy is selected");
+    return new CursorBasedExecutor(query, segment, filter, interval);
   }
 
   public static class CursorBasedExecutor extends SearchQueryExecutor {
 
-    public CursorBasedExecutor(SearchQuery query, Segment segment)
+    protected Filter filter;
+    protected Interval interval;
+
+    public CursorBasedExecutor(SearchQuery query, Segment segment, Filter filter, Interval interval)
     {
       super(query, segment);
+
+      this.filter = filter;
+      this.interval = interval;
     }
 
     @Override
