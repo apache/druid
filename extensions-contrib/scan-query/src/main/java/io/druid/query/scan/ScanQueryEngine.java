@@ -29,21 +29,24 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
 import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.Interval;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +54,7 @@ import java.util.Set;
 
 public class ScanQueryEngine
 {
+  private static final SelectQueryEngine.SelectStrategyFactory STRATEGY_FACTORY = new SelectQueryEngine.SelectStrategyFactory();
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
@@ -100,6 +104,7 @@ public class ScanQueryEngine
             adapter.makeCursors(
                 filter,
                 intervals.get(0),
+                VirtualColumns.EMPTY,
                 QueryGranularities.ALL,
                 query.isDescending()
             ),
@@ -117,10 +122,14 @@ public class ScanQueryEngine
                         final Set<String> columns = Sets.newHashSet();
                         final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-                        final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+                        final List<ColumnSelectorPlus<SelectQueryEngine.SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
+                            DimensionHandlerUtils.createColumnSelectorPluses(
+                                STRATEGY_FACTORY,
+                                Lists.newArrayList(dims),
+                                cursor
+                            )
+                        );
                         for (DimensionSpec dim : dims) {
-                          final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
-                          dimSelectors.put(dim.getOutputName(), dimSelector);
                           columns.add(dim.getOutputName());
                         }
 
@@ -172,7 +181,7 @@ public class ScanQueryEngine
                               final Map<String, Object> theEvent = SelectQueryEngine.singleEvent(
                                   ScanResultValue.timestampKey,
                                   timestampColumnSelector,
-                                  dimSelectors,
+                                  selectorPlusList,
                                   metSelectors
                               );
                               events.add(theEvent);

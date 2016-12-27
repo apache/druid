@@ -64,7 +64,7 @@ public class SelectQueryEngine
 {
   private static final SelectStrategyFactory STRATEGY_FACTORY = new SelectStrategyFactory();
 
-  private static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
+  public static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -205,7 +205,7 @@ public class SelectQueryEngine
               final Map<String, Object> theEvent = singleEvent(
                   EventHolder.timestampKey,
                   timestampColumnSelector,
-                  dimSelectors,
+                  selectorPlusList,
                   metSelectors
               );
 
@@ -229,7 +229,7 @@ public class SelectQueryEngine
   public static Map<String, Object> singleEvent(
       String timestampKey,
       LongColumnSelector timestampColumnSelector,
-      Map<String, DimensionSelector> dimSelectors,
+      List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList,
       Map<String, ObjectColumnSelector> metSelectors
   )
   {

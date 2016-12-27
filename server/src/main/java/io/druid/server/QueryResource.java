@@ -255,19 +255,19 @@ public class QueryResource implements QueryCountStatsProvider
                       CountingOutputStream os = new CountingOutputStream(outputStream);
                       jsonWriter.writeValue(os, yielder);
 
-                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                    os.close();
-                    successfulQueryCount.incrementAndGet();
-                    final long queryTime = System.currentTimeMillis() - start;
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                    .setDimension("success", "true")
-                                    .build("query/time", queryTime)
-                    );
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                    .build("query/bytes", os.getCount())
-                    );
+                      os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
+                      os.close();
+                      successfulQueryCount.incrementAndGet();
+                      final long queryTime = System.currentTimeMillis() - start;
+                      emitter.emit(
+                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
+                                      .setDimension("success", "true")
+                                      .build("query/time", queryTime)
+                      );
+                      emitter.emit(
+                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
+                                      .build("query/bytes", os.getCount())
+                      );
 
                       requestLogger.log(
                           new RequestLogLine(
