@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,8 +30,6 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -796,61 +793,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         public Object get()
                         {
                           return columnVals.getRowValue(cursorOffset.getOffset());
-                        }
-                      };
-                    }
-
-                    @Override
-                    public NumericColumnSelector makeMathExpressionSelector(String expression)
-                    {
-                      final Expr parsed = Parser.parse(expression);
-                      final List<String> required = Parser.findRequiredBindings(parsed);
-
-                      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-                      for (String columnName : index.getColumnNames()) {
-                        if (!required.contains(columnName)) {
-                          continue;
-                        }
-                        final GenericColumn column = index.getColumn(columnName).getGenericColumn();
-                        if (column == null) {
-                          continue;
-                        }
-                        closer.register(column);
-                        if (column.getType() == ValueType.FLOAT) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getFloatSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else if (column.getType() == ValueType.LONG) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getLongSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else {
-                          throw new UnsupportedOperationException(
-                              "Not supported type " + column.getType() + " for column " + columnName
-                          );
-                        }
-                      }
-                      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                      return new NumericColumnSelector()
-                      {
-                        @Override
-                        public Number get()
-                        {
-                          return parsed.eval(binding).numericValue();
                         }
                       };
                     }

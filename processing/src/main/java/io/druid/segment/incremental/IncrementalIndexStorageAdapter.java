@@ -20,16 +20,12 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -45,7 +41,6 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
@@ -62,7 +57,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -552,55 +546,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   }
                 }
                 return capabilities;
-              }
-
-              @Override
-              public NumericColumnSelector makeMathExpressionSelector(String expression)
-              {
-                final Expr parsed = Parser.parse(expression);
-
-                final List<String> required = Parser.findRequiredBindings(parsed);
-                final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-
-                for (String columnName : index.getMetricNames()) {
-                  if (!required.contains(columnName)) {
-                    continue;
-                  }
-                  ValueType type = index.getCapabilities(columnName).getType();
-                  if (type == ValueType.FLOAT) {
-                    final int metricIndex = index.getMetricIndex(columnName);
-                    values.put(
-                        columnName, new Supplier<Number>()
-                        {
-                          @Override
-                          public Number get()
-                          {
-                            return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
-                          }
-                        }
-                    );
-                  } else if (type == ValueType.LONG) {
-                    final int metricIndex = index.getMetricIndex(columnName);
-                    values.put(
-                        columnName, new Supplier<Number>()
-                        {
-                          @Override
-                          public Number get()
-                          {
-                            return index.getMetricLongValue(currEntry.getValue(), metricIndex);
-                          }
-                        }
-                    );
-                  }
-                }
-                final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                return new NumericColumnSelector() {
-                  @Override
-                  public Number get()
-                  {
-                    return parsed.eval(binding).numericValue();
-                  }
-                };
               }
             };
           }
