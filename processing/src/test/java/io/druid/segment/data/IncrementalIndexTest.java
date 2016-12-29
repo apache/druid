@@ -136,6 +136,7 @@ public class IncrementalIndexTest
                     return new OffheapIncrementalIndex(
                         0L, QueryGranularities.NONE, factories, 1000000,
                         new StupidPool<ByteBuffer>(
+                            "OffheapIncrementalIndex-bufferPool",
                             new Supplier<ByteBuffer>()
                             {
                               @Override
@@ -168,6 +169,7 @@ public class IncrementalIndexTest
                     return new OffheapIncrementalIndex(
                         0L, QueryGranularities.NONE, false, factories, 1000000,
                         new StupidPool<ByteBuffer>(
+                            "OffheapIncrementalIndex-bufferPool",
                             new Supplier<ByteBuffer>()
                             {
                               @Override

@@ -1,30 +1,27 @@
 package io.druid.query.search.search;
 
-import com.google.common.collect.Maps;
-import com.metamx.emitter.EmittingLogger;
+import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.Result;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
-import io.druid.query.search.SearchResultValue;
+import io.druid.query.search.SearchQueryRunner;
+import io.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.data.IndexedInts;
-import org.apache.commons.lang.mutable.MutableInt;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
 
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Arrays;
+import java.util.List;
 
 public class CursorBasedStrategy extends SearchStrategy
 {
   public static final String NAME = "cursorBased";
-
-  private static final EmittingLogger log = new EmittingLogger(CursorBasedStrategy.class);
 
   public CursorBasedStrategy(SearchQuery query)
   {
@@ -32,10 +29,15 @@ public class CursorBasedStrategy extends SearchStrategy
   }
 
   @Override
-  public SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment)
+  public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
-    log.debug("Cursor-based execution strategy is selected");
-    return new CursorBasedExecutor(query, segment, filter, interval);
+    final StorageAdapter adapter = segment.asStorageAdapter();
+    final List<DimensionSpec> dimensionSpecs = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
+    return ImmutableList.<SearchQueryExecutor>of(new CursorBasedExecutor(query,
+                                                                         segment,
+                                                                         filter,
+                                                                         interval,
+                                                                         dimensionSpecs));
   }
 
   public static class CursorBasedExecutor extends SearchQueryExecutor {
@@ -43,16 +45,19 @@ public class CursorBasedStrategy extends SearchStrategy
     protected Filter filter;
     protected Interval interval;
 
-    public CursorBasedExecutor(SearchQuery query, Segment segment, Filter filter, Interval interval)
+    public CursorBasedExecutor(SearchQuery query,
+                               Segment segment,
+                               Filter filter,
+                               Interval interval, List<DimensionSpec> dimensionSpecs)
     {
-      super(query, segment);
+      super(query, segment, dimensionSpecs);
 
       this.filter = filter;
       this.interval = interval;
     }
 
     @Override
-    public Sequence<Result<SearchResultValue>> execute()
+    public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
       final StorageAdapter adapter = segment.asStorageAdapter();
 
@@ -64,44 +69,40 @@ public class CursorBasedStrategy extends SearchStrategy
           query.isDescending()
       );
 
-      final TreeMap<SearchHit, MutableInt> retVal = cursors.accumulate(
-          Maps.<SearchHit, SearchHit, MutableInt>newTreeMap(query.getSort().getComparator()),
-          new Accumulator<TreeMap<SearchHit, MutableInt>, Cursor>()
+      final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
+      retVal.defaultReturnValue(0);
+
+      cursors.accumulate(
+          retVal,
+          new Accumulator<Object2IntRBTreeMap<SearchHit>, Cursor>()
           {
             @Override
-            public TreeMap<SearchHit, MutableInt> accumulate(TreeMap<SearchHit, MutableInt> set, Cursor cursor)
+            public Object2IntRBTreeMap<SearchHit> accumulate(Object2IntRBTreeMap<SearchHit> set, Cursor cursor)
             {
               if (set.size() >= limit) {
                 return set;
               }
 
-              Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-              for (DimensionSpec dim : dimsToSearch) {
-                dimSelectors.put(
-                    dim.getOutputName(),
-                    cursor.makeDimensionSelector(dim)
-                );
-              }
+              List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
+                  DimensionHandlerUtils.createColumnSelectorPluses(
+                      SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
+                      dimsToSearch,
+                      cursor
+                  )
+              );
 
               while (!cursor.isDone()) {
-                for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
-                  final DimensionSelector selector = entry.getValue();
+                for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+                  selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
+                      selectorPlus.getOutputName(),
+                      selectorPlus.getSelector(),
+                      searchQuerySpec,
+                      limit,
+                      set
+                  );
 
-                  if (selector != null) {
-                    final IndexedInts vals = selector.getRow();
-                    for (int i = 0; i < vals.size(); ++i) {
-                      final String dimVal = selector.lookupName(vals.get(i));
-                      if (searchQuerySpec.accept(dimVal)) {
-                        MutableInt counter = new MutableInt(1);
-                        MutableInt prev = set.put(new SearchHit(entry.getKey(), dimVal), counter);
-                        if (prev != null) {
-                          counter.add(prev.intValue());
-                        }
-                        if (set.size() >= limit) {
-                          return set;
-                        }
-                      }
-                    }
+                  if (set.size() >= limit) {
+                    return set;
                   }
                 }
 
@@ -113,7 +114,7 @@ public class CursorBasedStrategy extends SearchStrategy
           }
       );
 
-      return makeReturnResult(segment, limit, retVal);
+      return retVal;
     }
   }
 }

@@ -20,18 +20,18 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
 
 import java.util.Map;
 
 /**
  * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle multiple index numerals referencing the same dimension value.
  */
-public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][], Map<String, Aggregator[]>, TopNParams>
+public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][], Map<Comparable, Aggregator[]>, TopNParams>
 {
   private final TopNQuery query;
 
@@ -47,12 +47,12 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
 
   @Override
   public TopNParams makeInitParams(
-      final DimensionSelector dimSelector,
+      final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus,
       final Cursor cursor
   )
   {
     return new TopNParams(
-        dimSelector,
+        selectorPlus,
         cursor,
         Integer.MAX_VALUE
     );
@@ -61,16 +61,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
-    final AggregatorArrayProvider provider = new AggregatorArrayProvider(
-        params.getDimSelector(),
-        query,
-        params.getCardinality()
-    );
-
-    // Unlike regular topN we cannot rely on ordering to optimize.
-    // Optimization possibly requires a reverse lookup from value to ID, which is
-    // not possible when applying an extraction function
-    return provider.build();
+    ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, capabilities);
   }
 
   @Override
@@ -80,7 +72,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   }
 
   @Override
-  protected Map<String, Aggregator[]> makeDimValAggregateStore(TopNParams params)
+  protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
     return Maps.newHashMap();
   }
@@ -89,35 +81,21 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   public void scanAndAggregate(
       TopNParams params,
       Aggregator[][] rowSelector,
-      Map<String, Aggregator[]> aggregatesStore,
+      Map<Comparable, Aggregator[]> aggregatesStore,
       int numProcessed
   )
   {
     final Cursor cursor = params.getCursor();
-    final DimensionSelector dimSelector = params.getDimSelector();
+    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
 
     while (!cursor.isDone()) {
-      final IndexedInts dimValues = dimSelector.getRow();
-
-      for (int i = 0; i < dimValues.size(); ++i) {
-
-        final int dimIndex = dimValues.get(i);
-        Aggregator[] theAggregators = rowSelector[dimIndex];
-        if (theAggregators == null) {
-          final String key = dimSelector.lookupName(dimIndex);
-          theAggregators = aggregatesStore.get(key);
-          if (theAggregators == null) {
-            theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());
-            aggregatesStore.put(key, theAggregators);
-          }
-          rowSelector[dimIndex] = theAggregators;
-        }
-
-        for (Aggregator aggregator : theAggregators) {
-          aggregator.aggregate();
-        }
-      }
-
+      selectorPlus.getColumnSelectorStrategy().dimExtractionScanAndAggregate(
+          query,
+          selectorPlus.getSelector(),
+          cursor,
+          rowSelector,
+          aggregatesStore
+      );
       cursor.advance();
     }
   }
@@ -126,11 +104,11 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   protected void updateResults(
       TopNParams params,
       Aggregator[][] rowSelector,
-      Map<String, Aggregator[]> aggregatesStore,
+      Map<Comparable, Aggregator[]> aggregatesStore,
       TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<String, Aggregator[]> entry : aggregatesStore.entrySet()) {
+    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null && aggs.length > 0) {
         Object[] vals = new Object[aggs.length];
@@ -139,7 +117,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
         }
 
         resultBuilder.addEntry(
-            entry.getKey(),
+            entry.getKey() == null ? null : entry.getKey().toString(),
             entry.getKey(),
             vals
         );
@@ -148,9 +126,9 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   }
 
   @Override
-  protected void closeAggregators(Map<String, Aggregator[]> stringMap)
+  protected void closeAggregators(Map<Comparable, Aggregator[]> valueMap)
   {
-    for (Aggregator[] aggregators : stringMap.values()) {
+    for (Aggregator[] aggregators : valueMap.values()) {
       for (Aggregator agg : aggregators) {
         agg.close();
       }

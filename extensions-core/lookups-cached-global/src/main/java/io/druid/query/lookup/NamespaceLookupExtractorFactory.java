@@ -32,7 +32,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -54,9 +54,9 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     CLASS_CACHE_KEY = ByteBuffer.allocate(keyUtf8.length + 1).put(keyUtf8).put((byte) 0xFF).array();
   }
 
-  private volatile boolean started = false;
+  CacheScheduler.Entry entry = null;
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
-  private final NamespaceExtractionCacheManager manager;
+  private final CacheScheduler cacheScheduler;
   private final LookupIntrospectHandler lookupIntrospectHandler;
   private final ExtractionNamespace extractionNamespace;
   private final long firstCacheTimeout;
@@ -69,7 +69,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
       @JsonProperty("firstCacheTimeout") long firstCacheTimeout,
       @JsonProperty("injective") boolean injective,
-      @JacksonInject final NamespaceExtractionCacheManager manager
+      @JacksonInject final CacheScheduler cacheScheduler
   )
   {
     this.extractionNamespace = Preconditions.checkNotNull(
@@ -79,18 +79,18 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     this.firstCacheTimeout = firstCacheTimeout;
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
     this.injective = injective;
-    this.manager = manager;
+    this.cacheScheduler = cacheScheduler;
     this.extractorID = String.format("namespace-factory-%s-%s", extractionNamespace, UUID.randomUUID().toString());
-    this.lookupIntrospectHandler = new NamespaceLookupIntrospectHandler(this, manager, extractorID);
+    this.lookupIntrospectHandler = new NamespaceLookupIntrospectHandler(this);
   }
 
   @VisibleForTesting
   public NamespaceLookupExtractorFactory(
       ExtractionNamespace extractionNamespace,
-      NamespaceExtractionCacheManager manager
+      CacheScheduler cacheScheduler
   )
   {
-    this(extractionNamespace, 60000, false, manager);
+    this(extractionNamespace, 60000, false, cacheScheduler);
   }
 
   @Override
@@ -99,32 +99,29 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     final Lock writeLock = startStopSync.writeLock();
     try {
       writeLock.lockInterruptibly();
+      try {
+        if (entry != null) {
+          LOG.warn("Already started! [%s]", extractorID);
+          return true;
+        }
+        if (firstCacheTimeout > 0) {
+          entry = cacheScheduler.scheduleAndWait(extractionNamespace, firstCacheTimeout);
+          if (entry == null) {
+            LOG.error("Failed to schedule and wait for lookup [%s]", extractorID);
+            return false;
+          }
+        } else {
+          entry = cacheScheduler.schedule(extractionNamespace);
+        }
+        LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
+        return true;
+      }
+      finally {
+        writeLock.unlock();
+      }
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
-    }
-    try {
-      if (started) {
-        LOG.warn("Already started! [%s]", extractorID);
-        return true;
-      }
-      if (firstCacheTimeout > 0) {
-        if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
-          LOG.error("Failed to schedule and wait for lookup [%s]", extractorID);
-          return false;
-        }
-      } else {
-        if (!manager.scheduleOrUpdate(extractorID, extractionNamespace)) {
-          LOG.error("Failed to schedule lookup [%s]", extractorID);
-          return false;
-        }
-      }
-      LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
-      started = true;
-      return true;
-    }
-    finally {
-      writeLock.unlock();
     }
   }
 
@@ -139,12 +136,13 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       throw Throwables.propagate(e);
     }
     try {
-      if (!started) {
+      if (entry == null) {
         LOG.warn("Not started! [%s]", extractorID);
         return true;
       }
-      started = false;
-      return manager.checkedDelete(extractorID);
+      entry.close();
+      entry = null;
+      return true;
     }
     finally {
       writeLock.unlock();
@@ -191,7 +189,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     return injective;
   }
 
-  // Grab the latest snapshot from the cache manager
+  // Grab the latest snapshot from the CacheScheduler's entry
   @Override
   public LookupExtractor get()
   {
@@ -203,26 +201,17 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       throw Throwables.propagate(e);
     }
     try {
-      if (!started) {
+      if (entry == null) {
         throw new ISE("Factory [%s] not started", extractorID);
       }
-      String preVersion = null, postVersion = null;
-      Map<String, String> map = null;
-      // Make sure we absolutely know what version of map we grabbed (for caching purposes)
-      do {
-        preVersion = manager.getVersion(extractorID);
-        if (preVersion == null) {
-          throw new ISE("Namespace vanished for [%s]", extractorID);
-        }
-        map = manager.getCacheMap(extractorID);
-        postVersion = manager.getVersion(extractorID);
-        if (postVersion == null) {
-          // We lost some horrible race... make sure we clean up
-          manager.delete(extractorID);
-          throw new ISE("Lookup [%s] is deleting", extractorID);
-        }
-      } while (!preVersion.equals(postVersion));
-      final byte[] v = StringUtils.toUtf8(postVersion);
+      final CacheScheduler.CacheState cacheState = entry.getCacheState();
+      if (cacheState instanceof CacheScheduler.NoCache) {
+        final String noCacheReason = ((CacheScheduler.NoCache) cacheState).name();
+        throw new ISE("%s: %s, extractorID = %s", entry, noCacheReason, extractorID);
+      }
+      CacheScheduler.VersionedCache versionedCache = (CacheScheduler.VersionedCache) cacheState;
+      Map<String, String> map = versionedCache.getCache();
+      final byte[] v = StringUtils.toUtf8(versionedCache.getVersion());
       final byte[] id = StringUtils.toUtf8(extractorID);
       return new MapLookupExtractor(map, isInjective())
       {

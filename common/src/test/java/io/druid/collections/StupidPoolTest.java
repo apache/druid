@@ -20,9 +20,7 @@
 package io.druid.collections;
 
 import com.google.common.base.Supplier;
-
 import io.druid.java.util.common.ISE;
-
 import org.easymock.EasyMock;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.After;
@@ -45,7 +43,7 @@ public class StupidPoolTest
     generator = EasyMock.createMock(Supplier.class);
     EasyMock.expect(generator.get()).andReturn(defaultString).anyTimes();
     EasyMock.replay(generator);
-    poolOfString = new StupidPool<>(generator);
+    poolOfString = new StupidPool<>("poolOfString", generator);
     resourceHolderObj = poolOfString.take();
   }
 
@@ -72,10 +70,27 @@ public class StupidPoolTest
     resourceHolderObj.get();
   }
 
-  @Test
-  public void testFinalizeInResourceHolder()
+  @Test(timeout = 60_000)
+  public void testResourceHandlerClearedByJVM() throws InterruptedException
   {
-    resourceHolderObj = null;
-    System.runFinalization();
+    if (System.getProperty("java.version").startsWith("1.7")) {
+      // This test is unreliable on Java 7, probably GC is not triggered by System.gc(). It is not a problem because
+      // this test should ever pass on any version of Java to prove that StupidPool doesn't introduce leaks itself and
+      // actually cleans the leaked objects.
+      return;
+    }
+    String leakedString = createDanglingObjectHandler();
+    // Wait until dangling object string is returned to the pool
+    for (int i = 0; i < 6000 && poolOfString.leakedObjectsCount() == 0; i++) {
+      System.gc();
+      byte[] garbage = new byte[10_000_000];
+      Thread.sleep(10);
+    }
+    Assert.assertEquals(leakedString, 1, poolOfString.leakedObjectsCount());
+  }
+
+  private String createDanglingObjectHandler()
+  {
+    return poolOfString.take().get();
   }
 }

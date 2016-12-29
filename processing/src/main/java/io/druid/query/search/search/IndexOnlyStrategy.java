@@ -2,55 +2,108 @@ package io.druid.query.search.search;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
-import com.metamx.emitter.EmittingLogger;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.Result;
+import io.druid.java.util.common.Pair;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.filter.Filter;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.CursorBasedStrategy.CursorBasedExecutor;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.GenericColumn;
-import org.apache.commons.lang.mutable.MutableInt;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.TreeMap;
+import java.util.List;
 
 public class IndexOnlyStrategy extends SearchStrategy
 {
   public static final String NAME = "indexOnly";
 
-  private static final EmittingLogger log = new EmittingLogger(IndexOnlyStrategy.class);
+  private final ImmutableBitmap timeFilteredBitmap;
 
   public IndexOnlyStrategy(SearchQuery query)
   {
+    this(query, null);
+  }
+
+  public IndexOnlyStrategy(SearchQuery query, @Nullable ImmutableBitmap timeFilteredBitmap)
+  {
     super(query);
+    this.timeFilteredBitmap = timeFilteredBitmap;
   }
 
   @Override
-  public SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment)
+  public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
     final QueryableIndex index = segment.asQueryableIndex();
+    final StorageAdapter adapter = segment.asStorageAdapter();
 
-    if (index == null) {
-      log.debug("Index doesn't exist. Fall back to cursor-based execution strategy");
-      return new CursorBasedExecutor(query, segment, filter, interval);
-    } else {
-      log.debug("Index-only execution strategy is selected");
-      final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(index, segment, filter, interval);
-      return new IndexOnlyExecutor(query, segment, timeFilteredBitmap);
+    final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = // pair of bitmap dims and non-bitmap dims
+        partitionDimensionList(index, adapter, getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions()));
+    final List<DimensionSpec> bitmapSuppDims = pair.lhs;
+    final List<DimensionSpec> nonBitmapSuppDims = pair.rhs;
+
+    final ImmutableList.Builder<SearchQueryExecutor> builder = ImmutableList.builder();
+
+    if (bitmapSuppDims.size() > 0) {
+      final ImmutableBitmap timeFilteredBitmap = this.timeFilteredBitmap == null ?
+                                                 makeTimeFilteredBitmap(index, segment, filter, interval) :
+                                                 this.timeFilteredBitmap;
+      builder.add(new IndexOnlyExecutor(query, segment, timeFilteredBitmap, bitmapSuppDims));
     }
+
+    if (nonBitmapSuppDims.size() > 0) {
+      builder.add(new CursorBasedExecutor(query, segment, filter, interval, nonBitmapSuppDims));
+    }
+
+    return builder.build();
+  }
+
+  // Split dimension list into bitmap-supporting list and non-bitmap supporting list
+  private static Pair<List<DimensionSpec>, List<DimensionSpec>> partitionDimensionList(
+      QueryableIndex index,
+      StorageAdapter adapter,
+      List<DimensionSpec> dimensions
+  )
+  {
+    final List<DimensionSpec> bitmapDims = Lists.newArrayList();
+    final List<DimensionSpec> nonBitmapDims = Lists.newArrayList();
+    final List<DimensionSpec> dimsToSearch = getDimsToSearch(adapter.getAvailableDimensions(),
+                                                                                     dimensions);
+
+    if (index != null) {
+      for (DimensionSpec spec : dimsToSearch) {
+        ColumnCapabilities capabilities = adapter.getColumnCapabilities(spec.getDimension());
+        if (capabilities == null) {
+          continue;
+        }
+
+        if (capabilities.hasBitmapIndexes()) {
+          bitmapDims.add(spec);
+        } else {
+          nonBitmapDims.add(spec);
+        }
+      }
+    } else {
+      // no QueryableIndex available, so nothing has bitmaps
+      nonBitmapDims.addAll(dimsToSearch);
+    }
+
+    return new Pair<List<DimensionSpec>, List<DimensionSpec>>(ImmutableList.copyOf(bitmapDims),
+                                                              ImmutableList.copyOf(nonBitmapDims));
   }
 
   static ImmutableBitmap makeTimeFilteredBitmap(final QueryableIndex index,
@@ -123,21 +176,25 @@ public class IndexOnlyStrategy extends SearchStrategy
 
     private final ImmutableBitmap timeFilteredBitmap;
 
-    public IndexOnlyExecutor(SearchQuery query, Segment segment, ImmutableBitmap timeFilteredBitmap)
+    public IndexOnlyExecutor(SearchQuery query, Segment segment,
+                             ImmutableBitmap timeFilteredBitmap,
+                             List<DimensionSpec> dimensionSpecs)
     {
-      super(query, segment);
+      super(query, segment, dimensionSpecs);
       this.timeFilteredBitmap = timeFilteredBitmap;
     }
 
     @Override
-    public Sequence<Result<SearchResultValue>> execute()
+    public Object2IntRBTreeMap<SearchHit> execute(int limit)
     {
       final QueryableIndex index = segment.asQueryableIndex();
       Preconditions.checkArgument(index != null, "Index should not be null");
 
+      final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
+      retVal.defaultReturnValue(0);
+
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
-      final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
       for (DimensionSpec dimension : dimsToSearch) {
         final Column column = index.getColumn(dimension.getDimension());
         if (column == null) {
@@ -160,20 +217,16 @@ public class IndexOnlyStrategy extends SearchStrategy
               bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
             }
             if (bitmap.size() > 0) {
-              MutableInt counter = new MutableInt(bitmap.size());
-              MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
-              if (prev != null) {
-                counter.add(prev.intValue());
-              }
+              retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
               if (retVal.size() >= limit) {
-                return makeReturnResult(segment, limit, retVal);
+                return retVal;
               }
             }
           }
         }
       }
 
-      return makeReturnResult(segment, limit, retVal);
+      return retVal;
     }
   }
 }

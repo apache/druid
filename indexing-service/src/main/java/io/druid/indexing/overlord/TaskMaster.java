@@ -31,6 +31,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.helpers.OverlordHelperManager;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -78,7 +79,8 @@ public class TaskMaster
       final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
       final ServiceEmitter emitter,
-      final SupervisorManager supervisorManager
+      final SupervisorManager supervisorManager,
+      final OverlordHelperManager overlordHelperManager
   )
   {
     this.supervisorManager = supervisorManager;
@@ -120,6 +122,7 @@ public class TaskMaster
               leaderLifecycle.addManagedInstance(taskRunner);
               leaderLifecycle.addManagedInstance(taskQueue);
               leaderLifecycle.addManagedInstance(supervisorManager);
+              leaderLifecycle.addManagedInstance(overlordHelperManager);
 
               leaderLifecycle.addHandler(
                   new Lifecycle.Handler()

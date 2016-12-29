@@ -19,13 +19,18 @@
 
 package io.druid.query.search.search;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.java.util.common.IAE;
+import io.druid.query.Druids;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -46,7 +51,7 @@ public abstract class SearchStrategy
     this.interval = intervals.get(0);
   }
 
-  public abstract SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment);
+  public abstract List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment);
 
   public SearchQueryDecisionHelper getDecisionHelper(QueryableIndex index)
   {
@@ -57,6 +62,15 @@ public abstract class SearchStrategy
       return new RoaringBitmapDecisionHelper();
     } else {
       throw new IAE("Unknown bitmap type[%s]", bitmapFactory.getClass().getCanonicalName());
+    }
+  }
+
+  static List<DimensionSpec> getDimsToSearch(Indexed<String> availableDimensions, List<DimensionSpec> dimensions)
+  {
+    if (dimensions == null || dimensions.isEmpty()) {
+      return ImmutableList.copyOf(Iterables.transform(availableDimensions, Druids.DIMENSION_IDENTITY));
+    } else {
+      return dimensions;
     }
   }
 }

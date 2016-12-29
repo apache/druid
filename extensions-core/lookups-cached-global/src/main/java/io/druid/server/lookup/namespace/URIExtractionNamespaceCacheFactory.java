@@ -30,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
@@ -43,7 +44,7 @@ import java.util.regex.Pattern;
 /**
  *
  */
-public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<URIExtractionNamespace>
+public final class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<URIExtractionNamespace>
 {
   private static final int DEFAULT_NUM_RETRIES = 3;
   private static final Logger log = new Logger(URIExtractionNamespaceCacheFactory.class);
@@ -58,11 +59,12 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
   }
 
   @Override
-  public String populateCache(
-      final String id,
+  @Nullable
+  public CacheScheduler.VersionedCache populateCache(
       final URIExtractionNamespace extractionNamespace,
+      final CacheScheduler.EntryImpl<URIExtractionNamespace> entryId,
       @Nullable final String lastVersion,
-      final Map<String, String> cache
+      final CacheScheduler scheduler
   ) throws Exception
   {
     final boolean doSearch = extractionNamespace.getUriPrefix() != null;
@@ -114,23 +116,23 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
     final String uriPath = uri.getPath();
 
     return RetryUtils.retry(
-        new Callable<String>()
+        new Callable<CacheScheduler.VersionedCache>()
         {
           @Override
-          public String call() throws Exception
+          public CacheScheduler.VersionedCache call() throws Exception
           {
             final String version = puller.getVersion(uri);
             try {
               // Important to call equals() against version because lastVersion could be null
               if (version.equals(lastVersion)) {
                 log.debug(
-                    "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
+                    "URI [%s] for [%s] has the same last modified time [%s] as the last cached. " +
                     "Skipping ",
                     uri.toString(),
-                    id,
+                    entryId,
                     version
                 );
-                return lastVersion;
+                return null;
               }
             }
             catch (NumberFormatException ex) {
@@ -158,17 +160,30 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
                 }
               };
             }
-            final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
-                extractionNamespace.getNamespaceParseSpec()
-                                   .getParser()
-            ).populate(source, cache);
-            log.info(
-                "Finished loading %,d values from %,d lines for namespace [%s]",
-                populateResult.getEntries(),
-                populateResult.getLines(),
-                id
-            );
-            return version;
+
+            CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
+            try {
+              final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
+                  extractionNamespace.getNamespaceParseSpec()
+                                     .getParser()
+              ).populate(source, versionedCache.getCache());
+              log.info(
+                  "Finished loading %,d values from %,d lines for [%s]",
+                  populateResult.getEntries(),
+                  populateResult.getLines(),
+                  entryId
+              );
+              return versionedCache;
+            }
+            catch (Throwable t) {
+              try {
+                versionedCache.close();
+              }
+              catch (Exception e) {
+                t.addSuppressed(e);
+              }
+              throw t;
+            }
           }
         },
         puller.shouldRetryPredicate(),

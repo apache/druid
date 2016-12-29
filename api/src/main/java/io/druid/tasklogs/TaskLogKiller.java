@@ -26,4 +26,5 @@ import java.io.IOException;
 public interface TaskLogKiller
 {
   void killAll() throws IOException;
+  void killOlderThan(long timestamp) throws IOException;
 }

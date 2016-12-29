@@ -3,10 +3,10 @@ package io.druid.query.search.search;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.search.search.CursorBasedStrategy.CursorBasedExecutor;
-import io.druid.query.search.search.IndexOnlyStrategy.IndexOnlyExecutor;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+
+import java.util.List;
 
 public class AutoStrategy extends SearchStrategy
 {
@@ -20,7 +20,7 @@ public class AutoStrategy extends SearchStrategy
   }
 
   @Override
-  public SearchQueryExecutor getExecutionPlan(SearchQuery query, Segment segment)
+  public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
     final QueryableIndex index = segment.asQueryableIndex();
 
@@ -29,8 +29,8 @@ public class AutoStrategy extends SearchStrategy
                                                                                           segment,
                                                                                           filter,
                                                                                           interval);
-      final Iterable<DimensionSpec> dimsToSearch = SearchQueryExecutor.getDimsToSearch(index.getAvailableDimensions(),
-                                                                                       query.getDimensions());
+      final Iterable<DimensionSpec> dimsToSearch = getDimsToSearch(index.getAvailableDimensions(),
+                                                                   query.getDimensions());
 
       // Choose a search query execution strategy depending on the query.
       // Index-only strategy is selected when
@@ -42,15 +42,15 @@ public class AutoStrategy extends SearchStrategy
           helper.hasLowCardinality(index, dimsToSearch) ||
           helper.hasLowSelectivity(index, timeFilteredBitmap)) {
         log.debug("Index-only execution strategy is selected");
-        return new IndexOnlyExecutor(query, segment, timeFilteredBitmap);
+        return new IndexOnlyStrategy(query, timeFilteredBitmap).getExecutionPlan(query, segment);
       } else {
         log.debug("Cursor-based execution strategy is selected");
-        return new CursorBasedExecutor(query, segment, filter, interval);
+        return new CursorBasedStrategy(query).getExecutionPlan(query, segment);
       }
 
     } else {
       log.debug("Index doesn't exist. Fall back to cursor-based execution strategy");
-      return new CursorBasedExecutor(query, segment, filter, interval);
+      return new CursorBasedStrategy(query).getExecutionPlan(query, segment);
     }
   }
 }

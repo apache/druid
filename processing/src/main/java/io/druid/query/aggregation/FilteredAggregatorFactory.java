@@ -21,28 +21,28 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 
 import java.nio.ByteBuffer;
-import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
@@ -211,6 +211,9 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 
   private static class FilteredAggregatorValueMatcherFactory implements ValueMatcherFactory
   {
+    private static final ValueMatcherColumnSelectorStrategyFactory STRATEGY_FACTORY =
+        new ValueMatcherColumnSelectorStrategyFactory();
+
     private final ColumnSelectorFactory columnSelectorFactory;
 
     public FilteredAggregatorValueMatcherFactory(ColumnSelectorFactory columnSelectorFactory)
@@ -228,67 +231,16 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         );
       }
 
-      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
+      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
+          DimensionHandlerUtils.createColumnSelectorPluses(
+              STRATEGY_FACTORY,
+              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
+              columnSelectorFactory
+          );
 
-      // Compare "value" as null if it's empty.
-      final String valueString = Strings.emptyToNull(value);
 
-      // Missing columns match a null or empty string value, and don't match anything else.
-      if (selector == null) {
-        return new BooleanValueMatcher(valueString == null);
-      }
-
-      final int cardinality = selector.getValueCardinality();
-
-      if (cardinality >= 0) {
-        // Dictionary-encoded dimension. Compare by id instead of by value to save time.
-        final int valueId = selector.lookupId(valueString);
-
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return valueString == null;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (row.get(i) == valueId) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
-      } else {
-        // Not dictionary-encoded. Skip the optimization.
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return valueString == null;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (Objects.equals(selector.lookupName(row.get(i)), valueString)) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
-      }
+      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
+      return strategy.getValueMatcher(dimension, columnSelectorFactory, value);
     }
 
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
@@ -298,77 +250,18 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case LONG:
           return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
+          ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
+              DimensionHandlerUtils.createColumnSelectorPluses(
+                  STRATEGY_FACTORY,
+                  ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
+                  columnSelectorFactory
+              );
+
+
+          final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
+          return strategy.getValueMatcher(dimension, columnSelectorFactory, predicateFactory);
         default:
           return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-      }
-    }
-
-    public ValueMatcher makeStringValueMatcher(final String dimension, final Predicate<String> predicate)
-    {
-      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      final boolean doesMatchNull = predicate.apply(null);
-
-      if (selector == null) {
-        return new BooleanValueMatcher(doesMatchNull);
-      }
-
-      final int cardinality = selector.getValueCardinality();
-
-      if (cardinality >= 0) {
-        // Dictionary-encoded dimension. Check every value; build a bitset of matching ids.
-        final BitSet valueIds = new BitSet(cardinality);
-        for (int i = 0; i < cardinality; i++) {
-          if (predicate.apply(selector.lookupName(i))) {
-            valueIds.set(i);
-          }
-        }
-
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return doesMatchNull;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (valueIds.get(row.get(i))) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
-      } else {
-        // Not dictionary-encoded. Skip the optimization.
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            final IndexedInts row = selector.getRow();
-            final int size = row.size();
-            if (size == 0) {
-              // null should match empty rows in multi-value columns
-              return doesMatchNull;
-            } else {
-              for (int i = 0; i < size; ++i) {
-                if (predicate.apply(selector.lookupName(row.get(i)))) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          }
-        };
       }
     }
 
