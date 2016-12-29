@@ -314,7 +314,7 @@ public class BoundDimFilter implements DimFilter
 
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
   {
-    return new Supplier<DruidLongPredicate>()
+    class BoundLongPredicateSupplier implements Supplier<DruidLongPredicate>
     {
       private final Object initLock = new Object();
 
@@ -324,10 +324,10 @@ public class BoundDimFilter implements DimFilter
 
       // Other fields are not volatile.
       private boolean matchesNothing;
-      private boolean hasLowerLongBoundVolatile;
-      private boolean hasUpperLongBoundVolatile;
-      private long lowerLongBoundVolatile;
-      private long upperLongBoundVolatile;
+      private boolean hasLowerLongBound;
+      private boolean hasUpperLongBound;
+      private long lowerLongBound;
+      private long upperLongBound;
 
       @Override
       public DruidLongPredicate get()
@@ -347,10 +347,10 @@ public class BoundDimFilter implements DimFilter
 
         return new DruidLongPredicate()
         {
-          private final boolean hasLowerLongBound = hasLowerLongBoundVolatile;
-          private final boolean hasUpperLongBound = hasUpperLongBoundVolatile;
-          private final long lowerLongBound = hasLowerLongBound ? lowerLongBoundVolatile : 0L;
-          private final long upperLongBound = hasUpperLongBound ? upperLongBoundVolatile : 0L;
+          private final boolean hasLowerLongBound = BoundLongPredicateSupplier.this.hasLowerLongBound;
+          private final boolean hasUpperLongBound = BoundLongPredicateSupplier.this.hasUpperLongBound;
+          private final long lowerLongBound = hasLowerLongBound ? BoundLongPredicateSupplier.this.lowerLongBound : 0L;
+          private final long upperLongBound = hasUpperLongBound ? BoundLongPredicateSupplier.this.upperLongBound : 0L;
 
           @Override
           public boolean applyLong(long input)
@@ -393,13 +393,13 @@ public class BoundDimFilter implements DimFilter
             final Long lowerLong = GuavaUtils.tryParseLong(lower);
             if (lowerLong == null) {
               // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
-              hasLowerLongBoundVolatile = false;
+              hasLowerLongBound = false;
             } else {
-              hasLowerLongBoundVolatile = true;
-              lowerLongBoundVolatile = lowerLong;
+              hasLowerLongBound = true;
+              lowerLongBound = lowerLong;
             }
           } else {
-            hasLowerLongBoundVolatile = false;
+            hasLowerLongBound = false;
           }
 
           if (hasUpperBound()) {
@@ -410,15 +410,16 @@ public class BoundDimFilter implements DimFilter
               return;
             }
 
-            hasUpperLongBoundVolatile = true;
-            upperLongBoundVolatile = upperLong;
+            hasUpperLongBound = true;
+            upperLongBound = upperLong;
           } else {
-            hasUpperLongBoundVolatile = false;
+            hasUpperLongBound = false;
           }
 
           longsInitialized = true;
         }
       }
-    };
+    }
+    return new BoundLongPredicateSupplier();
   }
 }
