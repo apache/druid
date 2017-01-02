@@ -75,6 +75,23 @@ The following path is used for service discovery. It is **not** affected by `dru
 |--------|-----------|-------|
 |`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
 
+### Exhibitor
+
+[Exhibitor](https://github.com/Netflix/exhibitor/wiki) is a supervisor system for ZooKeeper.
+Exhibitor can dynamically scale-up/down the cluster of ZooKeeper servers.
+Druid can update self-owned list of ZooKeeper servers through Exhibitor without restarting.
+That is, it allows Druid to keep the connections of Exhibitor-supervised ZooKeeper servers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.exhibitor.service.hosts`|A JSON array which contains the hostnames of Exhibitor instances. Please specify this property if you want to use Exhibitor-supervised cluster.|none|
+|`druid.exhibitor.service.port`|The REST port used to connect to Exhibitor.|`8080`|
+|`druid.exhibitor.service.restUriPath`|The path of the REST call used to get the server set.|`/exhibitor/v1/cluster/list`|
+|`druid.exhibitor.service.useSsl`|Boolean flag for whether or not to use https protocol.|`false`|
+|`druid.exhibitor.service.pollingMs`|How ofter to poll the exhibitors for the list|`10000`|
+
+Note that `druid.zk.service.host` is used as a backup in case an Exhibitor instance can't be contacted and therefore should still be set.
+
 ### Startup Logging
 
 All nodes can log debugging information on startup.
