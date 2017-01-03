@@ -89,8 +89,7 @@ public class InputRowSerde
             IncrementalIndex.makeColumnSelectorFactory(
                 aggFactory,
                 supplier,
-                true,
-                null
+                true
             )
         );
         try {

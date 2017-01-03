@@ -31,7 +31,7 @@ import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Set;
 
@@ -83,9 +83,9 @@ public class InFilter implements Filter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    return factory.makeValueMatcher(dimension, getPredicateFactory());
+    return Filters.makeValueMatcher(factory, dimension, getPredicateFactory());
   }
 
   @Override

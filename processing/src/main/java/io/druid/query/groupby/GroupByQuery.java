@@ -143,6 +143,7 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public Sequence<Row> apply(Sequence<Row> input)
             {
+              GroupByQuery.this.havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
               return Sequences.filter(
                   input,
                   new Predicate<Row>()
@@ -369,6 +370,15 @@ public class GroupByQuery extends BaseQuery<Row>
     return 0;
   }
 
+  /**
+   * Apply the havingSpec and limitSpec. Because havingSpecs are not thread safe, and because they are applied during
+   * accumulation of the returned sequence, callers must take care to avoid accumulating two different Sequences
+   * returned by this method in two different threads.
+   *
+   * @param results sequence of rows to apply havingSpec and limitSpec to
+   *
+   * @return sequence of rows after applying havingSpec and limitSpec
+   */
   public Sequence<Row> applyLimit(Sequence<Row> results)
   {
     return limitFn.apply(results);

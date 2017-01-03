@@ -21,23 +21,9 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import io.druid.query.ColumnSelectorPlus;
-import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
-import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.column.Column;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
-import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 
 import java.nio.ByteBuffer;
@@ -66,8 +52,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcherFactory valueMatcherFactory = new FilteredAggregatorValueMatcherFactory(columnSelectorFactory);
-    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(valueMatcherFactory);
+    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(columnSelectorFactory);
     return new FilteredAggregator(
         valueMatcher,
         delegate.factorize(columnSelectorFactory)
@@ -77,8 +62,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcherFactory valueMatcherFactory = new FilteredAggregatorValueMatcherFactory(columnSelectorFactory);
-    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(valueMatcherFactory);
+    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(columnSelectorFactory);
     return new FilteredBufferAggregator(
         valueMatcher,
         delegate.factorizeBuffered(columnSelectorFactory)
@@ -207,82 +191,5 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     int result = delegate != null ? delegate.hashCode() : 0;
     result = 31 * result + (filter != null ? filter.hashCode() : 0);
     return result;
-  }
-
-  private static class FilteredAggregatorValueMatcherFactory implements ValueMatcherFactory
-  {
-    private static final ValueMatcherColumnSelectorStrategyFactory STRATEGY_FACTORY =
-        new ValueMatcherColumnSelectorStrategyFactory();
-
-    private final ColumnSelectorFactory columnSelectorFactory;
-
-    public FilteredAggregatorValueMatcherFactory(ColumnSelectorFactory columnSelectorFactory)
-    {
-      this.columnSelectorFactory = columnSelectorFactory;
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final String value)
-    {
-      if (getTypeForDimension(dimension) == ValueType.LONG) {
-        return Filters.getLongValueMatcher(
-            columnSelectorFactory.makeLongColumnSelector(dimension),
-            value
-        );
-      }
-
-      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
-          DimensionHandlerUtils.createColumnSelectorPluses(
-              STRATEGY_FACTORY,
-              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
-              columnSelectorFactory
-          );
-
-
-      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
-      return strategy.getValueMatcher(dimension, columnSelectorFactory, value);
-    }
-
-    public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
-    {
-      ValueType type = getTypeForDimension(dimension);
-      switch (type) {
-        case LONG:
-          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-        case STRING:
-          ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
-              DimensionHandlerUtils.createColumnSelectorPluses(
-                  STRATEGY_FACTORY,
-                  ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
-                  columnSelectorFactory
-              );
-
-
-          final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
-          return strategy.getValueMatcher(dimension, columnSelectorFactory, predicateFactory);
-        default:
-          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-      }
-    }
-
-    private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
-    {
-      return Filters.getLongPredicateMatcher(
-          columnSelectorFactory.makeLongColumnSelector(dimension),
-          predicate
-      );
-    }
-
-    private ValueType getTypeForDimension(String dimension)
-    {
-      // FilteredAggregatorFactory is sometimes created from a ColumnSelectorFactory that
-      // has no knowledge of column capabilities/types.
-      // Default to LONG for __time, STRING for everything else.
-      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-        return ValueType.LONG;
-      }
-      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
-    }
   }
 }

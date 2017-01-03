@@ -20,27 +20,22 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import io.druid.granularity.QueryGranularity;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
@@ -63,11 +58,9 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
-import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -245,13 +238,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           EntryHolder currEntry = new EntryHolder();
 
           @Override
-          public Cursor apply(@Nullable final Long input)
+          public Cursor apply(final Long input)
           {
             final long timeStart = Math.max(input, actualInterval.getStartMillis());
 
             return new Cursor()
             {
-              private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this, currEntry);
+              private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this);
               private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
               private Iterable<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> cursorIterable;
               private boolean emptyRange;
@@ -615,11 +608,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     );
   }
 
-  private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor, final EntryHolder holder)
+  private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor)
   {
     return filter == null
            ? new BooleanValueMatcher(true)
-           : filter.makeMatcher(new CursorAndEntryHolderValueMatcherFactory(cursor, holder));
+           : filter.makeMatcher(cursor);
   }
 
   public static class EntryHolder
@@ -644,84 +637,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     public Integer getValue()
     {
       return currEntry.getValue();
-    }
-  }
-
-
-  private class CursorAndEntryHolderValueMatcherFactory implements ValueMatcherFactory
-  {
-    private final EntryHolder holder;
-    private final Cursor cursor;
-
-    public CursorAndEntryHolderValueMatcherFactory(
-        Cursor cursor,
-        EntryHolder holder
-    )
-    {
-      this.cursor = cursor;
-      this.holder = holder;
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final String originalValue)
-    {
-      IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
-      if (dimensionDesc == null) {
-        // filtering on long metrics and __time is supported as well
-        final Integer metricIndexInt = index.getMetricIndex(dimension);
-        if (metricIndexInt != null || dimension.equals(Column.TIME_COLUMN_NAME)) {
-          ValueType type = getTypeForDimension(dimension);
-          switch (type) {
-            case LONG:
-              return Filters.getLongValueMatcher(cursor.makeLongColumnSelector(dimension), originalValue);
-            default:
-              return new BooleanValueMatcher(Strings.isNullOrEmpty(originalValue));
-          }
-        } else {
-          return new BooleanValueMatcher(Strings.isNullOrEmpty(originalValue));
-        }
-      } else {
-        final DimensionIndexer indexer = dimensionDesc.getIndexer();
-        final int dimIndex = dimensionDesc.getIndex();
-        return indexer.makeIndexingValueMatcher(originalValue, holder, dimIndex);
-      }
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
-    {
-      IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
-      if (dimensionDesc == null) {
-        // filtering on long metrics and __time is supported as well
-        final Integer metricIndexInt = index.getMetricIndex(dimension);
-        if (metricIndexInt != null || dimension.equals(Column.TIME_COLUMN_NAME)) {
-          ValueType type = getTypeForDimension(dimension);
-          switch (type) {
-            case LONG:
-              return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-            default:
-              return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-          }
-        } else {
-          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-        }
-      } else {
-        final DimensionIndexer indexer = dimensionDesc.getIndexer();
-        final int dimIndex = dimensionDesc.getIndex();
-        return indexer.makeIndexingValueMatcher(predicateFactory, holder, dimIndex);
-      }
-    }
-
-    // for long metrics and __time
-    private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
-    {
-      return Filters.getLongPredicateMatcher(cursor.makeLongColumnSelector(dimension), predicate);
-    }
-
-    private ValueType getTypeForDimension(String dimension)
-    {
-      ColumnCapabilities capabilities = index.getCapabilities(dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 

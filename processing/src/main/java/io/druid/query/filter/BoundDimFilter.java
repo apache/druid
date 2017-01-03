@@ -314,22 +314,27 @@ public class BoundDimFilter implements DimFilter
 
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
   {
-    return new Supplier<DruidLongPredicate>()
+    class BoundLongPredicateSupplier implements Supplier<DruidLongPredicate>
     {
       private final Object initLock = new Object();
+
+      // longsInitialized is volatile since it establishes the happens-before relationship on
+      // writes/reads to the rest of the fields (it's written last and read first).
       private volatile boolean longsInitialized = false;
-      private volatile boolean matchesAnything = true;
-      private volatile boolean hasLowerLongBoundVolatile;
-      private volatile boolean hasUpperLongBoundVolatile;
-      private volatile long lowerLongBoundVolatile;
-      private volatile long upperLongBoundVolatile;
+
+      // Other fields are not volatile.
+      private boolean matchesNothing;
+      private boolean hasLowerLongBound;
+      private boolean hasUpperLongBound;
+      private long lowerLongBound;
+      private long upperLongBound;
 
       @Override
       public DruidLongPredicate get()
       {
         initLongData();
 
-        if (!matchesAnything) {
+        if (matchesNothing) {
           return new DruidLongPredicate()
           {
             @Override
@@ -342,10 +347,10 @@ public class BoundDimFilter implements DimFilter
 
         return new DruidLongPredicate()
         {
-          private final boolean hasLowerLongBound = hasLowerLongBoundVolatile;
-          private final boolean hasUpperLongBound = hasUpperLongBoundVolatile;
-          private final long lowerLongBound = hasLowerLongBound ? lowerLongBoundVolatile : 0L;
-          private final long upperLongBound = hasUpperLongBound ? upperLongBoundVolatile : 0L;
+          private final boolean hasLowerLongBound = BoundLongPredicateSupplier.this.hasLowerLongBound;
+          private final boolean hasUpperLongBound = BoundLongPredicateSupplier.this.hasUpperLongBound;
+          private final long lowerLongBound = hasLowerLongBound ? BoundLongPredicateSupplier.this.lowerLongBound : 0L;
+          private final long upperLongBound = hasUpperLongBound ? BoundLongPredicateSupplier.this.upperLongBound : 0L;
 
           @Override
           public boolean applyLong(long input)
@@ -382,35 +387,39 @@ public class BoundDimFilter implements DimFilter
             return;
           }
 
+          matchesNothing = false;
+
           if (hasLowerBound()) {
             final Long lowerLong = GuavaUtils.tryParseLong(lower);
             if (lowerLong == null) {
-              matchesAnything = false;
-              return;
+              // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
+              hasLowerLongBound = false;
+            } else {
+              hasLowerLongBound = true;
+              lowerLongBound = lowerLong;
             }
-
-            hasLowerLongBoundVolatile = true;
-            lowerLongBoundVolatile = lowerLong;
           } else {
-            hasLowerLongBoundVolatile = false;
+            hasLowerLongBound = false;
           }
 
           if (hasUpperBound()) {
             Long upperLong = GuavaUtils.tryParseLong(upper);
             if (upperLong == null) {
-              matchesAnything = false;
+              // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
+              matchesNothing = true;
               return;
             }
 
-            hasUpperLongBoundVolatile = true;
-            upperLongBoundVolatile = upperLong;
+            hasUpperLongBound = true;
+            upperLongBound = upperLong;
           } else {
-            hasUpperLongBoundVolatile = false;
+            hasUpperLongBound = false;
           }
 
           longsInitialized = true;
         }
       }
-    };
+    }
+    return new BoundLongPredicateSupplier();
   }
 }

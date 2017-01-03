@@ -19,7 +19,9 @@
 
 package io.druid.query.groupby;
 
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
@@ -37,6 +39,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -45,6 +48,7 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -218,5 +222,35 @@ public class GroupByQueryHelper
           }
         }
     );
+  }
+
+  /**
+   * Returns types for fields that will appear in the Rows output from "query". Useful for feeding them into
+   * {@link RowBasedColumnSelectorFactory}.
+   *
+   * @param query groupBy query
+   *
+   * @return row types
+   */
+  public static Map<String, ValueType> rowSignatureFor(final GroupByQuery query)
+  {
+    final ImmutableMap.Builder<String, ValueType> types = ImmutableMap.builder();
+
+    for (DimensionSpec dimensionSpec : query.getDimensions()) {
+      types.put(dimensionSpec.getOutputName(), ValueType.STRING);
+    }
+
+    for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
+      final String typeName = aggregatorFactory.getTypeName();
+      final ValueType valueType = typeName != null
+                                  ? Enums.getIfPresent(ValueType.class, typeName.toUpperCase()).orNull()
+                                  : null;
+      if (valueType != null) {
+        types.put(aggregatorFactory.getName(), valueType);
+      }
+    }
+
+    // Don't include post-aggregators since we don't know what types they are.
+    return types.build();
   }
 }

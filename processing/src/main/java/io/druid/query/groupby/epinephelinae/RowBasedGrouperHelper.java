@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
@@ -36,31 +35,19 @@ import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Accumulator;
-import io.druid.math.expr.Evals;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryHelper;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NumericColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.column.Column;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -93,7 +80,11 @@ public class RowBasedGrouperHelper
         query.getDimensions().size(),
         querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
     );
-    final RowBasedColumnSelectorFactory columnSelectorFactory = new RowBasedColumnSelectorFactory();
+    final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        columnSelectorRow,
+        GroupByQueryHelper.rowSignatureFor(query)
+    );
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
@@ -150,8 +141,7 @@ public class RowBasedGrouperHelper
           return null;
         }
 
-
-        columnSelectorFactory.setRow(row);
+        columnSelectorRow.set(row);
 
         final int dimStart;
         final Comparable[] key;
@@ -193,7 +183,7 @@ public class RowBasedGrouperHelper
           // null return means grouping resources were exhausted.
           return null;
         }
-        columnSelectorFactory.setRow(null);
+        columnSelectorRow.set(null);
 
         return theGrouper;
       }
@@ -623,197 +613,4 @@ public class RowBasedGrouperHelper
       return idx;
     }
   }
-
-  private static class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
-  {
-    private ThreadLocal<Row> row = new ThreadLocal<>();
-
-    public void setRow(Row row)
-    {
-      this.row.set(row);
-    }
-
-    // This dimension selector does not have an associated lookup dictionary, which means lookup can only be done
-    // on the same row. This dimension selector is used for applying the extraction function on dimension, which
-    // requires a DimensionSelector implementation
-    @Override
-    public DimensionSelector makeDimensionSelector(
-        DimensionSpec dimensionSpec
-    )
-    {
-      return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
-    }
-
-    private DimensionSelector makeDimensionSelectorUndecorated(
-        DimensionSpec dimensionSpec
-    )
-    {
-      final String dimension = dimensionSpec.getDimension();
-      final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-
-      return new DimensionSelector()
-      {
-        @Override
-        public IndexedInts getRow()
-        {
-          final List<String> dimensionValues = row.get().getDimension(dimension);
-
-          final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
-
-          return new IndexedInts()
-          {
-            @Override
-            public int size()
-            {
-              return dimensionValuesSize;
-            }
-
-            @Override
-            public int get(int index)
-            {
-              if (index < 0 || index >= dimensionValuesSize) {
-                throw new IndexOutOfBoundsException("index: " + index);
-              }
-              return index;
-            }
-
-            @Override
-            public IntIterator iterator()
-            {
-              return IntIterators.fromTo(0, dimensionValuesSize);
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-
-            }
-
-            @Override
-            public void fill(int index, int[] toFill)
-            {
-              throw new UnsupportedOperationException("fill not supported");
-            }
-          };
-        }
-
-        @Override
-        public int getValueCardinality()
-        {
-          return DimensionSelector.CARDINALITY_UNKNOWN;
-        }
-
-        @Override
-        public String lookupName(int id)
-        {
-          final String value = row.get().getDimension(dimension).get(id);
-          return extractionFn == null ? value : extractionFn.apply(value);
-        }
-
-        @Override
-        public int lookupId(String name)
-        {
-          if (extractionFn != null) {
-            throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
-          }
-          return row.get().getDimension(dimension).indexOf(name);
-        }
-      };
-    }
-
-    @Override
-    public FloatColumnSelector makeFloatColumnSelector(final String columnName)
-    {
-      return new FloatColumnSelector()
-      {
-        @Override
-        public float get()
-        {
-          return row.get().getFloatMetric(columnName);
-        }
-      };
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(final String columnName)
-    {
-      if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-        return new LongColumnSelector()
-        {
-          @Override
-          public long get()
-          {
-            return row.get().getTimestampFromEpoch();
-          }
-        };
-      }
-      return new LongColumnSelector()
-      {
-        @Override
-        public long get()
-        {
-          return row.get().getLongMetric(columnName);
-        }
-      };
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(final String columnName)
-    {
-      return new ObjectColumnSelector()
-      {
-        @Override
-        public Class classOfObject()
-        {
-          return Object.class;
-        }
-
-        @Override
-        public Object get()
-        {
-          return row.get().getRaw(columnName);
-        }
-      };
-    }
-
-    @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
-    {
-      final Expr parsed = Parser.parse(expression);
-
-      final List<String> required = Parser.findRequiredBindings(parsed);
-      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-
-      for (final String columnName : required) {
-        values.put(
-            columnName, new Supplier<Number>()
-            {
-              @Override
-              public Number get()
-              {
-                return Evals.toNumber(row.get().getRaw(columnName));
-              }
-            }
-        );
-      }
-      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-
-      return new NumericColumnSelector()
-      {
-        @Override
-        public Number get()
-        {
-          return parsed.eval(binding).numericValue();
-        }
-      };
-    }
-
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      // We don't have any information on the column value type, returning null defaults type to string
-      return null;
-    }
-  }
-
 }

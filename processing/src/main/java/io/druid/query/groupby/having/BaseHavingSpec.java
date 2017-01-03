@@ -19,24 +19,15 @@
 
 package io.druid.query.groupby.having;
 
-import io.druid.data.input.Row;
+import io.druid.segment.column.ValueType;
 
-/**
- * A "having" spec that always evaluates to true
- */
-public class AlwaysHavingSpec extends BaseHavingSpec
+import java.util.Map;
+
+public abstract class BaseHavingSpec implements HavingSpec
 {
-  private static final byte CACHE_KEY = 0x0;
-
   @Override
-  public boolean eval(Row row)
+  public void setRowSignature(Map<String, ValueType> rowSignature)
   {
-    return true;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new byte[]{CACHE_KEY};
+    // Do nothing.
   }
 }

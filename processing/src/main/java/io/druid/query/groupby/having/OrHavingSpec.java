@@ -23,14 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The logical "or" operator for the "having" clause.
  */
-public class OrHavingSpec implements HavingSpec
+public class OrHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = 0x7;
 
@@ -46,6 +48,14 @@ public class OrHavingSpec implements HavingSpec
   public List<HavingSpec> getHavingSpecs()
   {
     return havingSpecs;
+  }
+
+  @Override
+  public void setRowSignature(Map<String, ValueType> rowSignature)
+  {
+    for (HavingSpec havingSpec : havingSpecs) {
+      havingSpec.setRowSignature(rowSignature);
+    }
   }
 
   @Override

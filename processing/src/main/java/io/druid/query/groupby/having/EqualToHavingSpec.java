@@ -32,7 +32,7 @@ import java.util.Arrays;
  * The "=" operator in a "having" clause. This is similar to SQL's "having aggregation = value",
  * except that in SQL an aggregation is an expression instead of an aggregation name as in Druid.
  */
-public class EqualToHavingSpec implements HavingSpec
+public class EqualToHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = 0x3;
 

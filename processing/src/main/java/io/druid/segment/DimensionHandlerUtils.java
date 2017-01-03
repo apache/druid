@@ -19,12 +19,13 @@
 
 package io.druid.segment;
 
-import io.druid.java.util.common.IAE;
+import com.google.common.collect.ImmutableList;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.java.util.common.IAE;
 import io.druid.query.ColumnSelectorPlus;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -61,6 +62,27 @@ public final class DimensionHandlerUtils
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
     return new StringDimensionHandler(dimensionName, multiValueHandling);
+  }
+
+  /**
+   * Convenience function equivalent to calling
+   * {@link #createColumnSelectorPluses(ColumnSelectorStrategyFactory, List, ColumnSelectorFactory)} with a singleton
+   * list of dimensionSpecs and then retrieving the only element in the returned array.
+   *
+   * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
+   * @param strategyFactory               A factory provided by query engines that generates type-handling strategies
+   * @param dimensionSpec                 column to generate a ColumnSelectorPlus object for
+   * @param cursor                        Used to create value selectors for columns.
+   *
+   * @return A ColumnSelectorPlus object
+   */
+  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass> createColumnSelectorPlus(
+      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
+      DimensionSpec dimensionSpec,
+      ColumnSelectorFactory cursor
+  )
+  {
+    return createColumnSelectorPluses(strategyFactory, ImmutableList.of(dimensionSpec), cursor)[0];
   }
 
   /**

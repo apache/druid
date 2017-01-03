@@ -22,13 +22,15 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.Row;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * The logical "not" operator for the "having" clause.
  */
-public class NotHavingSpec implements HavingSpec
+public class NotHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = 0x6;
 
@@ -44,6 +46,12 @@ public class NotHavingSpec implements HavingSpec
   public HavingSpec getHavingSpec()
   {
     return havingSpec;
+  }
+
+  @Override
+  public void setRowSignature(Map<String, ValueType> rowSignature)
+  {
+    havingSpec.setRowSignature(rowSignature);
   }
 
   @Override

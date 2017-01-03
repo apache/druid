@@ -206,7 +206,7 @@ public class LongFilteringTest extends BaseFilterTest
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, " ", "4", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.<String>of("1", "2", "3", "4")
     );
 
     assertFilterMatches(
