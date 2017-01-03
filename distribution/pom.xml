@@ -39,6 +39,9 @@
             <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
+    <properties>
+        <druid.distribution.pulldeps.opts></druid.distribution.pulldeps.opts>
+    </properties>
 
     <build>
         <plugins>
@@ -100,6 +103,7 @@
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
+                                <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
                     </execution>
