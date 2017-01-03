@@ -17,26 +17,34 @@
  * under the License.
  */
 
-package io.druid.query.groupby.having;
+package io.druid.common.guava;
 
-import io.druid.data.input.Row;
+import com.google.common.base.Supplier;
 
 /**
- * A "having" spec that always evaluates to true
+ * A settable Supplier. Not thread safe.
  */
-public class AlwaysHavingSpec extends BaseHavingSpec
+public class SettableSupplier<T> implements Supplier<T>
 {
-  private static final byte CACHE_KEY = 0x0;
+  private T obj;
 
-  @Override
-  public boolean eval(Row row)
+  public SettableSupplier()
   {
-    return true;
+  }
+
+  public SettableSupplier(T initialValue)
+  {
+    obj = initialValue;
+  }
+
+  public void set(T obj)
+  {
+    this.obj = obj;
   }
 
   @Override
-  public byte[] getCacheKey()
+  public T get()
   {
-    return new byte[]{CACHE_KEY};
+    return obj;
   }
 }

@@ -29,8 +29,8 @@ import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.BitmapIndex;
 
 import java.util.Comparator;
@@ -132,9 +132,9 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    return factory.makeValueMatcher(boundDimFilter.getDimension(), getPredicateFactory());
+    return Filters.makeValueMatcher(factory, boundDimFilter.getDimension(), getPredicateFactory());
   }
 
   @Override

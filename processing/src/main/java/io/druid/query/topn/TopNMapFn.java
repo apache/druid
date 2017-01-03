@@ -20,9 +20,8 @@
 package io.druid.query.topn;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import io.druid.query.Result;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.Result;
 import io.druid.query.topn.types.TopNStrategyFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
@@ -47,19 +46,19 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   @SuppressWarnings("unchecked")
   public Result<TopNResultValue> apply(Cursor cursor)
   {
-    final ColumnSelectorPlus[] selectorPlusArray = DimensionHandlerUtils.createColumnSelectorPluses(
+    final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
         STRATEGY_FACTORY,
-        Lists.newArrayList(query.getDimensionSpec()),
+        query.getDimensionSpec(),
         cursor
     );
 
-    if (selectorPlusArray[0].getSelector() == null) {
+    if (selectorPlus.getSelector() == null) {
       return null;
     }
 
     TopNParams params = null;
     try {
-      params = topNAlgorithm.makeInitParams(selectorPlusArray[0], cursor);
+      params = topNAlgorithm.makeInitParams(selectorPlus, cursor);
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 

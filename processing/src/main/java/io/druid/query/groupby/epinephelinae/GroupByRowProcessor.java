@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Pair;
@@ -41,8 +42,9 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.RowBasedValueMatcherFactory;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -53,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -61,6 +64,7 @@ public class GroupByRowProcessor
   public static Sequence<Row> process(
       final Query queryParam,
       final Sequence<Row> rows,
+      final Map<String, ValueType> rowSignature,
       final GroupByQueryConfig config,
       final BlockingPool<ByteBuffer> mergeBufferPool,
       final ObjectMapper spillMapper
@@ -86,10 +90,15 @@ public class GroupByRowProcessor
         query,
         Filters.toFilter(query.getDimFilter())
     );
-    final RowBasedValueMatcherFactory filterMatcherFactory = new RowBasedValueMatcherFactory();
+
+    final SettableSupplier<Row> rowSupplier = new SettableSupplier<>();
+    final RowBasedColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        rowSupplier,
+        rowSignature
+    );
     final ValueMatcher filterMatcher = filter == null
                                        ? new BooleanValueMatcher(true)
-                                       : filter.makeMatcher(filterMatcherFactory);
+                                       : filter.makeMatcher(columnSelectorFactory);
 
     final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(
         rows,
@@ -108,7 +117,7 @@ public class GroupByRowProcessor
             if (!inInterval) {
               return false;
             }
-            filterMatcherFactory.setRow(input);
+            rowSupplier.set(input);
             return filterMatcher.matches();
           }
         }

@@ -91,6 +91,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.groupby.having.BaseHavingSpec;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import io.druid.query.groupby.having.EqualToHavingSpec;
@@ -3366,7 +3367,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
-                ImmutableList.of(
+                ImmutableList.<HavingSpec>of(
                     new GreaterThanHavingSpec("rows", 2L),
                     new EqualToHavingSpec("idx", 217L)
                 )
@@ -3495,7 +3496,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
-                ImmutableList.of(
+                ImmutableList.<HavingSpec>of(
                     new GreaterThanHavingSpec("rows", 2L),
                     new EqualToHavingSpec("idx", 217L)
                 )
@@ -3604,7 +3605,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
-                ImmutableList.of(
+                ImmutableList.<HavingSpec>of(
                     new GreaterThanHavingSpec("rows_times_10", 20L),
                     new EqualToHavingSpec("idx", 217L)
                 )
@@ -4655,7 +4656,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setHavingSpec(
-            new HavingSpec()
+            new BaseHavingSpec()
             {
               @Override
               public boolean eval(Row row)
@@ -4926,7 +4927,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setHavingSpec(
-            new HavingSpec()
+            new BaseHavingSpec()
             {
               @Override
               public boolean eval(Row row)
