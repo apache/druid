@@ -241,7 +241,8 @@ public class PullDependencies implements Runnable
 
     try {
       log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
-      for (final String coordinate : coordinates) {
+      for (String coordinate : coordinates) {
+        coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
