@@ -27,6 +27,18 @@ import io.druid.segment.column.ValueType;
 public class ValueMatcherColumnSelectorStrategyFactory
     implements ColumnSelectorStrategyFactory<ValueMatcherColumnSelectorStrategy>
 {
+  private static final ValueMatcherColumnSelectorStrategyFactory INSTANCE = new ValueMatcherColumnSelectorStrategyFactory();
+
+  private ValueMatcherColumnSelectorStrategyFactory()
+  {
+    // Singleton.
+  }
+
+  public static ValueMatcherColumnSelectorStrategyFactory instance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities

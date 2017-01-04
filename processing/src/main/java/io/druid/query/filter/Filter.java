@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.ColumnSelectorFactory;
 
 /**
  */
@@ -40,7 +41,7 @@ public interface Filter
    * @param factory Object used to create ValueMatchers
    * @return ValueMatcher that applies this filter to row values.
    */
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory);
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory);
 
 
   /**

@@ -59,7 +59,7 @@
 
     <properties>
         <apache.curator.version>2.11.1</apache.curator.version>
-        <avatica.version>1.9.0</avatica.version>
+        <avatica.version>1.8.0</avatica.version>
         <calcite.version>1.10.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
@@ -261,11 +261,6 @@
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-linq4j</artifactId>
                 <version>${calcite.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.calcite.avatica</groupId>
-                <artifactId>avatica-core</artifactId>
-                <version>${avatica.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite.avatica</groupId>
