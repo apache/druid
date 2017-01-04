@@ -44,7 +44,19 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
 
   public abstract RowSignature getSourceRowSignature();
 
+  public final RowSignature getOutputRowSignature()
+  {
+    return getQueryBuilder().getOutputRowSignature();
+  }
+
   public abstract DruidQueryBuilder getQueryBuilder();
+
+  /**
+   * Return the number of Druid queries this rel involves, including sub-queries. Simple queries will return 1.
+   *
+   * @return number of nested queries
+   */
+  public abstract int getQueryCount();
 
   public abstract void accumulate(Function<Row, Void> sink);
 

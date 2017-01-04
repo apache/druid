@@ -132,6 +132,12 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
+  public int getQueryCount()
+  {
+    return 1;
+  }
+
+  @Override
   public void accumulate(final Function<Row, Void> sink)
   {
     getQueryMaker().accumulate(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder, sink);

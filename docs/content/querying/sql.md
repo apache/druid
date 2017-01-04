@@ -113,6 +113,13 @@ exact distinct count using a nested groupBy.
 SELECT COUNT(*) FROM (SELECT DISTINCT col FROM druid.foo)
 ```
 
+Note that groupBys require a separate merge buffer on the broker for each layer beyond the first layer of the groupBy.
+With the v2 groupBy strategy, this can potentially lead to deadlocks for groupBys nested beyond two layers, since the
+merge buffers are limited in number and are acquired one-by-one and not as a complete set. At this time we recommend
+that you avoid deeply-nested groupBys with the v2 strategy. Doubly-nested groupBys (groupBy -> groupBy -> table) are
+safe and do not suffer from this issue. If you like, you can forbid deeper nesting by setting
+`druid.sql.planner.maxQueryCount = 2`.
+
 #### Semi-joins
 
 Semi-join subqueries involving `WHERE ... IN (SELECT ...)`, like the following, are executed with a special process.

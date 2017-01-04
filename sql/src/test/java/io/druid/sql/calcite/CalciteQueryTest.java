@@ -139,6 +139,22 @@ public class CalciteQueryTest
       return true;
     }
   };
+  private static final PlannerConfig PLANNER_CONFIG_SINGLE_NESTING_ONLY = new PlannerConfig()
+  {
+    @Override
+    public int getMaxQueryCount()
+    {
+      return 2;
+    }
+  };
+  private static final PlannerConfig PLANNER_CONFIG_NO_SUBQUERIES = new PlannerConfig()
+  {
+    @Override
+    public int getMaxQueryCount()
+    {
+      return 1;
+    }
+  };
 
   private static final Map<String, Object> TIMESERIES_CONTEXT = ImmutableMap.<String, Object>of(
       "skipEmptyBuckets",
@@ -162,6 +178,8 @@ public class CalciteQueryTest
     connections.put(PLANNER_CONFIG_NO_TOPN, connectJdbc(walker, PLANNER_CONFIG_NO_TOPN));
     connections.put(PLANNER_CONFIG_SELECT_PAGING, connectJdbc(walker, PLANNER_CONFIG_SELECT_PAGING));
     connections.put(PLANNER_CONFIG_FALLBACK, connectJdbc(walker, PLANNER_CONFIG_FALLBACK));
+    connections.put(PLANNER_CONFIG_SINGLE_NESTING_ONLY, connectJdbc(walker, PLANNER_CONFIG_SINGLE_NESTING_ONLY));
+    connections.put(PLANNER_CONFIG_NO_SUBQUERIES, connectJdbc(walker, PLANNER_CONFIG_NO_SUBQUERIES));
 
     unhook = Hook.QUERY_PLAN.add(
         new Function<Object, Object>()
@@ -472,18 +490,28 @@ public class CalciteQueryTest
     );
 
     for (final String query : queries) {
-      Exception e = null;
-      try {
-        testQuery(query, ImmutableList.<Query>of(), ImmutableList.<Object[]>of());
-      }
-      catch (Exception e1) {
-        e = e1;
-      }
+      assertQueryIsUnplannable(query);
+    }
+  }
 
-      if (!(e instanceof SQLException) || !(e.getCause() instanceof RelOptPlanner.CannotPlanException)) {
-        log.error(e, "Expected SQLException caused by CannotPlanException for query: %s", query);
-        Assert.fail(query);
-      }
+  private void assertQueryIsUnplannable(final String sql)
+  {
+    assertQueryIsUnplannable(PLANNER_CONFIG_DEFAULT, sql);
+  }
+
+  private void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql)
+  {
+    Exception e = null;
+    try {
+      testQuery(plannerConfig, sql, ImmutableList.<Query>of(), ImmutableList.<Object[]>of());
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    if (!(e instanceof SQLException) || !(e.getCause() instanceof RelOptPlanner.CannotPlanException)) {
+      log.error(e, "Expected SQLException caused by CannotPlanException for query: %s", sql);
+      Assert.fail(sql);
     }
   }
 
@@ -1530,9 +1558,51 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testDoubleNestedGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(cnt), COUNT(*) FROM (\n"
+        + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
+        + "    SELECT\n"
+        + "      dim1,\n"
+        + "      dim2,\n"
+        + "      COUNT(*) cnt\n"
+        + "    FROM druid.foo\n"
+        + "    GROUP BY dim1, dim2\n"
+        + "  ) t1\n"
+        + "  GROUP BY dim2\n"
+        + ") t2",
+        null,
+        ImmutableList.of(
+            new Object[]{6L, 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testDoubleNestedGroupByForbiddenByConfig() throws Exception
+  {
+    assertQueryIsUnplannable(
+        PLANNER_CONFIG_SINGLE_NESTING_ONLY,
+        "SELECT SUM(cnt), COUNT(*) FROM (\n"
+        + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
+        + "    SELECT\n"
+        + "      dim1,\n"
+        + "      dim2,\n"
+        + "      COUNT(*) cnt\n"
+        + "    FROM druid.foo\n"
+        + "    GROUP BY dim1, dim2\n"
+        + "  ) t1\n"
+        + "  GROUP BY dim2\n"
+        + ") t2"
+    );
+  }
+
+  @Test
   public void testExactCountDistinctUsingSubquery() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_SINGLE_NESTING_ONLY, // Sanity check; this query should work with a single level of nesting.
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
@@ -2082,6 +2152,7 @@ public class CalciteQueryTest
   public void testGroupByFloor() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_NO_SUBQUERIES, // Sanity check; this simple query should work with subqueries disabled.
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
         ImmutableList.<Query>of(
             GroupByQuery.builder()
@@ -2519,6 +2590,7 @@ public class CalciteQueryTest
   public void testUsingSubqueryAsFilter() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_SINGLE_NESTING_ONLY, // Sanity check; this query should work with a single level of nesting.
         "SELECT dim1, dim2, COUNT(*) FROM druid.foo "
         + "WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')"
         + "AND dim1 <> 'xxx'"
@@ -2559,6 +2631,18 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{"def", "abc", 1L}
         )
+    );
+  }
+
+  @Test
+  public void testUsingSubqueryAsFilterForbiddenByConfig() throws Exception
+  {
+    assertQueryIsUnplannable(
+        PLANNER_CONFIG_NO_SUBQUERIES,
+        "SELECT dim1, dim2, COUNT(*) FROM druid.foo "
+        + "WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')"
+        + "AND dim1 <> 'xxx'"
+        + "group by dim1, dim2 ORDER BY dim2"
     );
   }
 

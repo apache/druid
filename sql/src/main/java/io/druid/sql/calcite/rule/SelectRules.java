@@ -21,9 +21,8 @@ package io.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.java.util.common.ISE;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -106,9 +105,13 @@ public class SelectRules
             dimOutputNameCounter++;
           } while (sourceRowSignature.getColumnType(GroupByRules.dimOutputName(dimOutputNameCounter)) != null);
           final String outputName = GroupByRules.dimOutputName(dimOutputNameCounter);
-          final DimensionSpec dimensionSpec = extractionFn == null
-                                              ? new DefaultDimensionSpec(column, outputName)
-                                              : new ExtractionDimensionSpec(column, outputName, extractionFn);
+          final DimensionSpec dimensionSpec = rex.toDimensionSpec(sourceRowSignature, outputName);
+
+          if (dimensionSpec == null) {
+            // Really should have been possible due to the checks above.
+            throw new ISE("WTF?! Could not create DimensionSpec for rowExtraction[%s].", rex);
+          }
+
           dimensions.add(dimensionSpec);
           rowOrder.add(outputName);
         } else if (extractionFn == null && !column.equals(Column.TIME_COLUMN_NAME)) {

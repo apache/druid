@@ -73,7 +73,7 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
         sourceRel.getTraitSet(),
         sourceRel,
         DruidQueryBuilder.fullScan(
-            sourceRel.getQueryBuilder().getOutputRowSignature(),
+            sourceRel.getOutputRowSignature(),
             sourceRel.getCluster().getTypeFactory()
         ).withFilter(filter).withGrouping(grouping, rowType, rowOrder)
     );
@@ -82,7 +82,7 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   @Override
   public RowSignature getSourceRowSignature()
   {
-    return sourceRel.getQueryBuilder().getOutputRowSignature();
+    return sourceRel.getOutputRowSignature();
   }
 
   @Override
@@ -98,7 +98,7 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
     if (queryDataSource != null) {
       getQueryMaker().accumulate(
           queryDataSource,
-          sourceRel.getQueryBuilder().getOutputRowSignature(),
+          sourceRel.getOutputRowSignature(),
           queryBuilder,
           sink
       );
@@ -117,6 +117,12 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   }
 
   @Override
+  public int getQueryCount()
+  {
+    return 1 + sourceRel.getQueryCount();
+  }
+
+  @Override
   public QueryDataSource asDataSource()
   {
     final QueryDataSource queryDataSource = sourceRel.asDataSource();
@@ -124,8 +130,7 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
       return null;
     } else {
       return new QueryDataSource(
-          sourceRel.getQueryBuilder()
-                   .toGroupByQuery(queryDataSource, sourceRel.getQueryBuilder().getOutputRowSignature())
+          queryBuilder.toGroupByQuery(queryDataSource, sourceRel.getOutputRowSignature())
       );
     }
   }

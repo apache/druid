@@ -176,6 +176,12 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
+  public int getQueryCount()
+  {
+    return left.getQueryCount() + right.getQueryCount();
+  }
+
+  @Override
   public void accumulate(final Function<Row, Void> sink)
   {
     final DruidRel rel = getLeftRelWithFilter();

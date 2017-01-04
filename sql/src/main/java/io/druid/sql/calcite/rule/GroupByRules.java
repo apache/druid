@@ -38,9 +38,7 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -48,8 +46,6 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
-import io.druid.segment.column.Column;
-import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
 import io.druid.sql.calcite.expression.Expressions;
@@ -89,9 +85,9 @@ public class GroupByRules
   public static List<RelOptRule> rules(final PlannerConfig plannerConfig)
   {
     return ImmutableList.of(
-        new DruidAggregateRule(plannerConfig.isUseApproximateCountDistinct()),
-        new DruidAggregateProjectRule(plannerConfig.isUseApproximateCountDistinct()),
-        new DruidAggregateProjectFilterRule(plannerConfig.isUseApproximateCountDistinct()),
+        new DruidAggregateRule(plannerConfig),
+        new DruidAggregateProjectRule(plannerConfig),
+        new DruidAggregateProjectFilterRule(plannerConfig),
         new DruidProjectAfterAggregationRule(),
         new DruidFilterAfterAggregationRule(),
         new DruidGroupBySortRule()
@@ -154,12 +150,12 @@ public class GroupByRules
 
   public static class DruidAggregateRule extends RelOptRule
   {
-    final boolean approximateCountDistinct;
+    private final PlannerConfig plannerConfig;
 
-    private DruidAggregateRule(final boolean approximateCountDistinct)
+    private DruidAggregateRule(final PlannerConfig plannerConfig)
     {
       super(operand(Aggregate.class, operand(DruidRel.class, none())));
-      this.approximateCountDistinct = approximateCountDistinct;
+      this.plannerConfig = plannerConfig;
     }
 
     @Override
@@ -172,7 +168,8 @@ public class GroupByRules
           null,
           null,
           aggregate,
-          approximateCountDistinct
+          plannerConfig.isUseApproximateCountDistinct(),
+          plannerConfig.getMaxQueryCount()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -182,12 +179,12 @@ public class GroupByRules
 
   public static class DruidAggregateProjectRule extends RelOptRule
   {
-    final boolean approximateCountDistinct;
+    private final PlannerConfig plannerConfig;
 
-    private DruidAggregateProjectRule(final boolean approximateCountDistinct)
+    private DruidAggregateProjectRule(final PlannerConfig plannerConfig)
     {
       super(operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, none()))));
-      this.approximateCountDistinct = approximateCountDistinct;
+      this.plannerConfig = plannerConfig;
     }
 
     @Override
@@ -201,7 +198,8 @@ public class GroupByRules
           null,
           project,
           aggregate,
-          approximateCountDistinct
+          plannerConfig.isUseApproximateCountDistinct(),
+          plannerConfig.getMaxQueryCount()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -211,12 +209,12 @@ public class GroupByRules
 
   public static class DruidAggregateProjectFilterRule extends RelOptRule
   {
-    final boolean approximateCountDistinct;
+    private final PlannerConfig plannerConfig;
 
-    private DruidAggregateProjectFilterRule(final boolean approximateCountDistinct)
+    private DruidAggregateProjectFilterRule(final PlannerConfig plannerConfig)
     {
       super(operand(Aggregate.class, operand(Project.class, operand(Filter.class, operand(DruidRel.class, none())))));
-      this.approximateCountDistinct = approximateCountDistinct;
+      this.plannerConfig = plannerConfig;
     }
 
     @Override
@@ -231,7 +229,8 @@ public class GroupByRules
           filter,
           project,
           aggregate,
-          approximateCountDistinct
+          plannerConfig.isUseApproximateCountDistinct(),
+          plannerConfig.getMaxQueryCount()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -301,7 +300,8 @@ public class GroupByRules
       final Filter filter0,
       final Project project0,
       final Aggregate aggregate,
-      final boolean approximateCountDistinct
+      final boolean approximateCountDistinct,
+      final int maxQueryCount
   )
   {
     if ((filter0 != null && druidRel.getQueryBuilder().getFilter() != null /* can't filter twice */)
@@ -316,7 +316,7 @@ public class GroupByRules
 
     if (isNestedQuery) {
       // Nested groupBy; source row signature is the output signature of druidRel.
-      sourceRowSignature = druidRel.getQueryBuilder().getOutputRowSignature();
+      sourceRowSignature = druidRel.getOutputRowSignature();
     } else {
       sourceRowSignature = druidRel.getSourceRowSignature();
     }
@@ -362,12 +362,16 @@ public class GroupByRules
         // nobody actually expects to see the literal.
         rowOrder.add(dimOutputName(dimOutputNameCounter++));
       } else {
-        final DimensionSpec dimensionSpec = toDimensionSpec(
+        final RowExtraction rex = Expressions.toRowExtraction(
+            sourceRowSignature.getRowOrder(),
+            Expressions.fromFieldAccess(sourceRowSignature, project, i)
+        );
+        if (rex == null) {
+          return null;
+        }
+
+        final DimensionSpec dimensionSpec = rex.toDimensionSpec(
             sourceRowSignature,
-            Expressions.toRowExtraction(
-                sourceRowSignature.getRowOrder(),
-                Expressions.fromFieldAccess(sourceRowSignature, project, i)
-            ),
             dimOutputName(dimOutputNameCounter++)
         );
         if (dimensionSpec == null) {
@@ -399,13 +403,20 @@ public class GroupByRules
 
     if (isNestedQuery) {
       // Nested groupBy.
-      return DruidNestedGroupBy.from(
+      final DruidNestedGroupBy retVal = DruidNestedGroupBy.from(
           druidRel,
           filter,
           Grouping.create(dimensions, aggregations),
           aggregate.getRowType(),
           rowOrder
       );
+
+      // Check maxQueryCount.
+      if (maxQueryCount > 0 && retVal.getQueryCount() > maxQueryCount) {
+        return null;
+      }
+
+      return retVal;
     } else {
       // groupBy on a base dataSource.
       return druidRel.withQueryBuilder(
@@ -497,7 +508,7 @@ public class GroupByRules
     }
 
     final DimFilter dimFilter = Expressions.toFilter(
-        druidRel.getQueryBuilder().getOutputRowSignature(),
+        druidRel.getOutputRowSignature(),
         postFilter.getCondition()
     );
 
@@ -615,31 +626,6 @@ public class GroupByRules
     return new DefaultLimitSpec(orderBys, limit);
   }
 
-  private static DimensionSpec toDimensionSpec(
-      final RowSignature rowSignature,
-      final RowExtraction rex,
-      final String name
-  )
-  {
-    if (rex == null) {
-      return null;
-    }
-
-    final ValueType columnType = rowSignature.getColumnType(rex.getColumn());
-
-    if (columnType == null) {
-      return null;
-    } else if (columnType == ValueType.STRING ||
-               (rex.getColumn().equals(Column.TIME_COLUMN_NAME) && rex.getExtractionFn() != null)) {
-      return rex.getExtractionFn() == null
-             ? new DefaultDimensionSpec(rex.getColumn(), name)
-             : new ExtractionDimensionSpec(rex.getColumn(), name, rex.getExtractionFn());
-    } else {
-      // Can't create dimensionSpecs for non-string, non-time.
-      return null;
-    }
-  }
-
   /**
    * Translate an AggregateCall to Druid equivalents.
    *
@@ -681,19 +667,22 @@ public class GroupByRules
       retVal = Aggregation.create(new CountAggregatorFactory(name));
     } else if (call.getAggregation().getKind() == SqlKind.COUNT && call.isDistinct() && approximateCountDistinct) {
       // COUNT(DISTINCT x)
-      final DimensionSpec dimensionSpec = toDimensionSpec(
+      final RowExtraction rex = Expressions.toRowExtraction(
+          rowOrder,
+          Expressions.fromFieldAccess(
+              sourceRowSignature,
+              project,
+              Iterables.getOnlyElement(call.getArgList())
+          )
+      );
+      if (rex == null) {
+        return null;
+      }
+
+      final DimensionSpec dimensionSpec = rex.toDimensionSpec(
           sourceRowSignature,
-          Expressions.toRowExtraction(
-              rowOrder,
-              Expressions.fromFieldAccess(
-                  sourceRowSignature,
-                  project,
-                  Iterables.getOnlyElement(call.getArgList())
-              )
-          ),
           aggInternalName(aggNumber, "dimSpec")
       );
-
       if (dimensionSpec == null) {
         return null;
       }

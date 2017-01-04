@@ -34,6 +34,9 @@ public class PlannerConfig
   private int maxTopNLimit = 100000;
 
   @JsonProperty
+  private int maxQueryCount = 8;
+
+  @JsonProperty
   private int selectThreshold = 1000;
 
   @JsonProperty
@@ -56,6 +59,11 @@ public class PlannerConfig
   }
 
   public int getMaxTopNLimit()
+  {
+    return maxTopNLimit;
+  }
+
+  public int getMaxQueryCount()
   {
     return maxTopNLimit;
   }
@@ -98,6 +106,9 @@ public class PlannerConfig
     if (maxTopNLimit != that.maxTopNLimit) {
       return false;
     }
+    if (maxQueryCount != that.maxQueryCount) {
+      return false;
+    }
     if (selectThreshold != that.selectThreshold) {
       return false;
     }
@@ -113,7 +124,6 @@ public class PlannerConfig
     return metadataRefreshPeriod != null
            ? metadataRefreshPeriod.equals(that.metadataRefreshPeriod)
            : that.metadataRefreshPeriod == null;
-
   }
 
   @Override
@@ -122,6 +132,7 @@ public class PlannerConfig
     int result = metadataRefreshPeriod != null ? metadataRefreshPeriod.hashCode() : 0;
     result = 31 * result + maxSemiJoinRowsInMemory;
     result = 31 * result + maxTopNLimit;
+    result = 31 * result + maxQueryCount;
     result = 31 * result + selectThreshold;
     result = 31 * result + (useApproximateCountDistinct ? 1 : 0);
     result = 31 * result + (useApproximateTopN ? 1 : 0);
@@ -136,6 +147,7 @@ public class PlannerConfig
            "metadataRefreshPeriod=" + metadataRefreshPeriod +
            ", maxSemiJoinRowsInMemory=" + maxSemiJoinRowsInMemory +
            ", maxTopNLimit=" + maxTopNLimit +
+           ", maxQueryCount=" + maxQueryCount +
            ", selectThreshold=" + selectThreshold +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +

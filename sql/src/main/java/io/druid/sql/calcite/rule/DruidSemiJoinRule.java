@@ -28,9 +28,9 @@ import org.apache.calcite.rel.core.SemiJoin;
 
 public class DruidSemiJoinRule extends RelOptRule
 {
-  private final int maxSemiJoinRowsInMemory;
+  private final PlannerConfig plannerConfig;
 
-  public DruidSemiJoinRule(final int maxSemiJoinRowsInMemory)
+  public DruidSemiJoinRule(final PlannerConfig plannerConfig)
   {
     super(
         operand(
@@ -39,12 +39,12 @@ public class DruidSemiJoinRule extends RelOptRule
             operand(DruidRel.class, none())
         )
     );
-    this.maxSemiJoinRowsInMemory = maxSemiJoinRowsInMemory;
+    this.plannerConfig = plannerConfig;
   }
 
   public static DruidSemiJoinRule create(final PlannerConfig plannerConfig)
   {
-    return new DruidSemiJoinRule(plannerConfig.getMaxSemiJoinRowsInMemory());
+    return new DruidSemiJoinRule(plannerConfig);
   }
 
   @Override
@@ -57,9 +57,15 @@ public class DruidSemiJoinRule extends RelOptRule
         semiJoin,
         left,
         right,
-        maxSemiJoinRowsInMemory
+        plannerConfig.getMaxSemiJoinRowsInMemory()
     );
+
     if (druidSemiJoin != null) {
+      // Check maxQueryCount.
+      if (plannerConfig.getMaxQueryCount() > 0 && druidSemiJoin.getQueryCount() > plannerConfig.getMaxQueryCount()) {
+        return;
+      }
+
       call.transformTo(druidSemiJoin);
     }
   }
