@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import com.yahoo.sketches.Util;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
@@ -93,6 +94,12 @@ public class SketchSetPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty

@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -141,6 +142,12 @@ public class JavaScriptPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public JavaScriptPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty

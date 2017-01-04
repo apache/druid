@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -69,6 +71,12 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   {
     final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
     return ah.getMax();
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @Override

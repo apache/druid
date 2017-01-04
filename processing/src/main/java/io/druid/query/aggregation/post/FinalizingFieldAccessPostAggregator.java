@@ -23,18 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.HasDependentAggFactories;
 import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasDependentAggFactories
+public class FinalizingFieldAccessPostAggregator implements PostAggregator
 {
   private final String name;
   private final String fieldName;
-  private Map<String, AggregatorFactory> aggFactoryMap;
 
   @JsonCreator
   public FinalizingFieldAccessPostAggregator(
@@ -61,13 +59,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasD
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    if (aggFactoryMap != null && aggFactoryMap.containsKey(fieldName)) {
-      return aggFactoryMap.get(fieldName).finalizeComputation(
-          combinedAggregators.get(fieldName)
-      );
-    } else {
-      return combinedAggregators.get(fieldName);
-    }
+    throw new UnsupportedOperationException("No decorated");
   }
 
   @Override
@@ -75,6 +67,24 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasD
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public FinalizingFieldAccessPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
+  {
+    return new FinalizingFieldAccessPostAggregator(name, fieldName) {
+      @Override
+      public Object compute(Map<String, Object> combinedAggregators)
+      {
+        if (aggregators != null && aggregators.containsKey(fieldName)) {
+          return aggregators.get(fieldName).finalizeComputation(
+              combinedAggregators.get(fieldName)
+          );
+        } else {
+          return combinedAggregators.get(fieldName);
+        }
+      }
+    };
   }
 
   @JsonProperty
@@ -89,7 +99,6 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasD
     return "FinalizingFieldAccessPostAggregator{" +
            "name'" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
-           ", aggFactoryMap='" + aggFactoryMap + '\'' +
            '}';
   }
 
@@ -111,9 +120,6 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasD
     if (name != null ? !name.equals(that.name) : that.name != null) {
       return false;
     }
-    if (aggFactoryMap != null ? !aggFactoryMap.equals(that.aggFactoryMap) : that.aggFactoryMap != null) {
-      return false;
-    }
 
     return true;
   }
@@ -123,19 +129,14 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator, HasD
   {
     int result = name != null ? name.hashCode() : 0;
     result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
-    result = 31 * result + (aggFactoryMap != null ? aggFactoryMap.hashCode() : 0);
     return result;
   }
 
-  @Override
-  public void setDependentAggFactories(Map<String, AggregatorFactory> aggFactoryMap)
+  public static FinalizingFieldAccessPostAggregator buildDecorated(String name,
+                                                                   String fieldName,
+                                                                   Map<String, AggregatorFactory> aggregators)
   {
-    this.aggFactoryMap = aggFactoryMap;
-  }
-
-  @Override
-  public Map<String, AggregatorFactory> getDependentAggFactories()
-  {
-    return aggFactoryMap;
+    FinalizingFieldAccessPostAggregator ret = new FinalizingFieldAccessPostAggregator(name, fieldName);
+    return ret.decorate(aggregators);
   }
 }

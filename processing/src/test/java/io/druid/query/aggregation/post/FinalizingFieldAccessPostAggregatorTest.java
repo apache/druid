@@ -48,7 +48,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Rule
   public final TemporaryFolder tempFoler = new TemporaryFolder();
 
-  @Test
+  @Test(expected = UnsupportedOperationException.class)
   public void testComputeWithoutFinalizing()
   {
     Aggregator agg = new CountAggregator();
@@ -59,7 +59,7 @@ public class FinalizingFieldAccessPostAggregatorTest
     Map<String, Object> metricValues = Maps.newHashMap();
     metricValues.put(agg.getName(), agg.get());
 
-    PostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", "rows");
+    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", "rows");
     Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
   }
 
@@ -72,8 +72,9 @@ public class FinalizingFieldAccessPostAggregatorTest
             .times(1);
     EasyMock.replay(aggFactory);
 
-    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_billy", "billy");
-    postAgg.setDependentAggFactories(ImmutableMap.of("billy", aggFactory));
+    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+        "final_billy", "billy", ImmutableMap.of("billy", aggFactory)
+    );
 
     Map<String, Object> metricValues = Maps.newHashMap();
     metricValues.put("billy", "test");
@@ -91,8 +92,9 @@ public class FinalizingFieldAccessPostAggregatorTest
             .times(1);
     EasyMock.replay(aggFactory);
 
-    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_billy", "billy");
-    postAgg.setDependentAggFactories(ImmutableMap.of("billy", aggFactory));
+    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+        "final_billy", "billy", ImmutableMap.of("billy", aggFactory)
+    );
 
     Map<String, Object> metricValues = Maps.newHashMap();
     metricValues.put("billy", "test");
