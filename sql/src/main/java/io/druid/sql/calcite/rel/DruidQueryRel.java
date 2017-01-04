@@ -40,6 +40,13 @@ import org.apache.calcite.rel.type.RelDataType;
 
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
+  // Factors used for computing cost (see computeSelfCost). These are intended to encourage pushing down filters
+  // and limits through stacks of nested queries when possible.
+  private static final double COST_BASE = 1.0;
+  private static final double COST_FILTER_MULTIPLIER = 0.1;
+  private static final double COST_GROUPING_MULTIPLIER = 0.5;
+  private static final double COST_LIMIT_MULTIPLIER = 0.5;
+
   private final RelOptTable table;
   private final DruidTable druidTable;
   private final DruidQueryBuilder queryBuilder;
@@ -194,18 +201,18 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost = 1.0;
+    double cost = COST_BASE;
 
     if (queryBuilder.getFilter() != null) {
-      cost *= 0.1;
+      cost *= COST_FILTER_MULTIPLIER;
     }
 
     if (queryBuilder.getGrouping() != null) {
-      cost *= 0.5;
+      cost *= COST_GROUPING_MULTIPLIER;
     }
 
     if (queryBuilder.getLimitSpec() != null) {
-      cost *= 0.5;
+      cost *= COST_LIMIT_MULTIPLIER;
     }
 
     return planner.getCostFactory().makeCost(cost, 0, 0);
