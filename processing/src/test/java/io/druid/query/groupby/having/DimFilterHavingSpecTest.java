@@ -27,6 +27,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.column.ValueType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -65,6 +66,7 @@ public class DimFilterHavingSpecTest
   }
 
   @Test(timeout = 60_000L)
+  @Ignore // Doesn't always pass. The check in "eval" is best effort and not guaranteed to detect concurrent usage.
   public void testConcurrentUsage() throws Exception
   {
     final ExecutorService exec = Executors.newFixedThreadPool(2);
