@@ -20,15 +20,12 @@
 package io.druid.query;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorUtil;
-import io.druid.query.aggregation.HasDependentAggFactories;
 import io.druid.query.aggregation.PostAggregator;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,7 +34,17 @@ import java.util.Set;
  */
 public class Queries
 {
-  public static void prepareAggregations(
+  public static List<PostAggregator> decorate(List<PostAggregator> postAggs,
+                                              Map<String, AggregatorFactory> aggFactories)
+  {
+    List<PostAggregator> decorated = Lists.newArrayListWithExpectedSize(postAggs.size());
+    for (PostAggregator aggregator : postAggs) {
+      decorated.add(aggregator.decorate(aggFactories));
+    }
+    return decorated;
+  }
+
+  public static List<PostAggregator> prepareAggregations(
       List<AggregatorFactory> aggFactories,
       List<PostAggregator> postAggs
   )
@@ -46,13 +53,15 @@ public class Queries
 
     final Map<String, AggregatorFactory> aggsFactoryMap = Maps.newHashMap();
     for (AggregatorFactory aggFactory : aggFactories) {
-      Preconditions.checkArgument(!aggsFactoryMap.containsKey(aggFactory.getName()), "[%s] already defined", aggFactory.getName());
+      Preconditions.checkArgument(!aggsFactoryMap.containsKey(aggFactory.getName()),
+                                  "[%s] already defined", aggFactory.getName());
       aggsFactoryMap.put(aggFactory.getName(), aggFactory);
     }
 
     if (postAggs != null && !postAggs.isEmpty()) {
       final Set<String> combinedAggNames = Sets.newHashSet(aggsFactoryMap.keySet());
 
+      List<PostAggregator> decorated = Lists.newArrayListWithExpectedSize(postAggs.size());
       for (final PostAggregator postAgg : postAggs) {
         final Set<String> dependencies = postAgg.getDependentFields();
         final Set<String> missing = Sets.difference(dependencies, combinedAggNames);
@@ -61,13 +70,14 @@ public class Queries
             missing.isEmpty(),
             "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
-        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined", postAgg.getName());
+        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()),
+                                    "[%s] already defined", postAgg.getName());
 
-        if (postAgg instanceof HasDependentAggFactories) {
-          HasDependentAggFactories richPostAgg = (HasDependentAggFactories) postAgg;
-          richPostAgg.setDependentAggFactories(aggsFactoryMap);
-        }
+        decorated.add(postAgg.decorate(aggsFactoryMap));
       }
+      return decorated;
     }
+
+    return postAggs;
   }
 }

@@ -35,4 +35,6 @@ public interface PostAggregator
   public Object compute(Map<String, Object> combinedAggregators);
 
   public String getName();
+
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators);
 }
