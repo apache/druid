@@ -38,16 +38,16 @@ public class JavaScriptModuleTest
   public void testInjectionDefault() throws Exception
   {
     JavaScriptConfig config = makeInjectorWithProperties(new Properties()).getInstance(JavaScriptConfig.class);
-    Assert.assertFalse(config.isDisabled());
+    Assert.assertFalse(config.isEnabled());
   }
 
   @Test
-  public void testInjectionDisabled() throws Exception
+  public void testInjectionEnabled() throws Exception
   {
     final Properties props = new Properties();
-    props.setProperty("druid.javascript.disabled", "true");
+    props.setProperty("druid.javascript.enabled", "true");
     JavaScriptConfig config = makeInjectorWithProperties(props).getInstance(JavaScriptConfig.class);
-    Assert.assertTrue(config.isDisabled());
+    Assert.assertTrue(config.isEnabled());
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

@@ -49,7 +49,7 @@ public class JavaScriptPostAggregatorTest
         "absPercent",
         Lists.newArrayList("delta", "total"),
         absPercentFunction,
-        JavaScriptConfig.getDefault()
+        JavaScriptConfig.getEnabledInstance()
     );
 
     Assert.assertEquals(10.0, javaScriptPostAggregator.compute(metricValues));
@@ -65,7 +65,7 @@ public class JavaScriptPostAggregatorTest
         "absPercent",
         Lists.newArrayList("delta", "total"),
         absPercentFunction,
-        new JavaScriptConfig(true)
+        new JavaScriptConfig(false)
     );
   }
 }

@@ -307,7 +307,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'a') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, null, JavaScriptConfig.getDefault())
+        new JavaScriptDimFilter("dim", jsFn, null, JavaScriptConfig.getEnabledInstance())
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -321,7 +321,7 @@ public class FilteredAggregatorTest
     FilteredAggregatorFactory factory;
 
     String extractionJsFn = "function(str) { return str + 'AARDVARK'; }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
@@ -363,7 +363,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'aAARDVARK') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, extractionFn, JavaScriptConfig.getDefault())
+        new JavaScriptDimFilter("dim", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance())
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
