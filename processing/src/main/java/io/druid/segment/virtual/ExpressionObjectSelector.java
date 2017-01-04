@@ -83,10 +83,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
         final ObjectColumnSelector selector = columnSelectorFactory.makeObjectColumnSelector(columnName);
         final Class clazz = selector == null ? null : selector.classOfObject();
-        if (selector == null || (clazz != Object.class && Number.class.isAssignableFrom(clazz))) {
-          // We know there are no numbers here. Use a null supplier.
-          supplier = null;
-        } else {
+        if (selector != null && (clazz == Object.class || Number.class.isAssignableFrom(clazz))) {
           // There may be numbers here.
           supplier = new Supplier<Number>()
           {
@@ -96,6 +93,9 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
               return tryParse(selector.get());
             }
           };
+        } else {
+          // We know there are no numbers here. Use a null supplier.
+          supplier = null;
         }
       } else {
         // Unhandleable ValueType (possibly STRING or COMPLEX).

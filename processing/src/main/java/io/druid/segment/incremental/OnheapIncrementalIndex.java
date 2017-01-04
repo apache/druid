@@ -36,6 +36,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -402,6 +403,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
+    @Nullable
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
     {

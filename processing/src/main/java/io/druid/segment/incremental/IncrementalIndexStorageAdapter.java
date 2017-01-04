@@ -56,6 +56,7 @@ import io.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -534,6 +535,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
               }
 
+              @Nullable
               @Override
               public ColumnCapabilities getColumnCapabilities(String columnName)
               {

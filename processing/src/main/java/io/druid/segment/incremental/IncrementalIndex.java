@@ -161,6 +161,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return baseSelectorFactory.makeDimensionSelector(dimensionSpec);
       }
 
+      @Nullable
       @Override
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {

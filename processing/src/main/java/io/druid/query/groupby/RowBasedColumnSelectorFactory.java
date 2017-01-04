@@ -242,6 +242,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
     }
   }
 
+  @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
