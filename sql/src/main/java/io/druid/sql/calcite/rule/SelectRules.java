@@ -63,16 +63,20 @@ public class SelectRules
     }
 
     @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final DruidRel druidRel = call.rel(1);
+
+      return druidRel.getQueryBuilder().getSelectProjection() == null
+             && druidRel.getQueryBuilder().getGrouping() == null
+             && druidRel.getQueryBuilder().getLimitSpec() == null;
+    }
+
+    @Override
     public void onMatch(RelOptRuleCall call)
     {
       final Project project = call.rel(0);
       final DruidRel druidRel = call.rel(1);
-
-      if (druidRel.getQueryBuilder().getSelectProjection() != null
-          || druidRel.getQueryBuilder().getGrouping() != null
-          || druidRel.getQueryBuilder().getLimitSpec() != null) {
-        return;
-      }
 
       // Only push in projections that can be used by the Select query.
       // Leave anything more complicated to DruidAggregateProjectRule for possible handling in a GroupBy query.
@@ -147,15 +151,19 @@ public class SelectRules
     }
 
     @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final DruidRel druidRel = call.rel(1);
+
+      return druidRel.getQueryBuilder().getGrouping() == null
+             && druidRel.getQueryBuilder().getLimitSpec() == null;
+    }
+
+    @Override
     public void onMatch(RelOptRuleCall call)
     {
       final Sort sort = call.rel(0);
       final DruidRel druidRel = call.rel(1);
-
-      if (druidRel.getQueryBuilder().getGrouping() != null
-          || druidRel.getQueryBuilder().getLimitSpec() != null) {
-        return;
-      }
 
       final DefaultLimitSpec limitSpec = GroupByRules.toLimitSpec(druidRel.getQueryBuilder().getRowOrder(), sort);
       if (limitSpec == null) {

@@ -88,9 +88,9 @@ public class GroupByRules
         new DruidAggregateRule(plannerConfig),
         new DruidAggregateProjectRule(plannerConfig),
         new DruidAggregateProjectFilterRule(plannerConfig),
-        new DruidProjectAfterAggregationRule(),
-        new DruidFilterAfterAggregationRule(),
-        new DruidGroupBySortRule()
+        new DruidGroupByPostAggregationRule(),
+        new DruidGroupByHavingRule(),
+        new DruidGroupByLimitRule()
     );
   }
 
@@ -159,6 +159,14 @@ public class GroupByRules
     }
 
     @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final Aggregate aggregate = call.rel(0);
+      final DruidRel druidRel = call.rel(1);
+      return canApplyAggregate(druidRel, null, null, aggregate);
+    }
+
+    @Override
     public void onMatch(RelOptRuleCall call)
     {
       final Aggregate aggregate = call.rel(0);
@@ -185,6 +193,15 @@ public class GroupByRules
     {
       super(operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, none()))));
       this.plannerConfig = plannerConfig;
+    }
+
+    @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final Aggregate aggregate = call.rel(0);
+      final Project project = call.rel(1);
+      final DruidRel druidRel = call.rel(2);
+      return canApplyAggregate(druidRel, null, project, aggregate);
     }
 
     @Override
@@ -218,6 +235,16 @@ public class GroupByRules
     }
 
     @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final Aggregate aggregate = call.rel(0);
+      final Project project = call.rel(1);
+      final Filter filter = call.rel(2);
+      final DruidRel druidRel = call.rel(3);
+      return canApplyAggregate(druidRel, filter, project, aggregate);
+    }
+
+    @Override
     public void onMatch(RelOptRuleCall call)
     {
       final Aggregate aggregate = call.rel(0);
@@ -238,11 +265,18 @@ public class GroupByRules
     }
   }
 
-  public static class DruidProjectAfterAggregationRule extends RelOptRule
+  public static class DruidGroupByPostAggregationRule extends RelOptRule
   {
-    private DruidProjectAfterAggregationRule()
+    private DruidGroupByPostAggregationRule()
     {
       super(operand(Project.class, operand(DruidRel.class, none())));
+    }
+
+    @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final DruidRel druidRel = call.rel(1);
+      return canApplyPostAggregation(druidRel);
     }
 
     @Override
@@ -250,18 +284,25 @@ public class GroupByRules
     {
       final Project postProject = call.rel(0);
       final DruidRel druidRel = call.rel(1);
-      final DruidRel newDruidRel = GroupByRules.applyProjectAfterAggregate(druidRel, postProject);
+      final DruidRel newDruidRel = GroupByRules.applyPostAggregation(druidRel, postProject);
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
       }
     }
   }
 
-  public static class DruidFilterAfterAggregationRule extends RelOptRule
+  public static class DruidGroupByHavingRule extends RelOptRule
   {
-    private DruidFilterAfterAggregationRule()
+    private DruidGroupByHavingRule()
     {
       super(operand(Filter.class, operand(DruidRel.class, none())));
+    }
+
+    @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final DruidRel druidRel = call.rel(1);
+      return canApplyHaving(druidRel);
     }
 
     @Override
@@ -269,18 +310,25 @@ public class GroupByRules
     {
       final Filter postFilter = call.rel(0);
       final DruidRel druidRel = call.rel(1);
-      final DruidRel newDruidRel = GroupByRules.applyFilterAfterAggregate(druidRel, postFilter);
+      final DruidRel newDruidRel = GroupByRules.applyHaving(druidRel, postFilter);
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
       }
     }
   }
 
-  public static class DruidGroupBySortRule extends RelOptRule
+  public static class DruidGroupByLimitRule extends RelOptRule
   {
-    private DruidGroupBySortRule()
+    private DruidGroupByLimitRule()
     {
       super(operand(Sort.class, operand(DruidRel.class, none())));
+    }
+
+    @Override
+    public boolean matches(RelOptRuleCall call)
+    {
+      final DruidRel druidRel = call.rel(1);
+      return canApplyLimit(druidRel);
     }
 
     @Override
@@ -288,13 +336,32 @@ public class GroupByRules
     {
       final Sort sort = call.rel(0);
       final DruidRel druidRel = call.rel(1);
-      final DruidRel newDruidRel = GroupByRules.applySort(druidRel, sort);
+      final DruidRel newDruidRel = GroupByRules.applyLimit(druidRel, sort);
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
       }
     }
   }
 
+  private static boolean canApplyAggregate(
+      final DruidRel druidRel,
+      final Filter filter,
+      final Project project,
+      final Aggregate aggregate
+  )
+  {
+    return (filter == null || druidRel.getQueryBuilder().getFilter() == null /* can't filter twice */)
+           && (project == null || druidRel.getQueryBuilder().getSelectProjection() == null /* can't project twice */)
+           && !aggregate.indicator
+           && aggregate.getGroupSets().size() == 1;
+  }
+
+  /**
+   * Applies a filter -> project -> aggregate chain to a druidRel. Do not call this method unless
+   * {@link #canApplyAggregate(DruidRel, Filter, Project, Aggregate)} returns true.
+   *
+   * @return new rel, or null if the chain cannot be applied
+   */
   private static DruidRel applyAggregate(
       final DruidRel druidRel,
       final Filter filter0,
@@ -304,12 +371,7 @@ public class GroupByRules
       final int maxQueryCount
   )
   {
-    if ((filter0 != null && druidRel.getQueryBuilder().getFilter() != null /* can't filter twice */)
-        || (project0 != null && druidRel.getQueryBuilder().getSelectProjection() != null /* can't project twice */)
-        || aggregate.indicator
-        || aggregate.getGroupSets().size() != 1) {
-      return null;
-    }
+    Preconditions.checkState(canApplyAggregate(druidRel, filter0, project0, aggregate), "Cannot applyAggregate.");
 
     final RowSignature sourceRowSignature;
     final boolean isNestedQuery = druidRel.getQueryBuilder().getGrouping() != null;
@@ -431,14 +493,19 @@ public class GroupByRules
     }
   }
 
-  private static DruidRel applyProjectAfterAggregate(
-      final DruidRel druidRel,
-      final Project postProject
-  )
+  private static boolean canApplyPostAggregation(final DruidRel druidRel)
   {
-    if (druidRel.getQueryBuilder().getGrouping() == null || druidRel.getQueryBuilder().getLimitSpec() != null) {
-      return null;
-    }
+    return druidRel.getQueryBuilder().getGrouping() != null && druidRel.getQueryBuilder().getLimitSpec() == null;
+  }
+
+  /**
+   * Applies a projection to the aggregations of a druidRel, by potentially adding post-aggregators.
+   *
+   * @return new rel, or null if the projection cannot be applied
+   */
+  private static DruidRel applyPostAggregation(final DruidRel druidRel, final Project postProject)
+  {
+    Preconditions.checkState(canApplyPostAggregation(druidRel), "Cannot applyPostAggregation");
 
     final List<String> rowOrder = druidRel.getQueryBuilder().getRowOrder();
     final Grouping grouping = druidRel.getQueryBuilder().getGrouping();
@@ -496,16 +563,22 @@ public class GroupByRules
     );
   }
 
-  private static DruidRel applyFilterAfterAggregate(
-      final DruidRel druidRel,
-      final Filter postFilter
-  )
+  private static boolean canApplyHaving(final DruidRel druidRel)
   {
-    if (druidRel.getQueryBuilder().getGrouping() == null
-        || druidRel.getQueryBuilder().getHaving() != null
-        || druidRel.getQueryBuilder().getLimitSpec() != null) {
-      return null;
-    }
+    return druidRel.getQueryBuilder().getGrouping() != null
+           && druidRel.getQueryBuilder().getHaving() == null
+           && druidRel.getQueryBuilder().getLimitSpec() == null;
+  }
+
+  /**
+   * Applies a filter to an aggregating druidRel, as a HavingSpec. Do not call this method unless
+   * {@link #canApplyHaving(DruidRel)} returns true.
+   *
+   * @return new rel, or null if the filter cannot be applied
+   */
+  private static DruidRel applyHaving(final DruidRel druidRel, final Filter postFilter)
+  {
+    Preconditions.checkState(canApplyHaving(druidRel), "Cannot applyHaving.");
 
     final DimFilter dimFilter = Expressions.toFilter(
         druidRel.getOutputRowSignature(),
@@ -522,15 +595,20 @@ public class GroupByRules
     }
   }
 
-  private static DruidRel applySort(
-      final DruidRel druidRel,
-      final Sort sort
-  )
+  private static boolean canApplyLimit(final DruidRel druidRel)
   {
-    if (druidRel.getQueryBuilder().getGrouping() == null || druidRel.getQueryBuilder().getLimitSpec() != null) {
-      // Can only sort when grouping and not already sorting.
-      return null;
-    }
+    return druidRel.getQueryBuilder().getGrouping() != null && druidRel.getQueryBuilder().getLimitSpec() == null;
+  }
+
+  /**
+   * Applies a sort to an aggregating druidRel, as a LimitSpec. Do not call this method unless
+   * {@link #canApplyLimit(DruidRel)} returns true.
+   *
+   * @return new rel, or null if the sort cannot be applied
+   */
+  private static DruidRel applyLimit(final DruidRel druidRel, final Sort sort)
+  {
+    Preconditions.checkState(canApplyLimit(druidRel), "Cannot applyLimit.");
 
     final Grouping grouping = druidRel.getQueryBuilder().getGrouping();
     final DefaultLimitSpec limitSpec = toLimitSpec(druidRel.getQueryBuilder().getRowOrder(), sort);
