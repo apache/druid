@@ -19,6 +19,7 @@
 
 package io.druid.segment.virtual;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
@@ -33,6 +34,8 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
@@ -60,43 +63,12 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
       final Supplier<Number> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        final FloatColumnSelector selector = columnSelectorFactory.makeFloatColumnSelector(columnName);
-        supplier = new Supplier<Number>()
-        {
-          @Override
-          public Number get()
-          {
-            return selector.get();
-          }
-        };
+        supplier = supplierFromFloatSelector(columnSelectorFactory.makeFloatColumnSelector(columnName));
       } else if (nativeType == ValueType.LONG) {
-        final LongColumnSelector selector = columnSelectorFactory.makeLongColumnSelector(columnName);
-        supplier = new Supplier<Number>()
-        {
-          @Override
-          public Number get()
-          {
-            return selector.get();
-          }
-        };
+        supplier = supplierFromLongSelector(columnSelectorFactory.makeLongColumnSelector(columnName));
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
-        final ObjectColumnSelector selector = columnSelectorFactory.makeObjectColumnSelector(columnName);
-        final Class clazz = selector == null ? null : selector.classOfObject();
-        if (selector != null && (clazz == Object.class || Number.class.isAssignableFrom(clazz))) {
-          // There may be numbers here.
-          supplier = new Supplier<Number>()
-          {
-            @Override
-            public Number get()
-            {
-              return tryParse(selector.get());
-            }
-          };
-        } else {
-          // We know there are no numbers here. Use a null supplier.
-          supplier = null;
-        }
+        supplier = supplierFromObjectSelector(columnSelectorFactory.makeObjectColumnSelector(columnName));
       } else {
         // Unhandleable ValueType (possibly STRING or COMPLEX).
         supplier = null;
@@ -110,6 +82,58 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
     return Parser.withSuppliers(suppliers);
   }
 
+  @VisibleForTesting
+  @Nonnull
+  static Supplier<Number> supplierFromFloatSelector(final FloatColumnSelector selector)
+  {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return selector.get();
+      }
+    };
+  }
+
+  @VisibleForTesting
+  @Nonnull
+  static Supplier<Number> supplierFromLongSelector(final LongColumnSelector selector)
+  {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return selector.get();
+      }
+    };
+  }
+
+  @VisibleForTesting
+  @Nullable
+  static Supplier<Number> supplierFromObjectSelector(final ObjectColumnSelector selector)
+  {
+    final Class<?> clazz = selector == null ? null : selector.classOfObject();
+    if (selector != null && (clazz.isAssignableFrom(Number.class)
+                             || clazz.isAssignableFrom(String.class)
+                             || Number.class.isAssignableFrom(clazz))) {
+      // There may be numbers here.
+      return new Supplier<Number>()
+      {
+        @Override
+        public Number get()
+        {
+          return tryParse(selector.get());
+        }
+      };
+    } else {
+      // We know there are no numbers here. Use a null supplier.
+      return null;
+    }
+  }
+
+  @Nullable
   private static Number tryParse(final Object value)
   {
     if (value == null) {
