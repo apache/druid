@@ -21,6 +21,7 @@ package io.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hashing;
@@ -258,14 +259,7 @@ public class SearchBenchmark
 
     final SearchQueryConfig config = new SearchQueryConfig().withOverrides(query);
     factory = new SearchQueryRunnerFactory(
-        new SearchStrategySelector(new Supplier<SearchQueryConfig>()
-        {
-          @Override
-          public SearchQueryConfig get()
-          {
-            return config;
-          }
-        }),
+        new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
             config,
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()

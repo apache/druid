@@ -34,7 +34,7 @@ public class SearchQueryConfig
   private int maxSearchLimit = 1000;
 
   @JsonProperty
-  private String searchStrategy = AutoStrategy.NAME;
+  private String searchStrategy = UseIndexesStrategy.NAME;
 
   public int getMaxSearchLimit()
   {

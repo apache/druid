@@ -57,9 +57,9 @@ public abstract class SearchStrategy
   {
     final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
     if (bitmapFactory.getClass().equals(ConciseBitmapFactory.class)) {
-      return new ConciseBitmapDecisionHelper();
+      return ConciseBitmapDecisionHelper.instance();
     } else if (bitmapFactory.getClass().equals(RoaringBitmapFactory.class)) {
-      return new RoaringBitmapDecisionHelper();
+      return RoaringBitmapDecisionHelper.instance();
     } else {
       throw new IAE("Unknown bitmap type[%s]", bitmapFactory.getClass().getCanonicalName());
     }

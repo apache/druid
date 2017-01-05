@@ -33,7 +33,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 })
 public interface BitmapSerdeFactory
 {
-  ObjectStrategy<ImmutableBitmap> getObjectStrategy();
+  public ObjectStrategy<ImmutableBitmap> getObjectStrategy();
 
-  BitmapFactory getBitmapFactory();
+  public BitmapFactory getBitmapFactory();
 }

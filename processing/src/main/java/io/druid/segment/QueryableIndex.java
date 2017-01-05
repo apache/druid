@@ -31,17 +31,17 @@ import java.util.Map;
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {
-  Interval getDataInterval();
-  int getNumRows();
-  Indexed<String> getAvailableDimensions();
-  BitmapFactory getBitmapFactoryForDimensions();
-  Metadata getMetadata();
-  Map<String, DimensionHandler> getDimensionHandlers();
+  public Interval getDataInterval();
+  public int getNumRows();
+  public Indexed<String> getAvailableDimensions();
+  public BitmapFactory getBitmapFactoryForDimensions();
+  public Metadata getMetadata();
+  public Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
    * @throws java.io.IOException if an exception was thrown closing the index
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
-  void close() throws IOException;
+  public void close() throws IOException;
 }

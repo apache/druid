@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
@@ -97,14 +98,7 @@ public class TestQueryRunners
   {
     final SearchQueryConfig config = new SearchQueryConfig();
     QueryRunnerFactory factory = new SearchQueryRunnerFactory(
-        new SearchStrategySelector(new Supplier<SearchQueryConfig>()
-        {
-          @Override
-          public SearchQueryConfig get()
-          {
-            return config;
-          }
-        }),
+        new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
           config,
           QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),

@@ -1,3 +1,22 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package io.druid.query.search.search;
 
 import com.google.common.base.Preconditions;
@@ -12,7 +31,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.filter.Filter;
-import io.druid.query.search.search.CursorBasedStrategy.CursorBasedExecutor;
+import io.druid.query.search.search.CursorOnlyStrategy.CursorBasedExecutor;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
@@ -28,18 +47,18 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
-public class IndexOnlyStrategy extends SearchStrategy
+public class UseIndexesStrategy extends SearchStrategy
 {
-  public static final String NAME = "indexOnly";
+  public static final String NAME = "useIndexes";
 
   private final ImmutableBitmap timeFilteredBitmap;
 
-  public IndexOnlyStrategy(SearchQuery query)
+  public UseIndexesStrategy(SearchQuery query)
   {
     this(query, null);
   }
 
-  public IndexOnlyStrategy(SearchQuery query, @Nullable ImmutableBitmap timeFilteredBitmap)
+  public UseIndexesStrategy(SearchQuery query, @Nullable ImmutableBitmap timeFilteredBitmap)
   {
     super(query);
     this.timeFilteredBitmap = timeFilteredBitmap;

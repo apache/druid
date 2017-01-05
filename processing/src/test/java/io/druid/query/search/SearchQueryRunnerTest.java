@@ -19,7 +19,7 @@
 
 package io.druid.query.search;
 
-import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Sequence;
@@ -70,14 +70,7 @@ public class SearchQueryRunnerTest
       config,
       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
   );
-  private static final SearchStrategySelector selector = new SearchStrategySelector(new Supplier<SearchQueryConfig>()
-  {
-    @Override
-    public SearchQueryConfig get()
-    {
-      return config;
-    }
-  });
+  private static final SearchStrategySelector selector = new SearchStrategySelector(Suppliers.ofInstance(config));
 
   @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
