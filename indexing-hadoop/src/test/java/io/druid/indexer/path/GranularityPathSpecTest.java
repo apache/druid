@@ -19,6 +19,7 @@
 
 package io.druid.indexer.path;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -29,13 +30,16 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -232,6 +236,15 @@ public class GranularityPathSpecTest
     );
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
+  }
+
+  @Test
+  public void testBackwardCompatiblePeriodSegmentGranularitySerialization() throws JsonProcessingException
+  {
+    final PeriodGranularity pt2S = new PeriodGranularity(new Period("PT2S"), null, DateTimeZone.UTC);
+    Assert.assertNotEquals("\"SECOND\"", jsonMapper.writeValueAsString(pt2S));
+    final Granularity pt1S = Granularity.SECOND;
+    Assert.assertEquals("\"SECOND\"", jsonMapper.writeValueAsString(pt1S));
   }
 
   private void createFile(TemporaryFolder folder, String... files) throws IOException

@@ -20,9 +20,12 @@
 package io.druid.java.util.common;
 
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalFieldValueException;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -390,6 +393,30 @@ public class GranularityTest {
         }
         catch (NoSuchElementException e) {
             Assert.assertTrue(true);
+        }
+    }
+
+    @Test
+    public void testCustomPeriodToDate()
+    {
+        PathDate[] customChecks = {
+            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"),
+            new PathDate(new DateTime(2011, 3, 15, 20, 50, 42, 0), null, "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1")
+        };
+        checkToDate(new PeriodGranularity(new Period("PT2S"), null, DateTimeZone.UTC), Granularity.Formatter.DEFAULT, customChecks);
+    }
+
+    @Test
+    public void testCustomNestedPeriodFail()
+    {
+        try {
+          Period p = Period.years(6).withMonths(3).withSeconds(23);
+          Granularity.GranularityType.fromPeriod(p);
+          Assert.fail("Complicated period creation should fail b/c of unsupported granularity type.");
+        }
+        catch (IAE e) {
+            // pass
         }
     }
 

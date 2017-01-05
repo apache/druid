@@ -20,6 +20,7 @@
 package io.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.IAE;
@@ -42,21 +43,26 @@ import java.util.regex.Pattern;
 public abstract class Granularity
 {
 
-  public static final Granularity SECOND = Granularity.fromString("SECOND");
-  public static final Granularity MINUTE = Granularity.fromString("MINUTE");
-  public static final Granularity FIVE_MINUTE = Granularity.fromString("FIVE_MINUTE");
-  public static final Granularity TEN_MINUTE = Granularity.fromString("TEN_MINUTE");
-  public static final Granularity FIFTEEN_MINUTE = Granularity.fromString("FIFTEEN_MINUTE");
-  public static final Granularity THIRTY_MINUTE = Granularity.fromString("THIRTY_MINUTE");
-  public static final Granularity HOUR = Granularity.fromString("HOUR");
-  public static final Granularity SIX_HOUR = Granularity.fromString("SIX_HOUR");
-  public static final Granularity DAY = Granularity.fromString("DAY");
-  public static final Granularity WEEK = Granularity.fromString("WEEK");
-  public static final Granularity MONTH = Granularity.fromString("MONTH");
-  public static final Granularity QUARTER = Granularity.fromString("QUARTER");
-  public static final Granularity YEAR = Granularity.fromString("YEAR");
-  public static final Granularity ALL = Granularity.fromString("ALL");
-  public static final Granularity NONE = Granularity.fromString("NONE");
+  public static final Granularity SECOND = fromString("SECOND");
+  public static final Granularity MINUTE = fromString("MINUTE");
+  public static final Granularity FIVE_MINUTE = fromString("FIVE_MINUTE");
+  public static final Granularity TEN_MINUTE = fromString("TEN_MINUTE");
+  public static final Granularity FIFTEEN_MINUTE = fromString("FIFTEEN_MINUTE");
+  public static final Granularity THIRTY_MINUTE = fromString("THIRTY_MINUTE");
+  public static final Granularity HOUR = fromString("HOUR");
+  public static final Granularity SIX_HOUR = fromString("SIX_HOUR");
+  public static final Granularity DAY = fromString("DAY");
+  public static final Granularity WEEK = fromString("WEEK");
+  public static final Granularity MONTH = fromString("MONTH");
+  public static final Granularity QUARTER = fromString("QUARTER");
+  public static final Granularity YEAR = fromString("YEAR");
+  public static final Granularity ALL = fromString("ALL");
+  public static final Granularity NONE = fromString("NONE");
+
+  static final List<Granularity> PREDEFINED_GRANULARITIES = ImmutableList.of(
+      SECOND, MINUTE, FIVE_MINUTE, TEN_MINUTE, FIFTEEN_MINUTE, THIRTY_MINUTE,
+      HOUR, SIX_HOUR, DAY, WEEK, MONTH, QUARTER, YEAR);
+
   // Default patterns for parsing paths.
   final Pattern defaultPathPattern =
       Pattern.compile(
@@ -206,7 +212,7 @@ public abstract class Granularity
 
   // Only to create a mapping of the granularity and all the supported file patterns
   // namely: default, lowerDefault and hive.
-  protected enum GranularityType
+  public enum GranularityType
   {
     SECOND(
         "'dt'=yyyy-MM-dd-HH-mm-ss",
@@ -323,7 +329,7 @@ public abstract class Granularity
 
     // Note: This is only an estimate based on the values in period.
     // This will not work for complicated periods that represent say 1 year 1 day
-    static GranularityType estimatedGranularityType(Period period)
+    public static GranularityType fromPeriod(Period period)
     {
       int[] vals = period.getValues();
       BitSet bs = new BitSet();
@@ -342,7 +348,12 @@ public abstract class Granularity
           return GranularityType.YEAR;
         }
         if (index == 1) {
-          return GranularityType.MONTH;
+          if (vals[index] == 4) {
+            return GranularityType.QUARTER;
+          }
+          else if (vals[index] == 1) {
+            return GranularityType.MONTH;
+          }
         }
         if (index == 2) {
           return GranularityType.WEEK;
@@ -351,10 +362,29 @@ public abstract class Granularity
           return GranularityType.DAY;
         }
         if (index == 4) {
-          return GranularityType.HOUR;
+          if (vals[index] == 6) {
+            return GranularityType.SIX_HOUR;
+          }
+          else if (vals[index] == 1) {
+            return GranularityType.HOUR;
+          }
         }
         if (index == 5) {
-          return GranularityType.MINUTE;
+          if (vals[index] == 30) {
+            return GranularityType.THIRTY_MINUTE;
+          }
+          else if (vals[index] == 15) {
+            return GranularityType.FIFTEEN_MINUTE;
+          }
+          else if (vals[index] == 10) {
+            return GranularityType.TEN_MINUTE;
+          }
+          else if (vals[index] == 5) {
+            return GranularityType.FIVE_MINUTE;
+          }
+          else if (vals[index] == 1) {
+            return GranularityType.MINUTE;
+          }
         }
         if (index == 6) {
           return GranularityType.SECOND;

@@ -21,6 +21,11 @@ package io.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializable;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
@@ -32,7 +37,9 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-public class PeriodGranularity extends Granularity
+import java.io.IOException;
+
+public class PeriodGranularity extends Granularity implements JsonSerializable
 {
   private final Period period;
   private final Chronology chronology;
@@ -83,7 +90,7 @@ public class PeriodGranularity extends Granularity
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
-    GranularityType granularityType = GranularityType.estimatedGranularityType(period);
+    GranularityType granularityType = GranularityType.fromPeriod(period);
     switch (type) {
       case DEFAULT:
         return DateTimeFormat.forPattern(granularityType.getDefaultFormat());
@@ -119,7 +126,7 @@ public class PeriodGranularity extends Granularity
   public DateTime toDate(String filePath, Formatter formatter)
   {
     Integer[] vals = getDateValues(filePath, formatter);
-    GranularityType granularityType = GranularityType.estimatedGranularityType(period);
+    GranularityType granularityType = GranularityType.fromPeriod(period);
 
     DateTime date = GranularityType.getDateTime(granularityType, vals);
 
@@ -420,5 +427,32 @@ public class PeriodGranularity extends Granularity
           + chronology.toString()
       );
     }
+  }
+
+  @Override
+  public void serialize(
+      JsonGenerator jsonGenerator, SerializerProvider serializerProvider
+  ) throws IOException, JsonProcessingException
+  {
+    // Retain the same behavior as pre-refactor granularity code.
+    // i.e. when Granularity class was an enum.
+    if (PREDEFINED_GRANULARITIES.contains(this)) {
+      jsonGenerator.writeString(GranularityType.fromPeriod(getPeriod()).toString());
+    } else {
+      jsonGenerator.writeStartObject();
+      jsonGenerator.writeStringField("type", "period");
+      jsonGenerator.writeObjectField("period", getPeriod());
+      jsonGenerator.writeObjectField("timeZone", getTimeZone());
+      jsonGenerator.writeObjectField("origin", getOrigin());
+      jsonGenerator.writeEndObject();
+    }
+  }
+
+  @Override
+  public void serializeWithType(
+      JsonGenerator jsonGenerator, SerializerProvider serializerProvider, TypeSerializer typeSerializer
+  ) throws IOException, JsonProcessingException
+  {
+    serialize(jsonGenerator, serializerProvider);
   }
 }
