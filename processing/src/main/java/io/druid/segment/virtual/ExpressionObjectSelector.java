@@ -86,6 +86,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
   @Nonnull
   static Supplier<Number> supplierFromFloatSelector(final FloatColumnSelector selector)
   {
+    Preconditions.checkNotNull(selector, "selector");
     return new Supplier<Number>()
     {
       @Override
@@ -100,6 +101,7 @@ public class ExpressionObjectSelector implements ObjectColumnSelector<Number>
   @Nonnull
   static Supplier<Number> supplierFromLongSelector(final LongColumnSelector selector)
   {
+    Preconditions.checkNotNull(selector, "selector");
     return new Supplier<Number>()
     {
       @Override
