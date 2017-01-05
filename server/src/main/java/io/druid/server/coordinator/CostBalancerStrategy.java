@@ -32,6 +32,7 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -348,13 +349,21 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
 
     final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
-
+    final List<Pair<Double, ServerHolder>> bestServers = new ArrayList<>();
     try {
       for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
         if (server.lhs < bestServer.lhs) {
           bestServer = server;
         }
       }
+
+      // Find All best servers and choose one randomly
+      for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
+        if (server.lhs == bestServer.lhs) {
+          bestServers.add(server);
+        }
+      }
+      bestServer = (bestServers.size() > 0) ? bestServers.get((int)Math.random()*bestServers.size()): bestServer;
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
