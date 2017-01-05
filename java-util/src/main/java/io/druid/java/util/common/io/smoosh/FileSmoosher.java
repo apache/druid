@@ -414,25 +414,27 @@ public class FileSmoosher implements Closeable
     final int fileNum = outFiles.size();
     File outFile = makeChunkFile(baseDir, fileNum);
     outFiles.add(outFile);
-    return new Outer(fileNum, new FileOutputStream(outFile), maxChunkSize);
+    return new Outer(fileNum, outFile, maxChunkSize);
   }
 
   public static class Outer implements SmooshedWriter
   {
     private final int fileNum;
     private final int maxLength;
+    private final File outFile;
     private final GatheringByteChannel channel;
 
     private final Closer closer = Closer.create();
     private int currOffset = 0;
 
-    Outer(int fileNum, FileOutputStream output, int maxLength)
+    Outer(int fileNum, File outFile, int maxLength) throws FileNotFoundException
     {
       this.fileNum = fileNum;
-      this.channel = output.getChannel();
+      this.outFile = outFile;
       this.maxLength = maxLength;
-      closer.register(output);
-      closer.register(channel);
+
+      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));
+      this.channel = closer.register(outStream.getChannel());
     }
 
     public int getFileNum()
@@ -494,6 +496,7 @@ public class FileSmoosher implements Closeable
     public void close() throws IOException
     {
       closer.close();
+      FileSmoosher.LOG.info("Created smoosh file [%s] of size [%s] bytes.", outFile.getAbsolutePath(), outFile.length());
     }
   }
 }
