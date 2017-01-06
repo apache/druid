@@ -354,7 +354,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     try {
       for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
         if (server.lhs <= bestServers.get(0).lhs) {
-          if(server.lhs < bestServers.get(0).lhs){
+          if (server.lhs < bestServers.get(0).lhs) {
             bestServers.clear();
           }
           bestServers.add(server);
@@ -362,7 +362,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       }
 
       // Randomly choose a server from the best servers
-      bestServer = bestServers.get((int)Math.random()*bestServers.size());
+      bestServer = bestServers.get((int) Math.random() * bestServers.size());
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
