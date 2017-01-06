@@ -51,7 +51,7 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
     }
 
     double normalizedCost = cost/nSegments;
-    double usageRatio = (double)server.getServer().getCurrSize()/(double)server.getServer().getMaxSize();
+    double usageRatio = (double) server.getSizeUsed() / (double) server.getServer().getMaxSize();
 
     return normalizedCost*usageRatio;
   }
