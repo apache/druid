@@ -33,10 +33,10 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -403,16 +403,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
+    @Nullable
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
     {
       return delegate.getColumnCapabilities(columnName);
-    }
-
-    @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
-    {
-      return delegate.makeMathExpressionSelector(expression);
     }
   }
 
