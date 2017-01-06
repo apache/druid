@@ -106,9 +106,6 @@ public class CalciteQueryTest
 {
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
-  // Used to mark tests that should pass once Calcite 1.11.0 is released.
-  private static final boolean CALCITE_1_11_0 = false;
-
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
   private static final PlannerConfig PLANNER_CONFIG_NO_TOPN = new PlannerConfig()
   {
@@ -588,11 +585,6 @@ public class CalciteQueryTest
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter() throws Exception
   {
-    if (!CALCITE_1_11_0) {
-      // https://issues.apache.org/jira/browse/CALCITE-1488
-      return;
-    }
-
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0",
         ImmutableList.<Query>of(),
@@ -605,11 +597,6 @@ public class CalciteQueryTest
   @Test
   public void testGroupByOneColumnWithLiterallyFalseFilter() throws Exception
   {
-    if (!CALCITE_1_11_0) {
-      // https://issues.apache.org/jira/browse/CALCITE-1488
-      return;
-    }
-
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0 GROUP BY dim1",
         ImmutableList.<Query>of(),
@@ -2002,11 +1989,6 @@ public class CalciteQueryTest
   @Test
   public void testGroupByExtractYear() throws Exception
   {
-    if (!CALCITE_1_11_0) {
-      // https://issues.apache.org/jira/browse/CALCITE-1509
-      return;
-    }
-
     testQuery(
         "SELECT\n"
         + "  EXTRACT(YEAR FROM __time) AS \"year\",\n"
@@ -2053,11 +2035,6 @@ public class CalciteQueryTest
   @Test
   public void testExtractFloorTime() throws Exception
   {
-    if (!CALCITE_1_11_0) {
-      // https://issues.apache.org/jira/browse/CALCITE-1509
-      return;
-    }
-
     testQuery(
         "SELECT\n"
         + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
@@ -2272,11 +2249,6 @@ public class CalciteQueryTest
   @Test
   public void testUsingSubqueryAsFilterOnTwoColumns() throws Exception
   {
-    if (!CALCITE_1_11_0) {
-      // https://issues.apache.org/jira/browse/CALCITE-1479
-      return;
-    }
-
     testQuery(
         "SELECT __time, cnt, dim1, dim2 FROM druid.foo "
         + " WHERE (dim1, dim2) IN ("
