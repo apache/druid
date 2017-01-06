@@ -52,7 +52,6 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -162,16 +161,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return baseSelectorFactory.makeDimensionSelector(dimensionSpec);
       }
 
+      @Nullable
       @Override
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
         return baseSelectorFactory.getColumnCapabilities(columnName);
-      }
-
-      @Override
-      public NumericColumnSelector makeMathExpressionSelector(String expression)
-      {
-        return baseSelectorFactory.makeMathExpressionSelector(expression);
       }
     };
   }
