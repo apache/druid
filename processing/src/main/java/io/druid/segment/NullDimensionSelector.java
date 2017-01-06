@@ -25,6 +25,18 @@ import io.druid.segment.data.ZeroIndexedInts;
 
 public class NullDimensionSelector implements DimensionSelector
 {
+  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
+
+  private NullDimensionSelector()
+  {
+    // Singleton.
+  }
+
+  public static NullDimensionSelector instance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public IndexedInts getRow()
   {

@@ -17,14 +17,37 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment.virtual;
 
-/**
-*/
-public enum ValueType
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.ZeroIndexedInts;
+
+public abstract class BaseSingleValueDimensionSelector implements DimensionSelector
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX
+  protected abstract String getValue();
+
+  @Override
+  public IndexedInts getRow()
+  {
+    return ZeroIndexedInts.instance();
+  }
+
+  @Override
+  public int getValueCardinality()
+  {
+    return DimensionSelector.CARDINALITY_UNKNOWN;
+  }
+
+  @Override
+  public String lookupName(int id)
+  {
+    return getValue();
+  }
+
+  @Override
+  public int lookupId(String name)
+  {
+    throw new UnsupportedOperationException("Cannot lookupId");
+  }
 }

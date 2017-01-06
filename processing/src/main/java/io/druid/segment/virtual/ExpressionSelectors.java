@@ -21,6 +21,7 @@ package io.druid.segment.virtual;
 
 import io.druid.math.expr.Expr;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
@@ -46,7 +47,7 @@ public class ExpressionSelectors
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    return new LongColumnSelector()
+    class ExpressionLongColumnSelector implements LongColumnSelector
     {
       @Override
       public long get()
@@ -54,7 +55,8 @@ public class ExpressionSelectors
         final Number number = baseSelector.get();
         return number != null ? number.longValue() : nullValue;
       }
-    };
+    }
+    return new ExpressionLongColumnSelector();
   }
 
   public static FloatColumnSelector makeFloatColumnSelector(
@@ -64,7 +66,7 @@ public class ExpressionSelectors
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    return new FloatColumnSelector()
+    class ExpressionFloatColumnSelector implements FloatColumnSelector
     {
       @Override
       public float get()
@@ -72,6 +74,25 @@ public class ExpressionSelectors
         final Number number = baseSelector.get();
         return number != null ? number.floatValue() : nullValue;
       }
-    };
+    }
+    return new ExpressionFloatColumnSelector();
+  }
+
+  public static DimensionSelector makeDimensionSelector(
+      final ColumnSelectorFactory columnSelectorFactory,
+      final Expr expression
+  )
+  {
+    final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
+    class ExpressionDimensionSelector extends BaseSingleValueDimensionSelector
+    {
+      @Override
+      protected String getValue()
+      {
+        final Number number = baseSelector.get();
+        return number == null ? null : String.valueOf(number);
+      }
+    }
+    return new ExpressionDimensionSelector();
   }
 }

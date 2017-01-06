@@ -40,7 +40,6 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
@@ -55,7 +54,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,8 +64,6 @@ import java.util.Map;
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
-  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
-
   private final QueryableIndex index;
 
   public QueryableIndexStorageAdapter(
@@ -428,6 +424,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         DimensionSpec dimensionSpec
                     )
                     {
+                      if (virtualColumns.exists(dimensionSpec.getDimension())) {
+                        return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+                      }
+
                       return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
                     }
 
@@ -440,7 +440,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
-                        return NULL_DIMENSION_SELECTOR;
+                        return NullDimensionSelector.instance();
                       }
 
                       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
@@ -461,7 +461,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final DictionaryEncodedColumn<String> column = cachedColumn;
 
                       if (column == null) {
-                        return NULL_DIMENSION_SELECTOR;
+                        return NullDimensionSelector.instance();
                       } else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
@@ -569,6 +569,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
+                      if (virtualColumns.exists(columnName)) {
+                        return virtualColumns.makeFloatColumnSelector(columnName, this);
+                      }
+
                       GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
@@ -582,14 +586,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
-                        return new FloatColumnSelector()
-                        {
-                          @Override
-                          public float get()
-                          {
-                            return 0.0f;
-                          }
-                        };
+                        return ZeroFloatColumnSelector.instance();
                       }
 
                       final GenericColumn metricVals = cachedMetricVals;
@@ -606,6 +603,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public LongColumnSelector makeLongColumnSelector(String columnName)
                     {
+                      if (virtualColumns.exists(columnName)) {
+                        return virtualColumns.makeLongColumnSelector(columnName, this);
+                      }
+
                       GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
@@ -619,14 +620,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
-                        return new LongColumnSelector()
-                        {
-                          @Override
-                          public long get()
-                          {
-                            return 0L;
-                          }
-                        };
+                        return ZeroLongColumnSelector.instance();
                       }
 
                       final GenericColumn metricVals = cachedMetricVals;
@@ -644,6 +638,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
+                      if (virtualColumns.exists(column)) {
+                        return virtualColumns.makeObjectColumnSelector(column, this);
+                      }
+
                       Object cachedColumnVals = objectColumnCache.get(column);
 
                       if (cachedColumnVals == null) {
@@ -668,10 +666,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals == null) {
-                        VirtualColumn vc = virtualColumns.getVirtualColumn(column);
-                        if (vc != null) {
-                          return vc.init(column, this);
-                        }
                         return null;
                       }
 
@@ -798,19 +792,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       };
                     }
 
-                    @Nullable
                     @Override
                     public ColumnCapabilities getColumnCapabilities(String columnName)
                     {
-                      ColumnCapabilities capabilities = getColumnCapabilites(index, columnName);
-                      if (capabilities == null && !virtualColumns.isEmpty()) {
-                        VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
-                        if (virtualColumn != null) {
-                          Class clazz = virtualColumn.init(columnName, this).classOfObject();
-                          capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
-                        }
+                      if (virtualColumns.exists(columnName)) {
+                        return virtualColumns.getColumnCapabilities(columnName);
                       }
-                      return capabilities;
+
+                      return getColumnCapabilites(index, columnName);
                     }
                   }
 
