@@ -329,6 +329,31 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testSelectSingleColumnTwice() throws Exception
+  {
+    testQuery(
+        "SELECT dim2 x, dim2 y FROM druid.foo LIMIT 2",
+        ImmutableList.<Query>of(
+            Druids.newSelectQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE)
+                  .intervals(QSS(Filtration.eternity()))
+                  .dimensionSpecs(DIMS(
+                      new DefaultDimensionSpec("dim2", "d1"),
+                      new DefaultDimensionSpec("dim2", "d2")
+                  ))
+                  .granularity(QueryGranularities.ALL)
+                  .descending(false)
+                  .pagingSpec(FIRST_PAGING_SPEC)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", "a"},
+            new Object[]{"", ""}
+        )
+    );
+  }
+
+  @Test
   public void testSelectSingleColumnWithLimitDescending() throws Exception
   {
     testQuery(
