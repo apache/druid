@@ -65,7 +65,7 @@ public class TaskLockbox
   // Datasource -> Interval -> Tasks + TaskLock
   private final Map<String, NavigableMap<Interval, TaskLockPosse>> running = Maps.newHashMap();
   private final TaskStorage taskStorage;
-  private final ReentrantLock giant = new ReentrantLock();
+  private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
