@@ -21,10 +21,14 @@ package io.druid.segment.virtual;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.dimension.ListFilteredDimensionSpec;
+import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -62,11 +66,16 @@ public class VirtualColumnsTest
         new DefaultDimensionSpec("expr", "x"),
         null
     );
+    final DimensionSelector extractionDimensionSelector = virtualColumns.makeDimensionSelector(
+        new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.5)),
+        null
+    );
     final FloatColumnSelector floatSelector = virtualColumns.makeFloatColumnSelector("expr", null);
     final LongColumnSelector longSelector = virtualColumns.makeLongColumnSelector("expr", null);
 
     Assert.assertEquals(1L, objectSelector.get());
     Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+    Assert.assertEquals("0.5", extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
     Assert.assertEquals(1.0f, floatSelector.get(), 0.0f);
     Assert.assertEquals(1L, longSelector.get());
   }

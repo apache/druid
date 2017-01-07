@@ -20,6 +20,7 @@
 package io.druid.segment.virtual;
 
 import io.druid.math.expr.Expr;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -80,19 +81,33 @@ public class ExpressionSelectors
 
   public static DimensionSelector makeDimensionSelector(
       final ColumnSelectorFactory columnSelectorFactory,
-      final Expr expression
+      final Expr expression,
+      final ExtractionFn extractionFn
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
-    class ExpressionDimensionSelector extends BaseSingleValueDimensionSelector
-    {
-      @Override
-      protected String getValue()
+
+    if (extractionFn == null) {
+      class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
       {
-        final Number number = baseSelector.get();
-        return number == null ? null : String.valueOf(number);
+        @Override
+        protected String getValue()
+        {
+          final Number number = baseSelector.get();
+          return number == null ? null : String.valueOf(number);
+        }
       }
+      return new DefaultExpressionDimensionSelector();
+    } else {
+      class ExtractionExpressionDimensionSelector extends BaseSingleValueDimensionSelector
+      {
+        @Override
+        protected String getValue()
+        {
+          return extractionFn.apply(baseSelector.get());
+        }
+      }
+      return new ExtractionExpressionDimensionSelector();
     }
-    return new ExpressionDimensionSelector();
   }
 }

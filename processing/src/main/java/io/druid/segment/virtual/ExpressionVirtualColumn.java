@@ -87,7 +87,13 @@ public class ExpressionVirtualColumn implements VirtualColumn
       final ColumnSelectorFactory columnSelectorFactory
   )
   {
-    return ExpressionSelectors.makeDimensionSelector(columnSelectorFactory, parsedExpression);
+    return dimensionSpec.decorate(
+        ExpressionSelectors.makeDimensionSelector(
+            columnSelectorFactory,
+            parsedExpression,
+            dimensionSpec.getExtractionFn()
+        )
+    );
   }
 
   @Override

@@ -21,8 +21,12 @@ package io.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.dimension.ListFilteredDimensionSpec;
+import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -44,6 +48,10 @@ public class ExpressionVirtualColumnTest
         new DefaultDimensionSpec("expr", "x"),
         columnSelectorFactory
     );
+    final DimensionSelector extractionDimensionSelector = virtualColumn.makeDimensionSelector(
+        new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.0)),
+        columnSelectorFactory
+    );
     final FloatColumnSelector floatSelector = virtualColumn.makeFloatColumnSelector("expr", columnSelectorFactory);
     final LongColumnSelector longSelector = virtualColumn.makeLongColumnSelector("expr", columnSelectorFactory);
 
@@ -57,6 +65,7 @@ public class ExpressionVirtualColumnTest
 
     Assert.assertEquals(null, objectSelector.get());
     Assert.assertEquals(null, dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+    Assert.assertEquals(null, extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
     Assert.assertEquals(0.0f, floatSelector.get(), 0.0f);
     Assert.assertEquals(0L, longSelector.get());
 
@@ -70,6 +79,7 @@ public class ExpressionVirtualColumnTest
 
     Assert.assertEquals(null, objectSelector.get());
     Assert.assertEquals(null, dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+    Assert.assertEquals(null, extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
     Assert.assertEquals(0.0f, floatSelector.get(), 0.0f);
     Assert.assertEquals(0L, longSelector.get());
 
@@ -83,6 +93,7 @@ public class ExpressionVirtualColumnTest
 
     Assert.assertEquals(5.1d, objectSelector.get());
     Assert.assertEquals("5.1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+    Assert.assertEquals("5", extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
     Assert.assertEquals(5.1f, floatSelector.get(), 0.0f);
     Assert.assertEquals(5L, longSelector.get());
   }
