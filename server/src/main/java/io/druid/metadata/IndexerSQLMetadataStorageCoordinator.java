@@ -947,11 +947,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               public Boolean withHandle(Handle handle) throws Exception
               {
                 int rows = handle.createStatement(
-                        String.format("DELETE from %s WHERE sequence_name = :sequence_name", dbTables.getPendingSegmentsTable())
+                        String.format(
+                                "DELETE from %1s WHERE sequence_name LIKE '%2s%%'",
+                                dbTables.getPendingSegmentsTable(),
+                                taskDataSegment.getIoConfig().get("baseSequenceName")
+                        )
                 )
-                        .bind("sequence_name", taskDataSegment.getIoConfig().get("baseSequenceName"))
                         .execute();
-                log.info("HHHHHHHHHHHHHHHHHHHHHHHHHH:"+taskDataSegment.getIoConfig().get("baseSequenceName"));
+                log.info("Delete sequenceName:"+taskDataSegment.getIoConfig().get("baseSequenceName"));
 
                 return rows > 0;
               }
