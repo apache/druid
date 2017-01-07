@@ -110,6 +110,38 @@ public class SqlResourceTest
   }
 
   @Test
+  public void testFieldAliasingSelect() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1")
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("x", "a", "y", "a")
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testFieldAliasingGroupBy() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2")
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("x", "", "y", ""),
+            ImmutableMap.of("x", "a", "y", "a"),
+            ImmutableMap.of("x", "abc", "y", "abc")
+        ),
+        rows
+    );
+  }
+
+  @Test
   public void testExplainCountStar() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(

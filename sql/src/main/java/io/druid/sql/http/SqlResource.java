@@ -106,7 +106,7 @@ public class SqlResource
                       value = resultSet.getObject(i + 1);
                     }
 
-                    jsonGenerator.writeObjectField(metaData.getColumnName(i + 1), value);
+                    jsonGenerator.writeObjectField(metaData.getColumnLabel(i + 1), value);
                   }
                   jsonGenerator.writeEndObject();
                 }

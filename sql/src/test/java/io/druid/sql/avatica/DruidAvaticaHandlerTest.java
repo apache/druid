@@ -125,6 +125,21 @@ public class DruidAvaticaHandlerTest
   }
 
   @Test
+  public void testFieldAliasingSelect() throws Exception
+  {
+    final ResultSet resultSet = client.createStatement().executeQuery(
+        "SELECT dim2 AS \"x\", dim2 AS \"y\" FROM druid.foo LIMIT 1"
+    );
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("x", "a", "y", "a")
+        ),
+        rows
+    );
+  }
+
+  @Test
   public void testExplainSelectCount() throws Exception
   {
     final ResultSet resultSet = client.createStatement().executeQuery(
@@ -244,8 +259,8 @@ public class DruidAvaticaHandlerTest
       while (resultSet.next()) {
         final Map<String, Object> row = Maps.newHashMap();
         for (int i = 0; i < metaData.getColumnCount(); i++) {
-          if (returnKeys == null || returnKeys.contains(metaData.getColumnName(i + 1))) {
-            row.put(metaData.getColumnName(i + 1), resultSet.getObject(i + 1));
+          if (returnKeys == null || returnKeys.contains(metaData.getColumnLabel(i + 1))) {
+            row.put(metaData.getColumnLabel(i + 1), resultSet.getObject(i + 1));
           }
         }
         rows.add(row);
