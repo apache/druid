@@ -21,13 +21,11 @@ package io.druid.segment.virtual;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
-import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;

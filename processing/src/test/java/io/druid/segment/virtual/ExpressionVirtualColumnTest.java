@@ -21,11 +21,9 @@ package io.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
-import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
