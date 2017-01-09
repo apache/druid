@@ -64,7 +64,8 @@ public class CursorOnlyStrategy extends SearchStrategy
                                                                          dimensionSpecs));
   }
 
-  public static class CursorBasedExecutor extends SearchQueryExecutor {
+  public static class CursorBasedExecutor extends SearchQueryExecutor
+  {
 
     protected Filter filter;
     protected Interval interval;

@@ -32,7 +32,8 @@ public abstract class SearchQueryExecutor
   protected final Segment segment;
   protected final List<DimensionSpec> dimsToSearch;
 
-  public SearchQueryExecutor(SearchQuery query, Segment segment, List<DimensionSpec> dimensionSpecs) {
+  public SearchQueryExecutor(SearchQuery query, Segment segment, List<DimensionSpec> dimensionSpecs)
+  {
     this.query = query;
     this.segment = segment;
     this.searchQuerySpec = query.getQuery();

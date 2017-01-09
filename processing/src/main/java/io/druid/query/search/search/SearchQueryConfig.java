@@ -41,15 +41,18 @@ public class SearchQueryConfig
     return maxSearchLimit;
   }
 
-  public String getSearchStrategy() {
+  public String getSearchStrategy()
+  {
     return searchStrategy;
   }
 
-  public void setSearchStrategy(final String strategy) {
+  public void setSearchStrategy(final String strategy)
+  {
     this.searchStrategy = strategy;
   }
 
-  public SearchQueryConfig withOverrides(final SearchQuery query) {
+  public SearchQueryConfig withOverrides(final SearchQuery query)
+  {
     final SearchQueryConfig newConfig = new SearchQueryConfig();
     newConfig.maxSearchLimit = query.getLimit();
     newConfig.searchStrategy = query.getContextValue(CTX_KEY_STRATEGY, searchStrategy);

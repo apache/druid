@@ -224,7 +224,8 @@ public class UseIndexesStrategy extends SearchStrategy
     return inclusive ? low : low - 1;
   }
 
-  public static class IndexOnlyExecutor extends SearchQueryExecutor {
+  public static class IndexOnlyExecutor extends SearchQueryExecutor
+  {
 
     private final ImmutableBitmap timeFilteredBitmap;
 
