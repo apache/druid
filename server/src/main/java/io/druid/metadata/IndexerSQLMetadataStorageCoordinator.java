@@ -326,37 +326,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     try {
       return connector.retryTransaction(
-<<<<<<< HEAD
-          new TransactionCallback<SegmentPublishResult>()
-          {
-            @Override
-            public SegmentPublishResult inTransaction(
-                final Handle handle,
-                final TransactionStatus transactionStatus
-            ) throws Exception
-            {
-              final Set<DataSegment> inserted = Sets.newHashSet();
-
-              if (startMetadata != null) {
-                final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
-                    handle,
-                    dataSource,
-                    startMetadata,
-                    endMetadata
-                );
-
-                if (result != DataSourceMetadataUpdateResult.SUCCESS) {
-                  transactionStatus.setRollbackOnly();
-                  txnFailure.set(true);
-
-                  if (result == DataSourceMetadataUpdateResult.FAILURE) {
-                    throw new RuntimeException("Aborting transaction!");
-                  } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
-                    throw new RetryTransactionException("Aborting transaction!");
-                  }
-                }
-              }
-=======
               new TransactionCallback<SegmentPublishResult>()
               {
                 @Override
@@ -368,17 +337,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   final Set<DataSegment> inserted = Sets.newHashSet();
 
                   if (startMetadata != null) {
-                    final boolean success = updateDataSourceMetadataWithHandle(
+                    final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
                             handle,
                             dataSource,
                             startMetadata,
                             endMetadata
                     );
 
-                    if (!success) {
+                    if (result != DataSourceMetadataUpdateResult.SUCCESS) {
                       transactionStatus.setRollbackOnly();
                       txnFailure.set(true);
-                      throw new RuntimeException("Aborting transaction!");
+
+                      if (result == DataSourceMetadataUpdateResult.FAILURE) {
+                        throw new RuntimeException("Aborting transaction!");
+                      } else if (result == DataSourceMetadataUpdateResult.TRY_AGAIN) {
+                        throw new RetryTransactionException("Aborting transaction!");
+                      }
                     }
                   }
 
@@ -387,7 +361,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                       inserted.add(segment);
                     }
                   }
->>>>>>> d135fbd... finished the interface to delete unused pendingSeglments, add TaskDataSegment.java to struct the task table’s data, add getNotActiveTask and deletePendingSegments in IndexerSQLMetadataStorageCoordinator.java to finish the delete logic, add test in TestIndexerMetadataStorageCoordinator.java.
 
                   return new SegmentPublishResult(ImmutableSet.copyOf(inserted), true);
                 }
@@ -737,19 +710,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return true if dataSource metadata was updated from matching startMetadata to matching endMetadata
    */
-<<<<<<< HEAD
   protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
-      final Handle handle,
-      final String dataSource,
-      final DataSourceMetadata startMetadata,
-      final DataSourceMetadata endMetadata
-=======
-  private boolean updateDataSourceMetadataWithHandle(
           final Handle handle,
           final String dataSource,
           final DataSourceMetadata startMetadata,
           final DataSourceMetadata endMetadata
->>>>>>> d135fbd... finished the interface to delete unused pendingSeglments, add TaskDataSegment.java to struct the task table’s data, add getNotActiveTask and deletePendingSegments in IndexerSQLMetadataStorageCoordinator.java to finish the delete logic, add test in TestIndexerMetadataStorageCoordinator.java.
   ) throws IOException
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -915,54 +880,55 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  public boolean deletePendingSegments(final List<TaskDataSegment> segments) throws IOException
-  {
-    return connector.getDBI().inTransaction(
-            new TransactionCallback<Boolean>()
-            {
-              int res = 0;
-              @Override
-              public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
-              {
-                for (final TaskDataSegment segment : segments) {
-                  if(deletePendingSegment(segment))
-                  {
-                    res +=1;
-                  }
+    public boolean deletePendingSegments(final List<TaskDataSegment> segments) throws IOException
+    {
+        return connector.getDBI().inTransaction(
+                new TransactionCallback<Boolean>()
+                {
+                    int res = 0;
+                    @Override
+                    public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+                    {
+                        for (final TaskDataSegment segment : segments) {
+                            if(deletePendingSegment(segment))
+                            {
+                                res +=1;
+                            }
+                        }
+
+                        return res == segments.size();
+                    }
                 }
-
-                return res == segments.size();
-              }
-            }
-    );
-  }
+        );
+    }
 
 
-  public boolean deletePendingSegment(final TaskDataSegment taskDataSegment)
-  {
-    return connector.retryWithHandle(
-            new HandleCallback<Boolean>()
-            {
-              @Override
-              public Boolean withHandle(Handle handle) throws Exception
-              {
-                int rows = handle.createStatement(
-                        String.format(
-                                "DELETE from %1s WHERE sequence_name LIKE '%2s%%'",
-                                dbTables.getPendingSegmentsTable(),
-                                taskDataSegment.getIoConfig().get("baseSequenceName")
+    public boolean deletePendingSegment(final TaskDataSegment taskDataSegment)
+    {
+        return connector.retryWithHandle(
+                new HandleCallback<Boolean>()
+                {
+                    @Override
+                    public Boolean withHandle(Handle handle) throws Exception
+                    {
+                        int rows = handle.createStatement(
+                                String.format(
+                                        "DELETE from %1s WHERE sequence_name LIKE '%2s%%'",
+                                        dbTables.getPendingSegmentsTable(),
+                                        taskDataSegment.getIoConfig().get("baseSequenceName")
+                                )
                         )
-                )
-                        .execute();
-                log.info("Delete sequenceName:"+taskDataSegment.getIoConfig().get("baseSequenceName"));
+                                .execute();
+                        log.info("Delete sequenceName:"+taskDataSegment.getIoConfig().get("baseSequenceName"));
 
-                return rows > 0;
-              }
-            }
-    );
-  }
+                        return rows > 0;
+                    }
+                }
+        );
+    }
 
-  @Override
+
+    @Override
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
     List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
@@ -1013,53 +979,54 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return matchingSegments;
   }
 
-  @Override
-  public List<TaskDataSegment> getNotActiveTask(final Interval interval)
-  {
-    List<TaskDataSegment> notActiveTasks = connector.inReadOnlyTransaction(
-            new TransactionCallback<List<TaskDataSegment>>()
-            {
-              @Override
-              public List<TaskDataSegment> inTransaction(Handle handle, TransactionStatus transactionStatus)
-                      throws Exception
-              {
-                return handle.createQuery(
-                        String.format(
-                                "SELECT payload FROM %s WHERE active = :active",
-                                dbTables.getTasksTable()
+
+    @Override
+    public List<TaskDataSegment> getNotActiveTask(final Interval interval)
+    {
+        List<TaskDataSegment> notActiveTasks = connector.inReadOnlyTransaction(
+                new TransactionCallback<List<TaskDataSegment>>()
+                {
+                    @Override
+                    public List<TaskDataSegment> inTransaction(Handle handle, TransactionStatus transactionStatus)
+                            throws Exception
+                    {
+                        return handle.createQuery(
+                                String.format(
+                                        "SELECT payload FROM %s WHERE active = :active",
+                                        dbTables.getTasksTable()
+                                )
                         )
-                )
-                        .bind("active", 0)
-                        .map(ByteArrayMapper.FIRST)
-                        .fold(
-                                Lists.<TaskDataSegment>newArrayList(),
-                                new Folder3<List<TaskDataSegment>, byte[]>()
-                                {
-                                  @Override
-                                  public List<TaskDataSegment> fold(
-                                          List<TaskDataSegment> accumulator,
-                                          byte[] payload,
-                                          FoldController foldController,
-                                          StatementContext statementContext
-                                  ) throws SQLException
-                                  {
-                                    try {
-                                      accumulator.add(jsonMapper.readValue(payload, TaskDataSegment.class));
-                                      return accumulator;
-                                    }
-                                    catch (Exception e) {
-                                      throw Throwables.propagate(e);
-                                    }
-                                  }
-                                }
-                        );
+                                .bind("active", 0)
+                                .map(ByteArrayMapper.FIRST)
+                                .fold(
+                                        Lists.<TaskDataSegment>newArrayList(),
+                                        new Folder3<List<TaskDataSegment>, byte[]>()
+                                        {
+                                            @Override
+                                            public List<TaskDataSegment> fold(
+                                                    List<TaskDataSegment> accumulator,
+                                                    byte[] payload,
+                                                    FoldController foldController,
+                                                    StatementContext statementContext
+                                            ) throws SQLException
+                                            {
+                                                try {
+                                                    accumulator.add(jsonMapper.readValue(payload, TaskDataSegment.class));
+                                                    return accumulator;
+                                                }
+                                                catch (Exception e) {
+                                                    throw Throwables.propagate(e);
+                                                }
+                                            }
+                                        }
+                                );
 
-              }
-            }
-    );
+                    }
+                }
+        );
 
-    log.info("Found %,d tasks for interval %s.", notActiveTasks.size(), interval);
-    return notActiveTasks;
-  }
+        log.info("Found %,d tasks for interval %s.", notActiveTasks.size(), interval);
+        return notActiveTasks;
+    }
 
 }
