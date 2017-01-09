@@ -37,7 +37,12 @@ public class AutoStrategy extends SearchStrategy
 
   private static final EmittingLogger log = new EmittingLogger(AutoStrategy.class);
 
-  public AutoStrategy(SearchQuery query)
+  public static AutoStrategy of(SearchQuery query)
+  {
+    return new AutoStrategy(query);
+  }
+
+  private AutoStrategy(SearchQuery query)
   {
     super(query);
   }
@@ -75,25 +80,27 @@ public class AutoStrategy extends SearchStrategy
         //            * (search predicate processing cost)
         final SearchQueryDecisionHelper helper = getDecisionHelper(index);
         final double useIndexStrategyCost = helper.getBitmapIntersectCost() * computeTotalCard(index, dimsToSearch);
-        final double cursorOnlyStrategyCost = timeFilteredBitmap.size() * dimsToSearch.size();
-        log.debug("useIndexStrategyCost: %f, cursorOnlyStrategyCost: %f", useIndexStrategyCost, cursorOnlyStrategyCost);
+        final double cursorOnlyStrategyCost =
+            (timeFilteredBitmap == null ? index.getNumRows() : timeFilteredBitmap.size()) * dimsToSearch.size();
+        log.debug("Use-index strategy cost: %f, cursor-only strategy cost: %f",
+                  useIndexStrategyCost, cursorOnlyStrategyCost);
 
         if (useIndexStrategyCost < cursorOnlyStrategyCost) {
           log.debug("Use-index execution strategy is selected, query id [%s]", query.getId());
-          return new UseIndexesStrategy(query, timeFilteredBitmap).getExecutionPlan(query, segment);
+          return UseIndexesStrategy.withTimeFilteredBitmap(query, timeFilteredBitmap).getExecutionPlan(query, segment);
         } else {
           log.debug("Cursor-only execution strategy is selected, query id [%s]", query.getId());
-          return new CursorOnlyStrategy(query).getExecutionPlan(query, segment);
+          return CursorOnlyStrategy.of(query).getExecutionPlan(query, segment);
         }
       } else {
         log.debug("Filter doesn't support bitmap index. Fall back to cursor-only execution strategy, query id [%s]",
                   query.getId());
-        return new CursorOnlyStrategy(query).getExecutionPlan(query, segment);
+        return CursorOnlyStrategy.of(query).getExecutionPlan(query, segment);
       }
 
     } else {
       log.debug("Index doesn't exist. Fall back to cursor-only execution strategy, query id [%s]", query.getId());
-      return new CursorOnlyStrategy(query).getExecutionPlan(query, segment);
+      return CursorOnlyStrategy.of(query).getExecutionPlan(query, segment);
     }
   }
 

@@ -48,13 +48,13 @@ public class SearchStrategySelector
     switch (strategyString) {
       case AutoStrategy.NAME:
         log.debug("Auto strategy is selected, query id [%s]", query.getId());
-        return new AutoStrategy(query);
+        return AutoStrategy.of(query);
       case UseIndexesStrategy.NAME:
-        log.debug("Index-only execution strategy is selected, query id [%s]", query.getId());
-        return new UseIndexesStrategy(query);
+        log.debug("Use-index strategy is selected, query id [%s]", query.getId());
+        return UseIndexesStrategy.of(query);
       case CursorOnlyStrategy.NAME:
-        log.debug("Cursor-based execution strategy is selected, query id [%s]", query.getId());
-        return new CursorOnlyStrategy(query);
+        log.debug("Cursor-only strategy is selected, query id [%s]", query.getId());
+        return CursorOnlyStrategy.of(query);
       default:
         throw new ISE("Unknown strategy[%s], query id [%s]", strategyString, query.getId());
     }

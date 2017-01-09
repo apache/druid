@@ -42,7 +42,12 @@ public class CursorOnlyStrategy extends SearchStrategy
 {
   public static final String NAME = "cursorOnly";
 
-  public CursorOnlyStrategy(SearchQuery query)
+  public static CursorOnlyStrategy of(SearchQuery query)
+  {
+    return new CursorOnlyStrategy(query);
+  }
+
+  private CursorOnlyStrategy(SearchQuery query)
   {
     super(query);
   }

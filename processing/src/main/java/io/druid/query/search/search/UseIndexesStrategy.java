@@ -53,15 +53,25 @@ public class UseIndexesStrategy extends SearchStrategy
   public static final String NAME = "useIndexes";
 
   private final ImmutableBitmap timeFilteredBitmap;
+  private final boolean needToMakeFilteredBitmap;
 
-  public UseIndexesStrategy(SearchQuery query)
+  public static UseIndexesStrategy of(SearchQuery query)
   {
-    this(query, null);
+    return new UseIndexesStrategy(query, true, null);
   }
 
-  public UseIndexesStrategy(SearchQuery query, @Nullable ImmutableBitmap timeFilteredBitmap)
+  public static UseIndexesStrategy withTimeFilteredBitmap(SearchQuery query,
+                                                          @Nullable ImmutableBitmap timeFilteredBitmap)
+  {
+    return new UseIndexesStrategy(query, false, timeFilteredBitmap);
+  }
+
+  private UseIndexesStrategy(SearchQuery query,
+                             boolean needToMakeFilteredBitmap,
+                             @Nullable ImmutableBitmap timeFilteredBitmap)
   {
     super(query);
+    this.needToMakeFilteredBitmap = needToMakeFilteredBitmap;
     this.timeFilteredBitmap = timeFilteredBitmap;
   }
 
@@ -91,7 +101,7 @@ public class UseIndexesStrategy extends SearchStrategy
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
         if (filter == null || filter.supportsBitmapIndex(selector)) {
-          final ImmutableBitmap timeFilteredBitmap = this.timeFilteredBitmap == null ?
+          final ImmutableBitmap timeFilteredBitmap = this.needToMakeFilteredBitmap ?
                                                      makeTimeFilteredBitmap(index, segment, filter, interval) :
                                                      this.timeFilteredBitmap;
           builder.add(new IndexOnlyExecutor(query, segment, timeFilteredBitmap, bitmapSuppDims));
