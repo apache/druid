@@ -304,13 +304,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)
     ).atLeastOnce();
-    serverInventoryView.start();
-    EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
-
-    serverInventoryView.stop();
-    EasyMock.expectLastCall().once();
-
     EasyMock.replay(serverInventoryView);
 
     coordinator.start();
