@@ -21,8 +21,9 @@ package io.druid.query.search.search;
 
 public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
-  private static final double LOW_FILTER_SELECTIVITY_THRESHOLD = 0.99;
-  private static final int LOW_CARDINALITY_THRESHOLD = 5000;
+  // This value comes from an experiment.
+  // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
+  private static final double BITMAP_INTERSECT_COST = 7.425;
   private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
 
   public static ConciseBitmapDecisionHelper instance()
@@ -32,6 +33,6 @@ public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
 
   private ConciseBitmapDecisionHelper()
   {
-    super(LOW_FILTER_SELECTIVITY_THRESHOLD, LOW_CARDINALITY_THRESHOLD);
+    super(BITMAP_INTERSECT_COST);
   }
 }

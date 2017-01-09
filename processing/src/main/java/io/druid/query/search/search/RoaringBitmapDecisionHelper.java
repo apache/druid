@@ -21,8 +21,9 @@ package io.druid.query.search.search;
 
 public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
-  private static final double LOW_FILTER_SELECTIVITY_THRESHOLD = 0.65;
-  private static final int LOW_CARDINALITY_THRESHOLD = 1000;
+  // This value comes from an experiment.
+  // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
+  private static final double BITMAP_INTERSECT_COST = 4.5;
   private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
 
   public static RoaringBitmapDecisionHelper instance()
@@ -32,6 +33,6 @@ public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
 
   private RoaringBitmapDecisionHelper()
   {
-    super(LOW_FILTER_SELECTIVITY_THRESHOLD, LOW_CARDINALITY_THRESHOLD);
+    super(BITMAP_INTERSECT_COST);
   }
 }

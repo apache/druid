@@ -20,6 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -55,6 +56,8 @@ public class AndFilter implements BooleanFilter
 
     final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
     for (final Filter filter : filters) {
+      Preconditions.checkArgument(filter.supportsBitmapIndex(selector),
+                                  "Filter[%s] does not support bitmap index", filter);
       final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
       if (bitmapIndex.isEmpty()) {
         // Short-circuit.

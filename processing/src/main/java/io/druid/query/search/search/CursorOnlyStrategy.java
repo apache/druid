@@ -102,7 +102,7 @@ public class CursorOnlyStrategy extends SearchStrategy
                 return set;
               }
 
-              List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
+              final List<ColumnSelectorPlus<SearchColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                   DimensionHandlerUtils.createColumnSelectorPluses(
                       SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
                       dimsToSearch,

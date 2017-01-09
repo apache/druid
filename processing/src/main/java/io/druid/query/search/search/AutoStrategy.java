@@ -22,8 +22,12 @@ package io.druid.query.search.search;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.Column;
 
 import java.util.List;
 
@@ -44,32 +48,67 @@ public class AutoStrategy extends SearchStrategy
     final QueryableIndex index = segment.asQueryableIndex();
 
     if (index != null) {
-      final ImmutableBitmap timeFilteredBitmap = UseIndexesStrategy.makeTimeFilteredBitmap(index,
-                                                                                           segment,
-                                                                                           filter,
-                                                                                           interval);
-      final Iterable<DimensionSpec> dimsToSearch = getDimsToSearch(index.getAvailableDimensions(),
-                                                                   query.getDimensions());
+      final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
+          index.getBitmapFactoryForDimensions(),
+          index
+      );
 
-      // Choose a search query execution strategy depending on the query.
-      // Index-only strategy is selected when
-      // 1) there is no filter,
-      // 2) the total cardinality is very low, or
-      // 3) the filter has a very low selectivity.
-      final SearchQueryDecisionHelper helper = getDecisionHelper(index);
-      if (filter == null ||
-          helper.hasLowCardinality(index, dimsToSearch) ||
-          helper.hasLowSelectivity(index, timeFilteredBitmap)) {
-        log.debug("Index-only execution strategy is selected, query id [%s]", query.getId());
-        return new UseIndexesStrategy(query, timeFilteredBitmap).getExecutionPlan(query, segment);
+      // Index-only plan is used only when any filter is not specified or every filter supports bitmap indexes.
+      //
+      // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
+      // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
+      // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
+      if (filter == null || filter.supportsBitmapIndex(selector)) {
+        final ImmutableBitmap timeFilteredBitmap = UseIndexesStrategy.makeTimeFilteredBitmap(index,
+                                                                                             segment,
+                                                                                             filter,
+                                                                                             interval);
+        final List<DimensionSpec> dimsToSearch = getDimsToSearch(index.getAvailableDimensions(),
+                                                                 query.getDimensions());
+
+        // Choose a search query execution strategy depending on the query.
+        // The costs of index-only plan and cursor-based plan can be computed like below.
+        //
+        // c_index = (total cardinality of all search dimensions) * (bitmap intersection cost)
+        //            * (search predicate processing cost)
+        // c_cursor = (# of rows in a segment) * (filter selectivity) * (# of dimensions)
+        //            * (search predicate processing cost)
+        final SearchQueryDecisionHelper helper = getDecisionHelper(index);
+        final double useIndexStrategyCost = helper.getBitmapIntersectCost() * computeTotalCard(index, dimsToSearch);
+        final double cursorOnlyStrategyCost = timeFilteredBitmap.size() * dimsToSearch.size();
+        log.debug("useIndexStrategyCost: %f, cursorOnlyStrategyCost: %f", useIndexStrategyCost, cursorOnlyStrategyCost);
+
+        if (useIndexStrategyCost < cursorOnlyStrategyCost) {
+          log.debug("Use-index execution strategy is selected, query id [%s]", query.getId());
+          return new UseIndexesStrategy(query, timeFilteredBitmap).getExecutionPlan(query, segment);
+        } else {
+          log.debug("Cursor-only execution strategy is selected, query id [%s]", query.getId());
+          return new CursorOnlyStrategy(query).getExecutionPlan(query, segment);
+        }
       } else {
-        log.debug("Cursor-based execution strategy is selected, query id [%s]", query.getId());
+        log.debug("Filter doesn't support bitmap index. Fall back to cursor-only execution strategy, query id [%s]",
+                  query.getId());
         return new CursorOnlyStrategy(query).getExecutionPlan(query, segment);
       }
 
     } else {
-      log.debug("Index doesn't exist. Fall back to cursor-based execution strategy, query id [%s]", query.getId());
+      log.debug("Index doesn't exist. Fall back to cursor-only execution strategy, query id [%s]", query.getId());
       return new CursorOnlyStrategy(query).getExecutionPlan(query, segment);
     }
+  }
+
+  private static long computeTotalCard(final QueryableIndex index, final Iterable<DimensionSpec> dimensionSpecs)
+  {
+    long totalCard = 0;
+    for (DimensionSpec dimension : dimensionSpecs) {
+      final Column column = index.getColumn(dimension.getDimension());
+      if (column != null) {
+        final BitmapIndex bitmapIndex = column.getBitmapIndex();
+        if (bitmapIndex != null) {
+          totalCard += bitmapIndex.getCardinality();
+        }
+      }
+    }
+    return totalCard;
   }
 }
