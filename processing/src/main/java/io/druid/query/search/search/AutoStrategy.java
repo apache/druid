@@ -64,12 +64,16 @@ public class AutoStrategy extends SearchStrategy
       // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
       // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
       if (filter == null || filter.supportsBitmapIndex(selector)) {
-        final ImmutableBitmap timeFilteredBitmap = UseIndexesStrategy.makeTimeFilteredBitmap(index,
-                                                                                             segment,
-                                                                                             filter,
-                                                                                             interval);
-        final List<DimensionSpec> dimsToSearch = getDimsToSearch(index.getAvailableDimensions(),
-                                                                 query.getDimensions());
+        final ImmutableBitmap timeFilteredBitmap = UseIndexesStrategy.makeTimeFilteredBitmap(
+            index,
+            segment,
+            filter,
+            interval
+        );
+        final List<DimensionSpec> dimsToSearch = getDimsToSearch(
+            index.getAvailableDimensions(),
+            query.getDimensions()
+        );
 
         // Choose a search query execution strategy depending on the query.
         // The costs of index-only plan and cursor-based plan can be computed like below.
@@ -83,7 +87,8 @@ public class AutoStrategy extends SearchStrategy
         final double cursorOnlyStrategyCost =
             (timeFilteredBitmap == null ? index.getNumRows() : timeFilteredBitmap.size()) * dimsToSearch.size();
         log.debug("Use-index strategy cost: %f, cursor-only strategy cost: %f",
-                  useIndexStrategyCost, cursorOnlyStrategyCost);
+                  useIndexStrategyCost, cursorOnlyStrategyCost
+        );
 
         if (useIndexStrategyCost < cursorOnlyStrategyCost) {
           log.debug("Use-index execution strategy is selected, query id [%s]", query.getId());
@@ -93,8 +98,10 @@ public class AutoStrategy extends SearchStrategy
           return CursorOnlyStrategy.of(query).getExecutionPlan(query, segment);
         }
       } else {
-        log.debug("Filter doesn't support bitmap index. Fall back to cursor-only execution strategy, query id [%s]",
-                  query.getId());
+        log.debug(
+            "Filter doesn't support bitmap index. Fall back to cursor-only execution strategy, query id [%s]",
+            query.getId()
+        );
         return CursorOnlyStrategy.of(query).getExecutionPlan(query, segment);
       }
 

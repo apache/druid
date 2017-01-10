@@ -65,8 +65,10 @@ public class TestQueryRunners
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         pool,
-        new TopNQueryQueryToolChest(topNConfig,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TopNQueryQueryToolChest(
+            topNConfig,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     return new FinalizeResultsQueryRunner<T>(
@@ -100,9 +102,11 @@ public class TestQueryRunners
     QueryRunnerFactory factory = new SearchQueryRunnerFactory(
         new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
-          config,
-          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER);
+            config,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()

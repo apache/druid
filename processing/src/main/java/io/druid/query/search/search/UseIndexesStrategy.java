@@ -60,15 +60,19 @@ public class UseIndexesStrategy extends SearchStrategy
     return new UseIndexesStrategy(query, true, null);
   }
 
-  public static UseIndexesStrategy withTimeFilteredBitmap(SearchQuery query,
-                                                          @Nullable ImmutableBitmap timeFilteredBitmap)
+  public static UseIndexesStrategy withTimeFilteredBitmap(
+      SearchQuery query,
+      @Nullable ImmutableBitmap timeFilteredBitmap
+  )
   {
     return new UseIndexesStrategy(query, false, timeFilteredBitmap);
   }
 
-  private UseIndexesStrategy(SearchQuery query,
-                             boolean needToMakeFilteredBitmap,
-                             @Nullable ImmutableBitmap timeFilteredBitmap)
+  private UseIndexesStrategy(
+      SearchQuery query,
+      boolean needToMakeFilteredBitmap,
+      @Nullable ImmutableBitmap timeFilteredBitmap
+  )
   {
     super(query);
     this.needToMakeFilteredBitmap = needToMakeFilteredBitmap;
@@ -129,8 +133,10 @@ public class UseIndexesStrategy extends SearchStrategy
   {
     final List<DimensionSpec> bitmapDims = Lists.newArrayList();
     final List<DimensionSpec> nonBitmapDims = Lists.newArrayList();
-    final List<DimensionSpec> dimsToSearch = getDimsToSearch(adapter.getAvailableDimensions(),
-                                                             dimensions);
+    final List<DimensionSpec> dimsToSearch = getDimsToSearch(
+        adapter.getAvailableDimensions(),
+        dimensions
+    );
 
     for (DimensionSpec spec : dimsToSearch) {
       ColumnCapabilities capabilities = adapter.getColumnCapabilities(spec.getDimension());
@@ -145,14 +151,18 @@ public class UseIndexesStrategy extends SearchStrategy
       }
     }
 
-    return new Pair<List<DimensionSpec>, List<DimensionSpec>>(ImmutableList.copyOf(bitmapDims),
-                                                              ImmutableList.copyOf(nonBitmapDims));
+    return new Pair<List<DimensionSpec>, List<DimensionSpec>>(
+        ImmutableList.copyOf(bitmapDims),
+        ImmutableList.copyOf(nonBitmapDims)
+    );
   }
 
-  static ImmutableBitmap makeTimeFilteredBitmap(final QueryableIndex index,
-                                                final Segment segment,
-                                                final Filter filter,
-                                                final Interval interval)
+  static ImmutableBitmap makeTimeFilteredBitmap(
+      final QueryableIndex index,
+      final Segment segment,
+      final Filter filter,
+      final Interval interval
+  )
   {
     final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
     final ImmutableBitmap baseFilter;
@@ -229,9 +239,11 @@ public class UseIndexesStrategy extends SearchStrategy
 
     private final ImmutableBitmap timeFilteredBitmap;
 
-    public IndexOnlyExecutor(SearchQuery query, Segment segment,
-                             ImmutableBitmap timeFilteredBitmap,
-                             List<DimensionSpec> dimensionSpecs)
+    public IndexOnlyExecutor(
+        SearchQuery query, Segment segment,
+        ImmutableBitmap timeFilteredBitmap,
+        List<DimensionSpec> dimensionSpecs
+    )
     {
       super(query, segment, dimensionSpecs);
       this.timeFilteredBitmap = timeFilteredBitmap;
@@ -256,7 +268,8 @@ public class UseIndexesStrategy extends SearchStrategy
 
         final BitmapIndex bitmapIndex = column.getBitmapIndex();
         Preconditions.checkArgument(bitmapIndex != null,
-                                    "Dimension [%s] should support bitmap index", dimension.getDimension());
+                                    "Dimension [%s] should support bitmap index", dimension.getDimension()
+        );
 
         ExtractionFn extractionFn = dimension.getExtractionFn();
         if (extractionFn == null) {

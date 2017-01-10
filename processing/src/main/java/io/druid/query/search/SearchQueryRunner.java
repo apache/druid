@@ -74,7 +74,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     )
     {
       ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case STRING:
           return new StringSearchColumnSelectorStrategy();
         default:
@@ -88,17 +88,17 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     /**
      * Read the current row from dimSelector and update the search result set.
-     *
+     * <p>
      * For each row value:
      * 1. Check if searchQuerySpec accept()s the value
      * 2. If so, add the value to the result set and increment the counter for that value
      * 3. If the size of the result set reaches the limit after adding a value, return early.
      *
-     * @param outputName Output name for this dimension in the search query being served
-     * @param dimSelector Dimension value selector
+     * @param outputName      Output name for this dimension in the search query being served
+     * @param dimSelector     Dimension value selector
      * @param searchQuerySpec Spec for the search query
-     * @param set The result set of the search query
-     * @param limit The limit of the search query
+     * @param set             The result set of the search query
+     * @param limit           The limit of the search query
      */
     void updateSearchResultSet(
         String outputName,

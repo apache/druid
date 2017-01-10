@@ -57,11 +57,13 @@ public class CursorOnlyStrategy extends SearchStrategy
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
     final List<DimensionSpec> dimensionSpecs = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
-    return ImmutableList.<SearchQueryExecutor>of(new CursorBasedExecutor(query,
-                                                                         segment,
-                                                                         filter,
-                                                                         interval,
-                                                                         dimensionSpecs));
+    return ImmutableList.<SearchQueryExecutor>of(new CursorBasedExecutor(
+        query,
+        segment,
+        filter,
+        interval,
+        dimensionSpecs
+    ));
   }
 
   public static class CursorBasedExecutor extends SearchQueryExecutor
@@ -70,10 +72,12 @@ public class CursorOnlyStrategy extends SearchStrategy
     protected Filter filter;
     protected Interval interval;
 
-    public CursorBasedExecutor(SearchQuery query,
-                               Segment segment,
-                               Filter filter,
-                               Interval interval, List<DimensionSpec> dimensionSpecs)
+    public CursorBasedExecutor(
+        SearchQuery query,
+        Segment segment,
+        Filter filter,
+        Interval interval, List<DimensionSpec> dimensionSpecs
+    )
     {
       super(query, segment, dimensionSpecs);
 

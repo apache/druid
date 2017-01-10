@@ -72,7 +72,7 @@ public class SearchQueryRunnerTest
   );
   private static final SearchStrategySelector selector = new SearchStrategySelector(Suppliers.ofInstance(config));
 
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
@@ -95,7 +95,7 @@ public class SearchQueryRunnerTest
   {
     this.runner = runner;
     this.decoratedRunner = toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
   }
 
   @Test
@@ -393,7 +393,8 @@ public class SearchQueryRunnerTest
                   new AndDimFilter(
                       Arrays.<DimFilter>asList(
                           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
-                          new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null))))
+                          new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
+                      )))
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .dimensions(QueryRunnerTestHelper.qualityDimension)
               .query("a")

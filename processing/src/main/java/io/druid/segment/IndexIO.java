@@ -1027,13 +1027,7 @@ public class IndexIO
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time")));
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval,
-          cols,
-          dims,
-          segmentBitmapSerdeFactory.getBitmapFactory(),
-          columns,
-          smooshedFiles,
-          metadata
+          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);

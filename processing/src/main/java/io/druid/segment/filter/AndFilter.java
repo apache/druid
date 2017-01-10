@@ -57,7 +57,8 @@ public class AndFilter implements BooleanFilter
     final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
     for (final Filter filter : filters) {
       Preconditions.checkArgument(filter.supportsBitmapIndex(selector),
-                                  "Filter[%s] does not support bitmap index", filter);
+                                  "Filter[%s] does not support bitmap index", filter
+      );
       final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
       if (bitmapIndex.isEmpty()) {
         // Short-circuit.
