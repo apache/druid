@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -313,15 +314,23 @@ public class LoadQueuePeon
   public void start()
   {
     ScheduledExecutors.scheduleAtFixedRate(
-            processingExecutor,
-            Period.ZERO.toStandardDuration(),
-            Period.millis(100).toStandardDuration(),
-            new Runnable() {
-              @Override
-              public void run() {
-                processSegmentChangeRequest();
-              }
+        processingExecutor,
+        config.getLoadQueuePeonStartDelay(),
+        Period.millis(50).toStandardDuration(),
+        new Callable<ScheduledExecutors.Signal>()
+        {
+          @Override
+          public ScheduledExecutors.Signal call()
+          {
+            processSegmentChangeRequest();
+
+            if (stopped) {
+              return ScheduledExecutors.Signal.STOP;
+            } else {
+              return ScheduledExecutors.Signal.REPEAT;
             }
+          }
+        }
     );
   }
 

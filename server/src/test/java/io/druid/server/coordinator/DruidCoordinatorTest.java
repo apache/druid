@@ -130,7 +130,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         10,
         null,
         false,
-        false
+        false,
+        new Duration("PT0s")
     );
     pathChildrenCache = new PathChildrenCache(curator, LOADPATH, true, true, Execs.singleThreaded("coordinator_test_path_children_cache-%d"));
     loadQueuePeon = new LoadQueuePeon(
