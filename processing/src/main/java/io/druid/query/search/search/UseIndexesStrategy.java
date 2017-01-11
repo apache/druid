@@ -99,7 +99,7 @@ public class UseIndexesStrategy extends SearchStrategy
             index
         );
 
-        // Index-only plan is used only when any filter is not specified or every filter supports bitmap indexes.
+        // Index-only plan is used only when any filter is not specified or the filter supports bitmap indexes.
         //
         // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
