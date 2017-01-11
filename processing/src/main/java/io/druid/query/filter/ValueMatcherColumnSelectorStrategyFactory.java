@@ -1,5 +1,3 @@
-package io.druid.query.filter;
-
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
  * or more contributor license agreements. See the NOTICE file
@@ -18,6 +16,8 @@ package io.druid.query.filter;
  * specific language governing permissions and limitations
  * under the License.
  */
+
+package io.druid.query.filter;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;

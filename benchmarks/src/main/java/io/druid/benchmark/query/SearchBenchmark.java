@@ -17,6 +17,7 @@
  * under the License.
  */
 
+
 package io.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
