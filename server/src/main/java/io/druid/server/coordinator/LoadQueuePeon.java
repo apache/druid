@@ -37,7 +37,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.data.Stat;
-import org.joda.time.Period;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -315,8 +314,8 @@ public class LoadQueuePeon
   {
     ScheduledExecutors.scheduleAtFixedRate(
         processingExecutor,
-        config.getLoadQueuePeonStartDelay(),
-        Period.millis(50).toStandardDuration(),
+        config.getLoadQueuePeonRepeatDelay(),
+        config.getLoadQueuePeonRepeatDelay(),
         new Callable<ScheduledExecutors.Signal>()
         {
           @Override

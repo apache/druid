@@ -81,7 +81,9 @@ public abstract class DruidCoordinatorConfig
     return null;
   }
 
-  @Config("druid.coordinator.loadqueuepeon.startDelay")
-  @Default("PT0s")
-  public abstract Duration getLoadQueuePeonStartDelay();
+  @Config("druid.coordinator.loadqueuepeon.repeatDelay")
+  public Duration getLoadQueuePeonRepeatDelay()
+  {
+    return Duration.millis(50);
+  }
 }
