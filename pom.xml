@@ -63,7 +63,7 @@
         <calcite.version>1.11.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.2.5.v20141112</jetty.version>
+        <jetty.version>9.2.19.v20160908</jetty.version>
         <jersey.version>1.19</jersey.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
