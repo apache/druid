@@ -16,22 +16,3 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package io.druid.client.coordinator;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-/**
- */
-public class CoordinatorSelectorConfig
-{
-  public static final String DEFAULT_SERVICE_NAME = "druid/coordinator";
-
-  @JsonProperty
-  private String serviceName = DEFAULT_SERVICE_NAME;
-
-  public String getServiceName()
-  {
-    return serviceName;
-  }
-}

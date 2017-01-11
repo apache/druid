@@ -757,6 +757,7 @@
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>
                     <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
                     <encoding>UTF-8</encoding>
+                    <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                 </configuration>
