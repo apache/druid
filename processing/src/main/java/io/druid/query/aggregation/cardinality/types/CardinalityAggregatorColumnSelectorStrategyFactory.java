@@ -36,6 +36,10 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
     switch(type) {
       case STRING:
         return new StringCardinalityAggregatorColumnSelectorStrategy();
+      case LONG:
+        return new LongCardinalityAggregatorColumnSelectorStrategy();
+      case FLOAT:
+        return new FloatCardinalityAggregatorColumnSelectorStrategy();
       default:
         throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }

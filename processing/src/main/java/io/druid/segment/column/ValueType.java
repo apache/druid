@@ -19,6 +19,9 @@
 
 package io.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.metamx.common.IAE;
+
 /**
 */
 public enum ValueType
@@ -27,6 +30,12 @@ public enum ValueType
   LONG,
   STRING,
   COMPLEX;
+
+  @JsonCreator
+  public static ValueType fromString(String name)
+  {
+    return valueOf(name.toUpperCase());
+  }
 
   public static ValueType typeFor(Class clazz)
   {
@@ -38,5 +47,18 @@ public enum ValueType
       return LONG;
     }
     return COMPLEX;
+  }
+
+  public static ValueType convertObjectToValueType(Object valObj)
+  {
+    if (valObj == null) {
+      return null;
+    } else if (valObj instanceof ValueType) {
+      return (ValueType) valObj;
+    } else if (valObj instanceof String) {
+      return fromString((String) valObj);
+    } else {
+      throw new IAE("Cannot convert [%s] to ValueType", valObj);
+    }
   }
 }

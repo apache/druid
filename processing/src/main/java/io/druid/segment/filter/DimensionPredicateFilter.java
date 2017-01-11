@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -77,6 +78,19 @@ public class DimensionPredicateFilter implements Filter
           {
             @Override
             public boolean applyLong(long input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+          };
+        }
+
+        @Override
+        public DruidFloatPredicate makeFloatPredicate()
+        {
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
             {
               return baseStringPredicate.apply(extractionFn.apply(input));
             }

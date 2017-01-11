@@ -22,7 +22,9 @@ package io.druid.query.groupby.epinephelinae;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
@@ -45,6 +47,8 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -182,6 +186,10 @@ public class GroupByQueryEngineV2
       switch(type) {
         case STRING:
           return new StringGroupByColumnSelectorStrategy();
+        case LONG:
+          return new LongGroupByColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatGroupByColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -339,6 +347,92 @@ public class GroupByQueryEngineV2
       } else {
         keyBuffer.putInt(keyBufferPosition, values.get(0));
       }
+    }
+  }
+
+  private static class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
+  {
+    @Override
+    public int getGroupingKeySize()
+    {
+      return Longs.BYTES;
+    }
+
+    @Override
+    public void processValueFromGroupingKey(
+        GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
+    )
+    {
+      final long val = key.getLong(selectorPlus.getKeyBufferPosition());
+      resultMap.put(selectorPlus.getOutputName(), val);
+    }
+
+    @Override
+    public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+    {
+      valuess[columnIndex] = ((LongColumnSelector) selector).get();
+    }
+
+    @Override
+    public void initGroupingKeyColumnValue(
+        int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+    )
+    {
+      keyBuffer.putLong(keyBufferPosition, (Long) rowObj);
+      stack[columnIndex] = 1;
+    }
+
+    @Override
+    public boolean checkRowIndexAndAddValueToGroupingKey(
+        int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
+    )
+    {
+      // rows from a long column are always size 1
+      keyBuffer.putLong(keyBufferPosition, (Long) rowObj);
+      return rowValIdx < 1;
+    }
+  }
+
+  private static class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
+  {
+    @Override
+    public int getGroupingKeySize()
+    {
+      return Floats.BYTES;
+    }
+
+    @Override
+    public void processValueFromGroupingKey(
+        GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
+    )
+    {
+      final float val = key.getFloat(selectorPlus.getKeyBufferPosition());
+      resultMap.put(selectorPlus.getOutputName(), val);
+    }
+
+    @Override
+    public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+    {
+      valuess[columnIndex] = ((FloatColumnSelector) selector).get();
+    }
+
+    @Override
+    public void initGroupingKeyColumnValue(
+        int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+    )
+    {
+      keyBuffer.putFloat(keyBufferPosition, (Float) rowObj);
+      stack[columnIndex] = 1;
+    }
+
+    @Override
+    public boolean checkRowIndexAndAddValueToGroupingKey(
+        int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
+    )
+    {
+      // rows from a float column are always size 1
+      keyBuffer.putFloat(keyBufferPosition, (Float) rowObj);
+      return rowValIdx < 1;
     }
   }
 

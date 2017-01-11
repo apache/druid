@@ -46,6 +46,10 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
     // Optimization possibly requires a reverse lookup from value to ID, which is
     // not possible when applying an extraction function
 
+    if (params.getCardinality() < 0) {
+      return null;
+    }
+
     final BaseTopNAlgorithm.AggregatorArrayProvider provider = new BaseTopNAlgorithm.AggregatorArrayProvider(
         (DimensionSelector) params.getSelectorPlus().getSelector(),
         query,
@@ -58,15 +62,29 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
 
   @Override
   public void dimExtractionScanAndAggregate(
-      final TopNQuery query,
+      TopNQuery query,
       DimensionSelector selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
       Map<Comparable, Aggregator[]> aggregatesStore
   )
   {
-    final IndexedInts dimValues = selector.getRow();
+    if (selector.getValueCardinality() < 0) {
+      dimExtractionScanAndAggregateNoCardinality(selector, rowSelector, aggregatesStore, cursor, query);
+    } else {
+      dimExtractionScanAndAggregateWithCardinality(selector, rowSelector, aggregatesStore, cursor, query);
+    }
+  }
 
+  private void dimExtractionScanAndAggregateWithCardinality(
+      DimensionSelector selector,
+      Aggregator[][] rowSelector,
+      Map<Comparable, Aggregator[]> aggregatesStore,
+      Cursor cursor,
+      TopNQuery query
+  )
+  {
+    final IndexedInts dimValues = selector.getRow();
     for (int i = 0; i < dimValues.size(); ++i) {
       final int dimIndex = dimValues.get(i);
       Aggregator[] theAggregators = rowSelector[dimIndex];
@@ -80,6 +98,30 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
         rowSelector[dimIndex] = theAggregators;
       }
 
+      for (Aggregator aggregator : theAggregators) {
+        aggregator.aggregate();
+      }
+    }
+  }
+
+  private void dimExtractionScanAndAggregateNoCardinality(
+      DimensionSelector selector,
+      Aggregator[][] rowSelector,
+      Map<Comparable, Aggregator[]> aggregatesStore,
+      Cursor cursor,
+      TopNQuery query
+  )
+  {
+    final IndexedInts dimValues = selector.getRow();
+    for (int i = 0; i < dimValues.size(); ++i) {
+      final int dimIndex = dimValues.get(i);
+      final String key = selector.lookupName(dimIndex);
+
+      Aggregator[] theAggregators = aggregatesStore.get(key);
+      if (theAggregators == null) {
+        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+        aggregatesStore.put(key, theAggregators);
+      }
       for (Aggregator aggregator : theAggregators) {
         aggregator.aggregate();
       }

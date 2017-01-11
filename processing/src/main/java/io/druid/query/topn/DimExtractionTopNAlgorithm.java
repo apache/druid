@@ -117,7 +117,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
         }
 
         resultBuilder.addEntry(
-            entry.getKey() == null ? null : entry.getKey().toString(),
+            entry.getKey(),
             entry.getKey(),
             vals
         );

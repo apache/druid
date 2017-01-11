@@ -17,43 +17,30 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.query.topn.types;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
-public class ValueMatcherColumnSelectorStrategyFactory
-    implements ColumnSelectorStrategyFactory<ValueMatcherColumnSelectorStrategy>
+public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategyFactory<TopNColumnSelectorStrategy>
 {
-  private static final ValueMatcherColumnSelectorStrategyFactory INSTANCE = new ValueMatcherColumnSelectorStrategyFactory();
-
-  private ValueMatcherColumnSelectorStrategyFactory()
-  {
-    // Singleton.
-  }
-
-  public static ValueMatcherColumnSelectorStrategyFactory instance()
-  {
-    return INSTANCE;
-  }
-
   @Override
-  public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
+  public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities
   )
   {
     ValueType type = capabilities.getType();
-    switch (type) {
+    switch(type) {
       case STRING:
-        return new StringValueMatcherColumnSelectorStrategy();
+        return new StringTopNColumnSelectorStrategy();
       case LONG:
-        return new LongValueMatcherColumnSelectorStrategy();
+        return new LongTopNColumnSelectorStrategy();
       case FLOAT:
-        return new FloatValueMatcherColumnSelectorStrategy();
+        return new FloatTopNColumnSelectorStrategy();
       default:
-        throw new IAE("Cannot create column selector strategy from invalid type [%s]", type);
+        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
     }
   }
 }

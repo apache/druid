@@ -50,10 +50,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final PriorityQueue<DimValHolder> pQueue;
   private final Comparator<DimValHolder> dimValComparator;
   private final String[] aggFactoryNames;
-  private static final Comparator<String> dimNameComparator = new Comparator<String>()
+  private static final Comparator<Comparable> dimNameComparator = new Comparator<Comparable>()
   {
     @Override
-    public int compare(String o1, String o2)
+    public int compare(Comparable o1, Comparable o2)
     {
       int retval;
       if (null == o1) {
@@ -114,7 +114,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNNumericResultBuilder addEntry(
-      String dimName,
+      Comparable dimName,
       Object dimValIndex,
       Object[] metricVals
   )
@@ -196,7 +196,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
-          .withDimName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
+          .withDimName((Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()))
           .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
           .build();
       pQueue.add(valHolder);

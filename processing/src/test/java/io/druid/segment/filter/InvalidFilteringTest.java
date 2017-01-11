@@ -124,16 +124,6 @@ public class InvalidFilteringTest extends BaseFilterTest
         ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
     );
 
-    assertFilterMatches(
-        new SelectorDimFilter("dmax", "another string", null),
-        ImmutableList.<String>of()
-    );
-
-    assertFilterMatches(
-        new SelectorDimFilter("dmax", null, null),
-        ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
-    );
-
     // predicate based matching
     assertFilterMatches(
         new InDimFilter("hyperion", Arrays.asList("hello", "world"), null),
@@ -142,16 +132,6 @@ public class InvalidFilteringTest extends BaseFilterTest
 
     assertFilterMatches(
         new InDimFilter("hyperion", Arrays.asList("hello", "world", null), null),
-        ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
-    );
-
-    assertFilterMatches(
-        new InDimFilter("dmax", Arrays.asList("hello", "world"), null),
-        ImmutableList.<String>of()
-    );
-
-    assertFilterMatches(
-        new InDimFilter("dmax", Arrays.asList("hello", "world", null), null),
         ImmutableList.<String>of("1", "2", "3", "4", "5", "6")
     );
   }

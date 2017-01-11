@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -31,6 +32,7 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 public final class DimensionHandlerUtils
 {
@@ -116,7 +118,8 @@ public final class DimensionHandlerUtils
       ColumnSelectorStrategyClass strategy = makeStrategy(
           strategyFactory,
           dimName,
-          cursor.getColumnCapabilities(dimSpec.getDimension())
+          cursor.getColumnCapabilities(dimSpec.getDimension()),
+          dimSpec.getExtractionFn() != null
       );
       final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
@@ -138,15 +141,21 @@ public final class DimensionHandlerUtils
   // (e.g., treating missing columns as empty String columns)
   private static ColumnCapabilities getEffectiveCapabilities(
       String dimName,
-      ColumnCapabilities capabilities
+      ColumnCapabilities capabilities,
+      boolean hasExFn
   )
   {
     if (capabilities == null) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
-    // non-Strings aren't actually supported yet
-    if (capabilities.getType() != ValueType.STRING) {
+    // Complex dimension type is not supported
+    if (capabilities.getType() == ValueType.COMPLEX) {
+      capabilities = DEFAULT_STRING_CAPABILITIES;
+    }
+
+    // Currently, all extractionFns output Strings, so force the type if present
+    if (hasExFn) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
@@ -160,10 +169,14 @@ public final class DimensionHandlerUtils
   {
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimName, capabilities);
+    capabilities = getEffectiveCapabilities(dimName, capabilities, dimSpec.getExtractionFn() != null);
     switch (capabilities.getType()) {
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
+      case LONG:
+        return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
+      case FLOAT:
+        return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
       default:
         return null;
     }
@@ -172,10 +185,56 @@ public final class DimensionHandlerUtils
   private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       String dimName,
-      ColumnCapabilities capabilities
+      ColumnCapabilities capabilities,
+      boolean hasExFn
   )
   {
-    capabilities = getEffectiveCapabilities(dimName, capabilities);
+    capabilities = getEffectiveCapabilities(dimName, capabilities, hasExFn);
     return strategyFactory.makeColumnSelectorStrategy(capabilities);
+  }
+
+  private static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
+
+  // TopNBinaryFn relies on this returning the same Long object when no conversion is needed
+  public static Long convertObjectToLong(Object valObj)
+  {
+    if (valObj instanceof Long) {
+      return (Long) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).longValue();
+    } else if (valObj instanceof String) {
+      try {
+        String s = ((String) valObj).replace(",", "");
+        return LONG_PAT.matcher(s).matches() ? Long.valueOf(s) : Double.valueOf(s).longValue();
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse value[%s] as long", valObj);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
+  }
+
+  // TopNBinaryFn relies on this returning the same Float object when no conversion is needed
+  public static Float convertObjectToFloat(Object valObj)
+  {
+    if (valObj == null) {
+      return 0.0f;
+    }
+
+    if (valObj instanceof Float) {
+      return (Float) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).floatValue();
+    } else if (valObj instanceof String) {
+      try {
+        return Float.valueOf(((String) valObj).replace(",", ""));
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse value[%s] as float", valObj);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
   }
 }

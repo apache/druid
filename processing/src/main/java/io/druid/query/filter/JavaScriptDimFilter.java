@@ -217,6 +217,20 @@ public class JavaScriptDimFilter implements DimFilter
       };
     }
 
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      return new DruidFloatPredicate()
+      {
+        @Override
+        public boolean applyFloat(float input)
+        {
+          // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+          return applyObject(input);
+        }
+      };
+    }
+
     public boolean applyObject(final Object input)
     {
       // one and only one context per thread

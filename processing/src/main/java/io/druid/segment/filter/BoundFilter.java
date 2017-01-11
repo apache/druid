@@ -25,6 +25,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -43,6 +44,7 @@ public class BoundFilter implements Filter
   private final ExtractionFn extractionFn;
 
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
+  private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
 
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
@@ -50,6 +52,7 @@ public class BoundFilter implements Filter
     this.comparator = boundDimFilter.getOrdering();
     this.extractionFn = boundDimFilter.getExtractionFn();
     this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
+    this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
   }
 
   @Override
@@ -190,6 +193,32 @@ public class BoundFilter implements Filter
           {
             @Override
             public boolean applyLong(long input)
+            {
+              return doesMatch(String.valueOf(input));
+            }
+          };
+        }
+      }
+
+      @Override
+      public DruidFloatPredicate makeFloatPredicate()
+      {
+        if (extractionFn != null) {
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return floatPredicateSupplier.get();
+        } else {
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
             {
               return doesMatch(String.valueOf(input));
             }

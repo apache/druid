@@ -28,13 +28,16 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Accumulator;
+import io.druid.query.BaseQuery;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.GroupByQuery;
@@ -43,12 +46,15 @@ import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -72,13 +78,17 @@ public class RowBasedGrouperHelper
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
     Preconditions.checkArgument(concurrencyHint >= 1 || concurrencyHint == -1, "invalid concurrencyHint");
 
+    final Map<String, ValueType> typeHints = BaseQuery.getContextTypeHints(query, query.getDimensions());
+    final List<ValueType> valueTypes = Lists.newArrayList(typeHints.values());
+
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         includeTimestamp,
         query.getContextSortByDimsFirst(),
         query.getDimensions().size(),
-        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
+        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint),
+        typeHints
     );
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
     final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
@@ -172,10 +182,27 @@ public class RowBasedGrouperHelper
           if (isInputRaw) {
             IndexedInts index = dimensionSelectors[i - dimStart].getRow();
             value = index.size() == 0 ? "" : dimensionSelectors[i - dimStart].lookupName(index.get(0));
+            key[i] = Strings.nullToEmpty(value);
           } else {
-            value = (String) row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
+            // only V2 groupby supports non-String types
+            Object valObj = row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
+
+            // convert types to what typeHints specifies, for merging purposes
+            switch (valueTypes.get(i - dimStart)) {
+              case STRING:
+                valObj = valObj == null ? "" : valObj.toString();
+                break;
+              case LONG:
+                valObj = DimensionHandlerUtils.convertObjectToLong(valObj);
+                break;
+              case FLOAT:
+                valObj = DimensionHandlerUtils.convertObjectToFloat(valObj);
+                break;
+              default:
+                throw new IAE("invalid type");
+            }
+            key[i] = (Comparable) valObj;
           }
-          key[i] = Strings.nullToEmpty(value);
         }
 
         final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
@@ -224,9 +251,10 @@ public class RowBasedGrouperHelper
 
             // Add dimensions.
             for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
+              Object dimVal = entry.getKey().getKey()[i];
               theMap.put(
                   query.getDimensions().get(i - dimStart).getOutputName(),
-                  Strings.emptyToNull((String) entry.getKey().getKey()[i])
+                  dimVal instanceof String ? Strings.emptyToNull((String)dimVal) : dimVal
               );
             }
 
@@ -302,19 +330,21 @@ public class RowBasedGrouperHelper
     private final boolean sortByDimsFirst;
     private final int dimCount;
     private final long maxDictionarySize;
+    private final Map<String, ValueType> typeHints;
 
-    RowBasedKeySerdeFactory(boolean includeTimestamp, boolean sortByDimsFirst, int dimCount, long maxDictionarySize)
+    RowBasedKeySerdeFactory(boolean includeTimestamp, boolean sortByDimsFirst, int dimCount, long maxDictionarySize, Map<String, ValueType> typeHints)
     {
       this.includeTimestamp = includeTimestamp;
       this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
+      this.typeHints = typeHints;
     }
 
     @Override
     public Grouper.KeySerde<RowBasedKey> factorize()
     {
-      return new RowBasedKeySerde(includeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize);
+      return new RowBasedKeySerde(includeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize, typeHints);
     }
 
     @Override
@@ -366,7 +396,7 @@ public class RowBasedGrouperHelper
     private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, int dimStart)
     {
       for (int i = dimStart; i < key1.getKey().length; i++) {
-        final int cmp = ((String) key1.getKey()[i]).compareTo((String) key2.getKey()[i]);
+        final int cmp = ((Comparable) key1.getKey()[i]).compareTo(key2.getKey()[i]);
         if (cmp != 0) {
           return cmp;
         }
@@ -388,6 +418,8 @@ public class RowBasedGrouperHelper
     private final ByteBuffer keyBuffer;
     private final List<String> dictionary = Lists.newArrayList();
     private final Map<String, Integer> reverseDictionary = Maps.newHashMap();
+    private final Map<String, ValueType> typeHints;
+    private final List<RowBasedKeySerdeHelper> serdeHelpers;
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -400,14 +432,17 @@ public class RowBasedGrouperHelper
         final boolean includeTimestamp,
         final boolean sortByDimsFirst,
         final int dimCount,
-        final long maxDictionarySize
+        final long maxDictionarySize,
+        final Map<String, ValueType> typeHints
     )
     {
       this.includeTimestamp = includeTimestamp;
       this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
-      this.keySize = (includeTimestamp ? Longs.BYTES : 0) + dimCount * Ints.BYTES;
+      this.typeHints = typeHints;
+      this.serdeHelpers = getSerdeHelpers();
+      this.keySize = (includeTimestamp ? Longs.BYTES : 0) + getTotalKeySize();
       this.keyBuffer = ByteBuffer.allocate(keySize);
     }
 
@@ -435,13 +470,10 @@ public class RowBasedGrouperHelper
       } else {
         dimStart = 0;
       }
-
       for (int i = dimStart; i < key.getKey().length; i++) {
-        final int id = addToDictionary((String) key.getKey()[i]);
-        if (id < 0) {
+        if (!serdeHelpers.get(i - dimStart).putToByteBuffer(key, i)) {
           return null;
         }
-        keyBuffer.putInt(id);
       }
 
       keyBuffer.flip();
@@ -467,7 +499,7 @@ public class RowBasedGrouperHelper
       }
 
       for (int i = dimStart; i < key.length; i++) {
-        key[i] = dictionary.get(buffer.getInt(dimsPosition + (Ints.BYTES * (i - dimStart))));
+        serdeHelpers.get(i - dimStart).getFromByteBuffer(buffer, dimsPosition, i, key);
       }
 
       return new RowBasedKey(key);
@@ -496,6 +528,7 @@ public class RowBasedGrouperHelper
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
             {
               final int cmp = compareDimsInBuffersForNullFudgeTimestamp(
+                  serdeHelpers,
                   sortableIds,
                   dimCount,
                   lhsBuffer,
@@ -523,6 +556,7 @@ public class RowBasedGrouperHelper
               }
 
               return compareDimsInBuffersForNullFudgeTimestamp(
+                  serdeHelpers,
                   sortableIds,
                   dimCount,
                   lhsBuffer,
@@ -540,9 +574,11 @@ public class RowBasedGrouperHelper
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
           {
             for (int i = 0; i < dimCount; i++) {
-              final int cmp = Ints.compare(
-                  sortableIds[lhsBuffer.getInt(lhsPosition + (Ints.BYTES * i))],
-                  sortableIds[rhsBuffer.getInt(rhsPosition + (Ints.BYTES * i))]
+              final int cmp = serdeHelpers.get(i).compare(
+                  lhsBuffer,
+                  rhsBuffer,
+                  lhsPosition,
+                  rhsPosition
               );
 
               if (cmp != 0) {
@@ -557,6 +593,7 @@ public class RowBasedGrouperHelper
     }
 
     private static int compareDimsInBuffersForNullFudgeTimestamp(
+        List<RowBasedKeySerdeHelper> serdeHelpers,
         int[] sortableIds,
         int dimCount,
         ByteBuffer lhsBuffer,
@@ -566,11 +603,12 @@ public class RowBasedGrouperHelper
     )
     {
       for (int i = 0; i < dimCount; i++) {
-        final int cmp = Ints.compare(
-            sortableIds[lhsBuffer.getInt(lhsPosition + Longs.BYTES + (Ints.BYTES * i))],
-            sortableIds[rhsBuffer.getInt(rhsPosition + Longs.BYTES + (Ints.BYTES * i))]
+        final int cmp = serdeHelpers.get(i).compare(
+            lhsBuffer,
+            rhsBuffer,
+            lhsPosition + Longs.BYTES,
+            rhsPosition + Longs.BYTES
         );
-
         if (cmp != 0) {
           return cmp;
         }
@@ -611,6 +649,169 @@ public class RowBasedGrouperHelper
         currentEstimatedSize += additionalEstimatedSize;
       }
       return idx;
+    }
+
+    private int getTotalKeySize()
+    {
+      int size = 0;
+      for (RowBasedKeySerdeHelper helper : serdeHelpers) {
+        size += helper.getKeyBufferValueSize();
+      }
+      return size;
+    }
+
+    private List<RowBasedKeySerdeHelper> getSerdeHelpers()
+    {
+      List<RowBasedKeySerdeHelper> helpers = new ArrayList<>();
+      int keyBufferPosition = 0;
+      for (ValueType valType : typeHints.values()) {
+        RowBasedKeySerdeHelper helper;
+        switch (valType) {
+          case STRING:
+            helper = new StringRowBasedKeySerdeHelper(keyBufferPosition);
+            break;
+          case LONG:
+            helper = new LongRowBasedKeySerdeHelper(keyBufferPosition);
+            break;
+          case FLOAT:
+            helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
+            break;
+          default:
+            throw new IAE("invalid type");
+        }
+        keyBufferPosition += helper.getKeyBufferValueSize();
+        helpers.add(helper);
+      }
+      return helpers;
+    }
+
+    private interface RowBasedKeySerdeHelper
+    {
+      int getKeyBufferValueSize();
+
+      boolean putToByteBuffer(RowBasedKey key, int idx);
+
+      void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
+
+      int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
+    }
+
+    private class StringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      final int keyBufferPosition;
+
+      public StringRowBasedKeySerdeHelper(int keyBufferPosition)
+      {
+        this.keyBufferPosition = keyBufferPosition;
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Ints.BYTES;
+      }
+
+      @Override
+      public boolean putToByteBuffer(RowBasedKey key, int idx)
+      {
+        final int id = addToDictionary((String) key.getKey()[idx]);
+        if (id < 0) {
+          return false;
+        }
+        keyBuffer.putInt(id);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        dimValues[dimValIdx] = dictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
+      }
+
+      @Override
+      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      {
+        return Ints.compare(
+            sortableIds[lhsBuffer.getInt(lhsPosition + keyBufferPosition)],
+            sortableIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
+        );
+      }
+    }
+
+    private class LongRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      final int keyBufferPosition;
+
+      public LongRowBasedKeySerdeHelper(int keyBufferPosition)
+      {
+        this.keyBufferPosition = keyBufferPosition;
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Longs.BYTES;
+      }
+
+      @Override
+      public boolean putToByteBuffer(RowBasedKey key, int idx)
+      {
+        keyBuffer.putLong((Long) key.getKey()[idx]);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        dimValues[dimValIdx] = buffer.getLong(initialOffset + keyBufferPosition);
+      }
+
+      @Override
+      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      {
+        return Longs.compare(
+            lhsBuffer.getLong(lhsPosition + keyBufferPosition),
+            rhsBuffer.getLong(rhsPosition + keyBufferPosition)
+        );
+      }
+    }
+
+    private class FloatRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      final int keyBufferPosition;
+
+      public FloatRowBasedKeySerdeHelper(int keyBufferPosition)
+      {
+        this.keyBufferPosition = keyBufferPosition;
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return Floats.BYTES;
+      }
+
+      @Override
+      public boolean putToByteBuffer(RowBasedKey key, int idx)
+      {
+        keyBuffer.putFloat((Float) key.getKey()[idx]);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        dimValues[dimValIdx] = buffer.getFloat(initialOffset + keyBufferPosition);
+      }
+
+      @Override
+      public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
+      {
+        return Float.compare(
+            lhsBuffer.getFloat(lhsPosition + keyBufferPosition),
+            rhsBuffer.getFloat(rhsPosition + keyBufferPosition)
+        );
+      }
     }
   }
 }

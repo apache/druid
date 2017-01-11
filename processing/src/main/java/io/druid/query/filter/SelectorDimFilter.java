@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Floats;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
@@ -48,7 +49,8 @@ public class SelectorDimFilter implements DimFilter
   private final Object initLock = new Object();
   private volatile boolean longsInitialized = false;
   private volatile Long valueAsLong;
-
+  private volatile boolean floatsInitialized = false;
+  private volatile Float valueAsFloat;
 
   @JsonCreator
   public SelectorDimFilter(
@@ -133,6 +135,34 @@ public class SelectorDimFilter implements DimFilter
               public boolean applyLong(long input)
               {
                 return input == unboxedLong;
+              }
+            };
+          }
+        }
+
+        @Override
+        public DruidFloatPredicate makeFloatPredicate()
+        {
+          initFloatValue();
+
+          if (valueAsFloat == null) {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return false;
+              }
+            };
+          } else {
+            // store the primitive, so we don't unbox for every comparison
+            final float unboxedFloat = valueAsFloat.floatValue();
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return input == unboxedFloat;
               }
             };
           }
@@ -223,6 +253,20 @@ public class SelectorDimFilter implements DimFilter
       }
       valueAsLong = GuavaUtils.tryParseLong(value);
       longsInitialized = true;
+    }
+  }
+
+  private void initFloatValue()
+  {
+    if (floatsInitialized) {
+      return;
+    }
+    synchronized (initLock) {
+      if (floatsInitialized) {
+        return;
+      }
+      valueAsFloat = Floats.tryParse(value);
+      floatsInitialized = true;
     }
   }
 }

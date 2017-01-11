@@ -636,6 +636,38 @@ public class SearchQueryRunnerTest
     checkSearchQuery(searchQuery, expectedHits);
   }
 
+  @Test
+  public void testSearchOnLongColumn()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dimensions(Column.TIME_COLUMN_NAME)
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .query("1297123200000")
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit(Column.TIME_COLUMN_NAME, "1297123200000", 13));
+    checkSearchQuery(searchQuery, expectedHits);
+  }
+
+  @Test
+  public void testSearchOnFloatColumn()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dimensions(QueryRunnerTestHelper.indexMetric)
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .query("100.7")
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.706055", 1));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.7756", 1));
+    checkSearchQuery(searchQuery, expectedHits);
+  }
 
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {

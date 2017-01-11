@@ -74,7 +74,10 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
   {
     boolean hasDimValSelector = (dimValSelector != null);
 
-    final int cardinality = params.getCardinality();
+    int cardinality = params.getCardinality();
+    if (cardinality < 0) {
+      cardinality = Integer.MAX_VALUE;
+    }
     int numProcessed = 0;
     while (numProcessed < cardinality) {
       final int numToProcess;
@@ -196,10 +199,6 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       ignoreAfterThreshold = false;
       ignoreFirstN = 0;
       keepOnlyN = dimSelector.getValueCardinality();
-
-      if (keepOnlyN < 0) {
-        throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
-      }
     }
 
     @Override

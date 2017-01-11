@@ -17,12 +17,24 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.query.aggregation.cardinality.types;
 
-public class QueryContextKeys
+import com.google.common.hash.Hasher;
+import io.druid.query.aggregation.cardinality.CardinalityAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.segment.FloatColumnSelector;
+
+public class FloatCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy<FloatColumnSelector>
 {
-  public static final String PRIORITY = "priority";
-  public static final String TIMEOUT = "timeout";
-  public static final String CHUNK_PERIOD = "chunkPeriod";
-  public static final String TYPE_HINTS = "typeHints";
+  @Override
+  public void hashRow(FloatColumnSelector dimSelector, Hasher hasher)
+  {
+    hasher.putFloat(dimSelector.get());
+  }
+
+  @Override
+  public void hashValues(FloatColumnSelector dimSelector, HyperLogLogCollector collector)
+  {
+    collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(String.valueOf(dimSelector.get())).asBytes());
+  }
 }

@@ -44,6 +44,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -595,6 +596,121 @@ public class SelectQueryRunnerTest
         offset.threshold()
     );
     verify(expectedResults, results);
+  }
+
+  @Test
+  public void testFullOnSelectWithLongAndFloat()
+  {
+    List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
+        new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex"),
+        new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime")
+    );
+
+    SelectQuery query = newTestQuery()
+        .dimensionSpecs(dimSpecs)
+        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .intervals(I_0112_0114)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        0,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", 1294790400000L)
+                            .put("floatIndex", 100.0f)
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", 1294790400000L)
+                            .put("floatIndex", 100.0f)
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", 1294790400000L)
+                            .put("floatIndex", 100.0f)
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", 1294876800000L)
+                            .put("floatIndex", 1564.6177f)
+                            .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", 1294876800000L)
+                            .put("floatIndex", 826.0602f)
+                            .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -3,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", 1294876800000L)
+                            .put("floatIndex", 1689.0128f)
+                            .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(descending ? expectedResultsDsc : expectedResultsAsc, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   private Map<String, Integer> toPagingIdentifier(int startDelta, boolean descending)

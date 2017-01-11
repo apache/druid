@@ -22,13 +22,13 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Result;
-import io.druid.query.topn.types.TopNStrategyFactory;
+import io.druid.query.topn.types.TopNColumnSelectorStrategyFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 
 public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
 {
-  private static final TopNStrategyFactory STRATEGY_FACTORY = new TopNStrategyFactory();
+  private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
 
   private final TopNQuery query;
   private final TopNAlgorithm topNAlgorithm;

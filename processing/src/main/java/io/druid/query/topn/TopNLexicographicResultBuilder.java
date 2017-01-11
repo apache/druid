@@ -81,11 +81,12 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNResultBuilder addEntry(
-      String dimName,
+      Comparable dimNameObj,
       Object dimValIndex,
       Object[] metricVals
   )
   {
+    final String dimName = dimNameObj == null ? null : dimNameObj.toString();
     final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + 1);
 
     if (shouldAdd(dimName)) {

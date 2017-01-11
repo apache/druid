@@ -17,26 +17,12 @@
  * under the License.
  */
 
-package io.druid.query.topn.types;
+package io.druid.query.filter;
 
-import io.druid.java.util.common.IAE;
-import io.druid.query.dimension.ColumnSelectorStrategyFactory;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
-
-public class TopNStrategyFactory implements ColumnSelectorStrategyFactory<TopNColumnSelectorStrategy>
+/**
+ * FloatPredicate is only supported in Java 8+, so use this to avoid boxing when a float predicate is needed.
+ */
+public interface DruidFloatPredicate
 {
-  @Override
-  public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities
-  )
-  {
-    ValueType type = capabilities.getType();
-    switch(type) {
-      case STRING:
-        return new StringTopNColumnSelectorStrategy();
-      default:
-        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
-    }
-  }
+  boolean applyFloat(float input);
 }

@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -87,6 +88,20 @@ public class SpatialFilter implements Filter
               public boolean applyLong(long input)
               {
                 // SpatialFilter does not currently support longs
+                return false;
+              }
+            };
+          }
+
+          @Override
+          public DruidFloatPredicate makeFloatPredicate()
+          {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                // SpatialFilter does not currently support floats
                 return false;
               }
             };

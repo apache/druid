@@ -31,6 +31,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Floats;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
@@ -52,11 +53,13 @@ public class InDimFilter implements DimFilter
   // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
   public static final int LONG_HASHING_THRESHOLD = 16;
+  public static final int FLOAT_HASHING_THRESHOLD = 16;
 
   private final ImmutableSortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
+  private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
 
   @JsonCreator
   public InDimFilter(
@@ -83,6 +86,7 @@ public class InDimFilter implements DimFilter
     this.dimension = dimension;
     this.extractionFn = extractionFn;
     this.longPredicateSupplier = getLongPredicateSupplier();
+    this.floatPredicateSupplier = getFloatPredicateSupplier();
   }
 
   @JsonProperty
@@ -182,7 +186,7 @@ public class InDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new InFilter(dimension, values, longPredicateSupplier, extractionFn);
+    return new InFilter(dimension, values, longPredicateSupplier, floatPredicateSupplier, extractionFn);
   }
 
   @Override
@@ -258,19 +262,17 @@ public class InDimFilter implements DimFilter
     return new Supplier<DruidLongPredicate>()
     {
       private final Object initLock = new Object();
-      private volatile boolean longsInitialized = false;
-      private volatile boolean useLongHash;
-      private volatile long[] longArray;
-      private volatile HashSet<Long> longHashSet;
+      private DruidLongPredicate predicate;
+
 
       private void initLongValues()
       {
-        if (longsInitialized) {
+        if (predicate != null) {
           return;
         }
 
         synchronized (initLock) {
-          if (longsInitialized) {
+          if (predicate != null) {
             return;
           }
 
@@ -282,18 +284,34 @@ public class InDimFilter implements DimFilter
             }
           }
 
-          useLongHash = longs.size() > LONG_HASHING_THRESHOLD;
-          if (useLongHash) {
-            longHashSet = new HashSet<Long>(longs);
+          if (longs.size() > LONG_HASHING_THRESHOLD) {
+            final HashSet<Long> longHashSet = new HashSet<>(longs);
+
+            predicate = new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return longHashSet.contains(input);
+              }
+            };
           } else {
+            final long[] longArray;
             longArray = new long[longs.size()];
             for (int i = 0; i < longs.size(); i++) {
               longArray[i] = longs.get(i).longValue();
             }
             Arrays.sort(longArray);
-          }
 
-          longsInitialized = true;
+            predicate = new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return Arrays.binarySearch(longArray, input) >= 0;
+              }
+            };
+          }
         }
       }
 
@@ -301,26 +319,73 @@ public class InDimFilter implements DimFilter
       public DruidLongPredicate get()
       {
         initLongValues();
+        return predicate;
+      }
+    };
+  }
 
-        if (useLongHash) {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return longHashSet.contains(input);
-            }
-          };
-        } else {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return Arrays.binarySearch(longArray, input) >= 0;
-            }
-          };
+  private Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
+  {
+    return new Supplier<DruidFloatPredicate>()
+    {
+      private final Object initLock = new Object();
+      private DruidFloatPredicate predicate;
+
+      private void initFloatValues()
+      {
+        if (predicate != null) {
+          return;
         }
+
+        synchronized (initLock) {
+          if (predicate != null) {
+            return;
+          }
+
+          List<Float> floats = new ArrayList<>();
+          for (String value : values) {
+            Float floatValue = Floats.tryParse(value);
+            if (floatValue != null) {
+              floats.add(floatValue);
+            }
+          }
+
+          if (floats.size() > FLOAT_HASHING_THRESHOLD) {
+            final HashSet<Float> floatHashSet = new HashSet<>(floats);
+
+            predicate = new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return floatHashSet.contains(input);
+              }
+            };
+          } else {
+            final float[] floatArray;
+            floatArray = new float[floats.size()];
+            for (int i = 0; i < floats.size(); i++) {
+              floatArray[i] = floats.get(i).floatValue();
+            }
+            Arrays.sort(floatArray);
+
+            predicate = new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return Arrays.binarySearch(floatArray, input) >= 0;
+              }
+            };
+          }
+        }
+      }
+
+      @Override
+      public DruidFloatPredicate get()
+      {
+        initFloatValues();
+        return predicate;
       }
     };
   }

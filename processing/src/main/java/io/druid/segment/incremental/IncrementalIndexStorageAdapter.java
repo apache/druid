@@ -38,7 +38,9 @@ import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.FloatWrappingDimensionSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.LongWrappingDimensionSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -350,6 +352,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       descending
                   );
                   return dimensionSpec.decorate(selector);
+                }
+
+                ColumnCapabilities capabilities = getColumnCapabilities(dimension);
+                if (capabilities != null) {
+                  if (capabilities.getType() == ValueType.LONG) {
+                    return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
+                  }
+                  if (capabilities.getType() == ValueType.FLOAT) {
+                    return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
+                  }
                 }
 
                 final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
