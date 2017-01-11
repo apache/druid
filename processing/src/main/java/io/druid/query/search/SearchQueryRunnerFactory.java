@@ -35,15 +35,18 @@ import java.util.concurrent.ExecutorService;
  */
 public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
 {
+  private final SearchStrategySelector strategySelector;
   private final SearchQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
   @Inject
   public SearchQueryRunnerFactory(
+      SearchStrategySelector strategySelector,
       SearchQueryQueryToolChest toolChest,
       QueryWatcher queryWatcher
   )
   {
+    this.strategySelector = strategySelector;
     this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
   }
@@ -51,7 +54,7 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   @Override
   public QueryRunner<Result<SearchResultValue>> createRunner(final Segment segment)
   {
-    return new SearchQueryRunner(segment);
+    return new SearchQueryRunner(segment, strategySelector);
   }
 
   @Override

@@ -20,9 +20,11 @@
 package io.druid.query;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
+import io.druid.query.search.SearchStrategySelector;
 import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
@@ -63,8 +65,10 @@ public class TestQueryRunners
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         pool,
-        new TopNQueryQueryToolChest(topNConfig,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TopNQueryQueryToolChest(
+            topNConfig,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     return new FinalizeResultsQueryRunner<T>(
@@ -94,10 +98,15 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(
-          new SearchQueryConfig(),
-          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER);
+    final SearchQueryConfig config = new SearchQueryConfig();
+    QueryRunnerFactory factory = new SearchQueryRunnerFactory(
+        new SearchStrategySelector(Suppliers.ofInstance(config)),
+        new SearchQueryQueryToolChest(
+            config,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
