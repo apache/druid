@@ -40,14 +40,11 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
 {
   static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
 
-  private final ServerConfig config;
-
   @Inject
   public DruidAvaticaHandler(
       final CalciteConnection connection,
       @Self final DruidNode druidNode,
-      final AvaticaMonitor avaticaMonitor,
-      final ServerConfig config
+      final AvaticaMonitor avaticaMonitor
   ) throws InstantiationException, IllegalAccessException, InvocationTargetException
   {
     super(
@@ -55,7 +52,6 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
         avaticaMonitor
     );
 
-    this.config = config;
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPort()));
   }
 
@@ -70,7 +66,7 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
     // This is not integrated with the experimental authorization framework.
     // (Non-trivial since we don't know the dataSources up-front)
 
-    if (config.isEnableAvatica() && request.getRequestURI().equals(AVATICA_PATH)) {
+    if (request.getRequestURI().equals(AVATICA_PATH)) {
       super.handle(target, baseRequest, request, response);
     }
   }

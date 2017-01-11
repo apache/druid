@@ -74,19 +74,10 @@ public class DruidAvaticaHandlerTest
         ),
         plannerConfig
     );
-    final ServerConfig serverConfig = new ServerConfig()
-    {
-      @Override
-      public boolean isEnableAvatica()
-      {
-        return true;
-      }
-    };
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         serverConnection,
         new DruidNode("dummy", "dummy", 1),
-        new AvaticaMonitor(),
-        serverConfig
+        new AvaticaMonitor()
     );
     final int port = new Random().nextInt(9999) + 10000;
     server = new Server(new InetSocketAddress("127.0.0.1", port));
