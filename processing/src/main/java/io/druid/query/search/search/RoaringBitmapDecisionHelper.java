@@ -19,43 +19,20 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
-
-/**
- */
-public class SearchQueryConfig
+public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
 {
-  public static final String CTX_KEY_STRATEGY = "searchStrategy";
+  // This value comes from an experiment.
+  // See the discussion at https://github.com/druid-io/druid/pull/3792#issuecomment-268331804.
+  private static final double BITMAP_INTERSECT_COST = 4.5;
+  private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
 
-  @JsonProperty
-  @Min(1)
-  private int maxSearchLimit = 1000;
-
-  @JsonProperty
-  private String searchStrategy = UseIndexesStrategy.NAME;
-
-  public int getMaxSearchLimit()
+  public static RoaringBitmapDecisionHelper instance()
   {
-    return maxSearchLimit;
+    return INSTANCE;
   }
 
-  public String getSearchStrategy()
+  private RoaringBitmapDecisionHelper()
   {
-    return searchStrategy;
-  }
-
-  public void setSearchStrategy(final String strategy)
-  {
-    this.searchStrategy = strategy;
-  }
-
-  public SearchQueryConfig withOverrides(final SearchQuery query)
-  {
-    final SearchQueryConfig newConfig = new SearchQueryConfig();
-    newConfig.maxSearchLimit = query.getLimit();
-    newConfig.searchStrategy = query.getContextValue(CTX_KEY_STRATEGY, searchStrategy);
-    return newConfig;
+    super(BITMAP_INTERSECT_COST);
   }
 }

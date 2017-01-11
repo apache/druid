@@ -20,11 +20,11 @@
 package io.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -44,16 +44,14 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.LongMaxAggregatorFactory;
-import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.InDimFilter;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.SearchResultValue;
+import io.druid.query.search.SearchStrategySelector;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
@@ -112,7 +110,6 @@ public class SearchBenchmark
   private int limit;
 
   private static final Logger log = new Logger(SearchBenchmark.class);
-  private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
@@ -154,13 +151,6 @@ public class SearchBenchmark
     { // basic.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
 
-      List<AggregatorFactory> queryAggs = new ArrayList<>();
-      queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
-      queryAggs.add(new LongMaxAggregatorFactory("maxLongUniform", "maxLongUniform"));
-      queryAggs.add(new DoubleSumAggregatorFactory("sumFloatNormal", "sumFloatNormal"));
-      queryAggs.add(new DoubleMinAggregatorFactory("minFloatZipf", "minFloatZipf"));
-      queryAggs.add(new HyperUniquesAggregatorFactory("hyperUniquesMet", "hyper"));
-
       Druids.SearchQueryBuilder queryBuilderA =
           Druids.newSearchQueryBuilder()
                 .dataSource("blah")
@@ -169,6 +159,39 @@ public class SearchBenchmark
                 .query("123");
 
       basicQueries.put("A", queryBuilderA);
+    }
+
+    { // basic.B
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<String> dimUniformFilterVals = Lists.newArrayList();
+      int resultNum = (int) (100000 * 0.1);
+      int step = 100000 / resultNum;
+      for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
+        dimUniformFilterVals.add(String.valueOf(i));
+      }
+
+      List<String> dimHyperUniqueFilterVals = Lists.newArrayList();
+      resultNum = (int) (100000 * 0.1);
+      step = 100000 / resultNum;
+      for (int i = 0; i < 100001 && dimHyperUniqueFilterVals.size() < resultNum; i += step) {
+        dimHyperUniqueFilterVals.add(String.valueOf(i));
+      }
+
+      final List<DimFilter> dimFilters = Lists.newArrayList();
+      dimFilters.add(new InDimFilter("dimUniform", dimUniformFilterVals, null));
+      dimFilters.add(new InDimFilter("dimHyperUnique", dimHyperUniqueFilterVals, null));
+
+      Druids.SearchQueryBuilder queryBuilderB =
+          Druids.newSearchQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .query("")
+                .dimensions(Lists.newArrayList("dimUniform", "dimHyperUnique"))
+                .filters(new AndDimFilter(dimFilters));
+
+      basicQueries.put("B", queryBuilderB);
     }
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
@@ -200,7 +223,7 @@ public class SearchBenchmark
       log.info("Generating rows for segment " + i);
       BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
           schemaInfo.getColumnSchemas(),
-          RNG_SEED + i,
+          System.currentTimeMillis(),
           schemaInfo.getDataInterval(),
           rowsPerSegment
       );
@@ -233,9 +256,11 @@ public class SearchBenchmark
       qIndexes.add(qIndex);
     }
 
+    final SearchQueryConfig config = new SearchQueryConfig().withOverrides(query);
     factory = new SearchQueryRunnerFactory(
+        new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
-            new SearchQueryConfig(),
+            config,
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
         ),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER

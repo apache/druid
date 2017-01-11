@@ -19,43 +19,17 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
-
-/**
- */
-public class SearchQueryConfig
+public abstract class SearchQueryDecisionHelper
 {
-  public static final String CTX_KEY_STRATEGY = "searchStrategy";
+  private final double bitmapIntersectCost;
 
-  @JsonProperty
-  @Min(1)
-  private int maxSearchLimit = 1000;
-
-  @JsonProperty
-  private String searchStrategy = UseIndexesStrategy.NAME;
-
-  public int getMaxSearchLimit()
+  protected SearchQueryDecisionHelper(final double bitmapIntersectCost)
   {
-    return maxSearchLimit;
+    this.bitmapIntersectCost = bitmapIntersectCost;
   }
 
-  public String getSearchStrategy()
+  public double getBitmapIntersectCost()
   {
-    return searchStrategy;
-  }
-
-  public void setSearchStrategy(final String strategy)
-  {
-    this.searchStrategy = strategy;
-  }
-
-  public SearchQueryConfig withOverrides(final SearchQuery query)
-  {
-    final SearchQueryConfig newConfig = new SearchQueryConfig();
-    newConfig.maxSearchLimit = query.getLimit();
-    newConfig.searchStrategy = query.getContextValue(CTX_KEY_STRATEGY, searchStrategy);
-    return newConfig;
+    return bitmapIntersectCost;
   }
 }
