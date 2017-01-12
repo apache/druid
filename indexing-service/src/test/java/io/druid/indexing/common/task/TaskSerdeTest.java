@@ -166,6 +166,54 @@ public class TaskSerdeTest
   }
 
   @Test
+  public void testIndexTaskwithResourceSerde() throws Exception
+  {
+    final IndexTask task = new IndexTask(
+        null,
+        new TaskResource("rofl", 2),
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularity.DAY,
+                    null,
+                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                )
+            ),
+            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
+        ),
+        jsonMapper
+    );
+
+    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
+      jsonMapper.registerModule(jacksonModule);
+    }
+    InjectableValues inject = new InjectableValues.Std()
+        .addValue(ObjectMapper.class, jsonMapper);
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final IndexTask task2 = jsonMapper.reader(Task.class).with(inject).readValue(json);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
+    Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
+    Assert.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
+    Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertTrue(task.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
+  }
+
+  @Test
   public void testMergeTaskSerde() throws Exception
   {
     final List<DataSegment> segments = ImmutableList.<DataSegment>of(DataSegment.builder()

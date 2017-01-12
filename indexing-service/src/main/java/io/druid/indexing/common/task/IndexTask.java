@@ -155,6 +155,21 @@ public class IndexTask extends AbstractFixedIntervalTask
 
   private final ObjectMapper jsonMapper;
 
+  private String taskId;
+
+  /**
+   * This overloaded constructor without @JsonCreator exists to allow for
+   * unit tests simulating a call to IndexTask without taskResource.
+   */
+  public IndexTask(
+      String id,
+      IndexIngestionSpec ingestionSchema,
+      ObjectMapper jsonMapper
+  )
+  {
+    this(id, new TaskResource(makeId(id, ingestionSchema), 1), ingestionSchema, jsonMapper);
+  }
+
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
