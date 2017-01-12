@@ -28,6 +28,8 @@ import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -57,8 +59,8 @@ public class HdfsDataSegmentPusherTest
   @Test
   public void testPushWithBadScheme() throws Exception
   {
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage("No FileSystem for scheme: xyzzy");
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Wrong FS");
     testUsingScheme("xyzzy");
 
     // Not reached
@@ -115,7 +117,7 @@ public class HdfsDataSegmentPusherTest
         "path",
         String.format(
             "%s/%s/index.zip",
-            HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), conf),
+                FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
             DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
         )
     ), segment.getLoadSpec());
@@ -127,7 +129,7 @@ public class HdfsDataSegmentPusherTest
     Assert.assertTrue(descriptorFile.exists());
 
     // push twice will fail and temp dir cleaned
-    File outDir = new File(String.format("%s/%s", HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), conf), segmentPath));
+    File outDir = new File(String.format("%s/%s", config.getStorageDirectory(), segmentPath));
     outDir.setReadOnly();
     try {
       pusher.push(segmentDir, segmentToPush);

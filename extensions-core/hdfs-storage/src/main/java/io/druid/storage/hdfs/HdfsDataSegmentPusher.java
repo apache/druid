@@ -20,6 +20,7 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
@@ -50,17 +51,20 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
+  private final String pathForHadoop ;
 
   @Inject
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       Configuration hadoopConfig,
       ObjectMapper jsonMapper
-  )
+  ) throws IOException
   {
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
+    this.pathForHadoop = FileSystem.newInstance(hadoopConfig).makeQualified(new Path(config.getStorageDirectory()))
+        .toUri().toString();
 
     log.info("Configured HDFS as deep storage");
   }
@@ -75,7 +79,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return new Path(HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig)).toUri().toString();
+    return pathForHadoop;
   }
 
   @Override
@@ -86,13 +90,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getIdentifier(),
-        HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig),
+        pathForHadoop,
         storageDir
     );
 
     Path tmpFile = new Path(String.format(
         "%s/%s/index.zip",
-        HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig),
+        pathForHadoop,
         UUIDUtils.generateUuid()
     ));
     FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
@@ -106,7 +110,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       size = CompressionUtils.zip(inDir, out);
       final Path outFile = new Path(String.format(
           "%s/%s/index.zip",
-          HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(config.getStorageDirectory(), hadoopConfig),
+          pathForHadoop,
           storageDir
       ));
       final Path outDir = outFile.getParent();

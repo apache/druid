@@ -45,7 +45,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   public HdfsDataSegmentKiller(final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
   {
     this.config = config;
-    this.storageDirectory = new Path(HdfsDataSegmentUtil.getFullyQualifiedHdfsPath(pusherConfig.getStorageDirectory(), config));
+    this.storageDirectory = new Path(pusherConfig.getStorageDirectory());
   }
 
   @Override
