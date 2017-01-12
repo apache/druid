@@ -115,22 +115,16 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           @Override
           public void after(boolean isDone, Throwable thrown)
           {
-            try {
-              long timeTaken = System.currentTimeMillis() - startTime;
-              emitter.emit(builder.build(metricName, timeTaken));
-
-              if (creationTime > 0) {
-                emitter.emit(builder.build("query/wait/time", startTime - creationTime));
-              }
+            if (thrown != null) {
+              builder.setDimension(DruidMetrics.STATUS, "failed");
+            } else if (!isDone) {
+              builder.setDimension(DruidMetrics.STATUS, "short");
             }
-            // Use finally block because emitting query time (in `try {}`, above) and the status (in `finally {}`,
-            // below) are unrelated and we don't want the latter to be skipped if the former thrown any exception.
-            finally {
-              if (thrown != null) {
-                builder.setDimension(DruidMetrics.STATUS, "failed");
-              } else if (!isDone) {
-                builder.setDimension(DruidMetrics.STATUS, "short");
-              }
+            long timeTaken = System.currentTimeMillis() - startTime;
+            emitter.emit(builder.build(metricName, timeTaken));
+
+            if (creationTime > 0) {
+              emitter.emit(builder.build("query/wait/time", startTime - creationTime));
             }
           }
         }
