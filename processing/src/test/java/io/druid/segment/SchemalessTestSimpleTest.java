@@ -67,14 +67,14 @@ import java.util.List;
 /**
  */
 @RunWith(Parameterized.class)
-public class SchemalessTestSimple
+public class SchemalessTestSimpleTest
 {
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IncrementalIndex incrementalIndex = SchemalessIndex.getIncrementalIndex();
+    final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
     final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
-    final QueryableIndex mergedIncrementalIndex = SchemalessIndex.getMergedIncrementalIndex();
+    final QueryableIndex mergedIncrementalIndex = SchemalessIndexTest.getMergedIncrementalIndex();
 
     return Arrays.asList(
         new Object[][]{
@@ -122,7 +122,7 @@ public class SchemalessTestSimple
 
   private Segment segment;
 
-  public SchemalessTestSimple(
+  public SchemalessTestSimpleTest(
       Segment segment
   )
   {
