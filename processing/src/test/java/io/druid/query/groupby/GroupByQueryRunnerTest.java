@@ -138,6 +138,35 @@ import java.util.concurrent.Executors;
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
 {
+  public static final ObjectMapper DEFAULT_MAPPER = new DefaultObjectMapper(new SmileFactory());
+  public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
+  {
+    @Override
+    public String getFormatString()
+    {
+      return null;
+    }
+
+    @Override
+    public int intermediateComputeSizeBytes()
+    {
+      return 10 * 1024 * 1024;
+    }
+
+    @Override
+    public int getNumMergeBuffers()
+    {
+      // There are some tests that need to allocate two buffers (simulating two levels of merging)
+      return 2;
+    }
+
+    @Override
+    public int getNumThreads()
+    {
+      return 2;
+    }
+  };
+
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
   private GroupByQueryConfig config;
@@ -253,12 +282,21 @@ public class GroupByQueryRunnerTest
       final GroupByQueryConfig config
   )
   {
-    return makeQueryRunnerFactory(new DefaultObjectMapper(new SmileFactory()), config);
+    return makeQueryRunnerFactory(DEFAULT_MAPPER, config, DEFAULT_PROCESSING_CONFIG);
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
       final ObjectMapper mapper,
       final GroupByQueryConfig config
+  )
+  {
+    return makeQueryRunnerFactory(mapper, config, DEFAULT_PROCESSING_CONFIG);
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final ObjectMapper mapper,
+      final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
@@ -269,7 +307,7 @@ public class GroupByQueryRunnerTest
           @Override
           public ByteBuffer get()
           {
-            return ByteBuffer.allocateDirect(10 * 1024 * 1024);
+            return ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
           }
         }
     );
@@ -279,10 +317,10 @@ public class GroupByQueryRunnerTest
           @Override
           public ByteBuffer get()
           {
-            return ByteBuffer.allocateDirect(10 * 1024 * 1024);
+            return ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
           }
         },
-        2 // There are some tests that need to allocate two buffers (simulating two levels of merging)
+        processingConfig.getNumMergeBuffers()
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
@@ -293,20 +331,7 @@ public class GroupByQueryRunnerTest
             bufferPool
         ),
         new GroupByStrategyV2(
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                return 2;
-              }
-            },
+            processingConfig,
             configSupplier,
             bufferPool,
             mergeBufferPool,

@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.query.QueryDataSource;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.AndDimFilter;
@@ -33,8 +34,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.expression.RowExtraction;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.DruidTables;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.interpreter.Row;
@@ -74,7 +74,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
       final int maxSemiJoinRowsInMemory
   )
   {
-    super(cluster, traitSet);
+    super(cluster, traitSet, left.getQueryMaker());
     this.semiJoin = semiJoin;
     this.left = left;
     this.right = right;
@@ -86,9 +86,9 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
   public static DruidSemiJoin from(
       final SemiJoin semiJoin,
-      final RelTraitSet traitSet,
       final DruidRel left,
-      final DruidRel right
+      final DruidRel right,
+      final int maxSemiJoinRowsInMemory
   )
   {
     if (semiJoin.getLeftKeys().size() != semiJoin.getRightKeys().size()) {
@@ -107,14 +107,14 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
     return new DruidSemiJoin(
         semiJoin.getCluster(),
-        traitSet,
+        semiJoin.getTraitSet(),
         semiJoin,
         left,
         right,
         semiJoin.getCondition(),
         listBuilder.build(),
         semiJoin.getRightKeys(),
-        right.getDruidTable().getPlannerConfig().getMaxSemiJoinRowsInMemory()
+        maxSemiJoinRowsInMemory
     );
   }
 
@@ -125,9 +125,9 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
-  public DruidTable getDruidTable()
+  public RowSignature getSourceRowSignature()
   {
-    return left.getDruidTable();
+    return left.getSourceRowSignature();
   }
 
   @Override
@@ -153,6 +153,13 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
+  public QueryDataSource asDataSource()
+  {
+    final DruidRel rel = getLeftRelWithFilter();
+    return rel != null ? rel.asDataSource() : null;
+  }
+
+  @Override
   public DruidSemiJoin asBindable()
   {
     return new DruidSemiJoin(
@@ -169,17 +176,105 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
+  public int getQueryCount()
+  {
+    return left.getQueryCount() + right.getQueryCount();
+  }
+
+  @Override
   public void accumulate(final Function<Row, Void> sink)
   {
+    final DruidRel rel = getLeftRelWithFilter();
+    if (rel != null) {
+      rel.accumulate(sink);
+    }
+  }
+
+  @Override
+  public Enumerable<Object[]> bind(final DataContext dataContext)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected RelDataType deriveRowType()
+  {
+    return left.getRowType();
+  }
+
+  @Override
+  public RelWriter explainTerms(RelWriter pw)
+  {
+    final Pair<DruidQueryBuilder, List<Integer>> rightQueryBuilderWithGrouping = getRightQueryBuilderWithGrouping();
+    return pw
+        .item("leftRowExtractions", leftRowExtractions)
+        .item("leftQuery", left.getQueryBuilder())
+        .item("rightKeysAdjusted", rightQueryBuilderWithGrouping.rhs)
+        .item("rightQuery", rightQueryBuilderWithGrouping.lhs);
+  }
+
+  @Override
+  public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
+  {
+    return right.computeSelfCost(planner, mq).plus(left.computeSelfCost(planner, mq).multiplyBy(50));
+  }
+
+  private Pair<DruidQueryBuilder, List<Integer>> getRightQueryBuilderWithGrouping()
+  {
+    if (right.getQueryBuilder().getGrouping() != null) {
+      return Pair.of(right.getQueryBuilder(), rightKeys);
+    } else {
+      // Add grouping on the join key to limit resultset from data nodes.
+      final List<DimensionSpec> dimensionSpecs = Lists.newArrayList();
+      final List<RelDataType> rowTypes = Lists.newArrayList();
+      final List<String> rowOrder = Lists.newArrayList();
+      final List<Integer> rightKeysAdjusted = Lists.newArrayList();
+
+      int counter = 0;
+      for (final int key : rightKeys) {
+        final String keyDimensionOutputName = "v" + key;
+        final RowExtraction rex = RowExtraction.fromQueryBuilder(right.getQueryBuilder(), key);
+        if (rex == null) {
+          throw new ISE("WTF?! Can't find dimensionSpec to group on!");
+        }
+
+        final DimensionSpec dimensionSpec = rex.toDimensionSpec(left.getSourceRowSignature(), keyDimensionOutputName);
+        if (dimensionSpec == null) {
+          throw new ISE("WTF?! Can't translate row expression to dimensionSpec: %s", rex);
+        }
+
+        dimensionSpecs.add(dimensionSpec);
+        rowTypes.add(right.getQueryBuilder().getRowType().getFieldList().get(key).getType());
+        rowOrder.add(dimensionSpec.getOutputName());
+        rightKeysAdjusted.add(counter++);
+      }
+
+      final DruidQueryBuilder newQueryBuilder = right
+          .getQueryBuilder()
+          .withGrouping(
+              Grouping.create(dimensionSpecs, ImmutableList.<Aggregation>of()),
+              getCluster().getTypeFactory().createStructType(rowTypes, rowOrder),
+              rowOrder
+          );
+
+      return Pair.of(newQueryBuilder, rightKeysAdjusted);
+    }
+  }
+
+  /**
+   * Returns a copy of the left rel with the filter applied from the right-hand side. This is an expensive operation
+   * since it actually executes the right-hand side query.
+   */
+  private DruidRel getLeftRelWithFilter()
+  {
     final Pair<DruidQueryBuilder, List<Integer>> pair = getRightQueryBuilderWithGrouping();
-    final DruidQueryBuilder rightQueryBuilderAdjusted = pair.lhs;
+    final DruidRel rightRelAdjusted = right.withQueryBuilder(pair.lhs);
     final List<Integer> rightKeysAdjusted = pair.rhs;
 
     // Build list of acceptable values from right side.
     final Set<List<String>> valuess = Sets.newHashSet();
     final List<DimFilter> filters = Lists.newArrayList();
-    rightQueryBuilderAdjusted.accumulate(
-        right.getDruidTable(),
+    rightRelAdjusted.accumulate(
         new Function<Row, Void>()
         {
           @Override
@@ -210,7 +305,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
                         false,
                         null,
                         leftRowExtractions.get(i).getExtractionFn(),
-                        DruidTables.naturalStringComparator(getDruidTable(), leftRowExtractions.get(i))
+                        getSourceRowSignature().naturalStringComparator(leftRowExtractions.get(i))
                     )
                 );
               }
@@ -235,83 +330,9 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
                                       )
                                   );
 
-      left.getQueryBuilder().withFilter(newFilter).accumulate(
-          left.getDruidTable(),
-          sink
-      );
-    }
-  }
-
-  @Override
-  public Enumerable<Object[]> bind(final DataContext dataContext)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected RelDataType deriveRowType()
-  {
-    return left.getRowType();
-  }
-
-  @Override
-  public RelWriter explainTerms(RelWriter pw)
-  {
-    final Pair<DruidQueryBuilder, List<Integer>> rightQueryBuilderWithGrouping = getRightQueryBuilderWithGrouping();
-    return pw
-        .item("leftDataSource", left.getDruidTable().getDataSource())
-        .item("leftRowExtractions", leftRowExtractions)
-        .item("leftQuery", left.getQueryBuilder())
-        .item("rightDataSource", right.getDruidTable().getDataSource())
-        .item("rightKeysAdjusted", rightQueryBuilderWithGrouping.rhs)
-        .item("rightQuery", rightQueryBuilderWithGrouping.lhs);
-  }
-
-  @Override
-  public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
-  {
-    return semiJoin.computeSelfCost(planner, mq).multiplyBy(0.1);
-  }
-
-  private Pair<DruidQueryBuilder, List<Integer>> getRightQueryBuilderWithGrouping()
-  {
-    if (right.getQueryBuilder().getGrouping() != null) {
-      return Pair.of(right.getQueryBuilder(), rightKeys);
+      return left.withQueryBuilder(left.getQueryBuilder().withFilter(newFilter));
     } else {
-      // Add grouping on the join key to limit resultset from data nodes.
-      final List<DimensionSpec> dimensionSpecs = Lists.newArrayList();
-      final List<RelDataType> rowTypes = Lists.newArrayList();
-      final List<String> rowOrder = Lists.newArrayList();
-      final List<Integer> rightKeysAdjusted = Lists.newArrayList();
-
-      int counter = 0;
-      for (final int key : rightKeys) {
-        final String keyDimensionOutputName = "v" + key;
-        final RowExtraction rex = RowExtraction.fromQueryBuilder(right.getQueryBuilder(), key);
-        if (rex == null) {
-          throw new ISE("WTF?! Can't find dimensionSpec to group on!");
-        }
-
-        final DimensionSpec dimensionSpec = rex.toDimensionSpec(left.getDruidTable(), keyDimensionOutputName);
-        if (dimensionSpec == null) {
-          throw new ISE("WTF?! Can't translate row expression to dimensionSpec: %s", rex);
-        }
-
-        dimensionSpecs.add(dimensionSpec);
-        rowTypes.add(right.getQueryBuilder().getRowType().getFieldList().get(key).getType());
-        rowOrder.add(dimensionSpec.getOutputName());
-        rightKeysAdjusted.add(counter++);
-      }
-
-      final DruidQueryBuilder newQueryBuilder = right
-          .getQueryBuilder()
-          .withGrouping(
-              Grouping.create(dimensionSpecs, ImmutableList.<Aggregation>of()),
-              getCluster().getTypeFactory().createStructType(rowTypes, rowOrder),
-              rowOrder
-          );
-
-      return Pair.of(newQueryBuilder, rightKeysAdjusted);
+      return null;
     }
   }
 }

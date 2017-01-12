@@ -28,7 +28,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.table.RowSignature;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -109,15 +109,15 @@ public class Filtration
    *
    * @return equivalent Filtration
    */
-  public Filtration optimize(final DruidTable druidTable)
+  public Filtration optimize(final RowSignature sourceRowSignature)
   {
     return transform(
         this,
         ImmutableList.of(
             CombineAndSimplifyBounds.instance(),
             MoveTimeFiltersToIntervals.instance(),
-            ConvertBoundsToSelectors.create(druidTable),
-            ConvertSelectorsToIns.create(druidTable),
+            ConvertBoundsToSelectors.create(sourceRowSignature),
+            ConvertSelectorsToIns.create(sourceRowSignature),
             MoveMarkerFiltersToIntervals.instance(),
             ValidateNoMarkerFiltersRemain.instance()
         )
@@ -129,7 +129,7 @@ public class Filtration
    *
    * @return equivalent Filtration
    */
-  public Filtration optimizeFilterOnly(final DruidTable druidTable)
+  public Filtration optimizeFilterOnly(final RowSignature sourceRowSignature)
   {
     if (!intervals.equals(ImmutableList.of(eternity()))) {
       throw new ISE("Cannot optimizeFilterOnly when intervals are set");
@@ -139,8 +139,8 @@ public class Filtration
         this,
         ImmutableList.<Function<Filtration, Filtration>>of(
             CombineAndSimplifyBounds.instance(),
-            ConvertBoundsToSelectors.create(druidTable),
-            ConvertSelectorsToIns.create(druidTable)
+            ConvertBoundsToSelectors.create(sourceRowSignature),
+            ConvertSelectorsToIns.create(sourceRowSignature)
         )
     );
 

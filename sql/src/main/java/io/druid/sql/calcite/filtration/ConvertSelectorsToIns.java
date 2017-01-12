@@ -27,24 +27,23 @@ import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.sql.calcite.expression.RowExtraction;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.DruidTables;
+import io.druid.sql.calcite.table.RowSignature;
 
 import java.util.List;
 import java.util.Map;
 
 public class ConvertSelectorsToIns extends BottomUpTransform
 {
-  private final DruidTable druidTable;
+  private final RowSignature sourceRowSignature;
 
-  private ConvertSelectorsToIns(final DruidTable druidTable)
+  private ConvertSelectorsToIns(final RowSignature sourceRowSignature)
   {
-    this.druidTable = druidTable;
+    this.sourceRowSignature = sourceRowSignature;
   }
 
-  public static ConvertSelectorsToIns create(final DruidTable druidTable)
+  public static ConvertSelectorsToIns create(final RowSignature sourceRowSignature)
   {
-    return new ConvertSelectorsToIns(druidTable);
+    return new ConvertSelectorsToIns(sourceRowSignature);
   }
 
   @Override
@@ -62,8 +61,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           final SelectorDimFilter selector = (SelectorDimFilter) child;
           final BoundRefKey boundRefKey = BoundRefKey.from(
               selector,
-              DruidTables.naturalStringComparator(
-                  druidTable,
+              sourceRowSignature.naturalStringComparator(
                   RowExtraction.of(selector.getDimension(), selector.getExtractionFn())
               )
           );

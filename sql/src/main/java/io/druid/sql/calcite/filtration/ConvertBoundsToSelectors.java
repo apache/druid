@@ -24,21 +24,20 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.sql.calcite.expression.RowExtraction;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.DruidTables;
+import io.druid.sql.calcite.table.RowSignature;
 
 public class ConvertBoundsToSelectors extends BottomUpTransform
 {
-  private final DruidTable druidTable;
+  private final RowSignature sourceRowSignature;
 
-  private ConvertBoundsToSelectors(final DruidTable druidTable)
+  private ConvertBoundsToSelectors(final RowSignature sourceRowSignature)
   {
-    this.druidTable = druidTable;
+    this.sourceRowSignature = sourceRowSignature;
   }
 
-  public static ConvertBoundsToSelectors create(final DruidTable druidTable)
+  public static ConvertBoundsToSelectors create(final RowSignature sourceRowSignature)
   {
-    return new ConvertBoundsToSelectors(druidTable);
+    return new ConvertBoundsToSelectors(sourceRowSignature);
   }
 
   @Override
@@ -46,8 +45,7 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
   {
     if (filter instanceof BoundDimFilter) {
       final BoundDimFilter bound = (BoundDimFilter) filter;
-      final StringComparator naturalStringComparator = DruidTables.naturalStringComparator(
-          druidTable,
+      final StringComparator naturalStringComparator = sourceRowSignature.naturalStringComparator(
           RowExtraction.of(bound.getDimension(), bound.getExtractionFn())
       );
 

@@ -19,15 +19,19 @@
 
 package io.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.granularity.QueryGranularities;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -106,6 +110,7 @@ public class CalciteQueryTest
 {
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
   private static final PlannerConfig PLANNER_CONFIG_NO_TOPN = new PlannerConfig()
   {
@@ -131,6 +136,22 @@ public class CalciteQueryTest
       return true;
     }
   };
+  private static final PlannerConfig PLANNER_CONFIG_SINGLE_NESTING_ONLY = new PlannerConfig()
+  {
+    @Override
+    public int getMaxQueryCount()
+    {
+      return 2;
+    }
+  };
+  private static final PlannerConfig PLANNER_CONFIG_NO_SUBQUERIES = new PlannerConfig()
+  {
+    @Override
+    public int getMaxQueryCount()
+    {
+      return 1;
+    }
+  };
 
   private static final Map<String, Object> TIMESERIES_CONTEXT = ImmutableMap.<String, Object>of(
       "skipEmptyBuckets",
@@ -154,6 +175,8 @@ public class CalciteQueryTest
     connections.put(PLANNER_CONFIG_NO_TOPN, connectJdbc(walker, PLANNER_CONFIG_NO_TOPN));
     connections.put(PLANNER_CONFIG_SELECT_PAGING, connectJdbc(walker, PLANNER_CONFIG_SELECT_PAGING));
     connections.put(PLANNER_CONFIG_FALLBACK, connectJdbc(walker, PLANNER_CONFIG_FALLBACK));
+    connections.put(PLANNER_CONFIG_SINGLE_NESTING_ONLY, connectJdbc(walker, PLANNER_CONFIG_SINGLE_NESTING_ONLY));
+    connections.put(PLANNER_CONFIG_NO_SUBQUERIES, connectJdbc(walker, PLANNER_CONFIG_NO_SUBQUERIES));
 
     unhook = Hook.QUERY_PLAN.add(
         new Function<Object, Object>()
@@ -161,7 +184,12 @@ public class CalciteQueryTest
           @Override
           public Object apply(Object input)
           {
-            log.info("Issued query: %s", input);
+            try {
+              log.info("Issued query: %s", OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(input));
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
             recordedQueries.add((Query) input);
             return null;
           }
@@ -479,22 +507,33 @@ public class CalciteQueryTest
         + "  SUM(cnt) AS cnt\n"
         + "FROM druid.foo\n"
         + "GROUP BY (CAST(__time AS DATE) + EXTRACT(HOUR FROM __time) * INTERVAL '1' HOUR)", // Time arithmetic
+        "SELECT dim1, SUM(m1) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING SUM(m1) > 1", // HAVING on float
         "SELECT columnName, typeName FROM metadata.COLUMNS WHERE tableName = 'foo'" // Metadata tables without fallback
     );
 
     for (final String query : queries) {
-      Exception e = null;
-      try {
-        testQuery(query, ImmutableList.<Query>of(), ImmutableList.<Object[]>of());
-      }
-      catch (Exception e1) {
-        e = e1;
-      }
+      assertQueryIsUnplannable(query);
+    }
+  }
 
-      if (!(e instanceof SQLException) || !(e.getCause() instanceof RelOptPlanner.CannotPlanException)) {
-        log.error(e, "Expected SQLException caused by CannotPlanException for query: %s", query);
-        Assert.fail(query);
-      }
+  private void assertQueryIsUnplannable(final String sql)
+  {
+    assertQueryIsUnplannable(PLANNER_CONFIG_DEFAULT, sql);
+  }
+
+  private void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql)
+  {
+    Exception e = null;
+    try {
+      testQuery(plannerConfig, sql, ImmutableList.<Query>of(), ImmutableList.<Object[]>of());
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    if (!(e instanceof SQLException) || !(e.getCause() instanceof RelOptPlanner.CannotPlanException)) {
+      log.error(e, "Expected SQLException caused by CannotPlanException for query: %s", sql);
+      Assert.fail(sql);
     }
   }
 
@@ -895,7 +934,7 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithSortOnPostAggregationNoTopN() throws Exception
+  public void testGroupByWithSortOnPostAggregationNoTopNConfig() throws Exception
   {
     testQuery(
         PLANNER_CONFIG_NO_TOPN,
@@ -1297,12 +1336,10 @@ public class CalciteQueryTest
                           NOT(SELECTOR("dim2", "a", null)),
                           AND(
                               NOT(TIME_BOUND("2000/2001")),
-                              NOT(
-                                  AND(
-                                      SELECTOR("dim1", "abc", null),
-                                      TIME_BOUND("2002-05-01/2003-05-01")
-                                  )
-                              )
+                              NOT(AND(
+                                  SELECTOR("dim1", "abc", null),
+                                  TIME_BOUND("2002-05-01/2003-05-01")
+                              ))
                           )
                       )
                   )
@@ -1531,6 +1568,378 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testDoubleNestedGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT SUM(cnt), COUNT(*) FROM (\n"
+        + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
+        + "    SELECT\n"
+        + "      dim1,\n"
+        + "      dim2,\n"
+        + "      COUNT(*) cnt\n"
+        + "    FROM druid.foo\n"
+        + "    GROUP BY dim1, dim2\n"
+        + "  ) t1\n"
+        + "  GROUP BY dim2\n"
+        + ") t2",
+        null,
+        ImmutableList.of(
+            new Object[]{6L, 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testDoubleNestedGroupByForbiddenByConfig() throws Exception
+  {
+    assertQueryIsUnplannable(
+        PLANNER_CONFIG_SINGLE_NESTING_ONLY,
+        "SELECT SUM(cnt), COUNT(*) FROM (\n"
+        + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
+        + "    SELECT\n"
+        + "      dim1,\n"
+        + "      dim2,\n"
+        + "      COUNT(*) cnt\n"
+        + "    FROM druid.foo\n"
+        + "    GROUP BY dim1, dim2\n"
+        + "  ) t1\n"
+        + "  GROUP BY dim2\n"
+        + ") t2"
+    );
+  }
+
+  @Test
+  public void testExactCountDistinctUsingSubquery() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_SINGLE_NESTING_ONLY, // Sanity check; this query should work with a single level of nesting.
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("a0", "a0"),
+                            new CountAggregatorFactory("a1")
+                        ))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L, 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testExactCountDistinctOfSemiJoinResult() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT DISTINCT dim2\n"
+        + "  FROM druid.foo\n"
+        + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+        + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
+        + "  )\n"
+        + ")",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimFilter(NOT(SELECTOR("dim1", "", null)))
+                        .setDimensions(DIMS(new ExtractionDimensionSpec(
+                            "dim1",
+                            "v0",
+                            new SubstringDimExtractionFn(0, 1)
+                        )))
+                        .build(),
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimFilter(IN(
+                                                "dim2",
+                                                ImmutableList.of("1", "2", "a", "d"),
+                                                new SubstringDimExtractionFn(0, 1)
+                                            ))
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new CountAggregatorFactory("a0")
+                        ))
+                        .build()
+
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        )
+    );
+  }
+
+  @Test
+  public void testExactCountDistinctUsingSubqueryWithWherePushDown() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)\n"
+        + "WHERE dim2 <> ''",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setDimFilter(NOT(SELECTOR("dim2", "", null)))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("a0", "a0"),
+                            new CountAggregatorFactory("a1")
+                        ))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)"
+        + "WHERE cnt > 0",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setLimit(1)
+                                            .build()
+                            )
+                        )
+                        .setDimFilter(BOUND("a0", "0", null, true, false, null, StringComparators.NUMERIC))
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("a0", "a0"),
+                            new CountAggregatorFactory("a1")
+                        ))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testCompareExactAndApproximateCountDistinctUsingSubquery() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  COUNT(*) AS exact_count,\n"
+        + "  COUNT(DISTINCT dim1) AS approx_count,\n"
+        + "  (CAST(1 AS FLOAT) - COUNT(DISTINCT dim1) / COUNT(*)) * 100 AS error_pct\n"
+        + "FROM (SELECT DISTINCT dim1 FROM druid.foo WHERE dim1 <> '')",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimFilter(NOT(SELECTOR("dim1", "", null)))
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new CountAggregatorFactory("a0"),
+                            new CardinalityAggregatorFactory(
+                                "a1",
+                                DIMS(new DefaultDimensionSpec("d0", "A1:dimSpec")),
+                                false
+                            )
+                        ))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.<PostAggregator>of(
+                                new ArithmeticPostAggregator(
+                                    "a2",
+                                    "*",
+                                    ImmutableList.of(
+                                        new ArithmeticPostAggregator(
+                                            null,
+                                            "-",
+                                            ImmutableList.of(
+                                                new ConstantPostAggregator(
+                                                    null,
+                                                    1
+                                                ),
+                                                new ArithmeticPostAggregator(
+                                                    null,
+                                                    "quotient",
+                                                    ImmutableList.of(
+                                                        new HyperUniqueFinalizingPostAggregator(
+                                                            "a1",
+                                                            "a1"
+                                                        ),
+                                                        new FieldAccessPostAggregator(
+                                                            null,
+                                                            "a0"
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        ),
+                                        new ConstantPostAggregator(null, 100)
+                                    )
+                                )
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{5L, 5L, -0.1222693591629298}
+        )
+    );
+  }
+
+  @Test
+  public void testHistogramUsingSubquery() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  CAST(thecnt AS VARCHAR),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS thecnt FROM druid.foo GROUP BY dim2)\n"
+        + "GROUP BY CAST(thecnt AS VARCHAR)",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(
+                                                new FieldAccessPostAggregator("a1", "a0")
+                                            ))
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("a1", "d0")))
+                        .setAggregatorSpecs(AGGS(
+                            new CountAggregatorFactory("a0")
+                        ))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"3", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testHistogramUsingSubqueryWithSort() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  CAST(thecnt AS VARCHAR),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS thecnt FROM druid.foo GROUP BY dim2)\n"
+        + "GROUP BY CAST(thecnt AS VARCHAR) ORDER BY CAST(thecnt AS VARCHAR) LIMIT 2",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(
+                                                new FieldAccessPostAggregator("a1", "a0")
+                                            ))
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("a1", "d0")))
+                        .setAggregatorSpecs(AGGS(
+                            new CountAggregatorFactory("a0")
+                        ))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(new OrderByColumnSpec(
+                                    "d0",
+                                    OrderByColumnSpec.Direction.ASCENDING,
+                                    StringComparators.LEXICOGRAPHIC
+                                )),
+                                2
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1", 1L},
+            new Object[]{"2", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testCountDistinctArithmetic() throws Exception
   {
     testQuery(
@@ -1624,7 +2033,7 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testGroupByLimitPushDown() throws Exception
+  public void testGroupBySortPushDown() throws Exception
   {
     testQuery(
         "SELECT dim1, dim2, SUM(cnt) FROM druid.foo GROUP BY dim1, dim2 ORDER BY dim2 LIMIT 4",
@@ -1710,54 +2119,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testGroupByLimitPushDownWithHavingOnDouble() throws Exception
-  {
-    testQuery(
-        "SELECT dim1, dim2, SUM(m1) AS m1_sum "
-        + "FROM druid.foo "
-        + "group by dim1, dim2 "
-        + "having SUM(m1) > 1 "
-        + "order by dim2 "
-        + "limit 4",
-        ImmutableList.<Query>of(
-            GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE)
-                        .setInterval(QSS(Filtration.eternity()))
-                        .setGranularity(QueryGranularities.ALL)
-                        .setDimensions(
-                            DIMS(
-                                new DefaultDimensionSpec("dim2", "d1"),
-                                new DefaultDimensionSpec("dim1", "d0")
-                            )
-                        )
-                        .setAggregatorSpecs(
-                            AGGS(
-                                new DoubleSumAggregatorFactory("a0", "m1")
-                            )
-                        )
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec("d1", OrderByColumnSpec.Direction.ASCENDING)
-                                ),
-                                4
-                            )
-                        )
-                        .setHavingSpec(new DimFilterHavingSpec(
-                            BOUND("a0", "1", null, true, false, null, StringComparators.NUMERIC)
-                        ))
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"10.1", "", 2.0},
-            new Object[]{"2", "", 3.0},
-            new Object[]{"abc", "", 6.0},
-            new Object[]{"1", "a", 4.0}
-        )
-    );
-  }
-
-  @Test
   public void testFilterOnTimeFloor() throws Exception
   {
     testQuery(
@@ -1801,6 +2162,7 @@ public class CalciteQueryTest
   public void testGroupByFloor() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_NO_SUBQUERIES, // Sanity check; this simple query should work with subqueries disabled.
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
         ImmutableList.<Query>of(
             GroupByQuery.builder()
@@ -1962,7 +2324,7 @@ public class CalciteQueryTest
   public void testTimeseries() throws Exception
   {
     testQuery(
-        "SELECT gran, SUM(cnt) FROM (\n"
+        "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT floor(__time TO month) AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
@@ -1978,8 +2340,8 @@ public class CalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 3L},
-            new Object[]{T("2001-01-01"), 3L}
+            new Object[]{3L, T("2000-01-01")},
+            new Object[]{3L, T("2001-01-01")}
         )
     );
   }
@@ -2228,6 +2590,7 @@ public class CalciteQueryTest
   public void testUsingSubqueryAsFilter() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_SINGLE_NESTING_ONLY, // Sanity check; this query should work with a single level of nesting.
         "SELECT dim1, dim2, COUNT(*) FROM druid.foo "
         + "WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')"
         + "AND dim1 <> 'xxx'"
@@ -2268,6 +2631,18 @@ public class CalciteQueryTest
         ImmutableList.of(
             new Object[]{"def", "abc", 1L}
         )
+    );
+  }
+
+  @Test
+  public void testUsingSubqueryAsFilterForbiddenByConfig() throws Exception
+  {
+    assertQueryIsUnplannable(
+        PLANNER_CONFIG_NO_SUBQUERIES,
+        "SELECT dim1, dim2, COUNT(*) FROM druid.foo "
+        + "WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')"
+        + "AND dim1 <> 'xxx'"
+        + "group by dim1, dim2 ORDER BY dim2"
     );
   }
 

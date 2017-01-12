@@ -23,23 +23,19 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import io.druid.common.guava.GuavaUtils;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Accumulator;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.query.DataSource;
+import io.druid.query.QueryDataSource;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
-import io.druid.query.groupby.having.DimFilterHavingSpec;
-import io.druid.query.groupby.orderby.DefaultLimitSpec;
-import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
@@ -47,12 +43,11 @@ import io.druid.query.select.SelectResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.DimensionAndMetricValueExtractor;
-import io.druid.query.topn.TopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.Column;
-import io.druid.sql.calcite.filtration.Filtration;
-import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.Row;
 import org.apache.calcite.interpreter.Sink;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -70,11 +65,16 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class QueryMaker
 {
-  private final static Logger log = new Logger(QueryMaker.class);
+  private final QuerySegmentWalker walker;
+  private final PlannerConfig plannerConfig;
 
-  private QueryMaker()
+  public QueryMaker(
+      final QuerySegmentWalker walker,
+      final PlannerConfig plannerConfig
+  )
   {
-    // No instantiation.
+    this.walker = walker;
+    this.plannerConfig = plannerConfig;
   }
 
   public static Function<Row, Void> sinkFunction(final Sink sink)
@@ -95,9 +95,59 @@ public class QueryMaker
     };
   }
 
-  public static void executeSelect(
-      final DruidTable druidTable,
+  public void accumulate(
+      final DataSource dataSource,
+      final RowSignature sourceRowSignature,
       final DruidQueryBuilder queryBuilder,
+      final Function<Row, Void> sink
+  )
+  {
+    if (dataSource instanceof QueryDataSource) {
+      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(dataSource, sourceRowSignature);
+      if (outerQuery == null) {
+        // Bug in the planner rules. They shouldn't allow this to happen.
+        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
+      }
+
+      executeGroupBy(queryBuilder, outerQuery, sink);
+      return;
+    }
+
+    final TimeseriesQuery timeseriesQuery = queryBuilder.toTimeseriesQuery(dataSource, sourceRowSignature);
+    if (timeseriesQuery != null) {
+      executeTimeseries(queryBuilder, timeseriesQuery, sink);
+      return;
+    }
+
+    final TopNQuery topNQuery = queryBuilder.toTopNQuery(
+        dataSource,
+        sourceRowSignature,
+        plannerConfig.getMaxTopNLimit(),
+        plannerConfig.isUseApproximateTopN()
+    );
+    if (topNQuery != null) {
+      executeTopN(queryBuilder, topNQuery, sink);
+      return;
+    }
+
+    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, sourceRowSignature);
+    if (groupByQuery != null) {
+      executeGroupBy(queryBuilder, groupByQuery, sink);
+      return;
+    }
+
+    final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, sourceRowSignature);
+    if (selectQuery != null) {
+      executeSelect(queryBuilder, selectQuery, sink);
+      return;
+    }
+
+    throw new IllegalStateException("WTF?! Cannot execute query even though we planned it?");
+  }
+
+  private void executeSelect(
+      final DruidQueryBuilder queryBuilder,
+      final SelectQuery baseQuery,
       final Function<Row, Void> sink
   )
   {
@@ -105,28 +155,7 @@ public class QueryMaker
 
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
-    final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(druidTable);
-    final SelectProjection selectProjection = queryBuilder.getSelectProjection();
-    final Integer limit;
-    final boolean descending;
-
-    if (queryBuilder.getLimitSpec() != null) {
-      limit = queryBuilder.getLimitSpec().getLimit();
-
-      // Safe to assume limitSpec has zero or one entry; DruidSelectSortRule wouldn't push in anything else.
-      if (queryBuilder.getLimitSpec().getColumns().size() > 0) {
-        final OrderByColumnSpec orderBy = Iterables.getOnlyElement(queryBuilder.getLimitSpec().getColumns());
-        if (!orderBy.getDimension().equals(Column.TIME_COLUMN_NAME)) {
-          throw new ISE("WTF?! Got select with non-time orderBy[%s]", orderBy);
-        }
-        descending = orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING;
-      } else {
-        descending = false;
-      }
-    } else {
-      limit = null;
-      descending = false;
-    }
+    final Integer limit = queryBuilder.getLimitSpec() != null ? queryBuilder.getLimitSpec().getLimit() : null;
 
     // Loop through pages.
     final AtomicBoolean morePages = new AtomicBoolean(true);
@@ -134,17 +163,12 @@ public class QueryMaker
     final AtomicLong rowsRead = new AtomicLong();
 
     while (morePages.get()) {
-      final SelectQuery query = new SelectQuery(
-          druidTable.getDataSource(),
-          filtration.getQuerySegmentSpec(),
-          descending,
-          filtration.getDimFilter(),
-          QueryGranularities.ALL,
-          selectProjection != null ? selectProjection.getDimensions() : ImmutableList.<DimensionSpec>of(),
-          selectProjection != null ? selectProjection.getMetrics() : ImmutableList.<String>of(),
-          null,
-          new PagingSpec(pagingIdentifiers.get(), druidTable.getPlannerConfig().getSelectThreshold(), true),
-          null
+      final SelectQuery query = baseQuery.withPagingSpec(
+          new PagingSpec(
+              pagingIdentifiers.get(),
+              plannerConfig.getSelectThreshold(),
+              true
+          )
       );
 
       Hook.QUERY_PLAN.run(query);
@@ -152,7 +176,7 @@ public class QueryMaker
       morePages.set(false);
       final AtomicBoolean gotResult = new AtomicBoolean();
 
-      query.run(druidTable.getQuerySegmentWalker(), Maps.<String, Object>newHashMap()).accumulate(
+      query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
           null,
           new Accumulator<Object, Result<SelectResultValue>>()
           {
@@ -198,56 +222,20 @@ public class QueryMaker
     }
   }
 
-  public static void executeTimeseries(
-      final DruidTable druidTable,
+  private void executeTimeseries(
       final DruidQueryBuilder queryBuilder,
+      final TimeseriesQuery query,
       final Function<Row, Void> sink
   )
   {
-    final QueryGranularity queryGranularity = queryBuilder.asQueryGranularityIfTimeseries();
-
-    if (queryGranularity == null) {
-      throw new ISE("WTF?! executeTimeseries called on query that cannot become a timeseries?!");
-    }
-
-    final String timeOutputName = queryBuilder.getGrouping().getDimensions().size() == 1
-                                  ? queryBuilder.getGrouping().getDimensions().get(0).getOutputName()
-                                  : null;
-
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
+    final String timeOutputName = dimensions.isEmpty() ? null : Iterables.getOnlyElement(dimensions).getOutputName();
     final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
-    final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(druidTable);
-
-    final boolean descending;
-
-    if (queryBuilder.getLimitSpec() != null) {
-      final DefaultLimitSpec limitSpec = queryBuilder.getLimitSpec();
-
-      // Sanity checks; these preconditions should be assured by DruidQueryBuilder.accumulate.
-      Preconditions.checkState(limitSpec.getColumns().size() == 1);
-      Preconditions.checkState(limitSpec.getColumns().get(0).getDimension().equals(timeOutputName));
-      descending = limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.DESCENDING;
-    } else {
-      descending = false;
-    }
-
-    final Map<String, Object> context = Maps.newHashMap();
-    context.put("skipEmptyBuckets", true);
-
-    final TimeseriesQuery query = new TimeseriesQuery(
-        druidTable.getDataSource(),
-        filtration.getQuerySegmentSpec(),
-        descending,
-        filtration.getDimFilter(),
-        queryGranularity,
-        queryBuilder.getGrouping().getAggregatorFactories(),
-        queryBuilder.getGrouping().getPostAggregators(),
-        context
-    );
 
     Hook.QUERY_PLAN.run(query);
 
-    query.run(druidTable.getQuerySegmentWalker(), Maps.<String, Object>newHashMap()).accumulate(
+    query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
         null,
         new Accumulator<Object, Result<TimeseriesResultValue>>()
         {
@@ -274,39 +262,18 @@ public class QueryMaker
     );
   }
 
-  public static void executeTopN(
-      final DruidTable druidTable,
+  private void executeTopN(
       final DruidQueryBuilder queryBuilder,
+      final TopNQuery query,
       final Function<Row, Void> sink
   )
   {
-    // OK to hard-code permissive values here; this method is only called if we really do want a topN.
-    final TopNMetricSpec topNMetricSpec = queryBuilder.asTopNMetricSpecIfTopN(Integer.MAX_VALUE, true);
-
-    if (topNMetricSpec == null) {
-      throw new ISE("WTF?! executeTopN called on query that cannot become a topN?!");
-    }
-
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
-    final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(druidTable);
-
-    final TopNQuery query = new TopNQuery(
-        druidTable.getDataSource(),
-        Iterables.getOnlyElement(queryBuilder.getGrouping().getDimensions()),
-        topNMetricSpec,
-        queryBuilder.getLimitSpec().getLimit(),
-        filtration.getQuerySegmentSpec(),
-        filtration.getDimFilter(),
-        QueryGranularities.ALL,
-        queryBuilder.getGrouping().getAggregatorFactories(),
-        queryBuilder.getGrouping().getPostAggregators(),
-        null
-    );
 
     Hook.QUERY_PLAN.run(query);
 
-    query.run(druidTable.getQuerySegmentWalker(), Maps.<String, Object>newHashMap()).accumulate(
+    query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
         null,
         new Accumulator<Object, Result<TopNResultValue>>()
         {
@@ -331,34 +298,18 @@ public class QueryMaker
     );
   }
 
-  public static void executeGroupBy(
-      final DruidTable druidTable,
+  private void executeGroupBy(
       final DruidQueryBuilder queryBuilder,
+      final GroupByQuery query,
       final Function<Row, Void> sink
   )
   {
-    Preconditions.checkState(queryBuilder.getGrouping() != null, "grouping must be non-null");
-
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
-    final Filtration filtration = Filtration.create(queryBuilder.getFilter()).optimize(druidTable);
-
-    final GroupByQuery query = new GroupByQuery(
-        druidTable.getDataSource(),
-        filtration.getQuerySegmentSpec(),
-        filtration.getDimFilter(),
-        QueryGranularities.ALL,
-        queryBuilder.getGrouping().getDimensions(),
-        queryBuilder.getGrouping().getAggregatorFactories(),
-        queryBuilder.getGrouping().getPostAggregators(),
-        queryBuilder.getHaving() != null ? new DimFilterHavingSpec(queryBuilder.getHaving()) : null,
-        queryBuilder.getLimitSpec(),
-        null
-    );
 
     Hook.QUERY_PLAN.run(query);
 
-    query.run(druidTable.getQuerySegmentWalker(), Maps.<String, Object>newHashMap()).accumulate(
+    query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
         null,
         new Accumulator<Object, io.druid.data.input.Row>()
         {

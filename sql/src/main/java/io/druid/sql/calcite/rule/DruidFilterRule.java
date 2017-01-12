@@ -53,8 +53,7 @@ public class DruidFilterRule extends RelOptRule
     }
 
     final DimFilter dimFilter = Expressions.toFilter(
-        druidRel.getDruidTable(),
-        druidRel.getQueryBuilder().getRowOrder(),
+        druidRel.getSourceRowSignature(),
         filter.getCondition()
     );
     if (dimFilter != null) {

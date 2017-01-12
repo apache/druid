@@ -45,6 +45,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -133,9 +134,8 @@ public class SqlBenchmark
     final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
         "foo",
         new DruidTable(
-            walker,
+            new QueryMaker(walker, plannerConfig),
             new TableDataSource("foo"),
-            plannerConfig,
             ImmutableMap.of(
                 "__time", ValueType.LONG,
                 "dimSequential", ValueType.STRING,

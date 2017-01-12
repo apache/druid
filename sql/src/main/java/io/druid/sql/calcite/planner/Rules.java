@@ -22,10 +22,9 @@ package io.druid.sql.calcite.planner;
 import com.google.common.collect.ImmutableList;
 import io.druid.sql.calcite.rule.DruidBindableConverterRule;
 import io.druid.sql.calcite.rule.DruidFilterRule;
-import io.druid.sql.calcite.rule.DruidSelectProjectionRule;
-import io.druid.sql.calcite.rule.DruidSelectSortRule;
 import io.druid.sql.calcite.rule.DruidSemiJoinRule;
 import io.druid.sql.calcite.rule.GroupByRules;
+import io.druid.sql.calcite.rule.SelectRules;
 import org.apache.calcite.adapter.enumerable.EnumerableInterpreterRule;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.interpreter.Bindables;
@@ -197,13 +196,12 @@ public class Rules
 
     // Druid-specific rules.
     rules.add(DruidFilterRule.instance());
-    rules.add(DruidSelectSortRule.instance());
-    rules.add(DruidSelectProjectionRule.instance());
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
-      rules.add(DruidSemiJoinRule.instance());
+      rules.add(DruidSemiJoinRule.create(plannerConfig));
     }
 
+    rules.addAll(SelectRules.rules());
     rules.addAll(GroupByRules.rules(plannerConfig));
 
     // Allow conversion of Druid queries to Bindable convention.

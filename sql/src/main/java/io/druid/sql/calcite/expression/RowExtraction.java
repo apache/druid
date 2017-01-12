@@ -28,7 +28,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.filter.Filters;
 import io.druid.sql.calcite.rel.DruidQueryBuilder;
-import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.table.RowSignature;
 
 /**
  * Represents an extraction of a value from a Druid row. Can be used for grouping, filtering, etc.
@@ -112,29 +112,24 @@ public class RowExtraction
   }
 
   /**
-   * Check if this extraction can be used to build a filter on a Druid table. This method exists because we can't
+   * Check if this extraction can be used to build a filter on a Druid dataSource. This method exists because we can't
    * filter on floats (yet) and things like DruidFilterRule need to check for that.
    *
-   * If a null table is passed in, this method always returns true.
+   * @param rowSignature row signature of the dataSource
    *
-   * @param druidTable Druid table, or null
-   *
-   * @return whether or not this extraction is filterable; will be true if druidTable is null
+   * @return whether or not this extraction is filterable
    */
-  public boolean isFilterable(final DruidTable druidTable)
+  public boolean isFilterable(final RowSignature rowSignature)
   {
-    return druidTable == null ||
-           Filters.FILTERABLE_TYPES.contains(druidTable.getColumnType(druidTable.getColumnNumber(column)));
+    return Filters.FILTERABLE_TYPES.contains(rowSignature.getColumnType(column));
   }
 
-  public DimensionSpec toDimensionSpec(final DruidTable druidTable, final String outputName)
+  public DimensionSpec toDimensionSpec(final RowSignature rowSignature, final String outputName)
   {
-    final int columnNumber = druidTable.getColumnNumber(column);
-    if (columnNumber < 0) {
+    final ValueType columnType = rowSignature.getColumnType(column);
+    if (columnType == null) {
       return null;
     }
-
-    final ValueType columnType = druidTable.getColumnType(columnNumber);
 
     if (columnType == ValueType.STRING || (column.equals(Column.TIME_COLUMN_NAME) && extractionFn != null)) {
       return extractionFn == null
