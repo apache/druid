@@ -47,7 +47,7 @@ import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
 import io.druid.sql.calcite.filtration.Filtration;
-import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexCall;
@@ -112,23 +112,23 @@ public class Expressions
   }
 
   /**
-   * Translate a field access, possibly through a projection, to an underlying Druid table.
+   * Translate a field access, possibly through a projection, to an underlying Druid dataSource.
    *
-   * @param druidTable  underlying Druid table
-   * @param project     projection, or null
-   * @param fieldNumber number of the field to access
+   * @param rowSignature row signature of underlying Druid dataSource
+   * @param project      projection, or null
+   * @param fieldNumber  number of the field to access
    *
    * @return row expression
    */
   public static RexNode fromFieldAccess(
-      final DruidTable druidTable,
+      final RowSignature rowSignature,
       final Project project,
       final int fieldNumber
   )
   {
     if (project == null) {
       // I don't think the factory impl matters here.
-      return RexInputRef.of(fieldNumber, druidTable.getRowType(new JavaTypeFactoryImpl()));
+      return RexInputRef.of(fieldNumber, rowSignature.getRelDataType(new JavaTypeFactoryImpl()));
     } else {
       return project.getChildExps().get(fieldNumber);
     }
@@ -332,13 +332,11 @@ public class Expressions
   /**
    * Translates "condition" to a Druid filter, or returns null if we cannot translate the condition.
    *
-   * @param druidTable Druid table, if the rows come from a table scan; null otherwise
-   * @param rowOrder   order of columns in the rows to be filtered
-   * @param expression Calcite row expression
+   * @param rowSignature row signature of the dataSource to be filtered
+   * @param expression   Calcite row expression
    */
   public static DimFilter toFilter(
-      final DruidTable druidTable,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
       final RexNode expression
   )
   {
@@ -347,7 +345,7 @@ public class Expressions
         || expression.getKind() == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
-        final DimFilter nextFilter = toFilter(druidTable, rowOrder, rexNode);
+        final DimFilter nextFilter = toFilter(rowSignature, rexNode);
         if (nextFilter == null) {
           return null;
         }
@@ -364,7 +362,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(druidTable, rowOrder, expression);
+      return toLeafFilter(rowSignature, expression);
     }
   }
 
@@ -372,13 +370,11 @@ public class Expressions
    * Translates "condition" to a Druid filter, assuming it does not contain any boolean expressions. Returns null
    * if we cannot translate the condition.
    *
-   * @param druidTable Druid table, if the rows come from a table scan; null otherwise
-   * @param rowOrder   order of columns in the rows to be filtered
-   * @param expression Calcite row expression
+   * @param rowSignature row signature of the dataSource to be filtered
+   * @param expression   Calcite row expression
    */
   private static DimFilter toLeafFilter(
-      final DruidTable druidTable,
-      final List<String> rowOrder,
+      final RowSignature rowSignature,
       final RexNode expression
   )
   {
@@ -392,8 +388,8 @@ public class Expressions
 
     if (kind == SqlKind.LIKE) {
       final List<RexNode> operands = ((RexCall) expression).getOperands();
-      final RowExtraction rex = EXPRESSION_CONVERTER.convert(rowOrder, operands.get(0));
-      if (rex == null || !rex.isFilterable(druidTable)) {
+      final RowExtraction rex = EXPRESSION_CONVERTER.convert(rowSignature.getRowOrder(), operands.get(0));
+      if (rex == null || !rex.isFilterable(rowSignature)) {
         return null;
       }
       return new LikeDimFilter(
@@ -428,8 +424,8 @@ public class Expressions
       }
 
       // lhs must be translatable to a RowExtraction to be filterable
-      final RowExtraction rex = EXPRESSION_CONVERTER.convert(rowOrder, lhs);
-      if (rex == null || !rex.isFilterable(druidTable)) {
+      final RowExtraction rex = EXPRESSION_CONVERTER.convert(rowSignature.getRowOrder(), lhs);
+      if (rex == null || !rex.isFilterable(rowSignature)) {
         return null;
       }
 
