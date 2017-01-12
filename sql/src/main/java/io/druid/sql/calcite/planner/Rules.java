@@ -53,7 +53,6 @@ import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
-import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
@@ -138,14 +137,13 @@ public class Rules
           EnumerableRules.ENUMERABLE_TABLE_FUNCTION_SCAN_RULE
       );
 
-  // Rules from VolcanoPlanner's registerAbstractRelationalRules.
+  // Rules from VolcanoPlanner's registerAbstractRelationalRules, minus SemiJoinRule (we have our own).
   private static final List<RelOptRule> VOLCANO_ABSTRACT_RULES =
       ImmutableList.of(
           FilterJoinRule.FILTER_ON_JOIN,
           FilterJoinRule.JOIN,
           AbstractConverter.ExpandConversionRule.INSTANCE,
           JoinCommuteRule.INSTANCE,
-          SemiJoinRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
           UnionToDistinctRule.INSTANCE,
           ProjectRemoveRule.INSTANCE,
