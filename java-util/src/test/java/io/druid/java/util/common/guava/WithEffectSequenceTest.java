@@ -23,8 +23,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WithEffectSequenceTest
@@ -64,12 +67,43 @@ public class WithEffectSequenceTest
     Assert.assertEquals(1, effect1.get());
     Assert.assertEquals(2, effect2.get());
 
-    // Ensure sequence runs via Yielder, because LimitedSequence extends YieldingSequenceBase
+    // Ensure sequence runs via Yielder, because LimitedSequence extends YieldingSequenceBase which
+    // implements accumulate() via yielder().
     // "Limiting" a sequence of 3 elements with 4 to let effects be executed. If e. g. limit with 1 or 2, effects are
     // not executed.
     Sequence<Integer> yieldingSequence = Sequences.limit(sequence, 4);
     Sequences.toList(yieldingSequence, new ArrayList<Integer>());
     Assert.assertEquals(3, effect1.get());
     Assert.assertEquals(4, effect2.get());
+  }
+
+  @Test
+  public void testEffectExecutedIfWrappedSequenceThrowsExceptionFromClose() {
+    Sequence<Integer> baseSeq = Sequences.simple(Arrays.asList(1, 2, 3));
+    Sequence<Integer> throwingSeq = Sequences.withBaggage(baseSeq, new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        throw new RuntimeException();
+
+      }
+    });
+    final AtomicBoolean effectExecuted = new AtomicBoolean();
+    Sequence<Integer> seqWithEffect = Sequences.withEffect(throwingSeq, new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        effectExecuted.set(true);
+      }
+    }, MoreExecutors.sameThreadExecutor());
+    try {
+      Sequences.toList(seqWithEffect, new ArrayList<Integer>());
+      Assert.fail("expected RuntimeException");
+    } catch (RuntimeException e) {
+      // expected
+      Assert.assertTrue(effectExecuted.get());
+    }
   }
 }

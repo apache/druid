@@ -121,16 +121,8 @@ public class Sequences
 
   public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
   {
-    return new Sequence<T>()
+    return new YieldingSequenceBase<T>()
     {
-      @Override
-      public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
-      {
-        final OutType out = seq.accumulate(initValue, accumulator);
-        exec.execute(effect);
-        return out;
-      }
-
       @Override
       public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
       {
