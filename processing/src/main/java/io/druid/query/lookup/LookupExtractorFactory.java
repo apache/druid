@@ -50,13 +50,6 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * @return Returns false if not successfully closed the {@link LookupExtractor} otherwise returns true
    */
   public boolean close();
-  /**
-   * Determine if this LookupExtractorFactory should replace some other LookupExtractorFactory.
-   * This is used to implement no-down-time
-   * @param other Some other LookupExtractorFactory which might need replaced
-   * @return `true` if the other should be replaced by this one. `false` if this one should not replace the other factory
-   */
-  boolean replaces(@Nullable LookupExtractorFactory other);
 
   /**
    * @return Returns the actual introspection request handler, can return {@code null} if it is not supported.

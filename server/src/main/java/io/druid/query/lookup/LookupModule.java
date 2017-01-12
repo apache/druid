@@ -33,7 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-
+import io.druid.common.utils.ServletResourceUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -43,8 +43,6 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -58,6 +56,9 @@ import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.curator.utils.ZKPaths;
 
 import javax.ws.rs.Path;
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,22 +120,49 @@ class LookupListeningResource extends ListenerResource
         })
         {
           @Override
+          public Response handleUpdates(
+              InputStream inputStream, ObjectMapper mapper
+          )
+          {
+            final LookupsState state;
+            try {
+              state = mapper.readValue(inputStream, LookupsState.class);
+            }
+            catch (final IOException ex) {
+              LOG.debug(ex, "Bad request");
+              return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(ex)).build();
+            }
+
+            try {
+              for (Map.Entry<String, LookupExtractorFactoryContainer> e : state.getToLoad().entrySet()) {
+                manager.add(e.getKey(), e.getValue());
+              }
+
+              for (String lookupToDrop : state.getToDrop()) {
+                manager.remove(lookupToDrop);
+              }
+
+              return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
+            }
+            catch (Exception e) {
+              LOG.error(e, "Error handling request");
+              return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+            }
+          }
+
+          @Override
           public Object post(final Map<String, LookupExtractorFactory> lookups)
               throws Exception
           {
             final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
             for (final String name : lookups.keySet()) {
-              final LookupExtractorFactory factory = lookups.get(name);
-              try {
-                // Only fail if it should have updated but didn't.
-                if (!manager.updateIfNew(name, factory) && factory.replaces(manager.get(name))) {
-                  failedUpdates.put(name, factory);
-                }
-              }
-              catch (ISE ise) {
-                LOG.error(ise, "Error starting [%s]: [%s]", name, factory);
-                failedUpdates.put(name, factory);
-              }
+
+              final LookupExtractorFactoryContainer factoryContainer = new LookupExtractorFactoryContainer(
+                  null,
+                  lookups.get(name)
+              );
+
+              manager.add(name, factoryContainer);
             }
             return ImmutableMap.of("status", "accepted", LookupModule.FAILED_UPDATES_KEY, failedUpdates);
           }
@@ -146,24 +174,15 @@ class LookupListeningResource extends ListenerResource
           }
 
           @Override
-          public Map<String, LookupExtractorFactory> getAll()
+          public LookupsState getAll()
           {
-            return manager.getAll();
+            return manager.getAllLookupsState();
           }
 
           @Override
           public Object delete(String id)
           {
-            if (manager.get(id) == null) {
-              return null;
-            }
-            if (!manager.remove(id)) {
-              if (manager.get(id) == null) {
-                return null;
-              }
-              // We don't have more information at this point.
-              throw new RE("Could not remove lookup [%s]", id);
-            }
+            manager.remove(id);
             return id;
           }
         }

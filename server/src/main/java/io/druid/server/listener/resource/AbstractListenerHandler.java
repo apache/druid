@@ -118,6 +118,8 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
   }
 
+
+
   @Override
   public final Response handleGET(String id)
   {
@@ -138,7 +140,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
   @Override
   public final Response handleGETAll()
   {
-    final Map<String, ObjType> all;
+    final Object all;
     try {
       all = getAll();
       if (all == null) {
@@ -200,7 +202,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
 
   protected abstract
   @Nullable
-  Map<String, ObjType> getAll();
+  Object getAll();
 
   /**
    * Process a POST request of the input items

@@ -26,63 +26,38 @@ import javax.validation.constraints.Min;
 
 public class LookupCoordinatorManagerConfig
 {
-  public static final Duration DEFAULT_HOST_DELETE_TIMEOUT = Duration.millis(1_000L);
-  public static final Duration DEFAULT_HOST_UPDATE_TIMEOUT = Duration.millis(10_000L);
-  public static final Duration DEFAULT_DELETE_ALL_TIMEOUT = Duration.millis(10_000L);
-  public static final Duration DEFAULT_UPDATE_ALL_TIMEOUT = Duration.millis(60_000L);
+  public static final Duration DEFAULT_HOST_TIMEOUT = Duration.millis(10_000L);
+  public static final Duration DEFAULT_ALL_HOST_TIMEOUT = Duration.millis(300_000L);
+
   @JsonProperty
-  private Duration hostDeleteTimeout = null;
+  private Duration hostTimeout = null;
   @JsonProperty
-  private Duration hostUpdateTimeout = null;
+  private Duration allHostTimeout = null;
   @JsonProperty
-  private Duration deleteAllTimeout = null;
-  @JsonProperty
-  private Duration updateAllTimeout = null;
-  @JsonProperty
-  @Min(1)
+  @Min(2)
   private int threadPoolSize = 10;
   @JsonProperty
   @Min(1)
-  private long period = 30_000L;
+  private long period = 120_000L;
 
-  public Duration getHostDeleteTimeout()
+  public Duration getHostTimeout()
   {
-    return hostDeleteTimeout == null ? DEFAULT_HOST_DELETE_TIMEOUT : hostDeleteTimeout;
+    return hostTimeout == null ? DEFAULT_HOST_TIMEOUT : hostTimeout;
   }
 
-  public void setHostDeleteTimeout(Duration hostDeleteTimeout)
+  public void setHostTimeout(Duration hostTimeout)
   {
-    this.hostDeleteTimeout = hostDeleteTimeout;
+    this.hostTimeout = hostTimeout;
   }
 
-  public Duration getHostUpdateTimeout()
+  public Duration getAllHostTimeout()
   {
-    return hostUpdateTimeout == null ? DEFAULT_HOST_UPDATE_TIMEOUT : hostUpdateTimeout;
+    return allHostTimeout == null ? DEFAULT_ALL_HOST_TIMEOUT : allHostTimeout;
   }
 
-  public void setHostUpdateTimeout(Duration hostUpdateTimeout)
+  public void setAllHostTimeout(Duration allHostTimeout)
   {
-    this.hostUpdateTimeout = hostUpdateTimeout;
-  }
-
-  public Duration getDeleteAllTimeout()
-  {
-    return deleteAllTimeout == null ? DEFAULT_DELETE_ALL_TIMEOUT : deleteAllTimeout;
-  }
-
-  public void setDeleteAllTimeout(Duration deleteAllTimeout)
-  {
-    this.deleteAllTimeout = deleteAllTimeout;
-  }
-
-  public Duration getUpdateAllTimeout()
-  {
-    return updateAllTimeout == null ? DEFAULT_UPDATE_ALL_TIMEOUT : updateAllTimeout;
-  }
-
-  public void setUpdateAllTimeout(Duration updateAllTimeout)
-  {
-    this.updateAllTimeout = updateAllTimeout;
+    this.allHostTimeout = allHostTimeout;
   }
 
   public int getThreadPoolSize()

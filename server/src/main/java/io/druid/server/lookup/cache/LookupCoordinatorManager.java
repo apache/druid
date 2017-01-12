@@ -19,7 +19,6 @@
 
 package io.druid.server.lookup.cache;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -72,13 +71,15 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -91,9 +92,7 @@ public class LookupCoordinatorManager
   // Doesn't have to be the same, but it makes things easy to look at
   public static final String LOOKUP_LISTEN_ANNOUNCE_KEY = LOOKUP_CONFIG_KEY;
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
-  private static final TypeReference<Map<String, Object>> MAP_STRING_OBJ_TYPE = new TypeReference<Map<String, Object>>()
-  {
-  };
+
   private final static Function<HostAndPort, URL> HOST_TO_URL = new Function<HostAndPort, URL>()
   {
     @Nullable
@@ -120,10 +119,12 @@ public class LookupCoordinatorManager
   private final ObjectMapper smileMapper;
   private final JacksonConfigManager configManager;
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig;
+  private final AtomicReference<Map<HostAndPort, LookupsStateWithMap>> knownOldState = new AtomicReference<>();
   private final Object startStopSync = new Object();
+
   // Updated by config watching service
-  private AtomicReference<Map<String, Map<String, Map<String, Object>>>> lookupMapConfigRef;
-  private volatile Map<String, Map<String, Map<String, Object>>> prior_update = ImmutableMap.of();
+  private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
+
   private volatile boolean started = false;
   private volatile ListenableScheduledFuture<?> backgroundManagerFuture = null;
   private final CountDownLatch backgroundManagerExitedLatch = new CountDownLatch(1);
@@ -151,283 +152,28 @@ public class LookupCoordinatorManager
     );
   }
 
-  void deleteOnHost(final URL url)
-      throws ExecutionException, InterruptedException, IOException
-  {
-    final AtomicInteger returnCode = new AtomicInteger(0);
-    final AtomicReference<String> reasonString = new AtomicReference<>(null);
-    LOG.debug("Dropping %s", url);
-
-    try (final InputStream result = httpClient.go(
-        new Request(HttpMethod.DELETE, url)
-            .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
-        makeResponseHandler(returnCode, reasonString),
-        lookupCoordinatorManagerConfig.getHostDeleteTimeout()
-    ).get()) {
-      // 404 is ok here, that means it was already deleted
-      if (!httpStatusIsSuccess(returnCode.get()) && !httpStatusIsNotFound(returnCode.get())) {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-          StreamUtils.copyAndClose(result, baos);
-        }
-        catch (IOException e2) {
-          LOG.warn(e2, "Error reading response from [%s]", url);
-        }
-
-        throw new IOException(
-            String.format(
-                "Bad lookup delete request to [%s] : [%d] : [%s]  Response: [%s]",
-                url,
-                returnCode.get(),
-                reasonString.get(),
-                StringUtils.fromUtf8(baos.toByteArray())
-            )
-        );
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Delete to [%s] : Status: %s reason: [%s]", url, returnCode.get(), reasonString.get());
-        }
-      }
-    }
-  }
-
-  void updateAllOnHost(final URL url, Map<String, Map<String, Object>> knownLookups)
-      throws IOException, InterruptedException, ExecutionException
-  {
-    final AtomicInteger returnCode = new AtomicInteger(0);
-    final AtomicReference<String> reasonString = new AtomicReference<>(null);
-    final byte[] bytes;
-    try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading up %d lookups to %s", knownLookups.size(), url);
-      }
-      bytes = smileMapper.writeValueAsBytes(knownLookups);
-    }
-    catch (JsonProcessingException e) {
-      throw Throwables.propagate(e);
-    }
-
-    try (final InputStream result = httpClient.go(
-        new Request(HttpMethod.POST, url)
-            .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-            .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-            .setContent(bytes),
-        makeResponseHandler(returnCode, reasonString),
-        lookupCoordinatorManagerConfig.getHostUpdateTimeout()
-    ).get()) {
-      if (!httpStatusIsSuccess(returnCode.get())) {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-          StreamUtils.copyAndClose(result, baos);
-        }
-        catch (IOException e2) {
-          LOG.warn(e2, "Error reading response");
-        }
-
-        throw new IOException(
-            String.format(
-                "Bad update request to [%s] : [%d] : [%s]  Response: [%s]",
-                url,
-                returnCode.get(),
-                reasonString.get(),
-                StringUtils.fromUtf8(baos.toByteArray())
-            )
-        );
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Update on [%s], Status: %s reason: [%s]", url, returnCode.get(), reasonString.get());
-        }
-        final Map<String, Object> resultMap = smileMapper.readValue(result, MAP_STRING_OBJ_TYPE);
-        final Object missingValuesObject = resultMap.get(LookupModule.FAILED_UPDATES_KEY);
-        if (null == missingValuesObject) {
-          throw new IAE("Update result did not have field for [%s]", LookupModule.FAILED_UPDATES_KEY);
-        }
-
-        final Map<String, Object> missingValues = smileMapper.convertValue(missingValuesObject, MAP_STRING_OBJ_TYPE);
-        if (!missingValues.isEmpty()) {
-          throw new IAE("Lookups failed to update: %s", smileMapper.writeValueAsString(missingValues.keySet()));
-        } else {
-          LOG.debug("Updated all lookups on [%s]", url);
-        }
-      }
-    }
-  }
-
-  // Overridden in unit tests
-  HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-      final AtomicInteger returnCode,
-      final AtomicReference<String> reasonString
-  )
-  {
-    return new SequenceInputStreamResponseHandler()
-    {
-      @Override
-      public ClientResponse<InputStream> handleResponse(HttpResponse response)
-      {
-        returnCode.set(response.getStatus().getCode());
-        reasonString.set(response.getStatus().getReasonPhrase());
-        return super.handleResponse(response);
-      }
-    };
-  }
-
-  void deleteAllOnTier(final String tier, final Collection<String> dropLookups)
-      throws ExecutionException, InterruptedException, IOException
-  {
-    if (dropLookups.isEmpty()) {
-      LOG.debug("Nothing to drop");
-      return;
-    }
-    final Collection<URL> urls = getAllHostsAnnounceEndpoint(tier);
-    final List<ListenableFuture<?>> futures = new ArrayList<>(urls.size());
-    for (final URL url : urls) {
-      futures.add(executorService.submit(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          for (final String drop : dropLookups) {
-            final URL lookupURL;
-            try {
-              lookupURL = new URL(
-                  url.getProtocol(),
-                  url.getHost(),
-                  url.getPort(),
-                  String.format("%s/%s", url.getFile(), drop)
-              );
-            }
-            catch (MalformedURLException e) {
-              throw new ISE(e, "Error creating url for [%s]/[%s]", url, drop);
-            }
-            try {
-              deleteOnHost(lookupURL);
-            }
-            catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-              LOG.warn("Delete [%s] interrupted", lookupURL);
-              throw Throwables.propagate(e);
-            }
-            catch (IOException | ExecutionException e) {
-              // Don't raise as ExecutionException. Just log and continue
-              LOG.makeAlert(e, "Error deleting [%s]", lookupURL).emit();
-            }
-          }
-        }
-      }));
-    }
-    final ListenableFuture allFuture = Futures.allAsList(futures);
-    try {
-      allFuture.get(lookupCoordinatorManagerConfig.getUpdateAllTimeout().getMillis(), TimeUnit.MILLISECONDS);
-    }
-    catch (TimeoutException e) {
-      // This should cause Interrupted exceptions on the offending ones
-      allFuture.cancel(true);
-      throw new ExecutionException("Timeout in updating hosts! Attempting to cancel", e);
-    }
-  }
-
-  void updateAllNewOnTier(final String tier, final Map<String, Map<String, Object>> knownLookups)
-      throws InterruptedException, ExecutionException, IOException
-  {
-    final Collection<URL> urls = Collections2.transform(
-        listenerDiscoverer.getNewNodes(LookupModule.getTierListenerPath(tier)),
-        HOST_TO_URL
-    );
-    if (urls.isEmpty() || knownLookups.isEmpty()) {
-      LOG.debug("Nothing new to report");
-      return;
-    }
-    updateNodes(urls, knownLookups);
-  }
-
-  void updateAllOnTier(final String tier, final Map<String, Map<String, Object>> knownLookups)
-      throws InterruptedException, ExecutionException, IOException
-  {
-    updateNodes(getAllHostsAnnounceEndpoint(tier), knownLookups);
-  }
-
-  void updateNodes(Collection<URL> urls, final Map<String, Map<String, Object>> knownLookups)
-      throws IOException, InterruptedException, ExecutionException
-  {
-    if (knownLookups == null) {
-      LOG.debug("No config for lookups found");
-      return;
-    }
-    if (knownLookups.isEmpty()) {
-      LOG.debug("No known lookups. Skipping update");
-      return;
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Updating %d lookups on %d nodes", knownLookups.size(), urls.size());
-    }
-    final List<ListenableFuture<?>> futures = new ArrayList<>(urls.size());
-    for (final URL url : urls) {
-      futures.add(executorService.submit(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          try {
-            updateAllOnHost(url, knownLookups);
-          }
-          catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOG.warn("Update on [%s] interrupted", url);
-            throw Throwables.propagate(e);
-          }
-          catch (IOException | ExecutionException e) {
-            // Don't raise as ExecutionException. Just log and continue
-            LOG.makeAlert(e, "Error submitting to [%s]", url).emit();
-          }
-        }
-      }));
-    }
-    final ListenableFuture allFuture = Futures.allAsList(futures);
-    try {
-      allFuture.get(lookupCoordinatorManagerConfig.getUpdateAllTimeout().getMillis(), TimeUnit.MILLISECONDS);
-    }
-    catch (TimeoutException e) {
-      LOG.warn("Timeout in updating hosts! Attempting to cancel");
-      // This should cause Interrupted exceptions on the offending ones
-      allFuture.cancel(true);
-    }
-  }
-
-  Collection<URL> getAllHostsAnnounceEndpoint(final String tier) throws IOException
-  {
-    return ImmutableList.copyOf(
-        Collections2.filter(
-            Collections2.transform(
-                listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tier)),
-                HOST_TO_URL
-            ),
-            Predicates.notNull()
-        )
-    );
-  }
-
   public boolean updateLookup(
       final String tier,
       final String lookupName,
-      Map<String, Object> spec,
+      LookupExtractorFactoryMapContainer spec,
       final AuditInfo auditInfo
   )
   {
     return updateLookups(
-        ImmutableMap.<String, Map<String, Map<String, Object>>>of(tier, ImmutableMap.of(lookupName, spec)),
+        ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(tier, ImmutableMap.of(lookupName, spec)),
         auditInfo
     );
   }
 
-  public boolean updateLookups(final Map<String, Map<String, Map<String, Object>>> updateSpec, AuditInfo auditInfo)
+  public boolean updateLookups(final Map<String, Map<String, LookupExtractorFactoryMapContainer>> updateSpec, AuditInfo auditInfo)
   {
     synchronized (startStopSync) {
-      final Map<String, Map<String, Map<String, Object>>> priorSpec = getKnownLookups();
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null && !updateSpec.isEmpty()) {
         // To prevent accidentally erasing configs if we haven't updated our cache of the values
         throw new ISE("Not initialized. If this is the first lookup, post an empty map to initialize");
       }
-      final Map<String, Map<String, Map<String, Object>>> updatedSpec;
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> updatedSpec;
 
       // Only add or update here, don't delete.
       if (priorSpec == null) {
@@ -437,14 +183,24 @@ public class LookupCoordinatorManager
         // Needs update
         updatedSpec = new HashMap<>(priorSpec);
         for (final String tier : updateSpec.keySet()) {
-          final Map<String, Map<String, Object>> priorTierSpec = priorSpec.get(tier);
-          final Map<String, Map<String, Object>> updateTierSpec = updateSpec.get(tier);
+          final Map<String, LookupExtractorFactoryMapContainer> priorTierSpec = priorSpec.get(tier);
+          final Map<String, LookupExtractorFactoryMapContainer> updateTierSpec = updateSpec.get(tier);
           if (priorTierSpec == null) {
             // New tier
             updatedSpec.put(tier, updateTierSpec);
           } else {
             // Update existing tier
-            final Map<String, Map<String, Object>> updatedTierSpec = new HashMap<>(priorTierSpec);
+            final Map<String, LookupExtractorFactoryMapContainer> updatedTierSpec = new HashMap<>(priorTierSpec);
+
+            for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : updateTierSpec.entrySet()) {
+              if (updatedTierSpec.containsKey(e.getKey()) && !e.getValue().replaces(updatedTierSpec.get(e.getKey()))) {
+                throw new IAE(
+                    "given update for lookup [%s] can't replace existing spec [%s].",
+                    e.getKey(),
+                    updatedTierSpec.get(e.getKey())
+                );
+              }
+            }
             updatedTierSpec.putAll(updateTierSpec);
             updatedSpec.put(tier, updatedTierSpec);
           }
@@ -454,7 +210,7 @@ public class LookupCoordinatorManager
     }
   }
 
-  public Map<String, Map<String, Map<String, Object>>> getKnownLookups()
+  public Map<String, Map<String, LookupExtractorFactoryMapContainer>> getKnownLookups()
   {
     if (!started) {
       throw new ISE("Not started");
@@ -465,13 +221,13 @@ public class LookupCoordinatorManager
   public boolean deleteLookup(final String tier, final String lookup, AuditInfo auditInfo)
   {
     synchronized (startStopSync) {
-      final Map<String, Map<String, Map<String, Object>>> priorSpec = getKnownLookups();
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null) {
         LOG.warn("Requested delete lookup [%s]/[%s]. But no lookups exist!", tier, lookup);
         return false;
       }
-      final Map<String, Map<String, Map<String, Object>>> updateSpec = new HashMap<>(priorSpec);
-      final Map<String, Map<String, Object>> priorTierSpec = updateSpec.get(tier);
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> updateSpec = new HashMap<>(priorSpec);
+      final Map<String, LookupExtractorFactoryMapContainer> priorTierSpec = updateSpec.get(tier);
       if (priorTierSpec == null) {
         LOG.warn("Requested delete of lookup [%s]/[%s] but tier does not exist!", tier, lookup);
         return false;
@@ -482,7 +238,7 @@ public class LookupCoordinatorManager
         return false;
       }
 
-      final Map<String, Map<String, Object>> updateTierSpec = new HashMap<>(priorTierSpec);
+      final Map<String, LookupExtractorFactoryMapContainer> updateTierSpec = new HashMap<>(priorTierSpec);
       updateTierSpec.remove(lookup);
       updateSpec.put(tier, updateTierSpec);
       return configManager.set(LOOKUP_CONFIG_KEY, updateSpec, auditInfo);
@@ -506,23 +262,21 @@ public class LookupCoordinatorManager
    *
    * @return The lookupName spec if found or null if not found or if no lookups at all are found
    */
-  public
   @Nullable
-  Map<String, Object> getLookup(final String tier, final String lookupName)
+  public LookupExtractorFactoryMapContainer getLookup(final String tier, final String lookupName)
   {
-    final Map<String, Map<String, Map<String, Object>>> prior = getKnownLookups();
+    final Map<String, Map<String, LookupExtractorFactoryMapContainer>> prior = getKnownLookups();
     if (prior == null) {
       LOG.warn("Requested tier [%s] lookupName [%s]. But no lookups exist!", tier, lookupName);
       return null;
     }
-    final Map<String, Map<String, Object>> tierLookups = prior.get(tier);
+    final Map<String, LookupExtractorFactoryMapContainer> tierLookups = prior.get(tier);
     if (tierLookups == null) {
       LOG.warn("Tier [%s] does not exist", tier);
       return null;
     }
     return tierLookups.get(lookupName);
   }
-
 
   @LifecycleStart
   public void start()
@@ -534,87 +288,51 @@ public class LookupCoordinatorManager
       if (executorService.isShutdown()) {
         throw new ISE("Cannot restart after stop!");
       }
+
       lookupMapConfigRef = configManager.watch(
           LOOKUP_CONFIG_KEY,
-          new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
+          new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
           {
           },
           null
       );
-      final ListenableScheduledFuture backgroundManagerFuture = this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
+
+      this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
           new Runnable()
           {
             @Override
             public void run()
             {
-              final Map<String, Map<String, Map<String, Object>>> allLookupTiers = lookupMapConfigRef.get();
-              // Sanity check for if we are shutting down
-              if (Thread.currentThread().isInterrupted()) {
-                LOG.info("Not updating lookups because process was interrupted");
-                return;
-              }
-              if (!started) {
-                LOG.info("Not started. Returning");
-                return;
-              }
-              if (allLookupTiers == null) {
-                LOG.info("Not updating lookups because no data exists");
-                return;
-              }
-              for (final String tier : allLookupTiers.keySet()) {
-                try {
-                  final Map<String, Map<String, Object>> allLookups = allLookupTiers.get(tier);
-                  final Map<String, Map<String, Object>> oldLookups = prior_update.get(tier);
-                  final Collection<String> drops;
-                  if (oldLookups == null) {
-                    drops = ImmutableList.of();
-                  } else {
-                    drops = Sets.difference(oldLookups.keySet(), allLookups.keySet());
-                  }
-                  if (allLookupTiers == prior_update) {
-                    LOG.debug("No updates");
-                    updateAllNewOnTier(tier, allLookups);
-                  } else {
-                    updateAllOnTier(tier, allLookups);
-                    deleteAllOnTier(tier, drops);
-                  }
-                }
-                catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
-                  throw Throwables.propagate(e);
-                }
-                catch (Exception e) {
-                  LOG.error(e, "Error updating lookups for tier [%s]. Will try again soon", tier);
-                }
-              }
-              prior_update = allLookupTiers;
+              lookupMgmtLoop();
             }
           },
           0,
           lookupCoordinatorManagerConfig.getPeriod(),
           TimeUnit.MILLISECONDS
       );
-      Futures.addCallback(backgroundManagerFuture, new FutureCallback<Object>()
-      {
-        @Override
-        public void onSuccess(@Nullable Object result)
-        {
-          backgroundManagerExitedLatch.countDown();
-          LOG.debug("Exited background lookup manager");
-        }
+      Futures.addCallback(
+          backgroundManagerFuture, new FutureCallback()
+          {
+            @Override
+            public void onSuccess(@Nullable Object result)
+            {
+              backgroundManagerExitedLatch.countDown();
+              LOG.debug("Exited background lookup manager");
+            }
 
-        @Override
-        public void onFailure(Throwable t)
-        {
-          backgroundManagerExitedLatch.countDown();
-          if (backgroundManagerFuture.isCancelled()) {
-            LOG.info("Background lookup manager exited");
-            LOG.trace(t, "Background lookup manager exited with throwable");
-          } else {
-            LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
+            @Override
+            public void onFailure(Throwable t)
+            {
+              backgroundManagerExitedLatch.countDown();
+              if (backgroundManagerFuture.isCancelled()) {
+                LOG.info("Background lookup manager exited");
+                LOG.trace(t, "Background lookup manager exited with throwable");
+              } else {
+                LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
+              }
+            }
           }
-        }
-      });
+      );
       started = true;
       LOG.debug("Started");
     }
@@ -640,6 +358,258 @@ public class LookupCoordinatorManager
     }
   }
 
+  private void lookupMgmtLoop()
+  {
+    // Sanity check for if we are shutting down
+    if (Thread.currentThread().isInterrupted()) {
+      LOG.info("Not updating lookups because process was interrupted");
+      return;
+    }
+
+    final Map<HostAndPort, LookupsStateWithMap> currState = new HashMap<>();
+
+    final Map<String, Map<String, LookupExtractorFactoryMapContainer>> allLookupTiers = lookupMapConfigRef.get();
+
+    if (allLookupTiers == null) {
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Not updating lookups because no data exists");
+      }
+      return;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting lookup sync for on all nodes.");
+    }
+
+    final Random rand = new Random();
+
+    try {
+      List<ListenableFuture<?>> futures = new ArrayList<>();
+      for (String tier : allLookupTiers.keySet()) {
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Starting lookup mgmt for tier [%s].", tier);
+        }
+
+        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = allLookupTiers.get(tier);
+        for (final HostAndPort node : listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tier))) {
+
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Starting lookup mgmt for tier [%s] and host [%s:%s].", tier, node.getHostText(), node.getPort());
+          }
+
+          futures.add(
+              executorService.submit(
+                  new Runnable()
+                  {
+                    @Override
+                    public void run()
+                    {
+                      try {
+
+                        if (LOG.isDebugEnabled()) {
+                          LOG.debug("Starting lookup sync for node [%s].", node);
+                        }
+
+                        LookupsStateWithMap lookupsState = knownOldState.get().get(node);
+                        if (lookupsState == null
+                            || !lookupsState.getToLoad().isEmpty()
+                            || !lookupsState.getToDrop().isEmpty()
+                            || rand.nextBoolean()) {
+                          lookupsState = getLookupStateForNode(node);
+
+                          if (LOG.isDebugEnabled()) {
+                            LOG.debug("Received lookups state from node [%s].", node);
+                          }
+                        }
+                        currState.put(node, lookupsState);
+
+                        Map<String, LookupExtractorFactoryMapContainer> toLoad = new HashMap<>();
+                        for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : tierLookups.entrySet()) {
+                          String name = e.getKey();
+                          LookupExtractorFactoryMapContainer lookupToBe = e.getValue();
+
+                          LookupExtractorFactoryMapContainer current = lookupsState.getToLoad().get(name);
+                          if (current == null) {
+                            current = lookupsState.getCurrent().get(name);
+                          }
+
+                          if (current == null || lookupToBe.replaces(current)) {
+                            toLoad.put(name, lookupToBe);
+                          }
+                        }
+
+                        Set<String> toDrop = new HashSet<>();
+                        toDrop.addAll(lookupsState.getCurrent().keySet());
+                        toDrop.addAll(lookupsState.getToLoad().keySet());
+                        toDrop = Sets.difference(toDrop, lookupsState.getToDrop());
+                        toDrop = Sets.difference(toDrop, tierLookups.keySet());
+
+                        if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
+                          currState.put(node, updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop)));
+
+                          if (LOG.isDebugEnabled()) {
+                            LOG.debug("Sent lookup updates to node [%s].", node);
+                          }
+                        }
+
+                        if (LOG.isDebugEnabled()) {
+                          LOG.debug("Finished lookup sync for node [%s].", node);
+                        }
+                      }
+                      catch (Exception ex) {
+                        LOG.makeAlert(ex, "Failed to manage lookups on node [%s].", node).emit();
+                      }
+                    }
+                  }
+              )
+          );
+        }
+      }
+
+      final ListenableFuture allFuture = Futures.allAsList(futures);
+      try {
+        allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS);
+        knownOldState.set(currState);
+      }
+      catch (Exception ex) {
+        allFuture.cancel(true);
+        throw ex;
+      }
+
+    } catch (Exception ex) {
+      LOG.makeAlert(ex, "Failed to finish lookup management loop.").emit();
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Finished lookup sync for on all nodes.");
+    }
+  }
+
+  @VisibleForTesting
+  LookupsStateWithMap updateNode(
+      HostAndPort node,
+      LookupsStateWithMap lookupsUpdate
+  )
+      throws IOException, InterruptedException, ExecutionException
+  {
+    final AtomicInteger returnCode = new AtomicInteger(0);
+    final AtomicReference<String> reasonString = new AtomicReference<>(null);
+
+    final URL url = getLookupsUpdateURL(node);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending lookups load/drop request to [%s]. Request [%s]", url, lookupsUpdate);
+    }
+
+    try (final InputStream result = httpClient.go(
+        new Request(HttpMethod.POST, url)
+            .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+            .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+            .setContent(smileMapper.writeValueAsBytes(lookupsUpdate)),
+        makeResponseHandler(returnCode, reasonString),
+        lookupCoordinatorManagerConfig.getHostTimeout()
+    ).get()) {
+      if (!httpStatusIsSuccess(returnCode.get())) {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+          StreamUtils.copyAndClose(result, baos);
+        }
+        catch (IOException e2) {
+          LOG.warn(e2, "Error reading response");
+        }
+
+        throw new IOException(
+            String.format(
+                "Bad update request to [%s] : [%d] : [%s]  Response: [%s]",
+                url,
+                returnCode.get(),
+                reasonString.get(),
+                StringUtils.fromUtf8(baos.toByteArray())
+            )
+        );
+      } else {
+        try {
+          final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                response
+            );
+          }
+          return response;
+        } catch (IOException ex) {
+          throw new IOException(
+              String.format("Failed to parse update response from [%s]. response [%s]", url, result),
+              ex
+          );
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
+  LookupsStateWithMap getLookupStateForNode(
+      HostAndPort node
+  ) throws IOException, InterruptedException, ExecutionException
+  {
+    final URL url = getLookupsURL(node);
+    final AtomicInteger returnCode = new AtomicInteger(0);
+    final AtomicReference<String> reasonString = new AtomicReference<>(null);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Getting lookups from [%s]", url);
+    }
+
+    try (final InputStream result = httpClient.go(
+        new Request(HttpMethod.GET, url)
+            .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
+        makeResponseHandler(returnCode, reasonString),
+        lookupCoordinatorManagerConfig.getHostTimeout()
+    ).get()) {
+      if (returnCode.get() == 200) {
+        try {
+          final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                response
+            );
+          }
+          return response;
+        } catch(IOException ex) {
+          throw new IOException(
+              String.format(
+                  "Failed to parser GET lookups response from [%s]. response [%s].",
+                  url,
+                  result
+              ),
+              ex
+          );
+        }
+      } else {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+          StreamUtils.copyAndClose(result, baos);
+        }
+        catch (IOException ex) {
+          LOG.warn(ex, "Error reading response from GET on url [%s]", url);
+        }
+
+        throw new IOException(
+            String.format(
+                "GET request failed to [%s] : [%d] : [%s]  Response: [%s]",
+                url,
+                returnCode.get(),
+                reasonString.get(),
+                StringUtils.fromUtf8(baos.toByteArray())
+            )
+        );
+      }
+    }
+  }
+
   static URL getLookupsURL(HostAndPort druidNode) throws MalformedURLException
   {
     return new URL(
@@ -647,6 +617,16 @@ public class LookupCoordinatorManager
         druidNode.getHostText(),
         druidNode.getPortOrDefault(-1),
         ListenerResource.BASE_PATH + "/" + LOOKUP_LISTEN_ANNOUNCE_KEY
+    );
+  }
+
+  static URL getLookupsUpdateURL(HostAndPort druidNode) throws MalformedURLException
+  {
+    return new URL(
+        "http",
+        druidNode.getHostText(),
+        druidNode.getPortOrDefault(-1),
+        ListenerResource.BASE_PATH + "/" + LOOKUP_LISTEN_ANNOUNCE_KEY + "/" + "updates"
     );
   }
 
@@ -671,5 +651,37 @@ public class LookupCoordinatorManager
   boolean waitForBackgroundTermination(long timeout) throws InterruptedException
   {
     return backgroundManagerExitedLatch.await(timeout, TimeUnit.MILLISECONDS);
+  }
+
+  @VisibleForTesting
+  HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+      final AtomicInteger returnCode,
+      final AtomicReference<String> reasonString
+  )
+  {
+    return new SequenceInputStreamResponseHandler()
+    {
+      @Override
+      public ClientResponse<InputStream> handleResponse(HttpResponse response)
+      {
+        returnCode.set(response.getStatus().getCode());
+        reasonString.set(response.getStatus().getReasonPhrase());
+        return super.handleResponse(response);
+      }
+    };
+  }
+
+  @VisibleForTesting
+  Collection<URL> getAllHostsAnnounceEndpoint(final String tier) throws IOException
+  {
+    return ImmutableList.copyOf(
+        Collections2.filter(
+            Collections2.transform(
+                listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tier)),
+                HOST_TO_URL
+            ),
+            Predicates.notNull()
+        )
+    );
   }
 }

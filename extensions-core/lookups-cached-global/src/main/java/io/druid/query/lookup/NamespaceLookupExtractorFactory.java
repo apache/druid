@@ -150,7 +150,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
-  public boolean replaces(@Nullable LookupExtractorFactory other)
+  public boolean equals(@Nullable Object other)
   {
     if (other != null && other instanceof NamespaceLookupExtractorFactory) {
       NamespaceLookupExtractorFactory that = (NamespaceLookupExtractorFactory) other;

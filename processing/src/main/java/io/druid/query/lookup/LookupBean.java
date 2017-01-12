@@ -24,8 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 //TODO merge this code to the same definition when pr/1576 is merged
 class LookupBean
 {
+  //kept for backward compatibility with druid ver <= 0.9.2 persisted snapshots
+  @Deprecated
   @JsonProperty
   LookupExtractorFactory factory;
+
+  @JsonProperty
+  LookupExtractorFactoryContainer container;
+
   @JsonProperty
   String name;
 

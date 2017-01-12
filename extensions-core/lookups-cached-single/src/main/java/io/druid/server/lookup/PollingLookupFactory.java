@@ -107,18 +107,6 @@ public class PollingLookupFactory implements LookupExtractorFactory
     }
   }
 
-  @Override
-  public boolean replaces(
-      @Nullable LookupExtractorFactory lookupExtractorFactory
-  )
-  {
-    if (lookupExtractorFactory == null) {
-      return true;
-    }
-
-    return !this.equals(lookupExtractorFactory);
-  }
-
   @Nullable
   @Override
   public LookupIntrospectHandler getIntrospectHandler()
