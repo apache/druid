@@ -1063,7 +1063,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         throw new RuntimeException("Got interrupted while waiting to be killed");
       }
     } else {
-      throw new RuntimeException(String.format("Failed to reset partitions [%s]", partitionOffsetMap.keySet()));
+      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
     }
   }
 }
