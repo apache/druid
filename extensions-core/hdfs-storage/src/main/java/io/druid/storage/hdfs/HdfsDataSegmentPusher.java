@@ -20,7 +20,6 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
@@ -64,7 +63,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
     this.pathForHadoop = FileSystem.newInstance(hadoopConfig).makeQualified(new Path(config.getStorageDirectory()))
-        .toUri().toString();
+                                   .toUri().toString();
 
     log.info("Configured HDFS as deep storage");
   }

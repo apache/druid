@@ -117,7 +117,7 @@ public class HdfsDataSegmentPusherTest
         "path",
         String.format(
             "%s/%s/index.zip",
-                FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+            FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
             DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
         )
     ), segment.getLoadSpec());
