@@ -121,6 +121,12 @@ public class Sequences
 
   public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
   {
+    // Uses YieldingSequenceBase to be able to execute the effect if all elements of the wrapped seq are processed
+    // (i. e. it "is done"), but the yielder of the underlying seq throws some exception from close(). This logic could
+    // be found in ExecuteWhenDoneYielder.close(). If accumulate() is implemented manually in this anonymous class
+    // instead of extending YieldingSequenceBase, it's not possible to distinguish exception thrown during elements
+    // processing in accumulate() of the underlying seq, from exception thrown after all elements are processed,
+    // in close().
     return new YieldingSequenceBase<T>()
     {
       @Override
