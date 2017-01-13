@@ -113,11 +113,9 @@ public class KafkaDataSourceMetadata implements DataSourceMetadata
       final Map<Integer, Long> newMap = Maps.newHashMap();
 
       for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      for (Map.Entry<Integer, Long> entry : that.getKafkaPartitions().getPartitionOffsetMap().entrySet()) {
-        newMap.remove(entry.getKey());
+        if(!that.getKafkaPartitions().getPartitionOffsetMap().containsKey(entry.getKey())) {
+          newMap.put(entry.getKey(), entry.getValue());
+        }
       }
 
       return new KafkaDataSourceMetadata(new KafkaPartitions(kafkaPartitions.getTopic(), newMap));

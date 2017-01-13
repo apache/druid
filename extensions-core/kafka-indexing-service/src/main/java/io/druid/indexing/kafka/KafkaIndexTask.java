@@ -1021,7 +1021,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
 
     if (doReset) {
-      sendResetRequest(resetPartitions, taskToolbox);
+      sendResetRequestAndWait(resetPartitions, taskToolbox);
     } else {
       log.warn("Retrying in %dms", POLL_RETRY_MS);
       pollRetryLock.lockInterruptibly();
@@ -1037,7 +1037,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private void sendResetRequest(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox) throws IOException
+  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox) throws IOException
   {
     Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
     for (Map.Entry<TopicPartition, Long>  outOfRangePartition: outOfRangePartitions.entrySet()) {
