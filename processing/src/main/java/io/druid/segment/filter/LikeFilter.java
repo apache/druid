@@ -80,45 +80,8 @@ public class LikeFilter implements Filter
 
       // Union bitmaps for all matching dimension values in range.
       // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-      return selector.getBitmapFactory().union(
-          new Iterable<ImmutableBitmap>()
-          {
-            @Override
-            public Iterator<ImmutableBitmap> iterator()
-            {
-              return new Iterator<ImmutableBitmap>()
-              {
-                int currIndex = startIndex;
-
-                @Override
-                public boolean hasNext()
-                {
-                  return currIndex < endIndex;
-                }
-
-                @Override
-                public ImmutableBitmap next()
-                {
-                  while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
-                    currIndex++;
-                  }
-
-                  if (currIndex == endIndex) {
-                    return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
-                  }
-
-                  return bitmapIndex.getBitmap(currIndex++);
-                }
-
-                @Override
-                public void remove()
-                {
-                  throw new UnsupportedOperationException();
-                }
-              };
-            }
-          }
-      );
+      return selector.getBitmapFactory()
+                     .union(getBitmapIterator(startIndex, endIndex, bitmapIndex, likeMatcher, dimValues));
     } else {
       // fallback
       return Filters.matchPredicate(
@@ -139,5 +102,108 @@ public class LikeFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    if (extractionFn == null && likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_EMPTY) {
+      // dimension equals prefix
+      return (double) selector.getBitmapIndex(dimension, likeMatcher.getPrefix()).size() / totalNumRows;
+    } else if (extractionFn == null && !likeMatcher.getPrefix().isEmpty()) {
+      // dimension startsWith prefix and is accepted by likeMatcher.matchesSuffixOnly
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+
+      if (bitmapIndex == null) {
+        // Treat this as a column full of nulls
+        return likeMatcher.matches(null) ? 1. : 0.;
+      }
+
+      // search for start, end indexes in the bitmaps; then include all matching bitmaps between those points
+      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+
+      final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
+      final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+      final int startIndex; // inclusive
+      final int endIndex; // exclusive
+
+      final int lowerFound = bitmapIndex.getIndex(lower);
+      startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
+
+      final int upperFound = bitmapIndex.getIndex(upper);
+      endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
+
+      // Use lazy iterator to allow getting bitmap size one by one and avoid materializing all of them at once.
+      final Iterator<ImmutableBitmap> iterator = getBitmapIterator(
+          startIndex,
+          endIndex,
+          bitmapIndex,
+          likeMatcher,
+          dimValues
+      ).iterator();
+
+      long matchRowNum = 0;
+      while (iterator.hasNext()) {
+        final ImmutableBitmap bitmap = iterator.next();
+        matchRowNum += bitmap.size();
+      }
+
+      return (double) matchRowNum / totalNumRows;
+    } else {
+      // fallback
+      return Filters.estimatePredicateSelectivity(
+          dimension,
+          selector,
+          likeMatcher.predicateFactory(extractionFn).makeStringPredicate(),
+          totalNumRows
+      );
+    }
+  }
+
+  private static Iterable<ImmutableBitmap> getBitmapIterator(
+      final int startIndex,
+      final int endIndex,
+      final BitmapIndex bitmapIndex,
+      final LikeDimFilter.LikeMatcher likeMatcher,
+      final Indexed<String> dimValues
+  )
+  {
+    return new Iterable<ImmutableBitmap>()
+    {
+      @Override
+      public Iterator<ImmutableBitmap> iterator()
+      {
+        return new Iterator<ImmutableBitmap>()
+        {
+          int currIndex = startIndex;
+
+          @Override
+          public boolean hasNext()
+          {
+            return currIndex < endIndex;
+          }
+
+          @Override
+          public ImmutableBitmap next()
+          {
+            while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
+              currIndex++;
+            }
+
+            if (currIndex == endIndex) {
+              return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
+            }
+
+            return bitmapIndex.getBitmap(currIndex++);
+          }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
   }
 }

@@ -155,6 +155,17 @@ public class OrFilter implements BooleanFilter
     return true;
   }
 
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    // Estimate selectivity with attribute value independence assumption
+    double selectivity = 0;
+    for (final Filter filter : filters) {
+      selectivity += filter.estimateSelectivity(selector, totalNumRows);
+    }
+    return Math.min(selectivity, 1.);
+  }
+
   public String toString()
   {
     return String.format("(%s)", OR_JOINER.join(filters));

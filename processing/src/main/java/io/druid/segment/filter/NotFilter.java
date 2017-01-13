@@ -68,6 +68,12 @@ public class NotFilter implements Filter
     return baseFilter.supportsBitmapIndex(selector);
   }
 
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    return 1. - baseFilter.estimateSelectivity(selector, totalNumRows);
+  }
+
   public Filter getBaseFilter()
   {
     return baseFilter;

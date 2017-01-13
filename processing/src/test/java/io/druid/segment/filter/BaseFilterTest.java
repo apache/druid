@@ -385,6 +385,12 @@ public abstract class BaseFilterTest
       {
         return false;
       }
+
+      @Override
+      public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+      {
+        return 1.0;
+      }
     };
 
     final Sequence<Cursor> cursors = makeCursorSequence(postFilteringFilter);

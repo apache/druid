@@ -100,4 +100,14 @@ public class SpatialFilter implements Filter
   {
     return selector.getBitmapIndex(dimension) != null;
   }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    long matchRowNum = 0;
+    for (final ImmutableBitmap bitmap : selector.getSpatialIndex(dimension).search(bound)) {
+      matchRowNum += bitmap.size();
+    }
+    return (double) matchRowNum / totalNumRows;
+  }
 }

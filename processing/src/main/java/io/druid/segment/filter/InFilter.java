@@ -94,6 +94,25 @@ public class InFilter implements Filter
     return selector.getBitmapIndex(dimension) != null;
   }
 
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    if (extractionFn == null) {
+      long matchedNumRows = 0;
+      for (final String eachVal : values) {
+        matchedNumRows += selector.getBitmapIndex(dimension, eachVal).size();
+      }
+      return (double) matchedNumRows / totalNumRows;
+    } else {
+      return Filters.estimatePredicateSelectivity(
+          dimension,
+          selector,
+          getPredicateFactory().makeStringPredicate(),
+          totalNumRows
+      );
+    }
+  }
+
   private DruidPredicateFactory getPredicateFactory()
   {
     return new DruidPredicateFactory()

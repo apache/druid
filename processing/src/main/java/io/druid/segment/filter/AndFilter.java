@@ -149,6 +149,17 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    // Estimate selectivity with attribute value independence assumption
+    double selectivity = 1.0;
+    for (final Filter filter : filters) {
+      selectivity *= filter.estimateSelectivity(selector, totalNumRows);
+    }
+    return selectivity;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("(%s)", AND_JOINER.join(filters));

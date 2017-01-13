@@ -105,6 +105,17 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    return Filters.estimatePredicateSelectivity(
+        dimension,
+        selector,
+        predicateFactory.makeStringPredicate(),
+        totalNumRows
+    );
+  }
+
+  @Override
   public String toString()
   {
     if (extractionFn != null) {

@@ -99,7 +99,7 @@ public class Filters
 
   /**
    * Create a ValueMatcher that compares row values to the provided string.
-   *
+   * <p>
    * An implementation of this method should be able to handle dimensions of various types.
    *
    * @param columnSelectorFactory Selector for columns.
@@ -136,10 +136,10 @@ public class Filters
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.
-   *
+   * <p>
    * The caller provides a predicate factory that can create a predicate for each value type supported by Druid.
    * See {@link DruidPredicateFactory} for more information.
-   *
+   * <p>
    * When creating the ValueMatcher, the ValueMatcherFactory implementation should decide what type of predicate
    * to create from the predicate factory based on the ValueType of the specified dimension.
    *
@@ -220,61 +220,106 @@ public class Filters
 
     // Apply predicate to all dimension values and union the matching bitmaps
     final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-    return selector.getBitmapFactory().union(
-        new Iterable<ImmutableBitmap>()
+    return selector.getBitmapFactory()
+                   .union(createPredicateQualifyingBitmapIterator(bitmapIndex, predicate, dimValues));
+  }
+
+  static double estimatePredicateSelectivity(
+      final String dimension,
+      final BitmapIndexSelector selector,
+      final Predicate<String> predicate,
+      final long totalNumRows
+  )
+  {
+    Preconditions.checkNotNull(dimension, "dimension");
+    Preconditions.checkNotNull(selector, "selector");
+    Preconditions.checkNotNull(predicate, "predicate");
+
+    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
+    final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+    if (dimValues == null || dimValues.size() == 0) {
+      if (predicate.apply(null)) {
+        return 1.;
+      } else {
+        return 0.;
+      }
+    }
+
+    // Apply predicate to all dimension values and union the matching bitmaps
+    final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+    final Iterator<ImmutableBitmap> iterator = createPredicateQualifyingBitmapIterator(
+        bitmapIndex,
+        predicate,
+        dimValues
+    ).iterator();
+
+    long matchRowNum = 0;
+    while (iterator.hasNext()) {
+      final ImmutableBitmap next = iterator.next();
+      matchRowNum += next.size();
+    }
+    return (double) matchRowNum / totalNumRows;
+  }
+
+  private static Iterable<ImmutableBitmap> createPredicateQualifyingBitmapIterator(
+      final BitmapIndex bitmapIndex,
+      final Predicate<String> predicate,
+      final Indexed<String> dimValues
+  )
+  {
+    return new Iterable<ImmutableBitmap>()
+    {
+      @Override
+      public Iterator<ImmutableBitmap> iterator()
+      {
+        return new Iterator<ImmutableBitmap>()
         {
-          @Override
-          public Iterator<ImmutableBitmap> iterator()
+          private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
+          private int nextIndex = 0;
+          private ImmutableBitmap nextBitmap;
+
           {
-            return new Iterator<ImmutableBitmap>()
-            {
-              private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
-              private int nextIndex = 0;
-              private ImmutableBitmap nextBitmap;
-
-              {
-                findNextBitmap();
-              }
-
-              private void findNextBitmap()
-              {
-                while (nextIndex < bitmapIndexCardinality) {
-                  if (predicate.apply(dimValues.get(nextIndex))) {
-                    nextBitmap = bitmapIndex.getBitmap(nextIndex);
-                    nextIndex++;
-                    return;
-                  }
-                  nextIndex++;
-                }
-                nextBitmap = null;
-              }
-
-              @Override
-              public boolean hasNext()
-              {
-                return nextBitmap != null;
-              }
-
-              @Override
-              public ImmutableBitmap next()
-              {
-                ImmutableBitmap bitmap = nextBitmap;
-                if (bitmap == null) {
-                  throw new NoSuchElementException();
-                }
-                findNextBitmap();
-                return bitmap;
-              }
-
-              @Override
-              public void remove()
-              {
-                throw new UnsupportedOperationException();
-              }
-            };
+            findNextBitmap();
           }
-        }
-    );
+
+          private void findNextBitmap()
+          {
+            while (nextIndex < bitmapIndexCardinality) {
+              if (predicate.apply(dimValues.get(nextIndex))) {
+                nextBitmap = bitmapIndex.getBitmap(nextIndex);
+                nextIndex++;
+                return;
+              }
+              nextIndex++;
+            }
+            nextBitmap = null;
+          }
+
+          @Override
+          public boolean hasNext()
+          {
+            return nextBitmap != null;
+          }
+
+          @Override
+          public ImmutableBitmap next()
+          {
+            ImmutableBitmap bitmap = nextBitmap;
+            if (bitmap == null) {
+              throw new NoSuchElementException();
+            }
+            findNextBitmap();
+            return bitmap;
+          }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
   }
 
   public static ValueMatcher getLongValueMatcher(
@@ -372,7 +417,6 @@ public class Filters
     }
 
 
-
     if (current instanceof OrFilter) {
       List<Filter> children = Lists.newArrayList();
       for (Filter child : ((OrFilter) current).getFilters()) {
@@ -425,7 +469,8 @@ public class Filters
 
   // CNF conversion functions were adapted from Apache Hive, see:
   // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter flatten(Filter root) {
+  private static Filter flatten(Filter root)
+  {
     if (root instanceof BooleanFilter) {
       List<Filter> children = new ArrayList<>();
       children.addAll(((BooleanFilter) root).getFilters());
@@ -436,7 +481,7 @@ public class Filters
         // do we need to flatten?
         if (child.getClass() == root.getClass() && !(child instanceof NotFilter)) {
           boolean first = true;
-          List<Filter> grandKids = ((BooleanFilter)child).getFilters();
+          List<Filter> grandKids = ((BooleanFilter) child).getFilters();
           for (Filter grandkid : grandKids) {
             // for the first grandkid replace the original parent
             if (first) {

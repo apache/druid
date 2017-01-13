@@ -32,7 +32,7 @@ public interface Filter
    * @param selector Object used to retrieve bitmap indexes
    * @return A bitmap indicating rows that match this filter.
    */
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+  ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
 
 
   /**
@@ -41,7 +41,7 @@ public interface Filter
    * @param factory Object used to create ValueMatchers
    * @return ValueMatcher that applies this filter to row values.
    */
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory);
+  ValueMatcher makeMatcher(ColumnSelectorFactory factory);
 
 
   /**
@@ -51,5 +51,14 @@ public interface Filter
    * @param selector Object used to retrieve bitmap indexes
    * @return true if this Filter can provide a bitmap index using the selector, false otherwise
    */
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector);
+  boolean supportsBitmapIndex(BitmapIndexSelector selector);
+
+  /**
+   * Estimate selectivity of this filter. The estimated selectivity might be different from the exact value.
+   *
+   * @param selector Object used to retrieve bitmap indexes
+   * @param totalNumRows total number of rows in a segment
+   * @return Selectivity ranging from 0 to 1.
+   */
+  double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows);
 }

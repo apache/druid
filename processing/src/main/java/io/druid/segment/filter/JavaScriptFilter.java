@@ -75,4 +75,25 @@ public class JavaScriptFilter implements Filter
   {
     return selector.getBitmapIndex(dimension) != null;
   }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    final Context cx = Context.enter();
+    try {
+      final Predicate<String> contextualPredicate = new Predicate<String>()
+      {
+        @Override
+        public boolean apply(String input)
+        {
+          return predicateFactory.applyInContext(cx, input);
+        }
+      };
+
+      return Filters.estimatePredicateSelectivity(dimension, selector, contextualPredicate, totalNumRows);
+    }
+    finally {
+      Context.exit();
+    }
+  }
 }

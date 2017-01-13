@@ -46,9 +46,17 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.IdentityExtractionFn;
+import io.druid.query.extraction.LowerExtractionFn;
+import io.druid.query.extraction.StrlenExtractionFn;
+import io.druid.query.extraction.SubstringDimExtractionFn;
+import io.druid.query.extraction.UpperExtractionFn;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.SearchResultValue;
@@ -163,9 +171,9 @@ public class SearchBenchmark
     }
 
     { // basic.B
-      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
 
-      List<String> dimUniformFilterVals = Lists.newArrayList();
+      final List<String> dimUniformFilterVals = Lists.newArrayList();
       int resultNum = (int) (100000 * 0.1);
       int step = 100000 / resultNum;
       for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
@@ -183,7 +191,7 @@ public class SearchBenchmark
       dimFilters.add(new InDimFilter("dimUniform", dimUniformFilterVals, null));
       dimFilters.add(new InDimFilter("dimHyperUnique", dimHyperUniqueFilterVals, null));
 
-      Druids.SearchQueryBuilder queryBuilderB =
+      final Druids.SearchQueryBuilder queryBuilderB =
           Druids.newSearchQueryBuilder()
                 .dataSource("blah")
                 .granularity(QueryGranularities.ALL)
@@ -193,6 +201,93 @@ public class SearchBenchmark
                 .filters(new AndDimFilter(dimFilters));
 
       basicQueries.put("B", queryBuilderB);
+    }
+
+    { // basic.C
+      final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      final List<String> dimUniformFilterVals = Lists.newArrayList();
+      final int resultNum = (int) (100000 * 0.1);
+      final int step = 100000 / resultNum;
+      for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
+        dimUniformFilterVals.add(String.valueOf(i));
+      }
+
+      final String dimName = "dimUniform";
+      final List<DimFilter> dimFilters = Lists.newArrayList();
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, IdentityExtractionFn.getInstance()));
+      dimFilters.add(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()));
+      dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, new DimExtractionFn()
+      {
+        @Override
+        public byte[] getCacheKey()
+        {
+          return new byte[] {0xF};
+        }
+
+        @Override
+        public String apply(String value)
+        {
+          return String.valueOf(Long.parseLong(value) + 1);
+        }
+
+        @Override
+        public boolean preservesOrdering()
+        {
+          return false;
+        }
+
+        @Override
+        public ExtractionType getExtractionType()
+        {
+          return ExtractionType.ONE_TO_ONE;
+        }
+      }, null));
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, new LowerExtractionFn(null)));
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, new UpperExtractionFn(null)));
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, new SubstringDimExtractionFn(1, 3)));
+
+      final Druids.SearchQueryBuilder queryBuilderC =
+          Druids.newSearchQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .query("")
+                .dimensions(Lists.newArrayList("dimUniform"))
+                .filters(new AndDimFilter(dimFilters));
+
+      basicQueries.put("C", queryBuilderC);
+    }
+
+    { // basic.D
+      final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      final List<String> dimUniformFilterVals = Lists.newArrayList();
+      final int resultNum = (int) (100000 * 0.1);
+      final int step = 100000 / resultNum;
+      for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
+        dimUniformFilterVals.add(String.valueOf(i));
+      }
+
+      final String dimName = "dimUniform";
+      final List<DimFilter> dimFilters = Lists.newArrayList();
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
+      dimFilters.add(new SelectorDimFilter(dimName, "3", null));
+      dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null));
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
+      dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
+
+      final Druids.SearchQueryBuilder queryBuilderC =
+          Druids.newSearchQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .query("")
+                .dimensions(Lists.newArrayList("dimUniform"))
+                .filters(new AndDimFilter(dimFilters));
+
+      basicQueries.put("D", queryBuilderC);
     }
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);

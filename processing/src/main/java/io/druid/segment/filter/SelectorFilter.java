@@ -60,6 +60,12 @@ public class SelectorFilter implements Filter
   }
 
   @Override
+  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  {
+    return (double) selector.getBitmapIndex(dimension, value).size() / totalNumRows;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("%s = %s", dimension, value);
