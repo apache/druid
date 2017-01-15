@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -50,7 +49,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class ScanQueryEngine
 {
@@ -80,9 +78,21 @@ public class ScanQueryEngine
 
     List<String> allDims = Lists.newLinkedList(adapter.getAvailableDimensions());
     List<String> allMetrics = Lists.newLinkedList(adapter.getAvailableMetrics());
+    final List<String> allColumns = Lists.newLinkedList();
     if (query.getColumns() != null && !query.getColumns().isEmpty()) {
+      if (!query.getColumns().contains(ScanResultValue.timestampKey)) {
+        allColumns.add(ScanResultValue.timestampKey);
+      }
+      allColumns.addAll(query.getColumns());
       allDims.retainAll(query.getColumns());
       allMetrics.retainAll(query.getColumns());
+    }
+    if (query.getColumns() == null || query.getColumns().isEmpty()) {
+      if (!allDims.contains(ScanResultValue.timestampKey)) {
+        allColumns.add(ScanResultValue.timestampKey);
+      }
+      allColumns.addAll(allDims);
+      allColumns.addAll(allMetrics);
     }
     final List<DimensionSpec> dims = DefaultDimensionSpec.toSpec(allDims);
     final List<String> metrics = allMetrics;
@@ -119,7 +129,6 @@ public class ScanQueryEngine
                       @Override
                       public Iterator<ScanResultValue> make()
                       {
-                        final Set<String> columns = Sets.newHashSet();
                         final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
                         final List<ColumnSelectorPlus<SelectQueryEngine.SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
@@ -129,15 +138,11 @@ public class ScanQueryEngine
                                 cursor
                             )
                         );
-                        for (DimensionSpec dim : dims) {
-                          columns.add(dim.getOutputName());
-                        }
 
                         final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
                         for (String metric : metrics) {
                           final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
                           metSelectors.put(metric, metricSelector);
-                          columns.add(metric);
                         }
                         final int batchSize = query.getBatchSize();
                         return new Iterator<ScanResultValue>()
@@ -158,11 +163,13 @@ public class ScanQueryEngine
                             String resultFormat = query.getResultFormat();
                             if (ScanQuery.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
                               throw new UnsupportedOperationException("valueVector is not supported now");
+                            } else if (ScanQuery.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
+                              events = rowsToCompactedList();
                             } else {
                               events = rowsToList();
                             }
                             responseContext.put("count", (int) responseContext.get("count") + (offset - lastOffset));
-                            return new ScanResultValue(segmentId, columns, events);
+                            return new ScanResultValue(segmentId, allColumns, events);
                           }
 
                           @Override
@@ -171,11 +178,29 @@ public class ScanQueryEngine
                             throw new UnsupportedOperationException();
                           }
 
+                          private Object rowsToCompactedList()
+                          {
+                            return Lists.transform(
+                                (List<Map<String, Object>>) rowsToList(),
+                                new Function<Map<String, Object>, Object>()
+                                {
+                                  @Override
+                                  public Object apply(Map<String, Object> input)
+                                  {
+                                    List eventValues = Lists.newArrayListWithCapacity(allColumns.size());
+                                    for (String expectedColumn : allColumns) {
+                                      eventValues.add(input.get(expectedColumn));
+                                    }
+                                    return eventValues;
+                                  }
+                                }
+                            );
+                          }
+
                           private Object rowsToList()
                           {
-                            int i = 0;
                             List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
-                            for (; !cursor.isDone()
+                            for (int i = 0; !cursor.isDone()
                                    && i < batchSize
                                    && offset < limit; cursor.advance(), i++, offset++) {
                               final Map<String, Object> theEvent = SelectQueryEngine.singleEvent(

@@ -21,20 +21,20 @@ package io.druid.query.scan;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Set;
+import java.util.List;
 
 public class ScanResultValue implements Comparable<ScanResultValue>
 {
   public static final String timestampKey = "timestamp";
 
   private final String segmentId;
-  private final Set<String> columns;
+  private final List<String> columns;
   private final Object events;
 
   @JsonCreator
   public ScanResultValue(
       @JsonProperty("segmentId") String segmentId,
-      @JsonProperty("columns") Set<String> columns,
+      @JsonProperty("columns") List<String> columns,
       @JsonProperty("events") Object events
   )
   {
@@ -50,7 +50,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   }
 
   @JsonProperty
-  public Set<String> getColumns()
+  public List<String> getColumns()
   {
     return columns;
   }

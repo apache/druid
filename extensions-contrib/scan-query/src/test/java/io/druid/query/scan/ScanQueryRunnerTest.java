@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -129,6 +130,7 @@ public class ScanQueryRunnerTest
   public void testFullOnSelect()
   {
     List<String> columns = Lists.newArrayList(
+        ScanResultValue.timestampKey,
         "market",
         "quality",
         "placement",
@@ -136,9 +138,9 @@ public class ScanQueryRunnerTest
         "partial_null_column",
         "null_column",
         "index",
-        "quality_uniques",
         "indexMin",
-        "indexMaxPlusTen"
+        "indexMaxPlusTen",
+        "quality_uniques"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
@@ -157,6 +159,42 @@ public class ScanQueryRunnerTest
         3
     );
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
+  }
+
+  @Test
+  public void testFullOnSelectAsCompactedList()
+  {
+    final List<String> columns = Lists.newArrayList(
+        ScanResultValue.timestampKey,
+        "market",
+        "quality",
+        "placement",
+        "placementish",
+        "partial_null_column",
+        "null_column",
+        "index",
+        "indexMin",
+        "indexMaxPlusTen",
+        "quality_uniques"
+    );
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<ScanResultValue> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<ScanResultValue>newArrayList()
+    );
+
+    List<ScanResultValue> expectedResults = toExpected(
+        toFullEvents(V_0112_0114),
+        columns,
+        0,
+        3
+    );
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(compactedListToRow(results), "null_column"));
   }
 
   @Test
@@ -185,11 +223,45 @@ public class ScanQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList("market", "index"),
+        Lists.newArrayList(ScanResultValue.timestampKey, "market", "index"),
         0,
         3
     );
     verify(expectedResults, results);
+  }
+
+  @Test
+  public void testSelectWithDimsAndMetsAsCompactedList()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
+        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<ScanResultValue> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<ScanResultValue>newArrayList()
+    );
+
+    List<ScanResultValue> expectedResults = toExpected(
+        toEvents(
+            new String[]{
+                ScanResultValue.timestampKey + ":TIME",
+                QueryRunnerTestHelper.marketDimension + ":STRING",
+                null,
+                null,
+                null,
+                QueryRunnerTestHelper.indexMetric + ":FLOAT"
+            },
+            V_0112_0114
+        ),
+        Lists.newArrayList(ScanResultValue.timestampKey, "market", "index"),
+        0,
+        3
+    );
+    verify(expectedResults, compactedListToRow(results));
   }
 
   @Test
@@ -246,7 +318,7 @@ public class ScanQueryRunnerTest
 
       List<ScanResultValue> expectedResults = toExpected(
           events,
-          Lists.newArrayList("quality", "index"),
+          Lists.newArrayList(ScanResultValue.timestampKey, "quality", "index"),
           0,
           limit
       );
@@ -257,7 +329,6 @@ public class ScanQueryRunnerTest
   @Test
   public void testSelectWithFilterLookupExtractionFn()
   {
-
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("total_market", "replaced");
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
@@ -299,7 +370,7 @@ public class ScanQueryRunnerTest
 
     List<ScanResultValue> expectedResults = toExpected(
         events,
-        Lists.newArrayList(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric),
+        Lists.newArrayList(ScanResultValue.timestampKey, QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric),
         0,
         3
     );
@@ -356,7 +427,7 @@ public class ScanQueryRunnerTest
 
     List<ScanResultValue> expectedResults = toExpected(
         events,
-        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(ScanResultValue.timestampKey, "foo", "foo2"),
         0,
         3
     );
@@ -440,7 +511,7 @@ public class ScanQueryRunnerTest
       expected.add(
           new ScanResultValue(
               QueryRunnerTestHelper.segmentId,
-              Sets.<String>newHashSet(columns),
+              columns,
               events
           )
       );
@@ -462,7 +533,9 @@ public class ScanQueryRunnerTest
 
       Assert.assertEquals(expected.getSegmentId(), actual.getSegmentId());
 
-      Assert.assertEquals(expected.getColumns(), actual.getColumns());
+      Set exColumns = Sets.newTreeSet(expected.getColumns());
+      Set acColumns = Sets.newTreeSet(actual.getColumns());
+      Assert.assertEquals(exColumns, acColumns);
 
       Iterator<Map<String, Object>> expectedEvts = ((List<Map<String, Object>>) expected.getEvents()).iterator();
       Iterator<Map<String, Object>> actualEvts = ((List<Map<String, Object>>) actual.getEvents()).iterator();
@@ -499,7 +572,7 @@ public class ScanQueryRunnerTest
   {
     // A Queryable index does not have the null column when it has loaded a index.
     for (ScanResultValue value : results) {
-      Set<String> columns = value.getColumns();
+      List<String> columns = value.getColumns();
       if (columns.contains(columnName)) {
         break;
       }
@@ -509,4 +582,24 @@ public class ScanQueryRunnerTest
     return results;
   }
 
+  private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results) {
+    return Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
+    {
+      @Override
+      public ScanResultValue apply(ScanResultValue input)
+      {
+        List mapEvents = Lists.newLinkedList();
+        List events = ((List) input.getEvents());
+        for (int i = 0; i < events.size(); i++) {
+          Iterator compactedEventIter = ((List) events.get(i)).iterator();
+          Map mapEvent = new LinkedHashMap();
+          for (String column : input.getColumns()) {
+            mapEvent.put(column, compactedEventIter.next());
+          }
+          mapEvents.add(mapEvent);
+        }
+        return new ScanResultValue(input.getSegmentId(), input.getColumns(), mapEvents);
+      }
+    });
+  }
 }
