@@ -84,8 +84,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPort();
-    port1 = SocketUtil.findOpenPort(port + 1);
-    port2 = SocketUtil.findOpenPort(port1 + 1);
+    port1 = SocketUtil.findOpenPortFrom(port + 1);
+    port2 = SocketUtil.findOpenPortFrom(port1 + 1);
 
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();

@@ -49,6 +49,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 
 |Name|Description|Docs|
 |----|-----------|----|
+|ambari-metrics-emitter|Ambari Metrics Emitter |[link](../development/extensions-contrib/ambari-metrics-emitter.html)|
 |druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-contrib/azure.html)|
 |druid-cassandra-storage|Apache Cassandra deep storage.|[link](../development/extensions-contrib/cassandra.html)|
 |druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/extensions-contrib/cloudfiles.html)|
@@ -63,6 +64,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |sqlserver-metadata-storage|Microsoft SqlServer deep storage.|[link](../development/extensions-contrib/sqlserver.html)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.html)|
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.html)|
+|druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.html)|
 
 ## Promoting Community Extension to Core Extension
 

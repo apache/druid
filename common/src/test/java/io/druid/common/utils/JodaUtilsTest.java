@@ -104,7 +104,11 @@ public class JodaUtilsTest
         new Interval("2011-02-03/2011-02-08"),
         new Interval("2011-03-01/2011-03-02"),
         new Interval("2011-03-03/2011-03-04"),
-        new Interval("2011-03-05/2011-03-06")
+        new Interval("2011-03-05/2011-03-06"),
+        new Interval("2011-04-01/2011-04-05"),
+        new Interval("2011-04-02/2011-04-03"),
+        new Interval("2011-05-01/2011-05-05"),
+        new Interval("2011-05-02/2011-05-07")
     );
 
     for (int i = 0; i < 20; ++i) {
@@ -115,7 +119,9 @@ public class JodaUtilsTest
               new Interval("2011-02-01/2011-02-08"),
               new Interval("2011-03-01/2011-03-02"),
               new Interval("2011-03-03/2011-03-04"),
-              new Interval("2011-03-05/2011-03-06")
+              new Interval("2011-03-05/2011-03-06"),
+              new Interval("2011-04-01/2011-04-05"),
+              new Interval("2011-05-01/2011-05-07")
           ),
           JodaUtils.condenseIntervals(intervals)
       );

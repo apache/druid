@@ -38,42 +38,34 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.math.expr.Evals;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandler;
-import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -111,46 +103,22 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public static ColumnSelectorFactory makeColumnSelectorFactory(
       final AggregatorFactory agg,
       final Supplier<InputRow> in,
-      final boolean deserializeComplexMetrics,
-      final Map<String, ColumnCapabilitiesImpl> columnCapabilities
+      final boolean deserializeComplexMetrics
   )
   {
+    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in, null);
     return new ColumnSelectorFactory()
     {
       @Override
       public LongColumnSelector makeLongColumnSelector(final String columnName)
       {
-        if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-          return new LongColumnSelector()
-          {
-            @Override
-            public long get()
-            {
-              return in.get().getTimestampFromEpoch();
-            }
-          };
-        }
-        return new LongColumnSelector()
-        {
-          @Override
-          public long get()
-          {
-            return in.get().getLongMetric(columnName);
-          }
-        };
+        return baseSelectorFactory.makeLongColumnSelector(columnName);
       }
 
       @Override
       public FloatColumnSelector makeFloatColumnSelector(final String columnName)
       {
-        return new FloatColumnSelector()
-        {
-          @Override
-          public float get()
-          {
-            return in.get().getFloatMetric(columnName);
-          }
-        };
+        return baseSelectorFactory.makeFloatColumnSelector(columnName);
       }
 
       @Override
@@ -158,20 +126,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       {
         final String typeName = agg.getTypeName();
 
-        final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
-        {
-          @Override
-          public Class classOfObject()
-          {
-            return Object.class;
-          }
-
-          @Override
-          public Object get()
-          {
-            return in.get().getRaw(column);
-          }
-        };
+        final ObjectColumnSelector rawColumnSelector = baseSelectorFactory.makeObjectColumnSelector(column);
 
         if ((Enums.getIfPresent(ValueType.class, typeName.toUpperCase()).isPresent() && !typeName.equalsIgnoreCase(ValueType.COMPLEX.name()))
             || !deserializeComplexMetrics) {
@@ -201,129 +156,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       @Override
+      public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return baseSelectorFactory.makeDimensionSelector(dimensionSpec);
+      }
+
+      @Nullable
+      @Override
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
-        // This ColumnSelectorFactory implementation has no knowledge of column capabilities.
-        // However, this method may still be called by FilteredAggregatorFactory's ValueMatcherFactory
-        // to check column types.
-        // Just return null, the caller will assume default types in that case.
-        return null;
-      }
-
-      @Override
-      public DimensionSelector makeDimensionSelector(
-          DimensionSpec dimensionSpec
-      )
-      {
-        return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
-      }
-
-      private DimensionSelector makeDimensionSelectorUndecorated(
-          DimensionSpec dimensionSpec
-      )
-      {
-        final String dimension = dimensionSpec.getDimension();
-        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-
-        return new DimensionSelector()
-        {
-          @Override
-          public IndexedInts getRow()
-          {
-            final List<String> dimensionValues = in.get().getDimension(dimension);
-            final int dimensionValuesSize = dimensionValues != null ? dimensionValues.size() : 0;
-
-            return new IndexedInts()
-            {
-              @Override
-              public int size()
-              {
-                return dimensionValuesSize;
-              }
-
-              @Override
-              public int get(int index)
-              {
-                if (index < 0 || index >= dimensionValuesSize) {
-                  throw new IndexOutOfBoundsException("index: " + index);
-                }
-                return index;
-              }
-
-              @Override
-              public IntIterator iterator()
-              {
-                return IntIterators.fromTo(0, dimensionValuesSize);
-              }
-
-              @Override
-              public void close() throws IOException
-              {
-
-              }
-
-              @Override
-              public void fill(int index, int[] toFill)
-              {
-                throw new UnsupportedOperationException("fill not supported");
-              }
-            };
-          }
-
-          @Override
-          public int getValueCardinality()
-          {
-            return DimensionSelector.CARDINALITY_UNKNOWN;
-          }
-
-          @Override
-          public String lookupName(int id)
-          {
-            final String value = in.get().getDimension(dimension).get(id);
-            return extractionFn == null ? value : extractionFn.apply(value);
-          }
-
-          @Override
-          public int lookupId(String name)
-          {
-            if (extractionFn != null) {
-              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
-            }
-            return in.get().getDimension(dimension).indexOf(name);
-          }
-        };
-      }
-
-      @Override
-      public NumericColumnSelector makeMathExpressionSelector(String expression)
-      {
-        final Expr parsed = Parser.parse(expression);
-
-        final List<String> required = Parser.findRequiredBindings(parsed);
-        final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-
-        for (final String columnName : required) {
-          values.put(
-              columnName, new Supplier<Number>()
-              {
-                @Override
-                public Number get()
-                {
-                  return Evals.toNumber(in.get().getRaw(columnName));
-                }
-              }
-          );
-        }
-        final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-
-        return new NumericColumnSelector()
-        {
-          @Override
-          public Number get()
-          {
-            return parsed.eval(binding).numericValue();
-          }
-        };
+        return baseSelectorFactory.getColumnCapabilities(columnName);
       }
     };
   }
@@ -407,7 +249,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
-        DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
             dimName,
             capabilities,
             dimSchema.getMultiValueHandling()
@@ -567,7 +409,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             capabilities.setHasBitmapIndexes(true);
             columnCapabilities.put(dimension, capabilities);
           }
-          DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dimension, capabilities, null);
+          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
           desc = addNewDimension(dimension, capabilities, handler);
         }
         DimensionHandler handler = desc.getHandler();
@@ -750,7 +592,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         if (dimensionDescs.get(dim) == null) {
           ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
           columnCapabilities.put(dim, capabilities);
-          DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dim, capabilities, null);
+          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
           addNewDimension(dim, capabilities, handler);
         }
       }

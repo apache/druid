@@ -41,7 +41,7 @@ Uses memcached as cache backend. This allows all nodes to share the same cache.
 |--------|-----------|-------|
 |`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
 |`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
-|`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
+|`druid.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
 |`druid.cache.numConnections`|Number of memcached connections to use.|1|

@@ -28,7 +28,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import org.junit.Assert;
@@ -74,12 +73,6 @@ public class JavaScriptAggregatorTest
 
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
     {
       return null;
     }

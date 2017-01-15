@@ -116,7 +116,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
                 )
             ),
             responseContext
-        )
+        ),
+        true
     );
 
     return new ResourceClosingSequence<>(query.applyLimit(GroupByQueryHelper.postAggregate(query, index)), index);
@@ -178,21 +179,26 @@ public class GroupByStrategyV1 implements GroupByStrategy
         .setLimitSpec(query.getLimitSpec().merge(subquery.getLimitSpec()))
         .build();
 
-    final IncrementalIndex innerQueryResultIndex = makeIncrementalIndex(
+    final IncrementalIndex innerQueryResultIndex = GroupByQueryHelper.makeIncrementalIndex(
         innerQuery.withOverriddenContext(
             ImmutableMap.<String, Object>of(
                 GroupByQueryHelper.CTX_KEY_SORT_RESULTS, true
             )
         ),
-        subqueryResult
+        configSupplier.get(),
+        bufferPool,
+        subqueryResult,
+        false
     );
 
     //Outer query might have multiple intervals, but they are expected to be non-overlapping and sorted which
     //is ensured by QuerySegmentSpec.
     //GroupByQueryEngine can only process one interval at a time, so we need to call it once per interval
     //and concatenate the results.
-    final IncrementalIndex outerQueryResultIndex = makeIncrementalIndex(
+    final IncrementalIndex outerQueryResultIndex = GroupByQueryHelper.makeIncrementalIndex(
         outerQuery,
+        configSupplier.get(),
+        bufferPool,
         Sequences.concat(
             Sequences.map(
                 Sequences.simple(outerQuery.getIntervals()),
@@ -210,7 +216,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
                   }
                 }
             )
-        )
+        ),
+        true
     );
 
     innerQueryResultIndex.close();
@@ -219,11 +226,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         outerQuery.applyLimit(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
         outerQueryResultIndex
     );
-  }
-
-  private IncrementalIndex makeIncrementalIndex(GroupByQuery query, Sequence<Row> rows)
-  {
-    return GroupByQueryHelper.makeIncrementalIndex(query, configSupplier.get(), bufferPool, rows);
   }
 
   @Override

@@ -34,6 +34,9 @@ Available Metrics
 |`query/node/bytes`|number of bytes returned from querying individual historical/realtime nodes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until broker starts receiving the response from individual historical/realtime nodes.|id, status, server.|< 1s|
 |`query/intervalChunk/time`|Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk.|id, status, chunkInterval (if interval chunking is enabled).|< 1s|
+|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Historical
 
@@ -45,6 +48,9 @@ Available Metrics
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the historical node).|id, segment.|several hundred milliseconds|
 |`query/cpu/time`|Microseconds of CPU time taken to complete a query|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|Varies|
+|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Real-time
 
@@ -53,6 +59,9 @@ Available Metrics
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
+|`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
 
 ### Jetty
 
@@ -109,6 +118,8 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/handoff/count`|Number of handoffs that happened.|dataSource.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
+|`ingest/sink/count`|Number of sinks not handoffed.|dataSource.|1~3|
+|`ingest/events/messageGap`|Time gap between the data time in event and current system time.|dataSource.|Greater than 0, depends on the time carried in event |
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0. 
 

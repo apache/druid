@@ -20,6 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -27,7 +28,7 @@ import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,9 @@ public class AndFilter implements BooleanFilter
 
     final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
     for (final Filter filter : filters) {
+      Preconditions.checkArgument(filter.supportsBitmapIndex(selector),
+                                  "Filter[%s] does not support bitmap index", filter
+      );
       final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
       if (bitmapIndex.isEmpty()) {
         // Short-circuit.
@@ -73,7 +77,7 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     if (filters.size() == 0) {
       return new BooleanValueMatcher(false);
@@ -90,7 +94,7 @@ public class AndFilter implements BooleanFilter
   @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
-      ValueMatcherFactory valueMatcherFactory,
+      ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   )
   {
@@ -101,7 +105,7 @@ public class AndFilter implements BooleanFilter
       if (filter.supportsBitmapIndex(selector)) {
         bitmaps.add(filter.getBitmapIndex(selector));
       } else {
-        ValueMatcher matcher = filter.makeMatcher(valueMatcherFactory);
+        ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);
       }
     }

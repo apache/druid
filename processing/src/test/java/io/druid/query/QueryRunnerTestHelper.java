@@ -106,6 +106,7 @@ public class QueryRunnerTestHelper
 
   public static final Granularity dayGran = Granularity.DAY;
   public static final Granularity allGran = Granularity.ALL;
+  public static final Granularity monthGran = Granularity.MONTH;
   public static final String timeDimension = "__time";
   public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";

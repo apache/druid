@@ -113,6 +113,13 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @Override
+  public void testEmptyTimeseries()
+  {
+    // Skip this test because the timeseries test expects the empty range to have one entry, but group by
+    // does not expect anything
+  }
+
+  @Override
   public void testFullOnTimeseries()
   {
     // Skip this test because the timeseries test expects a skipped day to be filled in, but group by doesn't

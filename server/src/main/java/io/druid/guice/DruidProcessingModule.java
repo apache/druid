@@ -109,6 +109,7 @@ public class DruidProcessingModule implements Module
   {
     verifyDirectMemory(config);
     return new StupidPool<>(
+        "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
         config.getNumThreads(),
         config.poolCacheMaxCount()

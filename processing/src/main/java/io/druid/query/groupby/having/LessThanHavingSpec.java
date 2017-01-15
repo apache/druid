@@ -31,7 +31,7 @@ import java.util.Arrays;
  * The "&lt;" operator in a "having" clause. This is similar to SQL's "having aggregation &lt; value",
  * except that an aggregation in SQL is an expression instead of an aggregation name as in Druid.
  */
-public class LessThanHavingSpec implements HavingSpec
+public class LessThanHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = 0x5;
 

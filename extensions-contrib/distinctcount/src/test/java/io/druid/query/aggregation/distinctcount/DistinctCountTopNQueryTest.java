@@ -55,6 +55,7 @@ public class DistinctCountTopNQueryTest
   {
     TopNQueryEngine engine = new TopNQueryEngine(
         new StupidPool<ByteBuffer>(
+            "TopNQueryEngine-bufferPool",
             new Supplier<ByteBuffer>()
             {
               @Override

@@ -31,4 +31,6 @@
 
   <!-- Our tests have many legacy usages of static imports; enforcement is impratical until those are removed. -->
   <suppress checks="AvoidStaticImport" files="[\\/]src[\\/]test[\\/]" />
+
+  <suppress checks="Header" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 </suppressions>

@@ -171,7 +171,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
               @Override
               public AggregatorFactory apply(String input)
               {
-                return new JavaScriptAggregatorFactory(input, fieldNames, fnAggregate, fnReset, fnCombine, config);
+                return new JavaScriptAggregatorFactory(input, Lists.newArrayList(input), fnCombine, fnReset, fnCombine, config);
               }
             }
         )

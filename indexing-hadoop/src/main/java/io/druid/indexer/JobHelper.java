@@ -737,7 +737,16 @@ public class JobHelper
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
     } else if ("google".equals(type)) {
-      segmentLocURI = URI.create(String.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path")));
+      // Segment names contain : in their path.
+      // Google Cloud Storage supports : but Hadoop does not.
+      // This becomes an issue when re-indexing using the current segments.
+      // The Hadoop getSplits code doesn't understand the : and returns "Relative path in absolute URI"
+      // This could be fixed using the same code that generates path names for hdfs segments using
+      // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
+      // Because of this we just URL encode the : making everything work as it should.
+      segmentLocURI = URI.create(
+          String.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+      );
     } else if ("local".equals(type)) {
       try {
         segmentLocURI = new URI("file", null, loadSpec.get("path").toString(), null, null);

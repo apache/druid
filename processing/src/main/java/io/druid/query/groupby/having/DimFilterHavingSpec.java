@@ -22,20 +22,24 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.data.input.Row;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.groupby.RowBasedValueMatcherFactory;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
-public class DimFilterHavingSpec implements HavingSpec
+public class DimFilterHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = (byte) 0x9;
 
   private final DimFilter dimFilter;
-  private final RowBasedValueMatcherFactory valueMatcherFactory;
-  private final ValueMatcher valueMatcher;
+  private final SettableSupplier<Row> rowSupplier;
+  private ValueMatcher valueMatcher;
+  private int evalCount;
 
   @JsonCreator
   public DimFilterHavingSpec(
@@ -43,8 +47,7 @@ public class DimFilterHavingSpec implements HavingSpec
   )
   {
     this.dimFilter = Preconditions.checkNotNull(dimFilter, "filter");
-    this.valueMatcherFactory = new RowBasedValueMatcherFactory();
-    this.valueMatcher = dimFilter.toFilter().makeMatcher(valueMatcherFactory);
+    this.rowSupplier = new SettableSupplier<>();
   }
 
   @JsonProperty("filter")
@@ -54,16 +57,24 @@ public class DimFilterHavingSpec implements HavingSpec
   }
 
   @Override
+  public void setRowSignature(Map<String, ValueType> rowSignature)
+  {
+    this.valueMatcher = dimFilter.toFilter()
+                                 .makeMatcher(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature));
+  }
+
+  @Override
   public boolean eval(final Row row)
   {
-    // Not thread safe, but it doesn't have to be.
-    valueMatcherFactory.setRow(row);
-    try {
-      return valueMatcher.matches();
+    int oldEvalCount = evalCount;
+    evalCount++;
+    rowSupplier.set(row);
+    final boolean retVal = valueMatcher.matches();
+    if (evalCount != oldEvalCount + 1) {
+      // Oops, someone was using this from two different threads, bad caller.
+      throw new IllegalStateException("concurrent 'eval' calls not permitted!");
     }
-    finally {
-      valueMatcherFactory.setRow(null);
-    }
+    return retVal;
   }
 
   @Override
