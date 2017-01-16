@@ -22,6 +22,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.guava.BaseSequence;
+import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
@@ -43,10 +45,30 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return new QueryRunner<ScanResultValue>()
     {
       @Override
-      public Sequence<ScanResultValue> run(final Query<ScanResultValue> input, Map<String, Object> responseContext)
+      public Sequence<ScanResultValue> run(
+          final Query<ScanResultValue> query, final Map<String, Object> responseContext
+      )
       {
-        // no actually merge
-        return runner.run(input, responseContext);
+        ScanQuery scanQuery = (ScanQuery) query;
+        if (scanQuery.getLimit() == Integer.MAX_VALUE) {
+          return runner.run(query, responseContext);
+        }
+        return new BaseSequence<>(
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+            {
+              @Override
+              public ScanQueryLimitRowIterator make()
+              {
+                return new ScanQueryLimitRowIterator(runner, (ScanQuery) query, responseContext);
+              }
+
+              @Override
+              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+              {
+                CloseQuietly.close(iterFromMake);
+              }
+            }
+        );
       }
     };
   }

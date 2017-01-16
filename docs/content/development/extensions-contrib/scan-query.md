@@ -155,8 +155,3 @@ The biggest difference between select query and scan query is that, scan query d
 It will cause memory pressure if too many rows required by select query.  
 Scan query doesn't have this issue.  
 Scan query can return all rows without issuing another pagination query, which is extremely useful when query against historical or realtime node directly.
-
-## Known issues
-1. Scan query doesn't respect `limit` from broker side, currently only historical and realtime node respect `limit`
-2. Scan query can't be cancelled.
-3. Scan query is running on qtp thread, thus it doesn't respect query priority.

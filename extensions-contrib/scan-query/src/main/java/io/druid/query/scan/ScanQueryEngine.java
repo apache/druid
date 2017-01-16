@@ -43,7 +43,6 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
-import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
@@ -104,8 +103,7 @@ public class ScanQueryEngine
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
-    // should be rewritten with given interval
-    final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
+    final String segmentId = segment.getIdentifier();
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
 
@@ -195,7 +193,7 @@ public class ScanQueryEngine
                                   @Override
                                   public Object apply(Map<String, Object> input)
                                   {
-                                    List eventValues = Lists.newArrayListWithCapacity(allColumns.size());
+                                    List eventValues = Lists.newArrayListWithExpectedSize(allColumns.size());
                                     for (String expectedColumn : allColumns) {
                                       eventValues.add(input.get(expectedColumn));
                                     }
