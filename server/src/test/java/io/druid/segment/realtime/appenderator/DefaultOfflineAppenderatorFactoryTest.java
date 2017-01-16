@@ -130,22 +130,10 @@ public class DefaultOfflineAppenderatorFactoryTest
         objectMapper
     );
 
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        75000,
-        null,
-        null,
-        temporaryFolder.newFolder(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+    RealtimeTuningConfig tuningConfig  = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(7500)
+        .withBasePersistDirectory(temporaryFolder.newFolder())
+        .build();
 
     try (Appenderator appenderator = defaultOfflineAppenderatorFactory.build(
         schema,

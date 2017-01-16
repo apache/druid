@@ -121,7 +121,7 @@ public class FireDepartmentTest
             ),
             null
         ),
-        RealtimeTuningConfig.makeDefaultTuningConfig(new File("/tmp/nonexistent"))
+        new RealtimeTuningConfig.Builder().withBasePersistDirectory(new File("/tmp/nonexistent")).build()
     );
 
     String json = jsonMapper.writeValueAsString(schema);

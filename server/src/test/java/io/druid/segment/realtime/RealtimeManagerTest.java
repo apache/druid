@@ -183,22 +183,12 @@ public class RealtimeManagerTest
           }
         }
     );
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        1,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(1)
+        .withIntermediatePersistPeriod(new Period("P1Y"))
+        .build();
+
     plumber = new TestPlumber(new Sink(
         new Interval("0/P5000Y"),
         schema,
@@ -238,39 +228,17 @@ public class RealtimeManagerTest
         null
     );
 
-    tuningConfig_0 = new RealtimeTuningConfig(
-        1,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        new LinearShardSpec(0),
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+    tuningConfig_0 = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(1)
+        .withIntermediatePersistPeriod(new Period("P1Y"))
+        .withShardSpec(new LinearShardSpec(0))
+        .build();
 
-    tuningConfig_1 = new RealtimeTuningConfig(
-        1,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        new LinearShardSpec(1),
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+    tuningConfig_1 = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(1)
+        .withIntermediatePersistPeriod(new Period("P1Y"))
+        .withShardSpec(new LinearShardSpec(1))
+        .build();
 
     schema3 = new DataSchema(
         "testing",

@@ -190,22 +190,12 @@ public class RealtimePlumberSchoolTest
 
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, handoffNotifierFactory, handoffNotifier, emitter);
 
-    tuningConfig = new RealtimeTuningConfig(
-        1,
-        null,
-        null,
-        null,
-        new IntervalStartVersioningPolicy(),
-        rejectionPolicy,
-        null,
-        null,
-        null,
-        buildV9Directly,
-        0,
-        0,
-        false,
-        null
-    );
+    tuningConfig = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(1)
+        .withVersioningPolicy(new IntervalStartVersioningPolicy())
+        .withRejectionPolicyFactory(rejectionPolicy)
+        .withBuildV9Directly(buildV9Directly)
+        .build();
 
     realtimePlumberSchool = new RealtimePlumberSchool(
         emitter,

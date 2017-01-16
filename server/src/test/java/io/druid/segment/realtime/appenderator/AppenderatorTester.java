@@ -21,6 +21,7 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
@@ -88,7 +89,7 @@ public class AppenderatorTester implements AutoCloseable
       final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, null);
+    this(maxRowsInMemory, Files.createTempDir());
   }
 
   public AppenderatorTester(
@@ -121,22 +122,10 @@ public class AppenderatorTester implements AutoCloseable
         objectMapper
     );
 
-    tuningConfig = new RealtimeTuningConfig(
-        maxRowsInMemory,
-        null,
-        null,
-        basePersistDirectory,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+    tuningConfig  = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(maxRowsInMemory)
+        .withBasePersistDirectory(basePersistDirectory)
+        .build();
 
     metrics = new FireDepartmentMetrics();
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");

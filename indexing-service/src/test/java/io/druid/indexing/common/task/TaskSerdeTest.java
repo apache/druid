@@ -434,22 +434,14 @@ public class TaskSerdeTest
                 null
             ),
 
-            new RealtimeTuningConfig(
-                1,
-                new Period("PT10M"),
-                null,
-                null,
-                null,
-                null,
-                1,
-                NoneShardSpec.instance(),
-                indexSpec,
-                null,
-                0,
-                0,
-                true,
-                null
-            )
+            new RealtimeTuningConfig.Builder()
+                .withMaxRowsInMemory(1)
+                .withIntermediatePersistPeriod(new Period("PT10M"))
+                .withMaxPendingPersists(1)
+                .withShardSpec(NoneShardSpec.instance())
+                .withIndexSpec(indexSpec)
+                .withReportParseExceptions(true)
+                .build()
         ),
         null
     );

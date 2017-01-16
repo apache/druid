@@ -18,6 +18,7 @@
  */
 package io.druid.segment.realtime.appenderator;
 
+import com.google.common.io.Files;
 import io.druid.data.input.InputRow;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -28,7 +29,6 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -65,23 +65,13 @@ public class AppenderatorPlumberTest
                 EasyMock.<SegmentDescriptor> anyObject(),
                 EasyMock.<Executor> anyObject(),
                 EasyMock.<Runnable> anyObject())).andReturn(true).anyTimes();
-    
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        1,
-        null,
-        null,
-        null,
-        new IntervalStartVersioningPolicy(),
-        new NoopRejectionPolicyFactory(),
-        null,
-        null,
-        null,
-        true,
-        0,
-        0,
-        false,
-        null
-    );
+
+    RealtimeTuningConfig tuningConfig  = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(1)
+        .withVersioningPolicy(new IntervalStartVersioningPolicy())
+        .withRejectionPolicyFactory(new NoopRejectionPolicyFactory())
+        .withBasePersistDirectory(Files.createTempDir())
+        .build();
 
     this.plumber = new AppenderatorPlumber(appenderatorTester.getSchema(),
         tuningConfig, appenderatorTester.getMetrics(),

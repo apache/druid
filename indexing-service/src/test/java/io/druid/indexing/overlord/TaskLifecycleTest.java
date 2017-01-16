@@ -1178,22 +1178,10 @@ public class TaskLifecycleTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
         null
     );
-    RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
-        1000,
-        new Period("P1Y"),
-        null, //default window period of 10 minutes
-        null, // base persist dir ignored by Realtime Index task
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+    RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(1000)
+        .withIntermediatePersistPeriod(new Period("P1Y"))
+        .build();
     FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig);
     return new RealtimeIndexTask(
         taskId,

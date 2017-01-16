@@ -34,17 +34,17 @@ public class RealtimeTuningConfigTest
   @Test
   public void testDefaultBasePersistDirectory()
   {
-    final RealtimeTuningConfig tuningConfig1 = RealtimeTuningConfig.makeDefaultTuningConfig(null);
-    final RealtimeTuningConfig tuningConfig2 = RealtimeTuningConfig.makeDefaultTuningConfig(null);
-    Assert.assertNotEquals(tuningConfig1.getBasePersistDirectory(), tuningConfig2.getBasePersistDirectory());
+    final RealtimeTuningConfig tuningConfig1 = new RealtimeTuningConfig.Builder().build();
+    final RealtimeTuningConfig tuningConfig2 = new RealtimeTuningConfig.Builder().build();
+    Assert.assertEquals(tuningConfig1.getBasePersistDirectory(), tuningConfig2.getBasePersistDirectory());
   }
 
   @Test
   public void testSpecificBasePersistDirectory()
   {
-    final RealtimeTuningConfig tuningConfig = RealtimeTuningConfig.makeDefaultTuningConfig(
-        new File("/tmp/nonexistent")
-    );
+    final RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig.Builder()
+        .withBasePersistDirectory(new File("/tmp/nonexistent"))
+        .build();
     Assert.assertEquals(new File("/tmp/nonexistent"), tuningConfig.getBasePersistDirectory());
   }
 
@@ -64,7 +64,7 @@ public class RealtimeTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNotNull(config.getBasePersistDirectory());
+    Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());

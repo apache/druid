@@ -60,7 +60,9 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
-    final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
+    final RealtimeTuningConfig defaults = new RealtimeTuningConfig.Builder()
+        .withBasePersistDirectory(basePersistDirectory)
+        .build();
 
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;

@@ -279,8 +279,9 @@ public class RealtimeIndexTask extends AbstractTask
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                            .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
-                                            .withVersioningPolicy(versioningPolicy);
+                                            .withBasePersistDirectorAndVersioningPolicy(
+                                                new File(toolbox.getTaskWorkDir(), "persist"),
+                                                versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,

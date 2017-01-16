@@ -58,22 +58,12 @@ public class SinkTest
 
     final Interval interval = new Interval("2013-01-01/2013-01-02");
     final String version = new DateTime().toString();
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        100,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null
-    );
+
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig.Builder()
+        .withMaxRowsInMemory(100)
+        .withIntermediatePersistPeriod(new Period("P1Y"))
+        .build();
+
     final Sink sink = new Sink(
         interval,
         schema,
