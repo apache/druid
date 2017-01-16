@@ -96,12 +96,7 @@ public class DruidTable implements TranslatableTable
   public RelNode toRel(final RelOptTable.ToRelContext context, final RelOptTable table)
   {
     final RelOptCluster cluster = context.getCluster();
-    return DruidQueryRel.fullScan(
-        cluster,
-        cluster.traitSet(),
-        table,
-        this
-    );
+    return DruidQueryRel.fullScan(cluster, table, this);
   }
 
   @Override
