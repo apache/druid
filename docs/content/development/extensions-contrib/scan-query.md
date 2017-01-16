@@ -158,6 +158,5 @@ Scan query can return all rows without issuing another pagination query, which i
 
 ## Known issues
 1. Scan query doesn't respect `limit` from broker side, currently only historical and realtime node respect `limit`
-2. Scan query doesn't respect `timeout` config in query context.
-3. Scan query can't be cancelled.
-4. Scan query is running on qtp thread, thus it doesn't respect query priority.
+2. Scan query can't be cancelled.
+3. Scan query is running on qtp thread, thus it doesn't respect query priority.

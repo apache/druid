@@ -20,10 +20,12 @@ package io.druid.query.scan;
 
 import com.google.common.base.Function;
 import com.google.inject.Inject;
+import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -67,6 +69,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           final Query<ScanResultValue> query, final Map<String, Object> responseContext
       )
       {
+        final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
+        final long timeoutAt = queryTimeout == null
+                               ? JodaUtils.MAX_INSTANT : System.currentTimeMillis() + queryTimeout.longValue();
+        responseContext.put("timeoutAt", timeoutAt);
         return Sequences.concat(
             Sequences.map(
                 Sequences.simple(queryRunners),
@@ -110,6 +116,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
 
+      // it happens in unit tests
+      if (responseContext.get("timeoutAt") == null) {
+        responseContext.put("timeoutAt", JodaUtils.MAX_INSTANT);
+      };
       return engine.process((ScanQuery) query, segment, responseContext);
     }
   }

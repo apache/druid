@@ -29,6 +29,7 @@ import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
@@ -49,6 +50,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 public class ScanQueryEngine
 {
@@ -65,6 +67,8 @@ public class ScanQueryEngine
         return Sequences.empty();
       }
     }
+    final Long timeoutAt = (long) responseContext.get("timeoutAt");
+    final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
     if (adapter == null) {
@@ -158,6 +162,9 @@ public class ScanQueryEngine
                           @Override
                           public ScanResultValue next()
                           {
+                            if (System.currentTimeMillis() >= timeoutAt) {
+                              throw new QueryInterruptedException(new TimeoutException());
+                            }
                             int lastOffset = offset;
                             Object events = null;
                             String resultFormat = query.getResultFormat();
@@ -169,6 +176,7 @@ public class ScanQueryEngine
                               events = rowsToList();
                             }
                             responseContext.put("count", (int) responseContext.get("count") + (offset - lastOffset));
+                            responseContext.put("timeoutAt", timeoutAt - (System.currentTimeMillis() - start));
                             return new ScanResultValue(segmentId, allColumns, events);
                           }
 
