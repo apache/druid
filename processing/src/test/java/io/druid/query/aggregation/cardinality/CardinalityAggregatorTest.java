@@ -21,6 +21,7 @@ package io.druid.query.aggregation.cardinality;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -41,7 +42,10 @@ import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectorUtils;
+import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
@@ -158,6 +162,18 @@ public class CardinalityAggregatorTest
     }
 
     @Override
+    public ValueMatcher makeValueMatcher(String value, boolean matchNull)
+    {
+      return DimensionSelectorUtils.makeRowBasedValueMatcher(this, value, matchNull);
+    }
+
+    @Override
+    public ValueMatcher makeValueMatcher(Predicate<String> predicate, boolean matchNull)
+    {
+      return DimensionSelectorUtils.makeRowBasedValueMatcher(this, predicate, matchNull);
+    }
+
+    @Override
     public int getValueCardinality()
     {
       return 1;
@@ -171,9 +187,23 @@ public class CardinalityAggregatorTest
     }
 
     @Override
-    public int lookupId(String s)
+    public boolean nameLookupPossibleInAdvance()
     {
-      return ids.get(s);
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public IdLookup idLookup()
+    {
+      return new IdLookup()
+      {
+        @Override
+        public int lookupId(String s)
+        {
+          return ids.get(s);
+        }
+      };
     }
   }
 

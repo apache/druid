@@ -19,65 +19,39 @@
 
 package io.druid.segment.data;
 
-import io.druid.java.util.common.IAE;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 
-/**
- */
-public final class ArrayBasedIndexedInts implements IndexedInts
+public final class SingleIndexedInt implements IndexedInts
 {
-  private static final ArrayBasedIndexedInts EMPTY = new ArrayBasedIndexedInts(IntArrays.EMPTY_ARRAY);
+  private final int value;
 
-  /**
-   * Returns empty ArrayBasedIndexedInts, size = 0. This is useful instead of {@link EmptyIndexedInts} where
-   * monomorphism is a concern.
-   */
-  public static ArrayBasedIndexedInts empty()
+  public SingleIndexedInt(int value)
   {
-    return EMPTY;
-  }
-
-  private final int[] expansion;
-  private final int size;
-
-  public ArrayBasedIndexedInts(int[] expansion)
-  {
-    this.expansion = expansion;
-    this.size = expansion.length;
-  }
-
-  public ArrayBasedIndexedInts(int[] expansion, int size)
-  {
-    this.expansion = expansion;
-    if (size < 0 || size > expansion.length) {
-      throw new IAE("Size[%s] should be between 0 and %s", size, expansion.length);
-    }
-    this.size = size;
+    this.value = value;
   }
 
   @Override
   public int size()
   {
-    return size;
+    return 1;
   }
 
   @Override
-  public int get(int index)
+  public int get(int i)
   {
-    if (index >= size) {
-      throw new IndexOutOfBoundsException("index: " + index + ", size: " + size);
+    if (i != 0) {
+      throw new IllegalArgumentException(i + " != 0");
     }
-    return expansion[index];
+    return value;
   }
 
   @Override
   public IntIterator iterator()
   {
-    return IntIterators.wrap(expansion, 0, size);
+    return IntIterators.singleton(value);
   }
 
   @Override
@@ -89,6 +63,5 @@ public final class ArrayBasedIndexedInts implements IndexedInts
   @Override
   public void close() throws IOException
   {
-
   }
 }

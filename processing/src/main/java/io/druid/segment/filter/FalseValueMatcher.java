@@ -21,16 +21,22 @@ package io.druid.segment.filter;
 
 import io.druid.query.filter.ValueMatcher;
 
-/**
-*/
-public final class BooleanValueMatcher
+final class FalseValueMatcher implements ValueMatcher
 {
-  public static ValueMatcher of(boolean matches)
+  private static final FalseValueMatcher INSTANCE = new FalseValueMatcher();
+
+  public static FalseValueMatcher instance()
   {
-    return matches ? TrueValueMatcher.instance() : FalseValueMatcher.instance();
+    return INSTANCE;
   }
 
-  private BooleanValueMatcher()
+  private FalseValueMatcher()
   {
+  }
+
+  @Override
+  public boolean matches()
+  {
+    return false;
   }
 }

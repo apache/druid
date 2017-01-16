@@ -26,6 +26,7 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.IdLookup;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -179,6 +180,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     private volatile int keepOnlyN;
 
     private final DimensionSelector dimSelector;
+    private final IdLookup idLookup;
     private final TopNQuery query;
     private final Capabilities capabilities;
 
@@ -189,6 +191,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     )
     {
       this.dimSelector = dimSelector;
+      this.idLookup = dimSelector.idLookup();
       this.query = query;
       this.capabilities = capabilities;
 
@@ -232,8 +235,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     {
       int startIndex = ignoreFirstN;
 
-      if (previousStop != null) {
-        int lookupId = dimSelector.lookupId(previousStop) + 1;
+      if (previousStop != null && idLookup != null) {
+        int lookupId = idLookup.lookupId(previousStop) + 1;
         if (lookupId < 0) {
           lookupId *= -1;
         }

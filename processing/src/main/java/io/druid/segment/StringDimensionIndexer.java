@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -29,23 +30,25 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
+import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
@@ -385,7 +388,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     final int dimIndex = desc.getIndex();
     final int maxId = getCardinality();
 
-    return new DimensionSelector()
+    class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
       @Override
       public IndexedInts getRow()
@@ -399,59 +402,118 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           indices = null;
         }
 
-        IntList valsTmp = null;
+        int[] row = null;
+        int rowSize = 0;
         if (indices == null || indices.length == 0) {
           final int nullId = getEncodedValue(null, false);
           if (nullId > -1) {
             if (nullId < maxId) {
-              valsTmp = IntLists.singleton(nullId);
+              row = new int[] {nullId};
+              rowSize = 1;
             } else {
-              valsTmp = IntLists.EMPTY_LIST;
+              // Choose to use ArrayBasedIndexedInts later, instead of EmptyIndexedInts, for monomorphism
+              row = IntArrays.EMPTY_ARRAY;
+              rowSize = 0;
             }
           }
         }
 
-        if (valsTmp == null && indices != null && indices.length > 0) {
-          valsTmp = new IntArrayList(indices.length);
-          for (int i = 0; i < indices.length; i++) {
-            int id = indices[i];
+        if (row == null && indices != null && indices.length > 0) {
+          row = new int[indices.length];
+          for (int id : indices) {
             if (id < maxId) {
-              valsTmp.add(id);
+              row[rowSize++] = id;
             }
           }
         }
 
-        final IntList vals = valsTmp == null ? IntLists.EMPTY_LIST : valsTmp;
-        return new IndexedInts()
+        return rowSize > 0 ? new ArrayBasedIndexedInts(row, rowSize) : ArrayBasedIndexedInts.empty();
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(final String value, final boolean matchNull)
+      {
+        if (extractionFn == null) {
+          final int valueId = lookupId(value);
+          if (valueId >= 0 || matchNull) {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                Object[] dims = currEntry.getKey().getDims();
+                if (dimIndex >= dims.length) {
+                  return matchNull;
+                }
+
+                int[] dimsInt = (int[]) dims[dimIndex];
+                if (dimsInt == null || dimsInt.length == 0) {
+                  return matchNull;
+                }
+
+                for (int id : dimsInt) {
+                  if (id == valueId) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+            };
+          } else {
+            return BooleanValueMatcher.of(false);
+          }
+        } else {
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              Object[] dims = currEntry.getKey().getDims();
+              if (dimIndex >= dims.length) {
+                return matchNull;
+              }
+
+              int[] dimsInt = (int[]) dims[dimIndex];
+              if (dimsInt == null || dimsInt.length == 0) {
+                return matchNull;
+              }
+
+              for (int id : dimsInt) {
+                if (Objects.equals(extractionFn.apply(getActualValue(id, false)), value)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          };
+        }
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(final Predicate<String> predicate, final boolean matchNull)
+      {
+        final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(this, predicate);
+        return new ValueMatcher()
         {
           @Override
-          public int size()
+          public boolean matches()
           {
-            return vals.size();
-          }
+            Object[] dims = currEntry.getKey().getDims();
+            if (dimIndex >= dims.length) {
+              return matchNull;
+            }
 
-          @Override
-          public int get(int index)
-          {
-            return vals.get(index);
-          }
+            int[] dimsInt = (int[]) dims[dimIndex];
+            if (dimsInt == null || dimsInt.length == 0) {
+              return matchNull;
+            }
 
-          @Override
-          public IntIterator iterator()
-          {
-            return vals.iterator();
-          }
-
-          @Override
-          public void fill(int index, int[] toFill)
-          {
-            throw new UnsupportedOperationException("fill not supported");
-          }
-
-          @Override
-          public void close() throws IOException
-          {
-
+            for (int id : dimsInt) {
+              if (predicateMatchingValueIds.get(id)) {
+                return true;
+              }
+            }
+            return false;
           }
         };
       }
@@ -470,6 +532,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
 
       @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        return extractionFn == null ? this : null;
+      }
+
+      @Override
       public int lookupId(String name)
       {
         if (extractionFn != null) {
@@ -479,7 +554,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         }
         return getEncodedValue(name, false);
       }
-    };
+    }
+    return new IndexerDimensionSelector();
   }
 
   @Override
