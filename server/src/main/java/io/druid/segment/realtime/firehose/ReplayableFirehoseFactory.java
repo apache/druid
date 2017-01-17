@@ -42,7 +42,6 @@ import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.guice.annotations.Smile;
-import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.utils.Runnables;
 
@@ -213,28 +212,28 @@ public class ReplayableFirehoseFactory implements FirehoseFactory<InputRowParser
     @Override
     public boolean hasMore()
     {
-      return it.hasNext() || (fileIndex < files.size() - 1);
+      if (it.hasNext()) {
+        return true;
+      }
+
+      try {
+        jsonParser.close();
+        if (++fileIndex >= files.size() || files.get(fileIndex).length() == 0) {
+          return false;
+        }
+
+        jsonParser = jsonFactory.createParser(files.get(fileIndex));
+        it = jsonParser.readValuesAs(Row.class);
+        return true;
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
 
     @Override
     public InputRow nextRow()
     {
-      if (!it.hasNext()) {
-        try {
-          CloseQuietly.close(jsonParser);
-
-          if (++fileIndex >= files.size()) {
-            throw new IllegalStateException("No more data!");
-          }
-
-          jsonParser = jsonFactory.createParser(files.get(fileIndex));
-          it = jsonParser.readValuesAs(Row.class);
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
       return Rows.toCaseInsensitiveInputRow(it.next(), dimensions);
     }
 
