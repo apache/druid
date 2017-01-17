@@ -48,8 +48,8 @@
     "ioConfig" : {
       "type" : "realtime",
       "firehose": {
-        "type": "timed",
-        "shutoffTime": "%%SHUTOFFTIME%%",
+        "type": "fixedCount",
+        "count": "%%COUNT%%",
         "delegate": {
           "type": "kafka-0.8",
 	    "consumerProps": {
