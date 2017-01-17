@@ -27,7 +27,7 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.WrappedImmutableConciseBitmap;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 
 /**
  */

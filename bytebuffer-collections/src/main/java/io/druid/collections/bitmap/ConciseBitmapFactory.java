@@ -22,7 +22,7 @@ package io.druid.collections.bitmap;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 
 /**
  * As the name suggests, this class instantiates bitmaps of the types

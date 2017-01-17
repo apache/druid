@@ -29,8 +29,8 @@ import com.carrotsearch.junitbenchmarks.annotation.BenchmarkHistoryChart;
 import com.carrotsearch.junitbenchmarks.annotation.LabelType;
 
 import io.druid.test.annotation.Benchmark;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.extendedset.intset.ConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 
 @Category({Benchmark.class})
 @BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 20)

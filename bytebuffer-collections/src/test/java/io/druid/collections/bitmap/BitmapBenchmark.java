@@ -38,7 +38,7 @@ import com.carrotsearch.junitbenchmarks.BenchmarkRule;
 import com.carrotsearch.junitbenchmarks.Clock;
 import com.google.common.collect.Lists;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 
 
 @BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
