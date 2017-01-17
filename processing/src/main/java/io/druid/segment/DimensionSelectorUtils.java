@@ -45,7 +45,7 @@ public final class DimensionSelectorUtils
     if (idLookup != null) {
       return makeDictionaryEncodedRowBasedValueMatcher(selector, idLookup.lookupId(value), matchNull);
     } else {
-      return makeNonDictionaryEncodedIndexedIntsBasedValueMatcher(selector, value, matchNull);
+      return makeNonDictionaryEncodedRowBasedValueMatcher(selector, value, matchNull);
     }
   }
 
@@ -94,7 +94,7 @@ public final class DimensionSelectorUtils
     }
   }
 
-  private static ValueMatcher makeNonDictionaryEncodedIndexedIntsBasedValueMatcher(
+  private static ValueMatcher makeNonDictionaryEncodedRowBasedValueMatcher(
       final DimensionSelector selector,
       final String value,
       final boolean matchNull
