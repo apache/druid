@@ -120,11 +120,13 @@ public class SpatialFilterTest
                                                     Arrays.asList(
                                                         new SpatialDimensionSchema(
                                                             "dim.geo",
-                                                            Arrays.asList("lat", "long")
+                                                            Arrays.asList("lat", "long"),
+                                                            null
                                                         ),
                                                         new SpatialDimensionSchema(
                                                             "spatialIsRad",
-                                                            Arrays.asList("lat2", "long2")
+                                                            Arrays.asList("lat2", "long2"),
+                                                            null
                                                         )
 
                                                     )
@@ -284,11 +286,13 @@ public class SpatialFilterTest
                                                       Arrays.asList(
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
-                                                              Arrays.asList("lat", "long")
+                                                              Arrays.asList("lat", "long"),
+                                                              null
                                                           ),
                                                           new SpatialDimensionSchema(
                                                               "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
+                                                              Arrays.asList("lat2", "long2"),
+                                                              null
                                                           )
 
                                                       )
@@ -308,11 +312,13 @@ public class SpatialFilterTest
                                                       Arrays.asList(
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
-                                                              Arrays.asList("lat", "long")
+                                                              Arrays.asList("lat", "long"),
+                                                              null
                                                           ),
                                                           new SpatialDimensionSchema(
                                                               "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
+                                                              Arrays.asList("lat2", "long2"),
+                                                              null
                                                           )
 
                                                       )
@@ -332,11 +338,13 @@ public class SpatialFilterTest
                                                       Arrays.asList(
                                                           new SpatialDimensionSchema(
                                                               "dim.geo",
-                                                              Arrays.asList("lat", "long")
+                                                              Arrays.asList("lat", "long"),
+                                                              null
                                                           ),
                                                           new SpatialDimensionSchema(
                                                               "spatialIsRad",
-                                                              Arrays.asList("lat2", "long2")
+                                                              Arrays.asList("lat2", "long2"),
+                                                              null
                                                           )
 
                                                       )
@@ -524,6 +532,7 @@ public class SpatialFilterTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
+                                          null,
                                           new RadiusBound(new float[]{0.0f, 0.0f}, 5)
                                       )
                                   )
@@ -577,6 +586,7 @@ public class SpatialFilterTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "spatialIsRad",
+                                          null,
                                           new RadiusBound(new float[]{0.0f, 0.0f}, 5)
                                       )
                                   )
@@ -629,6 +639,7 @@ public class SpatialFilterTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
+                                          null,
                                           new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
                                       )
                                   )

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import io.druid.data.input.impl.NewSpatialDimensionSchema;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -60,6 +61,7 @@ public class IndexSpec
   private final CompressedObjectStrategy.CompressionStrategy dimensionCompression;
   private final CompressedObjectStrategy.CompressionStrategy metricCompression;
   private final CompressionFactory.LongEncodingStrategy longEncoding;
+  private final String spatialDimensionDelimiter;
 
 
   /**
@@ -67,7 +69,7 @@ public class IndexSpec
    */
   public IndexSpec()
   {
-    this(null, null, null, null);
+    this(null, null, null, null, null);
   }
 
   /**
@@ -92,7 +94,8 @@ public class IndexSpec
       @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") CompressedObjectStrategy.CompressionStrategy dimensionCompression,
       @JsonProperty("metricCompression") CompressedObjectStrategy.CompressionStrategy metricCompression,
-      @JsonProperty("longEncoding") CompressionFactory.LongEncodingStrategy longEncoding
+      @JsonProperty("longEncoding") CompressionFactory.LongEncodingStrategy longEncoding,
+      @JsonProperty("spatialDimensionDelimiter") String spatialDimensionDelimiter
   )
   {
     Preconditions.checkArgument(dimensionCompression == null || DIMENSION_COMPRESSION.contains(dimensionCompression),
@@ -108,6 +111,8 @@ public class IndexSpec
     this.dimensionCompression = dimensionCompression == null ?DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
     this.metricCompression = metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression;
     this.longEncoding = longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding;
+    this.spatialDimensionDelimiter = spatialDimensionDelimiter == null ? NewSpatialDimensionSchema.DEFAULT_DELIMITER
+                                                                       : spatialDimensionDelimiter;
   }
 
   @JsonProperty("bitmap")
@@ -134,6 +139,12 @@ public class IndexSpec
     return longEncoding;
   }
 
+  @JsonProperty
+  public String getSpatialDimensionDelimiter()
+  {
+    return spatialDimensionDelimiter;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -146,27 +157,32 @@ public class IndexSpec
 
     IndexSpec indexSpec = (IndexSpec) o;
 
-    if (bitmapSerdeFactory != null
-        ? !bitmapSerdeFactory.equals(indexSpec.bitmapSerdeFactory)
-        : indexSpec.bitmapSerdeFactory != null) {
+    if (!bitmapSerdeFactory.equals(indexSpec.bitmapSerdeFactory)) {
       return false;
     }
-    if (dimensionCompression != null
-        ? !dimensionCompression.equals(indexSpec.dimensionCompression)
-        : indexSpec.dimensionCompression != null) {
+    if (!dimensionCompression.equals(indexSpec.dimensionCompression)) {
       return false;
     }
-    return !(metricCompression != null
-             ? !metricCompression.equals(indexSpec.metricCompression)
-             : indexSpec.metricCompression != null);
+
+    if (!longEncoding.equals(indexSpec.longEncoding)) {
+      return false;
+    }
+
+    if (!spatialDimensionDelimiter.equals(indexSpec.spatialDimensionDelimiter)) {
+      return false;
+    }
+
+    return metricCompression.equals(indexSpec.metricCompression);
   }
 
   @Override
   public int hashCode()
   {
-    int result = bitmapSerdeFactory != null ? bitmapSerdeFactory.hashCode() : 0;
-    result = 31 * result + (dimensionCompression != null ? dimensionCompression.hashCode() : 0);
-    result = 31 * result + (metricCompression != null ? metricCompression.hashCode() : 0);
+    int result = bitmapSerdeFactory.hashCode();
+    result = 31 * result + dimensionCompression.hashCode();
+    result = 31 * result + metricCompression.hashCode();
+    result = 31 * result + longEncoding.hashCode();
+    result = 31 * result + spatialDimensionDelimiter.hashCode();
     return result;
   }
 }

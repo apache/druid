@@ -40,10 +40,10 @@ public class DimensionsSpecSerdeTest
             new StringDimensionSchema("AAA"),
             new StringDimensionSchema("BBB"),
             new FloatDimensionSchema("C++"),
-            new NewSpatialDimensionSchema("DDT", null),
+            new NewSpatialDimensionSchema("DDT", null, null),
             new LongDimensionSchema("EEE"),
-            new NewSpatialDimensionSchema("DDT2", Arrays.asList("A", "B")),
-            new NewSpatialDimensionSchema("IMPR", Arrays.asList("S", "P", "Q", "R"))
+            new NewSpatialDimensionSchema("DDT2", Arrays.asList("A", "B"), null),
+            new NewSpatialDimensionSchema("IMPR", Arrays.asList("S", "P", "Q", "R"), null)
         ),
         Arrays.asList("FOO", "HAR"),
         null
@@ -67,9 +67,9 @@ public class DimensionsSpecSerdeTest
     );
 
     List<SpatialDimensionSchema> expectedSpatials = Arrays.asList(
-        new SpatialDimensionSchema("DDT", null),
-        new SpatialDimensionSchema("DDT2", Arrays.asList("A","B")),
-        new SpatialDimensionSchema("IMPR", Arrays.asList("S","P","Q","R"))
+        new SpatialDimensionSchema("DDT", null, null),
+        new SpatialDimensionSchema("DDT2", Arrays.asList("A","B"), null),
+        new SpatialDimensionSchema("IMPR", Arrays.asList("S","P","Q","R"), null)
     );
 
     Assert.assertEquals(expected, actual);

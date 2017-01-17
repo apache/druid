@@ -148,6 +148,7 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
           bmpFactory,
           tree,
           hasSpatial,
+          spatialValSplitter,
           dictIdSeeker,
           dictId,
           adapters,

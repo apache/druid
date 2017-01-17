@@ -52,6 +52,7 @@ import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
 import io.druid.segment.data.VSizeIndexedWriter;
+import io.druid.segment.incremental.SpatialDimensionRowTransformer;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterable;
@@ -73,7 +74,6 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
 
   protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
   protected static final int[] EMPTY_STR_DIM_ARRAY = new int[]{0};
-  protected static final Splitter SPLITTER = Splitter.on(",");
 
   private IndexedIntsWriter encodedValueWriter;
 
@@ -93,6 +93,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   protected List<IndexableAdapter> adapters;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
+  protected final Splitter spatialValSplitter;
 
   public StringDimensionMergerV9(
       String dimensionName,
@@ -110,6 +111,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     this.ioPeon = ioPeon;
     this.progress = progress;
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+    spatialValSplitter = Splitter.on(indexSpec.getSpatialDimensionDelimiter());
   }
 
   @Override
@@ -328,6 +330,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
             bmpFactory,
             tree,
             hasSpatial,
+            spatialValSplitter,
             dictIdSeeker,
             dictId,
             adapters,
@@ -358,6 +361,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       BitmapFactory bmpFactory,
       RTree tree,
       boolean hasSpatial,
+      Splitter spatialValSplitter,
       IndexSeeker[] dictIdSeeker,
       int dictId,
       List<IndexableAdapter> adapters,
@@ -406,11 +410,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     if (hasSpatial) {
       String dimVal = dimVals.get(dictId);
       if (dimVal != null) {
-        List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-        float[] coords = new float[stringCoords.size()];
-        for (int j = 0; j < coords.length; j++) {
-          coords[j] = Float.valueOf(stringCoords.get(j));
-        }
+        final float[] coords = SpatialDimensionRowTransformer.decode(spatialValSplitter, dimVal);
         tree.insert(coords, mergedIndexes);
       }
     }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import io.druid.collections.spatial.search.Bound;
+import io.druid.data.input.impl.NewSpatialDimensionSchema;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.filter.SpatialFilter;
 
@@ -33,11 +34,13 @@ import java.nio.ByteBuffer;
 public class SpatialDimFilter implements DimFilter
 {
   private final String dimension;
+  private final String delimiter;
   private final Bound bound;
 
   @JsonCreator
   public SpatialDimFilter(
       @JsonProperty("dimension") String dimension,
+      @JsonProperty("delimiter") String delimiter,
       @JsonProperty("bound") Bound bound
   )
   {
@@ -46,6 +49,7 @@ public class SpatialDimFilter implements DimFilter
 
     this.dimension = dimension;
     this.bound = bound;
+    this.delimiter = delimiter == null ? NewSpatialDimensionSchema.DEFAULT_DELIMITER : delimiter;
   }
 
   @Override
@@ -75,6 +79,12 @@ public class SpatialDimFilter implements DimFilter
   }
 
   @JsonProperty
+  public String getDelimiter()
+  {
+    return delimiter;
+  }
+
+  @JsonProperty
   public Bound getBound()
   {
     return bound;
@@ -83,7 +93,7 @@ public class SpatialDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new SpatialFilter(dimension, bound);
+    return new SpatialFilter(dimension, delimiter, bound);
   }
 
   @Override
@@ -104,21 +114,22 @@ public class SpatialDimFilter implements DimFilter
 
     SpatialDimFilter that = (SpatialDimFilter) o;
 
-    if (bound != null ? !bound.equals(that.bound) : that.bound != null) {
+    if (!bound.equals(that.bound)) {
       return false;
     }
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
+    if (!dimension.equals(that.dimension)) {
       return false;
     }
 
-    return true;
+    return delimiter.equals(that.delimiter);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension != null ? dimension.hashCode() : 0;
-    result = 31 * result + (bound != null ? bound.hashCode() : 0);
+    int result = dimension.hashCode();
+    result = 31 * result + bound.hashCode();
+    result = 31 * result + delimiter.hashCode();
     return result;
   }
 
@@ -127,6 +138,7 @@ public class SpatialDimFilter implements DimFilter
   {
     return "SpatialDimFilter{" +
            "dimension='" + dimension + '\'' +
+           ", delimiter='" + delimiter + '\'' +
            ", bound=" + bound +
            '}';
   }

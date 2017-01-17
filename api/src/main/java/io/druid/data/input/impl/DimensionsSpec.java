@@ -74,7 +74,7 @@ public class DimensionsSpec
 
   public static DimensionSchema convertSpatialSchema(SpatialDimensionSchema spatialSchema)
   {
-    return new NewSpatialDimensionSchema(spatialSchema.getDimName(), spatialSchema.getDims());
+    return new NewSpatialDimensionSchema(spatialSchema.getDimName(), spatialSchema.getDims(), spatialSchema.getDelimiter());
   }
 
   @JsonCreator
@@ -139,7 +139,7 @@ public class DimensionsSpec
           @Override
           public SpatialDimensionSchema apply(NewSpatialDimensionSchema input)
           {
-            return new SpatialDimensionSchema(input.getName(), input.getDims());
+            return new SpatialDimensionSchema(input.getName(), input.getDims(), input.getDelimiter());
           }
         }
     );

@@ -55,7 +55,8 @@ public class HadoopConverterTaskSerDeTest
   private static final IndexSpec INDEX_SPEC = new IndexSpec(new ConciseBitmapSerdeFactory(),
                                                             CompressedObjectStrategy.CompressionStrategy.LZ4,
                                                             CompressedObjectStrategy.CompressionStrategy.LZF,
-                                                            CompressionFactory.LongEncodingStrategy.LONGS);
+                                                            CompressionFactory.LongEncodingStrategy.LONGS,
+                                                            null);
   private static final DataSegment DATA_SEGMENT = new DataSegment(
       DATA_SOURCE,
       INTERVAL,

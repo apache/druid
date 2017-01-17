@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -104,7 +103,6 @@ public class IndexMerger
   protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
   protected static final SerializerUtils serializerUtils = new SerializerUtils();
   protected static final int INVALID_ROW = -1;
-  protected static final Splitter SPLITTER = Splitter.on(",");
 
   protected final ObjectMapper mapper;
   protected final IndexIO indexIO;

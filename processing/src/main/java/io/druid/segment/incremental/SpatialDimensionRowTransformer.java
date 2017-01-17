@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
@@ -46,9 +45,6 @@ import java.util.Set;
  */
 public class SpatialDimensionRowTransformer implements Function<InputRow, InputRow>
 {
-  private static final Joiner JOINER = Joiner.on(",");
-  private static final Splitter SPLITTER = Splitter.on(",");
-
   private final Map<String, SpatialDimensionSchema> spatialDimensionMap;
   private final Set<String> spatialPartialDimNames;
 
@@ -175,7 +171,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
         if (dimVals.size() != 1) {
           throw new ISE("Spatial dimension value must be in an array!");
         }
-        if (isJoinedSpatialDimValValid(dimVals.get(0))) {
+        if (isJoinedSpatialDimValValid(spatialDim.getSplitter(), dimVals.get(0))) {
           spatialLookup.put(spatialDimName, dimVals);
           finalDims.add(spatialDimName);
         }
@@ -189,7 +185,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
         }
 
         if (spatialDimVals.size() == spatialDim.getDims().size()) {
-          spatialLookup.put(spatialDimName, Arrays.asList(JOINER.join(spatialDimVals)));
+          spatialLookup.put(spatialDimName, Arrays.asList(spatialDim.getJoiner().join(spatialDimVals)));
           finalDims.add(spatialDimName);
         }
       }
@@ -198,7 +194,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return retVal;
   }
 
-  private boolean isSpatialDimValsValid(List<String> dimVals)
+  private static boolean isSpatialDimValsValid(List<String> dimVals)
   {
     if (dimVals == null || dimVals.isEmpty()) {
       return false;
@@ -211,12 +207,12 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return true;
   }
 
-  private boolean isJoinedSpatialDimValValid(String dimVal)
+  private static boolean isJoinedSpatialDimValValid(Splitter splitter, String dimVal)
   {
     if (dimVal == null || dimVal.isEmpty()) {
       return false;
     }
-    Iterable<String> dimVals = SPLITTER.split(dimVal);
+    Iterable<String> dimVals = splitter.split(dimVal);
     for (String val : dimVals) {
       if (tryParseFloat(val) == null) {
         return false;
@@ -242,13 +238,13 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
    *
    * @return decoded coordinate, or null if it could not be decoded
    */
-  public static float[] decode(final String encodedCoordinate)
+  public static float[] decode(final Splitter splitter, final String encodedCoordinate)
   {
     if (encodedCoordinate == null) {
       return null;
     }
 
-    final ImmutableList<String> parts = ImmutableList.copyOf(SPLITTER.split(encodedCoordinate));
+    final ImmutableList<String> parts = ImmutableList.copyOf(splitter.split(encodedCoordinate));
     final float[] coordinate = new float[parts.size()];
 
     for (int i = 0; i < coordinate.length; i++) {

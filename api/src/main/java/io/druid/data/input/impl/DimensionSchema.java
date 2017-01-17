@@ -107,7 +107,7 @@ public abstract class DimensionSchema
   protected DimensionSchema(String name, MultiValueHandling multiValueHandling)
   {
     this.name = Preconditions.checkNotNull(name, "Dimension name cannot be null.");
-    this.multiValueHandling = multiValueHandling;
+    this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
   }
 
   @JsonProperty
@@ -140,13 +140,18 @@ public abstract class DimensionSchema
 
     DimensionSchema that = (DimensionSchema) o;
 
-    return name.equals(that.name);
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
+    return multiValueHandling.equals(that.multiValueHandling);
   }
 
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    int result = name.hashCode();
+    result = result * 31 + multiValueHandling.hashCode();
+    return result;
   }
 }
