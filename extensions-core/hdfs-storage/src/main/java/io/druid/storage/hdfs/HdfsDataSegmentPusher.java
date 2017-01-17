@@ -50,7 +50,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
-  private final String pathForHadoop ;
+  private final String fullyQualifiedStorageDirectory;
 
   @Inject
   public HdfsDataSegmentPusher(
@@ -62,8 +62,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
-    this.pathForHadoop = FileSystem.newInstance(hadoopConfig).makeQualified(new Path(config.getStorageDirectory()))
-                                   .toUri().toString();
+    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(hadoopConfig).makeQualified(new Path(config.getStorageDirectory()))
+                                                    .toUri().toString();
 
     log.info("Configured HDFS as deep storage");
   }
@@ -78,7 +78,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return pathForHadoop;
+    return fullyQualifiedStorageDirectory;
   }
 
   @Override
@@ -89,13 +89,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getIdentifier(),
-        pathForHadoop,
+        fullyQualifiedStorageDirectory,
         storageDir
     );
 
     Path tmpFile = new Path(String.format(
         "%s/%s/index.zip",
-        pathForHadoop,
+        fullyQualifiedStorageDirectory,
         UUIDUtils.generateUuid()
     ));
     FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
@@ -109,7 +109,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       size = CompressionUtils.zip(inDir, out);
       final Path outFile = new Path(String.format(
           "%s/%s/index.zip",
-          pathForHadoop,
+          fullyQualifiedStorageDirectory,
           storageDir
       ));
       final Path outDir = outFile.getParent();
