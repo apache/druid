@@ -217,7 +217,10 @@ public class ReplayableFirehoseFactory implements FirehoseFactory<InputRowParser
       }
 
       try {
-        jsonParser.close();
+        if (jsonParser != null) {
+          jsonParser.close();
+        }
+
         if (++fileIndex >= files.size() || files.get(fileIndex).length() == 0) {
           return false;
         }
