@@ -427,7 +427,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           }
         }
 
-        return rowSize > 0 ? new ArrayBasedIndexedInts(row, rowSize) : ArrayBasedIndexedInts.empty();
+        return ArrayBasedIndexedInts.of(row, rowSize);
       }
 
       @Override

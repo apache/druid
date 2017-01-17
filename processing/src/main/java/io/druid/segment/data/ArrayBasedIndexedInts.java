@@ -30,32 +30,33 @@ import java.io.IOException;
  */
 public final class ArrayBasedIndexedInts implements IndexedInts
 {
-  private static final ArrayBasedIndexedInts EMPTY = new ArrayBasedIndexedInts(IntArrays.EMPTY_ARRAY);
+  private static final ArrayBasedIndexedInts EMPTY = new ArrayBasedIndexedInts(IntArrays.EMPTY_ARRAY, 0);
 
-  /**
-   * Returns empty ArrayBasedIndexedInts, size = 0. This is useful instead of {@link EmptyIndexedInts} where
-   * monomorphism is a concern.
-   */
-  public static ArrayBasedIndexedInts empty()
+  public static ArrayBasedIndexedInts of(int[] expansion)
   {
-    return EMPTY;
+    if (expansion.length == 0) {
+      return EMPTY;
+    }
+    return new ArrayBasedIndexedInts(expansion, expansion.length);
+  }
+
+  public static ArrayBasedIndexedInts of(int[] expansion, int size)
+  {
+    if (size == 0) {
+      return EMPTY;
+    }
+    if (size < 0 || size > expansion.length) {
+      throw new IAE("Size[%s] should be between 0 and %s", size, expansion.length);
+    }
+    return new ArrayBasedIndexedInts(expansion, size);
   }
 
   private final int[] expansion;
   private final int size;
 
-  public ArrayBasedIndexedInts(int[] expansion)
+  private ArrayBasedIndexedInts(int[] expansion, int size)
   {
     this.expansion = expansion;
-    this.size = expansion.length;
-  }
-
-  public ArrayBasedIndexedInts(int[] expansion, int size)
-  {
-    this.expansion = expansion;
-    if (size < 0 || size > expansion.length) {
-      throw new IAE("Size[%s] should be between 0 and %s", size, expansion.length);
-    }
     this.size = size;
   }
 

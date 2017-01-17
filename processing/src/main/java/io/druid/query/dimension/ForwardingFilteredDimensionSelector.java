@@ -71,7 +71,7 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
         result[resultSize++] = forwardedValue;
       }
     }
-    return new ArrayBasedIndexedInts(result, resultSize);
+    return ArrayBasedIndexedInts.of(result, resultSize);
   }
 
   @Override

@@ -52,7 +52,7 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
         result[resultSize++] = i;
       }
     }
-    return new ArrayBasedIndexedInts(result, resultSize);
+    return ArrayBasedIndexedInts.of(result, resultSize);
   }
 
   @Override

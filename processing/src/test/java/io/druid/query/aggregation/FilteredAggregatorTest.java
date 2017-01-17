@@ -104,9 +104,9 @@ public class FilteredAggregatorTest
                 public IndexedInts getRow()
                 {
                   if (selector.getIndex() % 3 == 2) {
-                    return new ArrayBasedIndexedInts(new int[]{1});
+                    return ArrayBasedIndexedInts.of(new int[]{1});
                   } else {
-                    return new ArrayBasedIndexedInts(new int[]{0});
+                    return ArrayBasedIndexedInts.of(new int[]{0});
                   }
                 }
 
