@@ -80,8 +80,6 @@ public class CompressedIntsIndexedWriterTest
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
-  File tempDirectory = FileUtils.getTempDirectory();
-  FileSmoosher smoosher = new FileSmoosher(tempDirectory);
 
   public CompressedIntsIndexedWriterTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
@@ -114,6 +112,8 @@ public class CompressedIntsIndexedWriterTest
 
   private void checkSerializedSizeAndData(int chunkFactor) throws Exception
   {
+    FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
+
     CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
         ioPeon, "test", chunkFactor, byteOrder, compressionStrategy
     );
@@ -180,7 +180,9 @@ public class CompressedIntsIndexedWriterTest
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
-    smoosher = new FileSmoosher(tempDirectory);
+    File tmpDirectory = FileUtils.getTempDirectory();
+    FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
+
     CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
         chunkFactor,
         compressionStrategy,
@@ -204,7 +206,7 @@ public class CompressedIntsIndexedWriterTest
     channel.close();
     smoosher.close();
 
-    SmooshedFileMapper mapper = Smoosh.map(tempDirectory);
+    SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
 
     // read from ByteBuffer and check values
     CompressedIntsIndexedSupplier supplierFromByteBuffer = CompressedIntsIndexedSupplier.fromByteBuffer(

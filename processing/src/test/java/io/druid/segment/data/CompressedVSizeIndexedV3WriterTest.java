@@ -67,8 +67,6 @@ public class CompressedVSizeIndexedV3WriterTest
   private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
-  File tmpDirectory = FileUtils.getTempDirectory();
-  FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
   private List<int[]> vals;
   public CompressedVSizeIndexedV3WriterTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
@@ -114,6 +112,8 @@ public class CompressedVSizeIndexedV3WriterTest
 
   private void checkSerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
+    FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
+
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
     CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
         ioPeon, "offset", offsetChunkFactor, byteOrder, compressionStrategy
@@ -229,9 +229,9 @@ public class CompressedVSizeIndexedV3WriterTest
 
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
     File tmpDirectory = FileUtils.getTempDirectory();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
+    int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
 
     CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
         offsetChunkFactor,

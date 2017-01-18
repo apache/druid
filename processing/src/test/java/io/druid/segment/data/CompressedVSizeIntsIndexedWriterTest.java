@@ -57,8 +57,6 @@ public class CompressedVSizeIntsIndexedWriterTest
   private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
-  File tmpDirectory = FileUtils.getTempDirectory();
-  FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
   private int[] vals;
   public CompressedVSizeIntsIndexedWriterTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
@@ -111,6 +109,8 @@ public class CompressedVSizeIntsIndexedWriterTest
 
   private void checkSerializedSizeAndData(int chunkSize) throws Exception
   {
+    FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
+
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
         ioPeon, "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy
     );
@@ -173,7 +173,9 @@ public class CompressedVSizeIntsIndexedWriterTest
 
   private void checkV2SerializedSizeAndData(int chunkSize) throws Exception
   {
-    smoosher = new FileSmoosher(tmpDirectory);
+    File tmpDirectory = FileUtils.getTempDirectory();
+    FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
+
     int maxValue = vals.length > 0 ? Ints.max(vals) : 0;
     GenericIndexedWriter genericIndexed = new GenericIndexedWriter<>(
         ioPeon,
