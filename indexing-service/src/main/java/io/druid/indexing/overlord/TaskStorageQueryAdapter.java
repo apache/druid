@@ -24,6 +24,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
@@ -80,6 +81,8 @@ public class TaskStorageQueryAdapter
     for (final TaskAction action : storage.getAuditLogs(taskid)) {
       if (action instanceof SegmentInsertAction) {
         segments.addAll(((SegmentInsertAction) action).getSegments());
+      } else if (action instanceof SegmentTransactionalInsertAction) {
+        segments.addAll(((SegmentTransactionalInsertAction) action).getSegments());
       }
     }
     return segments;

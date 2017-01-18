@@ -194,4 +194,9 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     result = 31 * result + (timezone != null ? timezone.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+    return new ArbitraryGranularitySpec(queryGranularity, rollup, inputIntervals, timezone);
+  }
 }

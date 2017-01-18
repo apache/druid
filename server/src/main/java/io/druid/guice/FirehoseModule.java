@@ -30,6 +30,7 @@ import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.FixedCountFirehoseFactory;
 import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.firehose.ReplayableFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
 import java.util.Arrays;
@@ -56,6 +57,7 @@ public class FirehoseModule implements DruidModule
                 new NamedType(LocalFirehoseFactory.class, "local"),
                 new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
                 new NamedType(CombiningFirehoseFactory.class, "combining"),
+                new NamedType(ReplayableFirehoseFactory.class, "replayable"),
                 new NamedType(FixedCountFirehoseFactory.class, "fixedCount")
             )
     );
