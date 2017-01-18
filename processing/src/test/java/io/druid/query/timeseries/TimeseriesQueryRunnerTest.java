@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.granularity.PeriodGranularity;
+import io.druid.granularity.PeriodQueryGranularity;
 import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequences;
@@ -414,7 +414,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .granularity(
-                                      new PeriodGranularity(
+                                      new PeriodQueryGranularity(
                                           new Period("P1D"),
                                           null,
                                           DateTimeZone.forID("America/Los_Angeles")
@@ -451,7 +451,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .granularity(new PeriodGranularity(new Period("P1M"), null, null))
+                                   .granularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
                                    .intervals(
                                        Arrays.asList(
                                            new Interval(
@@ -532,7 +532,7 @@ public class TimeseriesQueryRunnerTest
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(
-                                       new PeriodGranularity(
+                                       new PeriodQueryGranularity(
                                            new Period("P7D"),
                                            null,
                                            DateTimeZone.forID("America/Los_Angeles")
@@ -655,7 +655,7 @@ public class TimeseriesQueryRunnerTest
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(
-                                       new PeriodGranularity(
+                                       new PeriodQueryGranularity(
                                            new Period("PT1H"),
                                            new DateTime(60000),
                                            DateTimeZone.UTC
@@ -702,7 +702,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
-                                   .granularity(new PeriodGranularity(new Period("P1M"), null, null))
+                                   .granularity(new PeriodQueryGranularity(new Period("P1M"), null, null))
                                    .intervals(
                                        Arrays.asList(
                                            new Interval(

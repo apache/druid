@@ -26,7 +26,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -86,7 +86,7 @@ public class JobHelperTest
                 ),
                 new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(this.interval)
+                    SegmentGranularity.DAY, QueryGranularities.NONE, ImmutableList.of(this.interval)
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),

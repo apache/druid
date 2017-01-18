@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -203,7 +203,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.MINUTE,
+                SegmentGranularity.MINUTE,
                 QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             ),
@@ -265,7 +265,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.MINUTE,
+                SegmentGranularity.MINUTE,
                 QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             ),

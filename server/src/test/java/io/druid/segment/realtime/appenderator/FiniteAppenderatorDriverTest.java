@@ -33,8 +33,8 @@ import com.google.common.collect.Sets;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -94,7 +94,7 @@ public class FiniteAppenderatorDriverTest
   public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
-    allocator = new TestSegmentAllocator(DATA_SOURCE, Granularity.HOUR);
+    allocator = new TestSegmentAllocator(DATA_SOURCE, SegmentGranularity.HOUR);
     driver = new FiniteAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
@@ -230,10 +230,10 @@ public class FiniteAppenderatorDriverTest
   private class TestSegmentAllocator implements SegmentAllocator
   {
     private final String dataSource;
-    private final Granularity granularity;
+    private final SegmentGranularity granularity;
     private final Map<Long, AtomicInteger> counters = Maps.newHashMap();
 
-    public TestSegmentAllocator(String dataSource, Granularity granularity)
+    public TestSegmentAllocator(String dataSource, SegmentGranularity granularity)
     {
       this.dataSource = dataSource;
       this.granularity = granularity;

@@ -22,9 +22,9 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.FSSpideringIterator;
-import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 
@@ -50,7 +50,7 @@ public class GranularityPathSpec implements PathSpec
 
   private String inputPath;
   private String filePattern;
-  private Granularity dataGranularity;
+  private SegmentGranularity dataGranularity;
   private String pathFormat;
   private Class<? extends InputFormat> inputFormat;
 
@@ -88,12 +88,12 @@ public class GranularityPathSpec implements PathSpec
   }
 
   @JsonProperty
-  public Granularity getDataGranularity()
+  public SegmentGranularity getDataGranularity()
   {
     return dataGranularity;
   }
 
-  public void setDataGranularity(Granularity dataGranularity)
+  public void setDataGranularity(SegmentGranularity dataGranularity)
   {
     this.dataGranularity = dataGranularity;
   }

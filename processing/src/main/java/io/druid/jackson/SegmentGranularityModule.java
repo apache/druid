@@ -22,29 +22,21 @@ package io.druid.jackson;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import io.druid.granularity.AllGranularity;
-import io.druid.granularity.DurationGranularity;
-import io.druid.granularity.NoneGranularity;
-import io.druid.granularity.PeriodQueryGranularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.PeriodSegmentGranularity;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 
-/**
- */
-public class QueryGranularityModule extends SimpleModule
-{
-  public QueryGranularityModule()
-  {
-    super("QueryGranularityModule");
+public class SegmentGranularityModule extends SimpleModule {
 
-    setMixInAnnotation(QueryGranularity.class, QueryGranularityMixin.class);
-    registerSubtypes(
-        new NamedType(PeriodQueryGranularity.class, "period"),
-        new NamedType(DurationGranularity.class, "duration"),
-        new NamedType(AllGranularity.class, "all"),
-        new NamedType(NoneGranularity.class, "none")
-    );
-  }
+    public SegmentGranularityModule()
+    {
+        super("SegmentGranularityModule");
 
-  @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property = "type", defaultImpl = QueryGranularity.class)
-  public static interface QueryGranularityMixin {}
+        setMixInAnnotation(SegmentGranularity.class, SegmentGranularityMixin.class);
+        registerSubtypes(
+            new NamedType(PeriodSegmentGranularity.class, "period")
+        );
+    }
+
+    @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SegmentGranularity.class)
+    public static interface SegmentGranularityMixin {}
 }

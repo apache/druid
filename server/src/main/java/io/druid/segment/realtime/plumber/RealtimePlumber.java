@@ -42,7 +42,7 @@ import io.druid.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -226,7 +226,7 @@ public class RealtimePlumber implements Plumber
       return null;
     }
 
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
     final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
@@ -736,7 +736,7 @@ public class RealtimePlumber implements Plumber
 
   protected void startPersistThread()
   {
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
     final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
@@ -791,7 +791,7 @@ public class RealtimePlumber implements Plumber
 
   private void mergeAndPush()
   {
-    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final SegmentGranularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();

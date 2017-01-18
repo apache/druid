@@ -32,6 +32,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.SegmentGranularity;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
@@ -44,7 +45,6 @@ import io.druid.indexer.hadoop.DatasourceInputFormat;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -277,7 +277,7 @@ public class DatasourcePathSpecTest
                     new LongSumAggregatorFactory("visited_sum", "visited")
                 },
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(Interval.parse("2000/3000"))
+                    SegmentGranularity.DAY, QueryGranularities.NONE, ImmutableList.of(Interval.parse("2000/3000"))
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
