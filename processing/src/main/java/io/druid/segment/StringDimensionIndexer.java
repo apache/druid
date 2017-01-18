@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -48,7 +49,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
@@ -463,29 +463,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             return BooleanValueMatcher.of(false);
           }
         } else {
-          return new ValueMatcher()
-          {
-            @Override
-            public boolean matches()
-            {
-              Object[] dims = currEntry.getKey().getDims();
-              if (dimIndex >= dims.length) {
-                return matchNull;
-              }
-
-              int[] dimsInt = (int[]) dims[dimIndex];
-              if (dimsInt == null || dimsInt.length == 0) {
-                return matchNull;
-              }
-
-              for (int id : dimsInt) {
-                if (Objects.equals(extractionFn.apply(getActualValue(id, false)), value)) {
-                  return true;
-                }
-              }
-              return false;
-            }
-          };
+          // Employ precomputed BitSet optimization
+          return makeValueMatcher(Predicates.equalTo(value), matchNull);
         }
       }
 

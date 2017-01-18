@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import io.druid.java.util.common.IAE;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.DimensionSelector;
@@ -33,7 +34,6 @@ import it.unimi.dsi.fastutil.ints.Int2IntMap;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
-import java.util.Objects;
 
 final class ForwardingFilteredDimensionSelector implements DimensionSelector, IdLookup
 {
@@ -110,28 +110,8 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
         return BooleanValueMatcher.of(false);
       }
     } else {
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts baseRow = selector.getRow();
-          final int baseRowSize = baseRow.size();
-          boolean nullRow = true;
-          for (int i = 0; i < baseRowSize; i++) {
-            int rowValueId = baseRow.get(i);
-            int forwardedValue = forwardMapping.get(rowValueId);
-            if (forwardedValue >= 0) {
-              if (Objects.equals(selector.lookupName(rowValueId), value)) {
-                return true;
-              }
-              nullRow = false;
-            }
-          }
-          // null should match empty rows in multi-value columns
-          return nullRow && matchNull;
-        }
-      };
+      // Employ precomputed BitSet optimization
+      return makeValueMatcher(Predicates.equalTo(value), matchNull);
     }
   }
 

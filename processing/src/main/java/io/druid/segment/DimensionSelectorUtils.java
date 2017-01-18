@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import io.druid.java.util.common.IAE;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.data.IndexedInts;
@@ -44,6 +45,9 @@ public final class DimensionSelectorUtils
     IdLookup idLookup = selector.idLookup();
     if (idLookup != null) {
       return makeDictionaryEncodedRowBasedValueMatcher(selector, idLookup.lookupId(value), matchNull);
+    } else if (selector.getValueCardinality() >= 0 && selector.nameLookupPossibleInAdvance()) {
+      // Employ precomputed BitSet optimization
+      return makeRowBasedValueMatcher(selector, Predicates.equalTo(value), matchNull);
     } else {
       return makeNonDictionaryEncodedRowBasedValueMatcher(selector, value, matchNull);
     }

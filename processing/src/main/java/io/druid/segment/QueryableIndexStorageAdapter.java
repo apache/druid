@@ -63,7 +63,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  */
@@ -585,15 +584,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                 return BooleanValueMatcher.of(false);
                               }
                             } else {
-                              return new ValueMatcher()
-                              {
-                                @Override
-                                public boolean matches()
-                                {
-                                  String rowValue = lookupName(column.getSingleValueRow(cursorOffset.getOffset()));
-                                  return Objects.equals(rowValue, value);
-                                }
-                              };
+                              // Employ precomputed BitSet optimization
+                              return makeValueMatcher(Predicates.equalTo(value), matchNull);
                             }
                           }
 
