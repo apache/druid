@@ -20,26 +20,25 @@
 package io.druid.query.filter;
 
 import io.druid.query.dimension.ColumnSelectorStrategy;
-import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 
-public interface ValueMatcherColumnSelectorStrategy extends ColumnSelectorStrategy
+public interface ValueMatcherColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
 {
   /**
-   * Create a single value ValueMatcher, used for filtering by QueryableIndexStorageAdapter and FilteredAggregatorFactory.
+   * Create a single value ValueMatcher.
    *
-   * @param cursor ColumnSelectorFactory for creating dimension value selectors
+   * @param selector Column selector
    * @param value Value to match against
    * @return ValueMatcher that matches on 'value'
    */
-  ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, String value);
-
+  ValueMatcher makeValueMatcher(ValueSelectorType selector, String value);
 
   /**
-   * Create a predicate-based ValueMatcher, used for filtering by QueryableIndexStorageAdapter and FilteredAggregatorFactory.
+   * Create a predicate-based ValueMatcher.
    *
-   * @param cursor ColumnSelectorFactory for creating dimension value selectors
+   * @param selector Column selector
    * @param predicateFactory A DruidPredicateFactory that provides the filter predicates to be matched
    * @return A ValueMatcher that applies the predicate for this DimensionQueryHelper's value type from the predicateFactory
    */
-  ValueMatcher getValueMatcher(String columnName, ColumnSelectorFactory cursor, final DruidPredicateFactory predicateFactory);
+  ValueMatcher makeValueMatcher(ValueSelectorType selector, DruidPredicateFactory predicateFactory);
 }

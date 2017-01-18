@@ -27,6 +27,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 
 /**
  * Our very own subclass of CalcitePrepareImpl, used to alter behaviors of the JDBC driver as necessary.
@@ -64,5 +65,11 @@ public class DruidPlannerImpl extends CalcitePrepareImpl
     }
 
     return planner;
+  }
+
+  @Override
+  protected SqlRexConvertletTable createConvertletTable()
+  {
+    return DruidConvertletTable.instance();
   }
 }

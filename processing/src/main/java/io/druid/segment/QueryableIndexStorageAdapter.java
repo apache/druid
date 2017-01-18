@@ -21,33 +21,22 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
-
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
-import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
-import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -61,12 +50,12 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.BooleanValueMatcher;
-import io.druid.segment.filter.Filters;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -809,61 +798,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       };
                     }
 
-                    @Override
-                    public NumericColumnSelector makeMathExpressionSelector(String expression)
-                    {
-                      final Expr parsed = Parser.parse(expression);
-                      final List<String> required = Parser.findRequiredBindings(parsed);
-
-                      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-                      for (String columnName : index.getColumnNames()) {
-                        if (!required.contains(columnName)) {
-                          continue;
-                        }
-                        final GenericColumn column = index.getColumn(columnName).getGenericColumn();
-                        if (column == null) {
-                          continue;
-                        }
-                        closer.register(column);
-                        if (column.getType() == ValueType.FLOAT) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getFloatSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else if (column.getType() == ValueType.LONG) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getLongSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else {
-                          throw new UnsupportedOperationException(
-                              "Not supported type " + column.getType() + " for column " + columnName
-                          );
-                        }
-                      }
-                      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                      return new NumericColumnSelector()
-                      {
-                        @Override
-                        public Number get()
-                        {
-                          return parsed.eval(binding).numericValue();
-                        }
-                      };
-                    }
-
+                    @Nullable
                     @Override
                     public ColumnCapabilities getColumnCapabilities(String columnName)
                     {
@@ -927,10 +862,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   } else {
                     return new QueryableIndexBaseCursor()
                     {
-                      CursorOffsetHolderValueMatcherFactory valueMatcherFactory = new CursorOffsetHolderValueMatcherFactory(
-                          storageAdapter,
-                          this
-                      );
                       RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
                           cursorOffsetHolder,
                           descending
@@ -942,7 +873,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         if (postFilter instanceof BooleanFilter) {
                           filterMatcher = ((BooleanFilter) postFilter).makeMatcher(
                               bitmapIndexSelector,
-                              valueMatcherFactory,
+                              this,
                               rowOffsetMatcherFactory
                           );
                         } else {
@@ -950,7 +881,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(postFilter.getBitmapIndex(
                                 bitmapIndexSelector));
                           } else {
-                            filterMatcher = postFilter.makeMatcher(valueMatcherFactory);
+                            filterMatcher = postFilter.makeMatcher(this);
                           }
                         }
                       }
@@ -1037,83 +968,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public void set(Offset currOffset)
     {
       this.currOffset = currOffset;
-    }
-  }
-
-  private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
-  {
-    private static final ValueMatcherColumnSelectorStrategyFactory STRATEGY_FACTORY =
-        new ValueMatcherColumnSelectorStrategyFactory();
-
-    private final StorageAdapter storageAdapter;
-    private final ColumnSelectorFactory cursor;
-    private final List<String> availableMetrics;
-
-    public CursorOffsetHolderValueMatcherFactory(
-        StorageAdapter storageAdapter,
-        ColumnSelectorFactory cursor
-    )
-    {
-      this.storageAdapter = storageAdapter;
-      this.cursor = cursor;
-      this.availableMetrics = Lists.newArrayList(storageAdapter.getAvailableMetrics());
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final String value)
-    {
-      if (dimension.equals(Column.TIME_COLUMN_NAME) || availableMetrics.contains(dimension)) {
-        if (getTypeForDimension(dimension) == ValueType.LONG) {
-          return Filters.getLongValueMatcher(
-              cursor.makeLongColumnSelector(dimension),
-              value
-          );
-        }
-      }
-
-      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
-          DimensionHandlerUtils.createColumnSelectorPluses(
-              STRATEGY_FACTORY,
-              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
-              cursor
-          );
-
-      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
-      return strategy.getValueMatcher(dimension, cursor, value);
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
-    {
-      if (dimension.equals(Column.TIME_COLUMN_NAME) || availableMetrics.contains(dimension)) {
-        if (getTypeForDimension(dimension) == ValueType.LONG) {
-          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-        }
-      }
-
-      ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy>[] selector =
-          DimensionHandlerUtils.createColumnSelectorPluses(
-              STRATEGY_FACTORY,
-              ImmutableList.<DimensionSpec>of(DefaultDimensionSpec.of(dimension)),
-              cursor
-          );
-
-      final ValueMatcherColumnSelectorStrategy strategy = selector[0].getColumnSelectorStrategy();
-      return strategy.getValueMatcher(dimension, cursor, predicateFactory);
-    }
-
-    private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)
-    {
-      return Filters.getLongPredicateMatcher(
-          cursor.makeLongColumnSelector(dimension),
-          predicate
-      );
-    }
-
-    private ValueType getTypeForDimension(String dimension)
-    {
-      ColumnCapabilities capabilities = cursor.getColumnCapabilities(dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 

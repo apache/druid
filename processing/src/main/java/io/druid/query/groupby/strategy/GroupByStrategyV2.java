@@ -48,6 +48,7 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
@@ -207,6 +208,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final Sequence<Row> results = GroupByRowProcessor.process(
         query,
         subqueryResult,
+        GroupByQueryHelper.rowSignatureFor(subquery),
         configSupplier.get(),
         mergeBufferPool,
         spillMapper

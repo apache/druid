@@ -20,23 +20,18 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-
-import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DruidPredicateFactory;
-import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -379,7 +374,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public Object makeColumnValueSelector(
+  public DimensionSelector makeColumnValueSelector(
       final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
@@ -404,13 +399,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           indices = null;
         }
 
-        int nullId = getEncodedValue(null, false);
         IntList valsTmp = null;
-        if ((indices == null || indices.length == 0) && nullId > -1) {
-          if (nullId < maxId) {
-            valsTmp = IntLists.singleton(nullId);
+        if (indices == null || indices.length == 0) {
+          final int nullId = getEncodedValue(null, false);
+          if (nullId > -1) {
+            if (nullId < maxId) {
+              valsTmp = IntLists.singleton(nullId);
+            } else {
+              valsTmp = IntLists.EMPTY_LIST;
+            }
           }
-        } else if (indices != null && indices.length > 0) {
+        }
+
+        if (valsTmp == null && indices != null && indices.length > 0) {
           valsTmp = new IntArrayList(indices.length);
           for (int i = 0; i < indices.length; i++) {
             int id = indices[i];
@@ -532,79 +533,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
       bitmapIndexes[dimValIdx].add(rowNum);
     }
-  }
-
-  @Override
-  public ValueMatcher makeIndexingValueMatcher(
-      final String matchValue,
-      final IncrementalIndexStorageAdapter.EntryHolder holder,
-      final int dimIndex
-  )
-  {
-    final int encodedVal = getEncodedValue(matchValue, false);
-    final boolean matchOnNull = Strings.isNullOrEmpty(matchValue);
-    if (encodedVal < 0 && !matchOnNull) {
-      return new BooleanValueMatcher(false);
-    }
-
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        Object[] dims = holder.getKey().getDims();
-        if (dimIndex >= dims.length) {
-          return matchOnNull;
-        }
-
-        int[] dimsInt = (int[]) dims[dimIndex];
-        if (dimsInt == null || dimsInt.length == 0) {
-          return matchOnNull;
-        }
-
-        for (int i = 0; i < dimsInt.length; i++) {
-          if (dimsInt[i] == encodedVal) {
-            return true;
-          }
-        }
-        return false;
-      }
-    };
-  }
-
-  @Override
-  public ValueMatcher makeIndexingValueMatcher(
-      final DruidPredicateFactory predicateFactory,
-      final IncrementalIndexStorageAdapter.EntryHolder holder,
-      final int dimIndex
-  )
-  {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    final boolean matchOnNull = predicate.apply(null);
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        Object[] dims = holder.getKey().getDims();
-        if (dimIndex >= dims.length) {
-          return matchOnNull;
-        }
-
-        int[] dimsInt = (int[]) dims[dimIndex];
-        if (dimsInt == null || dimsInt.length == 0) {
-          return matchOnNull;
-        }
-
-        for (int i = 0; i < dimsInt.length; i++) {
-          String finalDimVal = getActualValue(dimsInt[i], false);
-          if (predicate.apply(finalDimVal)) {
-            return true;
-          }
-        }
-        return false;
-      }
-    };
   }
 
   private SortedDimensionDictionary sortedLookup()

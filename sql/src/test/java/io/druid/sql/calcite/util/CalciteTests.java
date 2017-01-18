@@ -30,6 +30,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -66,6 +67,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -198,12 +200,34 @@ public class CalciteTests
             .put(
                 GroupByQuery.class,
                 GroupByQueryRunnerTest.makeQueryRunnerFactory(
+                    GroupByQueryRunnerTest.DEFAULT_MAPPER,
                     new GroupByQueryConfig()
                     {
                       @Override
                       public String getDefaultStrategy()
                       {
                         return GroupByStrategySelector.STRATEGY_V2;
+                      }
+                    },
+                    new DruidProcessingConfig()
+                    {
+                      @Override
+                      public String getFormatString()
+                      {
+                        return null;
+                      }
+
+                      @Override
+                      public int intermediateComputeSizeBytes()
+                      {
+                        return 10 * 1024 * 1024;
+                      }
+
+                      @Override
+                      public int getNumMergeBuffers()
+                      {
+                        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+                        return 3;
                       }
                     }
                 )
@@ -224,7 +248,7 @@ public class CalciteTests
 
   public static DruidTable createDruidTable(final QuerySegmentWalker walker, final PlannerConfig plannerConfig)
   {
-    return new DruidTable(walker, new TableDataSource(DATASOURCE), plannerConfig, COLUMN_TYPES);
+    return new DruidTable(new QueryMaker(walker, plannerConfig), new TableDataSource(DATASOURCE), COLUMN_TYPES);
   }
 
   public static Schema createMockSchema(final QuerySegmentWalker walker, final PlannerConfig plannerConfig)

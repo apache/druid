@@ -25,9 +25,9 @@ import org.roaringbitmap.IntIterator;
 
 import com.google.common.primitives.Ints;
 
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import it.uniroma3.mat.extendedset.intset.IntSet;
+import io.druid.extendedset.intset.ConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
+import io.druid.extendedset.intset.IntSet;
 
 public class WrappedConciseBitmap implements MutableBitmap
 {

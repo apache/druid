@@ -27,12 +27,35 @@ import javax.validation.constraints.Min;
  */
 public class SearchQueryConfig
 {
+  public static final String CTX_KEY_STRATEGY = "searchStrategy";
+
   @JsonProperty
   @Min(1)
   private int maxSearchLimit = 1000;
 
+  @JsonProperty
+  private String searchStrategy = UseIndexesStrategy.NAME;
+
   public int getMaxSearchLimit()
   {
     return maxSearchLimit;
+  }
+
+  public String getSearchStrategy()
+  {
+    return searchStrategy;
+  }
+
+  public void setSearchStrategy(final String strategy)
+  {
+    this.searchStrategy = strategy;
+  }
+
+  public SearchQueryConfig withOverrides(final SearchQuery query)
+  {
+    final SearchQueryConfig newConfig = new SearchQueryConfig();
+    newConfig.maxSearchLimit = query.getLimit();
+    newConfig.searchStrategy = query.getContextValue(CTX_KEY_STRATEGY, searchStrategy);
+    return newConfig;
   }
 }

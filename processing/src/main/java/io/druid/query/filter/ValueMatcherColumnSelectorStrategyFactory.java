@@ -1,5 +1,3 @@
-package io.druid.query.filter;
-
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
  * or more contributor license agreements. See the NOTICE file
@@ -19,6 +17,8 @@ package io.druid.query.filter;
  * under the License.
  */
 
+package io.druid.query.filter;
+
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.segment.column.ColumnCapabilities;
@@ -27,6 +27,18 @@ import io.druid.segment.column.ValueType;
 public class ValueMatcherColumnSelectorStrategyFactory
     implements ColumnSelectorStrategyFactory<ValueMatcherColumnSelectorStrategy>
 {
+  private static final ValueMatcherColumnSelectorStrategyFactory INSTANCE = new ValueMatcherColumnSelectorStrategyFactory();
+
+  private ValueMatcherColumnSelectorStrategyFactory()
+  {
+    // Singleton.
+  }
+
+  public static ValueMatcherColumnSelectorStrategyFactory instance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities

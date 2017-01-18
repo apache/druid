@@ -17,11 +17,34 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.common.guava;
+
+import com.google.common.base.Supplier;
 
 /**
+ * A settable Supplier. Not thread safe.
  */
-public interface NumericColumnSelector
+public class SettableSupplier<T> implements Supplier<T>
 {
-  Number get();
+  private T obj;
+
+  public SettableSupplier()
+  {
+  }
+
+  public SettableSupplier(T initialValue)
+  {
+    obj = initialValue;
+  }
+
+  public void set(T obj)
+  {
+    this.obj = obj;
+  }
+
+  @Override
+  public T get()
+  {
+    return obj;
+  }
 }

@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Sequence;
@@ -64,17 +65,20 @@ import java.util.Map;
 public class SearchQueryRunnerTest
 {
   private static final Logger LOG = new Logger(SearchQueryRunnerTest.class);
+  private static final SearchQueryConfig config = new SearchQueryConfig();
   private static final SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest(
-      new SearchQueryConfig(),
+      config,
       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
   );
+  private static final SearchStrategySelector selector = new SearchStrategySelector(Suppliers.ofInstance(config));
 
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
             new SearchQueryRunnerFactory(
+                selector,
                 toolChest,
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -91,7 +95,7 @@ public class SearchQueryRunnerTest
   {
     this.runner = runner;
     this.decoratedRunner = toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
   }
 
   @Test
@@ -389,7 +393,8 @@ public class SearchQueryRunnerTest
                   new AndDimFilter(
                       Arrays.<DimFilter>asList(
                           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
-                          new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null))))
+                          new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
+                      )))
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .dimensions(QueryRunnerTestHelper.qualityDimension)
               .query("a")

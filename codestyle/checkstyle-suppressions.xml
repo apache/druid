@@ -31,4 +31,9 @@
 
   <!-- Our tests have many legacy usages of static imports; enforcement is impratical until those are removed. -->
   <suppress checks="AvoidStaticImport" files="[\\/]src[\\/]test[\\/]" />
+
+  <suppress checks="Header" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+
+  <!-- extendedset is a fork of Alessandro Colantonio's CONCISE (COmpressed 'N' Composable Integer SEt) repository and licensed to Metamarkets under a CLA is not true. -->
+  <suppress checks="Header" files="[\\/]extendedset[\\/]" />
 </suppressions>

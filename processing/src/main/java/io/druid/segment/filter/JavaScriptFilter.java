@@ -25,7 +25,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import org.mozilla.javascript.Context;
 
 public class JavaScriptFilter implements Filter
@@ -64,10 +64,10 @@ public class JavaScriptFilter implements Filter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     // suboptimal, since we need create one context per call to predicate.apply()
-    return factory.makeValueMatcher(dimension, predicateFactory);
+    return Filters.makeValueMatcher(factory, dimension, predicateFactory);
   }
 
   @Override

@@ -16,26 +16,3 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package io.druid.sql.avatica;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-public class ServerConfig
-{
-  @JsonProperty
-  private boolean enableAvatica = false;
-
-  @JsonProperty
-  private boolean enableJsonOverHttp = true;
-
-  public boolean isEnableAvatica()
-  {
-    return enableAvatica;
-  }
-
-  public boolean isEnableJsonOverHttp()
-  {
-    return enableJsonOverHttp;
-  }
-}

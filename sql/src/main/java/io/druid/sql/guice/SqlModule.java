@@ -32,7 +32,6 @@ import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.sql.avatica.AvaticaMonitor;
 import io.druid.sql.avatica.DruidAvaticaHandler;
-import io.druid.sql.avatica.ServerConfig;
 import io.druid.sql.calcite.DruidSchema;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -45,6 +44,8 @@ import java.util.Properties;
 public class SqlModule implements Module
 {
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
+  private static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.server.enableJsonOverHttp";
+  private static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.server.enableAvatica";
 
   @Inject
   private Properties props;
@@ -57,13 +58,18 @@ public class SqlModule implements Module
   public void configure(Binder binder)
   {
     if (isEnabled()) {
-      JsonConfigProvider.bind(binder, "druid.sql.server", ServerConfig.class);
       JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-      Jerseys.addResource(binder, SqlResource.class);
-      binder.bind(AvaticaMonitor.class).in(LazySingleton.class);
-      JettyBindings.addHandler(binder, DruidAvaticaHandler.class);
-      MetricsModule.register(binder, AvaticaMonitor.class);
       LifecycleModule.register(binder, DruidSchema.class);
+
+      if (isJsonOverHttpEnabled()) {
+        Jerseys.addResource(binder, SqlResource.class);
+      }
+
+      if (isAvaticaEnabled()) {
+        binder.bind(AvaticaMonitor.class).in(LazySingleton.class);
+        JettyBindings.addHandler(binder, DruidAvaticaHandler.class);
+        MetricsModule.register(binder, AvaticaMonitor.class);
+      }
     }
   }
 
@@ -84,5 +90,17 @@ public class SqlModule implements Module
   {
     Preconditions.checkNotNull(props, "props");
     return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE, "false"));
+  }
+
+  private boolean isJsonOverHttpEnabled()
+  {
+    Preconditions.checkNotNull(props, "props");
+    return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE_JSON_OVER_HTTP, "true"));
+  }
+
+  private boolean isAvaticaEnabled()
+  {
+    Preconditions.checkNotNull(props, "props");
+    return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE_AVATICA, "true"));
   }
 }

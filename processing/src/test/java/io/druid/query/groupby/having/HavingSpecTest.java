@@ -44,10 +44,10 @@ public class HavingSpecTest
 
   @Test
   public void testHavingClauseSerde() throws Exception {
-    List<HavingSpec> havings = Arrays.asList(
+    List<HavingSpec> havings = Arrays.<HavingSpec>asList(
       new GreaterThanHavingSpec("agg", Double.valueOf(1.3)),
       new OrHavingSpec(
-        Arrays.asList(
+        Arrays.<HavingSpec>asList(
           new LessThanHavingSpec("lessAgg", Long.valueOf(1L)),
           new NotHavingSpec(new EqualToHavingSpec("equalAgg", Double.valueOf(2)))
         )
@@ -152,7 +152,7 @@ public class HavingSpecTest
     assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
   }
 
-  private static class CountingHavingSpec implements HavingSpec {
+  private static class CountingHavingSpec extends BaseHavingSpec {
 
     private final AtomicInteger counter;
     private final boolean value;

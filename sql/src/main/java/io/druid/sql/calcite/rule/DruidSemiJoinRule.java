@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.rule;
 
+import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.DruidSemiJoin;
 import org.apache.calcite.plan.RelOptRule;
@@ -27,9 +28,9 @@ import org.apache.calcite.rel.core.SemiJoin;
 
 public class DruidSemiJoinRule extends RelOptRule
 {
-  private static final DruidSemiJoinRule INSTANCE = new DruidSemiJoinRule();
+  private final PlannerConfig plannerConfig;
 
-  private DruidSemiJoinRule()
+  public DruidSemiJoinRule(final PlannerConfig plannerConfig)
   {
     super(
         operand(
@@ -38,11 +39,12 @@ public class DruidSemiJoinRule extends RelOptRule
             operand(DruidRel.class, none())
         )
     );
+    this.plannerConfig = plannerConfig;
   }
 
-  public static DruidSemiJoinRule instance()
+  public static DruidSemiJoinRule create(final PlannerConfig plannerConfig)
   {
-    return INSTANCE;
+    return new DruidSemiJoinRule(plannerConfig);
   }
 
   @Override
@@ -51,8 +53,19 @@ public class DruidSemiJoinRule extends RelOptRule
     final SemiJoin semiJoin = call.rel(0);
     final DruidRel left = call.rel(1);
     final DruidRel right = call.rel(2);
-    final DruidSemiJoin druidSemiJoin = DruidSemiJoin.from(semiJoin, semiJoin.getTraitSet(), left, right);
+    final DruidSemiJoin druidSemiJoin = DruidSemiJoin.from(
+        semiJoin,
+        left,
+        right,
+        plannerConfig.getMaxSemiJoinRowsInMemory()
+    );
+
     if (druidSemiJoin != null) {
+      // Check maxQueryCount.
+      if (plannerConfig.getMaxQueryCount() > 0 && druidSemiJoin.getQueryCount() > plannerConfig.getMaxQueryCount()) {
+        return;
+      }
+
       call.transformTo(druidSemiJoin);
     }
   }

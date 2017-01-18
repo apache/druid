@@ -32,7 +32,7 @@ import java.util.Arrays;
  * The "&gt;" operator in a "having" clause. This is similar to SQL's "having aggregation &gt; value",
  * except that an aggregation in SQL is an expression instead of an aggregation name as in Druid.
  */
-public class GreaterThanHavingSpec implements HavingSpec
+public class GreaterThanHavingSpec extends BaseHavingSpec
 {
   private static final byte CACHE_KEY = 0x4;
 
