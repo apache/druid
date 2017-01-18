@@ -51,10 +51,10 @@ import java.util.List;
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
  * <p>
- * V3 Storage Format
+ * V2 Storage Format
  * Meta, header and value files are separate.
  * Meta File:
- * byte 1: version (0x3)
+ * byte 1: version (0x2)
  * byte 2 == 0x1 =&gt; allowReverseLookup
  * bytes 3-6: numberOfElementsPerValueFile expressed as power of 2. That means all the value files contains same number of items
  * except last value file and may have fewer elements.
@@ -101,7 +101,7 @@ public class GenericIndexed<T> implements Indexed<T>
     }
   };
   private static final byte version_one = 0x1;
-  private static final byte version_three = 0X3;
+  private static final byte version_two = 0X2;
 
   private final ObjectStrategy<T> strategy;
   private final boolean allowReverseLookup;
@@ -275,9 +275,9 @@ public class GenericIndexed<T> implements Indexed<T>
 
     if (version_one == versionFromBuffer) {
       return createVersionOneGenericIndexed(buffer, strategy);
-    } else if (version_three == versionFromBuffer) {
+    } else if (version_two == versionFromBuffer) {
       throw new IAE(
-          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper) to read version 3 indexed.",
+          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper) to read version 2 indexed.",
           versionFromBuffer
       );
     }
@@ -306,10 +306,10 @@ public class GenericIndexed<T> implements Indexed<T>
     if (version_one == versionFromBuffer) {
       return createVersionOneGenericIndexed(buffer, strategy);
     } else {
-      if (version_three == versionFromBuffer) {
+      if (version_two == versionFromBuffer) {
 
         if (fileMapper == null) {
-          throw new IAE("SmooshedFileMapper can not be null for version 3.");
+          throw new IAE("SmooshedFileMapper can not be null for version 2.");
         }
         boolean allowReverseLookup = buffer.get() == 0x1;
         int logBaseTwoOfElementsPerValueFile = buffer.getInt();
@@ -388,14 +388,14 @@ public class GenericIndexed<T> implements Indexed<T>
   public long getSerializedSize()
   {
     if (valueBuffers.size() != 1) {
-      throw new UnsupportedOperationException("Method not supported for version 3.");
+      throw new UnsupportedOperationException("Method not supported for version 2 GenericIndexed.");
     }
     return theBuffer.remaining() + 2 + 4 + 4;
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    //version 3 will always have more than one buffer in valueBuffers.
+    //version 2 will always have more than one buffer in valueBuffers.
     if (valueBuffers.size() == 1) {
       channel.write(ByteBuffer.wrap(new byte[]{version_one, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
       channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
@@ -403,7 +403,7 @@ public class GenericIndexed<T> implements Indexed<T>
       channel.write(theBuffer.asReadOnlyBuffer());
     } else {
       throw new UnsupportedOperationException(
-          "GenericIndexed serialization for V3 is unsupported. Use GenericIndexedWriter instead.");
+          "GenericIndexed serialization for V2 is unsupported. Use GenericIndexedWriter instead.");
     }
   }
 

@@ -60,7 +60,7 @@ public class GenericIndexedWriter<T> implements Closeable
   private T prevObject = null;
   private CountingOutputStream headerOut = null;
   private CountingOutputStream valuesOut = null;
-  private CountingOutputStream headerOutLong = null; // to hold header values as long and useful for version 3 GenericIndexed.
+  private CountingOutputStream headerOutLong = null; // to hold header values as long and useful for version 2 GenericIndexed.
   private long numWritten = 0;
   private boolean requireMultipleFiles = false;
 
@@ -116,7 +116,6 @@ public class GenericIndexedWriter<T> implements Closeable
   {
     headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header")));
     valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("values")));
-    headerOutLong = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("headerLong")));
   }
 
   public void write(T objectToWrite) throws IOException
@@ -131,11 +130,15 @@ public class GenericIndexedWriter<T> implements Closeable
     valuesOut.write(Ints.toByteArray(bytesToWrite.length));
     valuesOut.write(bytesToWrite);
 
-    headerOut.write(Ints.toByteArray((int) valuesOut.getCount()));
-    headerOutLong.write(Longs.toByteArray(valuesOut.getCount()));
+    if(!requireMultipleFiles) {
+      headerOut.write(Ints.toByteArray((int) valuesOut.getCount()));
+    } else {
+      headerOutLong.write(Longs.toByteArray(valuesOut.getCount()));
+    }
 
-    if (getSerializedSize() > fileSizeLimit) {
+    if (!requireMultipleFiles && getSerializedSize() > fileSizeLimit) {
       requireMultipleFiles = true;
+      initializeHeaderOutLong();
     }
 
     prevObject = objectToWrite;
@@ -149,6 +152,7 @@ public class GenericIndexedWriter<T> implements Closeable
   @Override
   public void close() throws IOException
   {
+    valuesOut.close();
     if (requireMultipleFiles) {
       closeMultiFiles();
     } else {
@@ -159,9 +163,6 @@ public class GenericIndexedWriter<T> implements Closeable
   private void closeSingleFile() throws IOException
   {
     headerOut.close();
-    headerOutLong.close();
-    valuesOut.close();
-
     final long numBytesWritten = headerOut.getCount() + valuesOut.getCount();
 
     Preconditions.checkState(
@@ -185,11 +186,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   private void closeMultiFiles() throws IOException
   {
-    headerOut.close();
     headerOutLong.close();
-    valuesOut.close();
-
-    // revisit this check.
     Preconditions.checkState(
         headerOutLong.getCount() == (numWritten * 8),
         "numWritten[%s] number of rows should have [%s] bytes written to headerOutLong, had[%s]",
@@ -275,7 +272,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   public long getSerializedSize()
   {
-    // for version 3 getSerializedSize() returns number of bytes in meta file.
+    // for version 2 getSerializedSize() returns number of bytes in meta file.
     if (!requireMultipleFiles) {
       return 2 + // version and sorted flag
              Ints.BYTES + // numBytesWritten
@@ -297,7 +294,7 @@ public class GenericIndexedWriter<T> implements Closeable
     // ByteSource.concat is only available in guava 15 and higher
     // This is guava 14 compatible
     if (requireMultipleFiles) {
-      throw new ISE("Can not combine streams for version 3."); //fallback to old behaviour.
+      throw new ISE("Can not combine streams for version 2."); //fallback to old behaviour.
     }
 
     return ByteStreams.join(
@@ -333,14 +330,14 @@ public class GenericIndexedWriter<T> implements Closeable
     }
 
     if (smoosher == null) {
-      throw new IAE("version 3 requires FileSmoosher.");
+      throw new IAE("version 2 GenericIndexedWriter requires FileSmoosher.");
     }
     File f = ioPeon.getFile(makeFilename("headerLong"));
     Preconditions.checkNotNull(f, "header file missing.");
 
     int bagSizePower = bagSizePower();
     OutputStream metaOut = Channels.newOutputStream(channel);
-    metaOut.write(0x3);
+    metaOut.write(0x2);
     metaOut.write(objectsSorted ? 0x1 : 0x0);
     metaOut.write(Ints.toByteArray(bagSizePower));
     metaOut.write(Ints.toByteArray((int) numWritten));
@@ -358,10 +355,10 @@ public class GenericIndexedWriter<T> implements Closeable
 
         for (int i = 0; i <= filesRequired; i++) {
           if (i != filesRequired) {
-            headerFile.seek((bagSize + counter) * 8); // 8 for long bytes.
+            headerFile.seek((bagSize + counter) * Longs.BYTES); // 8 for long bytes.
             counter = counter + bagSize;
           } else {
-            headerFile.seek((numWritten - 1) * 8); // for remaining items.
+            headerFile.seek((numWritten - 1) * Longs.BYTES); // for remaining items.
           }
           long valuePosition = headerFile.readLong();
           long numBytesToPutInFile = valuePosition - previousValuePosition;
@@ -407,6 +404,23 @@ public class GenericIndexedWriter<T> implements Closeable
             .addWithSmooshedWriter(generateHeaderFileName(filenameBase), numBytesToPutInFile)) {
           writeBytesIntoSmooshedChannel(numBytesToPutInFile, buffer, smooshChannel, is);
         }
+      }
+
+    }
+  }
+
+  private void initializeHeaderOutLong() throws IOException
+  {
+    headerOut.close();
+    headerOutLong = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("headerLong")));
+    File f = ioPeon.getFile(makeFilename("header"));
+
+    try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
+
+      for(int i = 0; i < numWritten; i++) {
+        headerFile.seek(i*Ints.BYTES);
+        int count = headerFile.readInt();
+        headerOutLong.write(Longs.toByteArray(count));
       }
 
     }

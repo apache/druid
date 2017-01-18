@@ -171,7 +171,7 @@ public class CompressedVSizeIntsIndexedWriterTest
     checkSerializedSizeAndData(2);
   }
 
-  private void checkV3SerializedSizeAndData(int chunkSize) throws Exception
+  private void checkV2SerializedSizeAndData(int chunkSize) throws Exception
   {
     smoosher = new FileSmoosher(tmpDirectory);
     int maxValue = vals.length > 0 ? Ints.max(vals) : 0;
@@ -225,7 +225,7 @@ public class CompressedVSizeIntsIndexedWriterTest
     for (int maxValue : MAX_VALUES) {
       final int maxChunkSize = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
       generateVals((rand.nextInt(5) + 5) * maxChunkSize + rand.nextInt(maxChunkSize), maxValue);
-      checkV3SerializedSizeAndData(maxChunkSize);
+      checkV2SerializedSizeAndData(maxChunkSize);
     }
   }
 

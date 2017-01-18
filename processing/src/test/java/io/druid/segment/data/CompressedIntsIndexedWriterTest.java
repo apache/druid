@@ -178,7 +178,7 @@ public class CompressedIntsIndexedWriterTest
   }
 
 
-  private void checkV3SerializedSizeAndData(int chunkFactor) throws Exception
+  private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
     smoosher = new FileSmoosher(tempDirectory);
     CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
@@ -227,7 +227,7 @@ public class CompressedIntsIndexedWriterTest
     for (int maxValue : MAX_VALUES) {
       for (int chunkFactor : CHUNK_FACTORS) {
         generateVals((rand.nextInt(5) + 5) * chunkFactor + rand.nextInt(chunkFactor), maxValue);
-        checkV3SerializedSizeAndData(chunkFactor);
+        checkV2SerializedSizeAndData(chunkFactor);
       }
     }
   }
