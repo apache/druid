@@ -38,6 +38,7 @@ import java.util.Objects;
 final class ForwardingFilteredDimensionSelector implements DimensionSelector, IdLookup
 {
   private final DimensionSelector selector;
+  private final IdLookup baseIdLookup;
   private final Int2IntMap forwardMapping;
   private final int[] reverseMapping;
 
@@ -51,6 +52,7 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
     if (!selector.nameLookupPossibleInAdvance()) {
       throw new IAE("selector.nameLookupPossibleInAdvance() should return true");
     }
+    this.baseIdLookup = selector.idLookup();
     this.forwardMapping = Preconditions.checkNotNull(forwardMapping);
     if (forwardMapping.defaultReturnValue() != -1) {
       throw new IAE("forwardMapping.defaultReturnValue() should be -1");
@@ -182,19 +184,12 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
   @Override
   public IdLookup idLookup()
   {
-    final IdLookup baseIdLookup = selector.idLookup();
-    if (baseIdLookup != null) {
-      return this;
-    } else {
-      return null;
-    }
+    return baseIdLookup != null ? this : null;
   }
 
   @Override
   public int lookupId(String name)
   {
-    // Don't cache selector.idLookup(), because it is likely implemented as `return this`, in this case caching only
-    // makes access slower.
-    return forwardMapping.get(selector.idLookup().lookupId(name));
+    return forwardMapping.get(baseIdLookup.lookupId(name));
   }
 }
