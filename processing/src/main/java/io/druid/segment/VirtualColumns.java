@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -183,9 +182,15 @@ public class VirtualColumns
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    return virtualColumn != null
-           ? Preconditions.checkNotNull(virtualColumn.capabilities(columnName), "capabilities for column[%s]", columnName)
-           : null;
+    if (virtualColumn != null) {
+      return Preconditions.checkNotNull(
+          virtualColumn.capabilities(columnName),
+          "capabilities for column[%s]",
+          columnName
+      );
+    } else {
+      return null;
+    }
   }
 
   public boolean isEmpty()
@@ -221,11 +226,12 @@ public class VirtualColumns
     return buf.array();
   }
 
-  private void detectCycles(VirtualColumn virtualColumn, ImmutableSet<String> columnNames)
+  private void detectCycles(VirtualColumn virtualColumn, Set<String> columnNames)
   {
-    Set<String> nextSet = columnNames == null
-                          ? Sets.newHashSet(virtualColumn.getOutputName())
-                          : Sets.newHashSet(columnNames);
+    // Copy columnNames to avoid modifying it
+    final Set<String> nextSet = columnNames == null
+                                ? Sets.newHashSet(virtualColumn.getOutputName())
+                                : Sets.newHashSet(columnNames);
 
     for (String columnName : virtualColumn.requiredColumns()) {
       if (!nextSet.add(columnName)) {
@@ -234,7 +240,7 @@ public class VirtualColumns
 
       final VirtualColumn dependency = getVirtualColumn(columnName);
       if (dependency != null) {
-        detectCycles(dependency, ImmutableSet.copyOf(nextSet));
+        detectCycles(dependency, nextSet);
       }
     }
   }

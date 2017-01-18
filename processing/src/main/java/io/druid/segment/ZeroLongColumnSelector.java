@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-public class ZeroLongColumnSelector implements LongColumnSelector
+public final class ZeroLongColumnSelector implements LongColumnSelector
 {
   private static final ZeroLongColumnSelector INSTANCE = new ZeroLongColumnSelector();
 

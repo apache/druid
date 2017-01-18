@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-public class ZeroFloatColumnSelector implements FloatColumnSelector
+public final class ZeroFloatColumnSelector implements FloatColumnSelector
 {
   private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
 
