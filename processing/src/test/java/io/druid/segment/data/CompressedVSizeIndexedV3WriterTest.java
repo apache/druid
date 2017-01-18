@@ -230,7 +230,8 @@ public class CompressedVSizeIndexedV3WriterTest
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
-    smoosher = new FileSmoosher(tmpDirectory);
+    File tmpDirectory = FileUtils.getTempDirectory();
+    FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
     CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
         offsetChunkFactor,
