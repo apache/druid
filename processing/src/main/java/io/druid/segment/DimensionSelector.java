@@ -91,12 +91,12 @@ public interface DimensionSelector extends ColumnValueSelector
 
   /**
    * Returns true if it is possible to {@link #lookupName(int)} by ids from 0 to {@link #getValueCardinality()}
-   * Before the rows with those ids are returns.
+   * before the rows with those ids are returned.
    *
-   * <p>Returns false if {@link #lookupName(int)} could be called only with ids, returned from the last call of {@link
-   * #getRow()} on this DimensionSelector, but not earlier and not later. If {@link #lookupName(int)} is called with an
-   * id, which is not present in the last {@link IndexedInts}, returned from {@link #getRow()}, result is undefined:
-   * exception could be thrown, or null returned, or some other random value.
+   * <p>Returns false if {@link #lookupName(int)} could be called only with ids, returned from the most recent call of
+   * {@link #getRow()} on this DimensionSelector, but not earlier and not later. If {@link #lookupName(int)} is called
+   * with an id, which is not present in the most recent {@link IndexedInts}, returned from {@link #getRow()}, result is
+   * undefined: exception could be thrown, or null returned, or some other random value.
    */
   boolean nameLookupPossibleInAdvance();
 
