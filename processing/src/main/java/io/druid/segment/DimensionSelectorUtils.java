@@ -129,7 +129,7 @@ public final class DimensionSelectorUtils
   )
   {
     int cardinality = selector.getValueCardinality();
-    if (cardinality >= 0) {
+    if (cardinality >= 0 && selector.nameLookupPossibleInAdvance()) {
       return makeDictionaryEncodedRowBasedValueMatcher(selector, predicate, matchNull);
     } else {
       return makeNonDictionaryEncodedRowBasedValueMatcher(selector, predicate, matchNull);
