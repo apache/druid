@@ -250,38 +250,43 @@ public class QueryResource implements QueryCountStatsProvider
                   @Override
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
-                    // json serializer will always close the yielder
-                    CountingOutputStream os = new CountingOutputStream(outputStream);
-                    jsonWriter.writeValue(os, yielder);
+                    try {
+                      // json serializer will always close the yielder
+                      CountingOutputStream os = new CountingOutputStream(outputStream);
+                      jsonWriter.writeValue(os, yielder);
 
-                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                    os.close();
-                    successfulQueryCount.incrementAndGet();
-                    final long queryTime = System.currentTimeMillis() - start;
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                    .setDimension("success", "true")
-                                    .build("query/time", queryTime)
-                    );
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                    .build("query/bytes", os.getCount())
-                    );
+                      os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
+                      os.close();
+                      successfulQueryCount.incrementAndGet();
+                      final long queryTime = System.currentTimeMillis() - start;
+                      emitter.emit(
+                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
+                                      .setDimension("success", "true")
+                                      .build("query/time", queryTime)
+                      );
+                      emitter.emit(
+                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
+                                      .build("query/bytes", os.getCount())
+                      );
 
-                    requestLogger.log(
-                        new RequestLogLine(
-                            new DateTime(start),
-                            req.getRemoteAddr(),
-                            theQuery,
-                            new QueryStats(
-                                ImmutableMap.<String, Object>of(
-                                    "query/time", queryTime,
-                                    "query/bytes", os.getCount(),
-                                    "success", true
-                                )
-                            )
-                        )
-                    );
+                      requestLogger.log(
+                          new RequestLogLine(
+                              new DateTime(start),
+                              req.getRemoteAddr(),
+                              theQuery,
+                              new QueryStats(
+                                  ImmutableMap.<String, Object>of(
+                                      "query/time", queryTime,
+                                      "query/bytes", os.getCount(),
+                                      "success", true
+                                  )
+                              )
+                          )
+                      );
+                    }
+                    finally {
+                      Thread.currentThread().setName(currThreadName);
+                    }
                   }
                 },
                 context.getContentType()
