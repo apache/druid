@@ -24,9 +24,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
@@ -37,6 +37,7 @@ import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -120,68 +121,20 @@ public class S3DataSegmentMover implements DataSegmentMover
             @Override
             public Void call() throws Exception
             {
-              if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
-                log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+              final String copyMsg = StringUtils.safeFormat(
+                  "[s3://%s/%s] to [s3://%s/%s]", s3Bucket,
+                  s3Path,
+                  targetS3Bucket,
+                  targetS3Path
+              );
+              try {
+                doSafeMove(s3Bucket, targetS3Bucket, s3Path, targetS3Path, copyMsg);
                 return null;
               }
-              if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-                final S3Object[] list = s3Client.listObjects(s3Bucket, s3Path, "");
-                if (list.length == 0) {
-                  // should never happen
-                  throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
-                }
-                final S3Object s3Object = list[0];
-                if (s3Object.getStorageClass() != null &&
-                    s3Object.getStorageClass().equals(S3Object.STORAGE_CLASS_GLACIER)) {
-                  log.warn("Cannot move file[s3://%s/%s] of storage class glacier, skipping.", s3Bucket, s3Path);
-                } else {
-                  final String copyMsg = StringUtils.safeFormat(
-                      "[s3://%s/%s] to [s3://%s/%s]", s3Bucket,
-                      s3Path,
-                      targetS3Bucket,
-                      targetS3Path
-                  );
-                  log.info(
-                      "Moving file %s",
-                      copyMsg
-                  );
-                  final S3Object target = new S3Object(targetS3Path);
-                  if (!config.getDisableAcl()) {
-                    target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
-                  }
-                  final Map<String, Object> copyResult = s3Client.moveObject(
-                      s3Bucket,
-                      s3Path,
-                      targetS3Bucket,
-                      target,
-                      false
-                  );
-                  if (copyResult != null && copyResult.containsKey("DeleteException")) {
-                    log.error("Error Deleting data after copy %s: %s", copyMsg, copyResult);
-                    // Maybe retry deleting here?
-                  } else {
-                    log.debug("Finished moving file %s", copyMsg);
-                  }
-                }
-              } else {
-                // ensure object exists in target location
-                if (s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
-                  log.info(
-                      "Not moving file [s3://%s/%s], already present in target location [s3://%s/%s]",
-                      s3Bucket, s3Path,
-                      targetS3Bucket, targetS3Path
-                  );
-                } else {
-                  throw new SegmentLoadingException(
-                      "Unable to move file [s3://%s/%s] to [s3://%s/%s], not present in either source or target location",
-                      s3Bucket,
-                      s3Path,
-                      targetS3Bucket,
-                      targetS3Path
-                  );
-                }
+              catch (Exception e) {
+                log.info(e, "Error while trying to move " + copyMsg);
+                throw e;
               }
-              return null;
             }
           }
       );
@@ -191,5 +144,98 @@ public class S3DataSegmentMover implements DataSegmentMover
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
       throw Throwables.propagate(e);
     }
+  }
+
+  private void doSafeMove(String s3Bucket, String targetS3Bucket, String s3Path, String targetS3Path, String copyMsg)
+      throws Exception
+  {
+    if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
+      log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+      return;
+    }
+    if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
+      final S3Object[] list = s3Client.listObjects(s3Bucket, s3Path, "");
+      if (list.length == 0) {
+        // should never happen
+        throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
+      }
+      final S3Object s3Object = list[0];
+      if (s3Object.getStorageClass() != null &&
+          s3Object.getStorageClass().equals(S3Object.STORAGE_CLASS_GLACIER)) {
+        throw new ServiceException(StringUtils.safeFormat(
+            "Cannot move file[s3://%s/%s] of storage class glacier, skipping.",
+            s3Bucket,
+            s3Path
+        ));
+      } else {
+        log.info("Moving file %s", copyMsg);
+        final S3Object target = new S3Object(targetS3Path);
+        if (!config.getDisableAcl()) {
+          target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+        }
+        s3Client.copyObject(
+            s3Bucket,
+            s3Path,
+            targetS3Bucket,
+            target,
+            false
+        );
+        if (!s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
+          throw new IOException("After copy reported as successful the file doesn't exist in the target location");
+        }
+        deleteWithRetriesSilent(s3Bucket, s3Path);
+        log.debug("Finished moving file %s", copyMsg);
+      }
+    } else {
+      // ensure object exists in target location
+      if (s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
+        log.info(
+            "Not moving file [s3://%s/%s], already present in target location [s3://%s/%s]",
+            s3Bucket, s3Path,
+            targetS3Bucket, targetS3Path
+        );
+      } else {
+        throw new SegmentLoadingException(
+            "Unable to move file %s, not present in either source or target location",
+            copyMsg
+        );
+      }
+    }
+  }
+
+  private void deleteWithRetriesSilent(final String s3Bucket, final String s3Path)
+  {
+    try {
+      deleteWithRetries(s3Bucket, s3Path);
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to delete file [s3://%s/%s], giving up", s3Bucket, s3Path);
+    }
+  }
+
+  private void deleteWithRetries(final String s3Bucket, final String s3Path) throws Exception
+  {
+    RetryUtils.retry(new Callable<Void>()
+    {
+      @Override
+      public Void call() throws Exception
+      {
+        try {
+          s3Client.deleteObject(s3Bucket, s3Path);
+          if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
+            throw new IOException(StringUtils.safeFormat(
+                "After delete reported as successful the deleted file [s3://%s/%s] still exists",
+                s3Bucket,
+                s3Path
+            ));
+          }
+          return null;
+        }
+        catch (Exception e) {
+          log.info(e, "Error while trying to delete [s3://%s/%s]", s3Bucket, s3Path);
+          throw e;
+        }
+      }
+    }, S3Utils.S3RETRY, 3);
   }
 }
