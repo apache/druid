@@ -68,13 +68,14 @@ on broker startup and also periodically in the background through
 [SegmentMetadata queries](../querying/segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
-This cached metadata is queryable through the "INFORMATION_SCHEMA.TABLES" and "INFORMATION_SCHEMA.COLUMNS" tables. Druid
-also provides the "INFORMATION_SCHEMA.SCHEMATA" table, although it always has the same two schemata: "druid" and
-"INFORMATION_SCHEMA". For example, to retrieve metadata for the Druid datasource "foo"", use the query:
+This cached metadata is queryable through "INFORMATION_SCHEMA" tables. For example, to retrieve metadata for the Druid
+datasource "foo", use the query:
 
 ```sql
 SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE SCHEMA_NAME = 'druid' AND TABLE_NAME = 'foo'
 ```
+
+See the [INFORMATION_SCHEMA tables](#information_schema-tables) section below for details on the available metadata.
 
 You can also access table and column metadata through JDBC using `connection.getMetaData()`.
 
@@ -173,3 +174,50 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 A number of third parties have also released SQL libraries for Druid. Links to popular options can be found on
 our [libraries](/libraries.html) page. These libraries make native Druid JSON queries and do not use Druid's SQL layer.
+
+## INFORMATION_SCHEMA tables
+
+Druid metadata is queryable through "INFORMATION_SCHEMA" tables described below.
+
+### SCHEMATA table
+
+|Column|Notes|
+|------|-----|
+|CATALOG_NAME|Unused|
+|SCHEMA_NAME||
+|SCHEMA_OWNER|Unused|
+|DEFAULT_CHARACTER_SET_CATALOG|Unused|
+|DEFAULT_CHARACTER_SET_SCHEMA|Unused|
+|DEFAULT_CHARACTER_SET_NAME|Unused|
+|SQL_PATH|Unused|
+
+### TABLES table
+
+|Column|Notes|
+|------|-----|
+|TABLE_CATALOG|Unused|
+|TABLE_SCHEMA||
+|TABLE_NAME||
+|TABLE_TYPE|"TABLE" or "SYSTEM_TABLE"|
+
+### COLUMNS table
+
+|Column|Notes|
+|------|-----|
+|TABLE_CATALOG|Unused|
+|TABLE_SCHEMA||
+|TABLE_NAME||
+|COLUMN_NAME||
+|ORDINAL_POSITION||
+|COLUMN_DEFAULT|Unused|
+|IS_NULLABLE||
+|DATA_TYPE||
+|CHARACTER_MAXIMUM_LENGTH|Unused|
+|CHARACTER_OCTET_LENGTH|Unused|
+|NUMERIC_PRECISION||
+|NUMERIC_PRECISION_RADIX||
+|NUMERIC_SCALE||
+|DATETIME_PRECISION||
+|CHARACTER_SET_NAME||
+|COLLATION_NAME||
+|JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
