@@ -479,7 +479,7 @@ public class DumpSegment extends GuiceRunnable
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)
   {
     sequence.accumulate(
-        null,
+        (Object) null,
         new Accumulator<Object, T>()
         {
           @Override
@@ -487,6 +487,8 @@ public class DumpSegment extends GuiceRunnable
           {
             return null;
           }
+
+          public void close() {}
         }
     );
   }

@@ -22,6 +22,8 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -710,6 +712,14 @@ public class ServerManagerTest
     @Override
     public <OutType> Yielder<OutType> toYielder(
         final OutType initValue, final YieldingAccumulator<OutType, T> accumulator
+    )
+    {
+      return toYielder(Suppliers.ofInstance(initValue), accumulator);
+    }
+
+    @Override
+    public <OutType> Yielder<OutType> toYielder(
+        final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
     )
     {
       notifyLatch.countDown();

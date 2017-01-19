@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.logger.Logger;
 
@@ -65,6 +66,21 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> fn)
   {
     IterType iterator = maker.make();
+    return accumulate(iterator, initValue, fn);
+  }
+
+  @Override
+  public <OutType> OutType accumulate(Supplier<OutType> initValue, final Accumulator<OutType, T> fn)
+  {
+    final IterType iterator = maker.make();
+    // initValue.get() is called here to guarantee some kind of initialization for initValue is executed
+    // after making the iterator
+    final OutType retVal = initValue.get();
+    return accumulate(iterator, retVal, fn);
+  }
+
+  private <OutType> OutType accumulate(IterType iterator, OutType initValue, final Accumulator<OutType, T> fn)
+  {
     try {
       while (iterator.hasNext()) {
         initValue = fn.accumulate(initValue, iterator.next());
@@ -83,6 +99,31 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
 
     try {
       return makeYielder(initValue, accumulator, iterator);
+    }
+    catch (Exception e) {
+      // We caught an Exception instead of returning a really, real, live, real boy, errr, iterator
+      // So we better try to close our stuff, 'cause the exception is what is making it out of here.
+      try {
+        maker.cleanup(iterator);
+      }
+      catch (RuntimeException e1) {
+        log.error(e1, "Exception thrown when closing maker.  Logging and ignoring.");
+      }
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+  )
+  {
+    final IterType iterator = maker.make();
+
+    try {
+      // initValue.get() is called here to guarantee some kind of initialization for initValue is executed
+      // after making the iterator
+      return makeYielder(initValue.get(), accumulator, iterator);
     }
     catch (Exception e) {
       // We caught an Exception instead of returning a really, real, live, real boy, errr, iterator

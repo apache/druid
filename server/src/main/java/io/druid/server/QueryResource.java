@@ -227,7 +227,7 @@ public class QueryResource implements QueryCountStatsProvider
       }
 
       final Yielder yielder = results.toYielder(
-          null,
+          (Object) null,
           new YieldingAccumulator()
           {
             @Override

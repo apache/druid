@@ -20,6 +20,7 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 
@@ -45,6 +46,23 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
+    final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
+
+    return makeYielder(pQueue, initValue, accumulator);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+  )
+  {
+    final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
+
+    return makeYielder(pQueue, initValue.get(), accumulator);
+  }
+
+  private PriorityQueue<Yielder<T>> makePriorityQueue()
+  {
     PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<>(
         32,
         ordering.onResultOf(
@@ -59,7 +77,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
         )
     );
 
-    pQueue = baseSequences.accumulate(
+    return baseSequences.accumulate(
         pQueue,
         new Accumulator<PriorityQueue<Yielder<T>>, Sequence<T>>()
         {
@@ -67,7 +85,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
           public PriorityQueue<Yielder<T>> accumulate(PriorityQueue<Yielder<T>> queue, Sequence<T> in)
           {
             final Yielder<T> yielder = in.toYielder(
-                null,
+                (T) null,
                 new YieldingAccumulator<T, T>()
                 {
                   @Override
@@ -94,8 +112,6 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
           }
         }
     );
-
-    return makeYielder(pQueue, initValue, accumulator);
   }
 
   private <OutType> Yielder<OutType> makeYielder(

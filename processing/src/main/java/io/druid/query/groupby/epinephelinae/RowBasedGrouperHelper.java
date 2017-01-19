@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
@@ -62,7 +63,7 @@ public class RowBasedGrouperHelper
       final GroupByQuery query,
       final boolean isInputRaw,
       final GroupByQueryConfig config,
-      final ByteBuffer buffer,
+      final Supplier<ByteBuffer> bufferSupplier,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -88,7 +89,7 @@ public class RowBasedGrouperHelper
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
-          buffer,
+          bufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
@@ -101,7 +102,7 @@ public class RowBasedGrouperHelper
       );
     } else {
       grouper = new ConcurrentGrouper<>(
-          buffer,
+          bufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,

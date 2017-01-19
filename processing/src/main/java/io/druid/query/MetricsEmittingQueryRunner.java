@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.guava.Accumulator;
@@ -93,13 +94,40 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     return new Sequence<T>()
     {
       @Override
-      public <OutType> OutType accumulate(OutType outType, Accumulator<OutType, T> accumulator)
+      public <OutType> OutType accumulate(final OutType outType, final Accumulator<OutType, T> accumulator)
+      {
+        return accumulate(new Supplier<OutType>()
+        {
+          @Override
+          public OutType get()
+          {
+            return queryRunner.run(query, responseContext).accumulate(outType, accumulator);
+          }
+        });
+      }
+
+      @Override
+      public <OutType> OutType accumulate(
+          final Supplier<OutType> initValue, final Accumulator<OutType, T> accumulator
+      )
+      {
+        return accumulate(new Supplier<OutType>()
+        {
+          @Override
+          public OutType get()
+          {
+            return queryRunner.run(query, responseContext).accumulate(initValue, accumulator);
+          }
+        });
+      }
+
+      private <OutType> OutType accumulate(Supplier<OutType> retValSupplier)
       {
         OutType retVal;
 
         long startTime = System.currentTimeMillis();
         try {
-          retVal = queryRunner.run(query, responseContext).accumulate(outType, accumulator);
+          retVal = retValSupplier.get();
         }
         catch (RuntimeException e) {
           builder.setDimension(DruidMetrics.STATUS, "failed");
@@ -123,13 +151,43 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       }
 
       @Override
-      public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+      public <OutType> Yielder<OutType> toYielder(
+          final OutType initValue,
+          final YieldingAccumulator<OutType, T> accumulator
+      )
+      {
+        return toYielder(new Supplier<Yielder<OutType>>()
+        {
+          @Override
+          public Yielder<OutType> get()
+          {
+            return queryRunner.run(query, responseContext).toYielder(initValue, accumulator);
+          }
+        });
+      }
+
+      @Override
+      public <OutType> Yielder<OutType> toYielder(
+          final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
+      )
+      {
+        return toYielder(new Supplier<Yielder<OutType>>()
+        {
+          @Override
+          public Yielder<OutType> get()
+          {
+            return queryRunner.run(query, responseContext).toYielder(initValue, accumulator);
+          }
+        });
+      }
+
+      private <OutType> Yielder<OutType> toYielder(Supplier<Yielder<OutType>> supplier)
       {
         Yielder<OutType> retVal;
 
         long startTime = System.currentTimeMillis();
         try {
-          retVal = queryRunner.run(query, responseContext).toYielder(initValue, accumulator);
+          retVal = supplier.get();
         }
         catch (RuntimeException e) {
           builder.setDimension(DruidMetrics.STATUS, "failed");

@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -73,6 +74,19 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           OutType initValue, YieldingAccumulator<OutType, T> accumulator
       )
       {
+        return makeSequence().toYielder(initValue, accumulator);
+      }
+
+      @Override
+      public <OutType> Yielder<OutType> toYielder(
+          Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      )
+      {
+        return makeSequence().toYielder(initValue, accumulator);
+      }
+
+      private Sequence<T> makeSequence()
+      {
         List<SegmentDescriptor> missingSegments = getMissingSegments(context);
 
         if (!missingSegments.isEmpty()) {
@@ -100,12 +114,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
           return new MergeSequence<>(
               query.getResultOrdering(),
-              Sequences.simple(listOfSequences)).toYielder(
-              initValue, accumulator
-          );
+              Sequences.simple(listOfSequences));
         }
         else {
-          return Iterables.getOnlyElement(listOfSequences).toYielder(initValue, accumulator);
+          return Iterables.getOnlyElement(listOfSequences);
         }
       }
     };

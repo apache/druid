@@ -19,6 +19,8 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.base.Supplier;
+
 import java.io.Closeable;
 
 /**
@@ -46,8 +48,38 @@ public class ResourceClosingSequence<T> implements Sequence<T>
   }
 
   @Override
+  public <OutType> OutType accumulate(
+      Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+  )
+  {
+    try {
+      return baseSequence.accumulate(initValue, accumulator);
+    }
+    finally {
+      CloseQuietly.close(closeable);
+    }
+  }
+
+  @Override
   public <OutType> Yielder<OutType> toYielder(
       OutType initValue, YieldingAccumulator<OutType, T> accumulator
+  )
+  {
+    final Yielder<OutType> baseYielder;
+    try {
+      baseYielder = baseSequence.toYielder(initValue, accumulator);
+    }
+    catch (RuntimeException e) {
+      CloseQuietly.close(closeable);
+      throw e;
+    }
+
+    return new ResourceClosingYielder<>(baseYielder, closeable);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final Yielder<OutType> baseYielder;

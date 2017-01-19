@@ -524,7 +524,7 @@ public class AggregationTestHelper
         try {
           Sequence<Row> resultSeq = baseRunner.run(query, Maps.<String, Object>newHashMap());
           final Yielder yielder = resultSeq.toYielder(
-              null,
+              (Object) null,
               new YieldingAccumulator()
               {
                 @Override

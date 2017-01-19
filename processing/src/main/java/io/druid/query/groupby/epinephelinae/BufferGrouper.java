@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
+import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -64,16 +65,18 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
   private static final int HASH_SIZE = Ints.BYTES;
 
-  private final ByteBuffer buffer;
+  private final Supplier<ByteBuffer> bufferSupplier;
   private final KeySerde<KeyType> keySerde;
   private final int keySize;
   private final BufferAggregator[] aggregators;
   private final int[] aggregatorOffsets;
   private final int initialBuckets;
   private final int bucketSize;
-  private final int tableArenaSize;
   private final int bufferGrouperMaxSize; // Integer.MAX_VALUE in production, only used for unit tests
   private final float maxLoadFactor;
+
+  private ByteBuffer buffer;
+  private int tableArenaSize = -1;
 
   // Buffer pointing to the current table (it moves around as the table grows)
   private ByteBuffer tableBuffer;
@@ -91,7 +94,7 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
   private int maxSize;
 
   public BufferGrouper(
-      final ByteBuffer buffer,
+      final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
@@ -100,7 +103,7 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
       final int initialBuckets
   )
   {
-    this.buffer = buffer;
+    this.bufferSupplier = bufferSupplier;
     this.keySerde = keySerde;
     this.keySize = keySerde.keySize();
     this.aggregators = new BufferAggregator[aggregatorFactories.length];
@@ -121,8 +124,13 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.bucketSize = offset;
-    this.tableArenaSize = (buffer.capacity() / (bucketSize + Ints.BYTES)) * bucketSize;
+  }
 
+  @Override
+  public void init()
+  {
+    this.buffer = bufferSupplier.get();
+    this.tableArenaSize = (buffer.capacity() / (bucketSize + Ints.BYTES)) * bucketSize;
     reset();
   }
 

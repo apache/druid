@@ -177,7 +177,7 @@ public class QueryMaker
       final AtomicBoolean gotResult = new AtomicBoolean();
 
       query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-          null,
+          (Object) null,
           new Accumulator<Object, Result<SelectResultValue>>()
           {
             @Override
@@ -236,7 +236,7 @@ public class QueryMaker
     Hook.QUERY_PLAN.run(query);
 
     query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-        null,
+        (Object) null,
         new Accumulator<Object, Result<TimeseriesResultValue>>()
         {
           @Override
@@ -274,7 +274,7 @@ public class QueryMaker
     Hook.QUERY_PLAN.run(query);
 
     query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-        null,
+        (Object) null,
         new Accumulator<Object, Result<TopNResultValue>>()
         {
           @Override
@@ -310,7 +310,7 @@ public class QueryMaker
     Hook.QUERY_PLAN.run(query);
 
     query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-        null,
+        (Object) null,
         new Accumulator<Object, io.druid.data.input.Row>()
         {
           @Override

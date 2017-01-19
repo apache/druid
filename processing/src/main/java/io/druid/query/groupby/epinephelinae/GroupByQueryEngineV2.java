@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
@@ -402,7 +403,7 @@ public class GroupByQueryEngineV2
       }
 
       final Grouper<ByteBuffer> grouper = new BufferGrouper<>(
-          buffer,
+          Suppliers.ofInstance(buffer),
           keySerde,
           cursor,
           query.getAggregatorSpecs()
@@ -411,6 +412,7 @@ public class GroupByQueryEngineV2
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets()
       );
+      grouper.init();
 
 outer:
       while (!cursor.isDone()) {

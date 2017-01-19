@@ -172,7 +172,7 @@ public class IngestSegmentFirehose implements Firehose
         )
     );
     rowYielder = rows.toYielder(
-        null,
+        (InputRow) null,
         new YieldingAccumulator<InputRow, InputRow>()
         {
           @Override

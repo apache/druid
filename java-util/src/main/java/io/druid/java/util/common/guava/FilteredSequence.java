@@ -20,6 +20,7 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 
 import java.io.IOException;
 
@@ -46,7 +47,27 @@ public class FilteredSequence<T> implements Sequence<T>
   }
 
   @Override
+  public <OutType> OutType accumulate(
+      Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+  )
+  {
+    return baseSequence.accumulate(initValue, new FilteringAccumulator<>(pred, accumulator));
+  }
+
+  @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+  {
+    final FilteringYieldingAccumulator<OutType, T> filteringAccumulator = new FilteringYieldingAccumulator<>(
+        pred, accumulator
+    );
+
+    return wrapYielder(baseSequence.toYielder(initValue, filteringAccumulator), filteringAccumulator);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+  )
   {
     final FilteringYieldingAccumulator<OutType, T> filteringAccumulator = new FilteringYieldingAccumulator<>(
         pred, accumulator

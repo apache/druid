@@ -63,6 +63,7 @@ public class PlannerConfig
     return maxTopNLimit;
   }
 
+  // TODO remove this
   public int getMaxQueryCount()
   {
     return maxTopNLimit;

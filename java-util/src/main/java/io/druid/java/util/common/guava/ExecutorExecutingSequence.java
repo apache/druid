@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 
 import java.io.IOException;
@@ -68,7 +69,59 @@ public class ExecutorExecutingSequence<T> implements Sequence<T>
   }
 
   @Override
+  public <OutType> OutType accumulate(
+      final Supplier<OutType> initValue, final Accumulator<OutType, T> accumulator
+  )
+  {
+    Future<OutType> future = exec.submit(
+        new Callable<OutType>()
+        {
+          @Override
+          public OutType call() throws Exception
+          {
+            return sequence.accumulate(initValue, accumulator);
+          }
+        }
+    );
+    try {
+      return future.get();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+    catch (ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Override
   public <OutType> Yielder<OutType> toYielder(final OutType initValue, final YieldingAccumulator<OutType, T> accumulator)
+  {
+    Future<Yielder<OutType>> future = exec.submit(
+        new Callable<Yielder<OutType>>()
+        {
+          @Override
+          public Yielder<OutType> call() throws Exception
+          {
+            return makeYielder(sequence.toYielder(initValue, accumulator));
+          }
+        }
+    );
+    try {
+      return future.get();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+    catch (ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+     final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
+  )
   {
     Future<Yielder<OutType>> future = exec.submit(
         new Callable<Yielder<OutType>>()

@@ -20,9 +20,9 @@
 package io.druid.collections;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
@@ -75,9 +75,43 @@ public class OrderedMergeSequence<T> implements Sequence<T>
   }
 
   @Override
+  public <OutType> OutType accumulate(
+      Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+  )
+  {
+    Yielder<OutType> yielder = null;
+    try {
+      yielder = toYielder(initValue, YieldingAccumulators.fromAccumulator(accumulator));
+      return yielder.get();
+    }
+    finally {
+      CloseQuietly.close(yielder);
+    }
+  }
+
+  @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<Yielder<T>>(
+    final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
+    final Yielder<Yielder<T>> oldDudeAtCrosswalk = makeOldDudeAtCrosswalk();
+
+    return makeYielder(pQueue, oldDudeAtCrosswalk, initValue, accumulator);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+  )
+  {
+    final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
+    final Yielder<Yielder<T>> oldDudeAtCrosswalk = makeOldDudeAtCrosswalk();
+
+    return makeYielder(pQueue, oldDudeAtCrosswalk, initValue.get(), accumulator);
+  }
+
+  private PriorityQueue<Yielder<T>> makePriorityQueue()
+  {
+    return new PriorityQueue<Yielder<T>>(
         32,
         ordering.onResultOf(
             new Function<Yielder<T>, T>()
@@ -90,16 +124,19 @@ public class OrderedMergeSequence<T> implements Sequence<T>
             }
         )
     );
+  }
 
-    Yielder<Yielder<T>> oldDudeAtCrosswalk = sequences.toYielder(
-        null,
+  private Yielder<Yielder<T>> makeOldDudeAtCrosswalk()
+  {
+    return sequences.toYielder(
+        (Yielder<T>) null,
         new YieldingAccumulator<Yielder<T>, Sequence<T>>()
         {
           @Override
           public Yielder<T> accumulate(Yielder<T> accumulated, Sequence<T> in)
           {
             final Yielder<T> retVal = in.toYielder(
-                null,
+                (T) null,
                 new YieldingAccumulator<T, T>()
                 {
                   @Override
@@ -128,8 +165,6 @@ public class OrderedMergeSequence<T> implements Sequence<T>
           }
         }
     );
-
-    return makeYielder(pQueue, oldDudeAtCrosswalk, initValue, accumulator);
   }
 
   private <OutType> Yielder<OutType> makeYielder(

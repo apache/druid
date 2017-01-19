@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 
+import com.google.common.base.Supplier;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.common.utils.VMUtils;
@@ -86,12 +87,53 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           }
 
           @Override
-          public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+          public <OutType> OutType accumulate(
+              Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+          )
+          {
+            final long start = VMUtils.getCurrentThreadCpuTime();
+            try {
+              return baseSequence.accumulate(initValue, accumulator);
+            }
+            finally {
+              cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
+            }
+          }
+
+          @Override
+          public <OutType> Yielder<OutType> toYielder(final OutType initValue, final YieldingAccumulator<OutType, T> accumulator)
+          {
+            return toYielder(new Supplier<Yielder<OutType>>()
+            {
+              @Override
+              public Yielder<OutType> get()
+              {
+                return baseSequence.toYielder(initValue, accumulator);
+              }
+            });
+          }
+
+          @Override
+          public <OutType> Yielder<OutType> toYielder(
+              final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
+          )
+          {
+            return toYielder(new Supplier<Yielder<OutType>>()
+            {
+              @Override
+              public Yielder<OutType> get()
+              {
+                return baseSequence.toYielder(initValue, accumulator);
+              }
+            });
+          }
+
+          private <OutType> Yielder<OutType> toYielder(Supplier<Yielder<OutType>> supplier)
           {
             final long start = VMUtils.getCurrentThreadCpuTime();
             final Yielder<OutType> delegateYielder;
             try {
-              delegateYielder = baseSequence.toYielder(initValue, accumulator);
+              delegateYielder = supplier.get();
             }
             finally {
               cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);

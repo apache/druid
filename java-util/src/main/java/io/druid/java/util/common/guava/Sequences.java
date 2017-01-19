@@ -21,6 +21,7 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import java.io.Closeable;
@@ -96,7 +97,25 @@ public class Sequences
       }
 
       @Override
+      public <OutType> OutType accumulate(
+          Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+      )
+      {
+        final OutType out = seq.accumulate(initValue, accumulator);
+        exec.execute(effect);
+        return out;
+      }
+
+      @Override
       public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+      {
+        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValue, accumulator), effect, exec);
+      }
+
+      @Override
+      public <OutType> Yielder<OutType> toYielder(
+          Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      )
       {
         return new ExecuteWhenDoneYielder<>(seq.toYielder(initValue, accumulator), effect, exec);
       }
@@ -125,9 +144,25 @@ public class Sequences
     }
 
     @Override
+    public <OutType> OutType accumulate(
+        Supplier<OutType> initValue, Accumulator<OutType, Object> accumulator
+    )
+    {
+      return initValue.get();
+    }
+
+    @Override
     public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, Object> accumulator)
     {
       return Yielders.done(initValue, null);
+    }
+
+    @Override
+    public <OutType> Yielder<OutType> toYielder(
+        Supplier<OutType> initValue, YieldingAccumulator<OutType, Object> accumulator
+    )
+    {
+      return Yielders.done(initValue.get(), null);
     }
   }
 }

@@ -226,8 +226,8 @@ public class CalciteTests
                       @Override
                       public int getNumMergeBuffers()
                       {
-                        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-                        return 3;
+                        // Need 2 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+                        return 2;
                       }
                     }
                 )

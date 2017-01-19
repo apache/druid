@@ -20,6 +20,7 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 
 import java.io.IOException;
 
@@ -46,6 +47,18 @@ public class LimitedSequence<T> extends YieldingSequenceBase<T>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+  {
+    final LimitedYieldingAccumulator<OutType, T> limitedAccumulator = new LimitedYieldingAccumulator<>(
+        accumulator
+    );
+    final Yielder<OutType> subYielder = baseSequence.toYielder(initValue, limitedAccumulator);
+    return new LimitedYielder<>(subYielder, limitedAccumulator);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+  )
   {
     final LimitedYieldingAccumulator<OutType, T> limitedAccumulator = new LimitedYieldingAccumulator<>(
         accumulator

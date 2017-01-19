@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Supplier;
 import io.druid.java.util.common.guava.ResourceClosingYielder;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
@@ -43,6 +44,15 @@ public class ReferenceCountingSequence<T> extends YieldingSequenceBase<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(
       OutType initValue, YieldingAccumulator<OutType, T> accumulator
+  )
+  {
+    final Closeable closeable = segment.increment();
+    return new ResourceClosingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), closeable);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final Closeable closeable = segment.increment();

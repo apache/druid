@@ -19,6 +19,7 @@
 
 package io.druid.query.spec;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Accumulator;
@@ -97,6 +98,29 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
       }
 
       @Override
+      public <OutType> OutType accumulate(
+          final Supplier<OutType> initValue, final Accumulator<OutType, T> accumulator
+      )
+      {
+        return doItNamed(
+            new Callable<OutType>()
+            {
+              @Override
+              public OutType call() throws Exception
+              {
+                try {
+                  return baseSequence.accumulate(initValue, accumulator);
+                }
+                catch (SegmentMissingException e) {
+                  appendMissingSegment(responseContext);
+                  return initValue.get();
+                }
+              }
+            }
+        );
+      }
+
+      @Override
       public <OutType> Yielder<OutType> toYielder(
           final OutType initValue,
           final YieldingAccumulator<OutType, T> accumulator
@@ -114,6 +138,29 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
                 catch (SegmentMissingException e) {
                   appendMissingSegment(responseContext);
                   return Yielders.done(initValue, null);
+                }
+              }
+            }
+        );
+      }
+
+      @Override
+      public <OutType> Yielder<OutType> toYielder(
+          final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
+      )
+      {
+        return doItNamed(
+            new Callable<Yielder<OutType>>()
+            {
+              @Override
+              public Yielder<OutType> call() throws Exception
+              {
+                try {
+                  return makeYielder(baseSequence.toYielder(initValue, accumulator));
+                }
+                catch (SegmentMissingException e) {
+                  appendMissingSegment(responseContext);
+                  return Yielders.done(initValue.get(), null);
                 }
               }
             }

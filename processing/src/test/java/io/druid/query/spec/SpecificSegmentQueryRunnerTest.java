@@ -20,6 +20,7 @@
 package io.druid.query.spec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -73,6 +74,14 @@ public class SpecificSegmentQueryRunnerTest
             return new Sequence()
             {
               @Override
+              public Object accumulate(
+                  Supplier initValue, Accumulator accumulator
+              )
+              {
+                throw new SegmentMissingException("FAILSAUCE");
+              }
+
+              @Override
               public Object accumulate(Object initValue, Accumulator accumulator)
               {
                 throw new SegmentMissingException("FAILSAUCE");
@@ -82,6 +91,12 @@ public class SpecificSegmentQueryRunnerTest
               public Yielder<Object> toYielder(
                   Object initValue, YieldingAccumulator accumulator
               )
+              {
+                throw new SegmentMissingException("FAILSAUCE");
+              }
+
+              @Override
+              public Yielder toYielder(Supplier initValue, YieldingAccumulator accumulator)
               {
                 throw new SegmentMissingException("FAILSAUCE");
               }
@@ -114,7 +129,7 @@ public class SpecificSegmentQueryRunnerTest
     responseContext = Maps.newHashMap();
     results = queryRunner.run(query, responseContext);
     results.toYielder(
-        null, new YieldingAccumulator()
+        (Object) null, new YieldingAccumulator()
         {
           final List lists = Lists.newArrayList();
           @Override

@@ -20,6 +20,7 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 
 /**
  */
@@ -44,7 +45,23 @@ public class MappedSequence<T, Out> implements Sequence<Out>
   }
 
   @Override
+  public <OutType> OutType accumulate(
+      Supplier<OutType> initValue, Accumulator<OutType, Out> accumulator
+  )
+  {
+    return baseSequence.accumulate(initValue, new MappingAccumulator<>(fn, accumulator));
+  }
+
+  @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, Out> accumulator)
+  {
+    return baseSequence.toYielder(initValue, new MappingYieldingAccumulator<>(fn, accumulator));
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, Out> accumulator
+  )
   {
     return baseSequence.toYielder(initValue, new MappingYieldingAccumulator<>(fn, accumulator));
   }

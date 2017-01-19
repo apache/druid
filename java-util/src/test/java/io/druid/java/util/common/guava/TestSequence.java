@@ -19,6 +19,8 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.base.Supplier;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -66,7 +68,23 @@ public class TestSequence<T> implements Sequence<T>
   }
 
   @Override
+  public <OutType> OutType accumulate(
+      Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+  )
+  {
+    return base.accumulate(initValue, accumulator);
+  }
+
+  @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+  {
+    return base.toYielder(initValue, accumulator);
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+  )
   {
     return base.toYielder(initValue, accumulator);
   }
