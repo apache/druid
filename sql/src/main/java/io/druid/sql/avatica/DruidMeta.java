@@ -557,16 +557,18 @@ public class DruidMeta extends MetaImpl
 
   private void closeDruidStatement(final DruidStatement statement)
   {
-    final DruidStatement druidStatement2;
     synchronized (connections) {
       final DruidConnection connection = getDruidConnection(statement.getConnectionId());
-      druidStatement2 = connection.statements().remove(statement.getStatementId());
+      if (connection.statements().get(statement.getStatementId()) == statement) {
+        connection.statements().remove(statement.getStatementId());
+      } else {
+        // "statement" is not actually in the set of open statements for this connection
+        throw new ISE("Statement[%s] not open", statement.getStatementId());
+      }
     }
 
-    if (statement == druidStatement2) {
-      log.debug("Connection[%s] closed statement[%s].", statement.getConnectionId(), statement.getStatementId());
-      statement.close();
-    }
+    log.debug("Connection[%s] closed statement[%s].", statement.getConnectionId(), statement.getStatementId());
+    statement.close();
   }
 
   private MetaResultSet sqlResultSet(final ConnectionHandle ch, final String sql)
