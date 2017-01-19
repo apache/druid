@@ -96,13 +96,20 @@ public class QuantileSqlAggregatorTest
   public void testQuantileOnFloatAndLongs() throws Exception
   {
     try (final Planner planner = plannerFactory.createPlanner()) {
-      final String sql = "SELECT QUANTILE(m1, 0.01), QUANTILE(m1, 0.5), QUANTILE(m1, 0.99), QUANTILE(cnt, 0.5) FROM foo";
+      final String sql = "SELECT\n"
+                         + "APPROX_QUANTILE(m1, 0.01),\n"
+                         + "APPROX_QUANTILE(m1, 0.5, 50),\n"
+                         + "APPROX_QUANTILE(m1, 0.98, 200),\n"
+                         + "APPROX_QUANTILE(m1, 0.99),\n"
+                         + "APPROX_QUANTILE(cnt, 0.5)\n"
+                         + "FROM foo";
+
       final PlannerResult plannerResult = Calcites.plan(planner, sql);
 
       // Verify results
       final List<Object[]> results = Sequences.toList(plannerResult.run(), new ArrayList<Object[]>());
       final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{1.0, 3.0, 5.940000057220459, 1.0}
+          new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 1.0}
       );
       Assert.assertEquals(expectedResults.size(), results.size());
       for (int i = 0; i < expectedResults.size(); i++) {
@@ -117,13 +124,15 @@ public class QuantileSqlAggregatorTest
                 .granularity(QueryGranularities.ALL)
                 .aggregators(ImmutableList.<AggregatorFactory>of(
                     new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
-                    new ApproximateHistogramAggregatorFactory("a3:agg", "cnt", null, null, null, null)
+                    new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
+                    new ApproximateHistogramAggregatorFactory("a4:agg", "cnt", null, null, null, null)
                 ))
                 .postAggregators(ImmutableList.<PostAggregator>of(
                     new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                     new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                    new QuantilePostAggregator("a2", "a0:agg", 0.99f),
-                    new QuantilePostAggregator("a3", "a3:agg", 0.50f)
+                    new QuantilePostAggregator("a2", "a2:agg", 0.98f),
+                    new QuantilePostAggregator("a3", "a0:agg", 0.99f),
+                    new QuantilePostAggregator("a4", "a4:agg", 0.50f)
                 ))
                 .context(TIMESERIES_CONTEXT)
                 .build(),

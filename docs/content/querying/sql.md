@@ -149,8 +149,10 @@ Some Druid extensions also include SQL language extensions.
 
 If the [approximate histogram extension](../development/extensions-core/approximate-histograms.html) is loaded:
 
-- `QUANTILE(column, probability)` on numeric or approximate histogram columns computes approximate quantiles. The
-"probability" should be between 0 and 1 (exclusive).
+- `APPROX_QUANTILE(column, probability)` or `APPROX_QUANTILE(column, probability, resolution)` on numeric or
+approximate histogram columns computes approximate quantiles. The "probability" should be between 0 and 1 (exclusive).
+The "resolution" is the number of centroids to use for the computation. Higher resolutions will be give more
+precise results but also have higher overhead. If not provided, the default resolution is 50.
 
 ### Unsupported features
 
