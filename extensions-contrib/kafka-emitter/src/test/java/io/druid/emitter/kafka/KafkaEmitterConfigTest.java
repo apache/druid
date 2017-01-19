@@ -38,7 +38,7 @@ public class KafkaEmitterConfigTest {
 
   @Test
   public void testSerDeserKafkaEmitterConfig() throws IOException {
-    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "test");
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "test", "test");
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.reader(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);

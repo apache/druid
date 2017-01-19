@@ -30,6 +30,8 @@ public class KafkaEmitterConfig {
   final private String bootstrapServers;
   @JsonProperty
   final private String topic;
+  @JsonProperty("clustername")
+  final private String clusterName;
 
   @Override
   public boolean equals(Object o) {
@@ -42,16 +44,20 @@ public class KafkaEmitterConfig {
 
     KafkaEmitterConfig that = (KafkaEmitterConfig) o;
 
-    if(!getBootstrapServers().equals(that.getBootstrapServers())) {
+    if(!getBootstrapServers().equals(that.getBootstrapServers())
+        || !getTopic().equals(that.getTopic())
+        || !getClusterName().equals(that.getClusterName())) {
       return false;
+    } else {
+      return true;
     }
-    return getTopic().equals(that.getTopic());
   }
   @JsonCreator
   public KafkaEmitterConfig(@JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
-                            @JsonProperty("topic") String topic) {
+                            @JsonProperty("topic") String topic, @JsonProperty("clustername") String clusterName) {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.topic = Preconditions.checkNotNull(topic, "topic can not be null");
+    this.clusterName = (clusterName == null || clusterName.isEmpty()) ? "NONAME" : clusterName;
   }
 
   @JsonProperty
@@ -59,4 +65,7 @@ public class KafkaEmitterConfig {
 
   @JsonProperty
   public String getTopic() { return topic; }
+
+  @JsonProperty
+  public String getClusterName() { return clusterName; }
 }

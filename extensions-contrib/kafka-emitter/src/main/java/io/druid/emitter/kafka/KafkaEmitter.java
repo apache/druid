@@ -19,7 +19,7 @@
 
 package io.druid.emitter.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
@@ -34,6 +34,8 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class KafkaEmitter implements Emitter {
@@ -77,8 +79,11 @@ public class KafkaEmitter implements Emitter {
       }
     }
     try {
-      producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(event)));
-    } catch (JsonProcessingException e) {
+      TypeReference<Map<String,String>> typeRef = new TypeReference<Map<String,String>>() {};
+      HashMap<String, String> result = jsonMapper.readValue(jsonMapper.writeValueAsString(event), typeRef);
+      result.put("clustername", config.getClusterName());
+      producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)));
+    } catch (Exception e) {
       log.warn(e, "Failed to generate json");
     }
   }
