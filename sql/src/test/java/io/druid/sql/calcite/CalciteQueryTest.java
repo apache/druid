@@ -1590,25 +1590,6 @@ public class CalciteQueryTest
   }
 
   @Test
-  public void testDoubleNestedGroupByForbiddenByConfig() throws Exception
-  {
-    assertQueryIsUnplannable(
-        PLANNER_CONFIG_SINGLE_NESTING_ONLY,
-        "SELECT SUM(cnt), COUNT(*) FROM (\n"
-        + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
-        + "    SELECT\n"
-        + "      dim1,\n"
-        + "      dim2,\n"
-        + "      COUNT(*) cnt\n"
-        + "    FROM druid.foo\n"
-        + "    GROUP BY dim1, dim2\n"
-        + "  ) t1\n"
-        + "  GROUP BY dim2\n"
-        + ") t2"
-    );
-  }
-
-  @Test
   public void testExactCountDistinctUsingSubquery() throws Exception
   {
     testQuery(

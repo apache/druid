@@ -176,8 +176,7 @@ public class GroupByRules
           null,
           null,
           aggregate,
-          plannerConfig.isUseApproximateCountDistinct(),
-          plannerConfig.getMaxQueryCount()
+          plannerConfig.isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -215,8 +214,7 @@ public class GroupByRules
           null,
           project,
           aggregate,
-          plannerConfig.isUseApproximateCountDistinct(),
-          plannerConfig.getMaxQueryCount()
+          plannerConfig.isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -256,8 +254,7 @@ public class GroupByRules
           filter,
           project,
           aggregate,
-          plannerConfig.isUseApproximateCountDistinct(),
-          plannerConfig.getMaxQueryCount()
+          plannerConfig.isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -367,8 +364,7 @@ public class GroupByRules
       final Filter filter0,
       final Project project0,
       final Aggregate aggregate,
-      final boolean approximateCountDistinct,
-      final int maxQueryCount
+      final boolean approximateCountDistinct
   )
   {
     Preconditions.checkState(canApplyAggregate(druidRel, filter0, project0, aggregate), "Cannot applyAggregate.");
@@ -472,11 +468,6 @@ public class GroupByRules
           aggregate.getRowType(),
           rowOrder
       );
-
-      // Check maxQueryCount.
-      if (maxQueryCount > 0 && retVal.getQueryCount() > maxQueryCount) {
-        return null;
-      }
 
       return retVal;
     } else {
