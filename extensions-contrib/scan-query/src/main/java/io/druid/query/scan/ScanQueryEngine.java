@@ -20,7 +20,6 @@ package io.druid.query.scan;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.granularity.QueryGranularities;
@@ -60,13 +59,13 @@ public class ScanQueryEngine
       final Map<String, Object> responseContext
   )
   {
-    if (responseContext.get("count") != null) {
-      int count = (int) responseContext.get("count");
+    if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) != null) {
+      int count = (int) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
       if (count >= query.getLimit()) {
         return Sequences.empty();
       }
     }
-    final Long timeoutAt = (long) responseContext.get("timeoutAt");
+    final Long timeoutAt = (long) responseContext.get(ScanQueryRunnerFactory.CTX_TIMEOUT_AT);
     final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
@@ -75,9 +74,6 @@ public class ScanQueryEngine
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
-
-    // at the point where this code is called, only one datasource should exist.
-    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     List<String> allDims = Lists.newLinkedList(adapter.getAvailableDimensions());
     List<String> allMetrics = Lists.newLinkedList(adapter.getAvailableMetrics());
@@ -90,7 +86,7 @@ public class ScanQueryEngine
       allDims.retainAll(query.getColumns());
       allMetrics.retainAll(query.getColumns());
     }
-    if (query.getColumns() == null || query.getColumns().isEmpty()) {
+    else {
       if (!allDims.contains(ScanResultValue.timestampKey)) {
         allColumns.add(ScanResultValue.timestampKey);
       }
@@ -107,10 +103,10 @@ public class ScanQueryEngine
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
 
-    if (responseContext.get("count") == null) {
-      responseContext.put("count", 0);
+    if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) == null) {
+      responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0);
     }
-    final int limit = query.getLimit() - (int) responseContext.get("count");
+    final int limit = query.getLimit() - (int) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
     return Sequences.concat(
         Sequences.map(
             adapter.makeCursors(
@@ -173,8 +169,14 @@ public class ScanQueryEngine
                             } else {
                               events = rowsToList();
                             }
-                            responseContext.put("count", (int) responseContext.get("count") + (offset - lastOffset));
-                            responseContext.put("timeoutAt", timeoutAt - (System.currentTimeMillis() - start));
+                            responseContext.put(
+                                ScanQueryRunnerFactory.CTX_COUNT,
+                                (int) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) + (offset - lastOffset)
+                            );
+                            responseContext.put(
+                                ScanQueryRunnerFactory.CTX_TIMEOUT_AT,
+                                timeoutAt - (System.currentTimeMillis() - start)
+                            );
                             return new ScanResultValue(segmentId, allColumns, events);
                           }
 

@@ -36,6 +36,8 @@ import java.util.concurrent.ExecutorService;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
 {
+  public static final String CTX_TIMEOUT_AT = "timeoutAt";
+  public static final String CTX_COUNT = "count";
   private final ScanQueryQueryToolChest toolChest;
   private final ScanQueryEngine engine;
 
@@ -72,7 +74,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
         final long timeoutAt = queryTimeout == null
                                ? JodaUtils.MAX_INSTANT : System.currentTimeMillis() + queryTimeout.longValue();
-        responseContext.put("timeoutAt", timeoutAt);
+        responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
         return Sequences.concat(
             Sequences.map(
                 Sequences.simple(queryRunners),
@@ -117,8 +119,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       }
 
       // it happens in unit tests
-      if (responseContext.get("timeoutAt") == null) {
-        responseContext.put("timeoutAt", JodaUtils.MAX_INSTANT);
+      if (responseContext.get(CTX_TIMEOUT_AT) == null) {
+        responseContext.put(CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
       };
       return engine.process((ScanQuery) query, segment, responseContext);
     }
