@@ -161,6 +161,8 @@ public class S3DataSegmentMoverTest
   {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean moved = false;
+    boolean copied = false;
+    boolean deletedOld = false;
 
     private MockStorageService() throws S3ServiceException
     {
@@ -169,7 +171,7 @@ public class S3DataSegmentMoverTest
 
     public boolean didMove()
     {
-      return moved;
+      return moved || (copied && deletedOld);
     }
 
     @Override
@@ -210,6 +212,29 @@ public class S3DataSegmentMoverTest
         storage.get(sourceBucketName).remove(sourceObjectKey);
       }
       return null;
+    }
+
+    @Override
+    public Map<String, Object> copyObject(
+        String sourceBucketName,
+        String sourceObjectKey,
+        String destinationBucketName,
+        StorageObject destinationObject,
+        boolean replaceMetadata
+    ) throws ServiceException
+    {
+      copied = true;
+      if (isObjectInBucket(sourceBucketName, sourceObjectKey)) {
+        this.putObject(destinationBucketName, new S3Object(destinationObject.getKey()));
+      }
+      return null;
+    }
+
+    @Override
+    public void deleteObject(String bucket, String objectKey) throws S3ServiceException
+    {
+      deletedOld = true;
+      storage.get(bucket).remove(objectKey);
     }
 
     @Override
