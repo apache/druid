@@ -101,7 +101,10 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           }
 
           @Override
-          public <OutType> Yielder<OutType> toYielder(final OutType initValue, final YieldingAccumulator<OutType, T> accumulator)
+          public <OutType> Yielder<OutType> toYielder(
+              final OutType initValue,
+              final YieldingAccumulator<OutType, T> accumulator
+          )
           {
             return toYielder(new Supplier<Yielder<OutType>>()
             {

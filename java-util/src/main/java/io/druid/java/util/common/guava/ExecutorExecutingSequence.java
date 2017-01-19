@@ -95,7 +95,10 @@ public class ExecutorExecutingSequence<T> implements Sequence<T>
   }
 
   @Override
-  public <OutType> Yielder<OutType> toYielder(final OutType initValue, final YieldingAccumulator<OutType, T> accumulator)
+  public <OutType> Yielder<OutType> toYielder(
+      final OutType initValue,
+      final YieldingAccumulator<OutType, T> accumulator
+  )
   {
     Future<Yielder<OutType>> future = exec.submit(
         new Callable<Yielder<OutType>>()
@@ -120,7 +123,7 @@ public class ExecutorExecutingSequence<T> implements Sequence<T>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-     final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
+      final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
   )
   {
     Future<Yielder<OutType>> future = exec.submit(

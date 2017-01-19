@@ -114,9 +114,9 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
           return new MergeSequence<>(
               query.getResultOrdering(),
-              Sequences.simple(listOfSequences));
-        }
-        else {
+              Sequences.simple(listOfSequences)
+          );
+        } else {
           return Iterables.getOnlyElement(listOfSequences);
         }
       }

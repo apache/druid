@@ -84,7 +84,7 @@ public class Sequences
     return new ResourceClosingSequence<>(seq, baggage);
   }
 
-  public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
+  public static <T> Sequence<T> withEffect(final Sequence<T> seq, final Runnable effect, final Executor exec)
   {
     return new Sequence<T>()
     {
