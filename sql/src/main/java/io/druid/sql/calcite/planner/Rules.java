@@ -53,7 +53,6 @@ import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
-import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
@@ -124,7 +123,6 @@ public class Rules
           FilterJoinRule.JOIN,
           AbstractConverter.ExpandConversionRule.INSTANCE,
           JoinCommuteRule.INSTANCE,
-          SemiJoinRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
           UnionToDistinctRule.INSTANCE,
           ProjectRemoveRule.INSTANCE,

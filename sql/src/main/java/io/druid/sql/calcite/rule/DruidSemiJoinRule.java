@@ -19,24 +19,73 @@
 
 package io.druid.sql.calcite.rule;
 
+import com.google.common.base.Predicate;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.DruidSemiJoin;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.rel.core.SemiJoin;
+import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.JoinInfo;
+import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.tools.RelBuilder;
+import org.apache.calcite.util.ImmutableBitSet;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Planner rule adapted from Calcite 1.11.0's SemiJoinRule.
+ *
+ * This rule identifies a JOIN where the right-hand side is being used like a filter. Requirements are:
+ *
+ * 1) Right-hand side is grouping on the join key
+ * 2) No fields from the right-hand side are selected
+ * 3) Join is INNER (right-hand side acting as filter) or LEFT (right-hand side can be ignored)
+ *
+ * This is used instead of Calcite's built in rule because that rule's un-doing of aggregation is unproductive (we'd
+ * just want to add it back again). Also, this rule operates on DruidRels.
+ */
 public class DruidSemiJoinRule extends RelOptRule
 {
+  private static final Predicate<Join> IS_LEFT_OR_INNER =
+      new Predicate<Join>()
+      {
+        public boolean apply(Join join)
+        {
+          final JoinRelType joinType = join.getJoinType();
+          return joinType == JoinRelType.LEFT || joinType == JoinRelType.INNER;
+        }
+      };
+
+  private static final Predicate<DruidRel> IS_GROUP_BY =
+      new Predicate<DruidRel>()
+      {
+        public boolean apply(DruidRel druidRel)
+        {
+          return druidRel.getQueryBuilder().getGrouping() != null;
+        }
+      };
+
   private final PlannerConfig plannerConfig;
 
-  public DruidSemiJoinRule(final PlannerConfig plannerConfig)
+  private DruidSemiJoinRule(final PlannerConfig plannerConfig)
   {
     super(
         operand(
-            SemiJoin.class,
-            operand(DruidRel.class, none()),
-            operand(DruidRel.class, none())
+            Project.class,
+            operand(
+                Join.class,
+                null,
+                IS_LEFT_OR_INNER,
+                some(
+                    operand(DruidRel.class, any()),
+                    operand(DruidRel.class, null, IS_GROUP_BY, any())
+                )
+            )
         )
     );
     this.plannerConfig = plannerConfig;
@@ -50,23 +99,66 @@ public class DruidSemiJoinRule extends RelOptRule
   @Override
   public void onMatch(RelOptRuleCall call)
   {
-    final SemiJoin semiJoin = call.rel(0);
-    final DruidRel left = call.rel(1);
-    final DruidRel right = call.rel(2);
-    final DruidSemiJoin druidSemiJoin = DruidSemiJoin.from(
-        semiJoin,
-        left,
-        right,
-        plannerConfig.getMaxSemiJoinRowsInMemory()
-    );
+    final Project project = call.rel(0);
+    final Join join = call.rel(1);
+    final DruidRel left = call.rel(2);
+    final DruidRel right = call.rel(3);
 
-    if (druidSemiJoin != null) {
+    final ImmutableBitSet bits =
+        RelOptUtil.InputFinder.bits(project.getProjects(), null);
+    final ImmutableBitSet rightBits =
+        ImmutableBitSet.range(
+            left.getRowType().getFieldCount(),
+            join.getRowType().getFieldCount()
+        );
+
+    if (bits.intersects(rightBits)) {
+      return;
+    }
+
+    final JoinInfo joinInfo = join.analyzeCondition();
+    final List<Integer> rightDimsOut = new ArrayList<>();
+    for (DimensionSpec dimensionSpec : right.getQueryBuilder().getGrouping().getDimensions()) {
+      rightDimsOut.add(right.getOutputRowSignature().getRowOrder().indexOf(dimensionSpec.getOutputName()));
+    }
+
+    if (!joinInfo.isEqui() || !joinInfo.rightSet().equals(ImmutableBitSet.of(rightDimsOut))) {
+      // Rule requires that aggregate key to be the same as the join key.
+      // By the way, neither a super-set nor a sub-set would work.
+      return;
+    }
+
+    final RelBuilder relBuilder = call.builder();
+
+    if (join.getJoinType() == JoinRelType.LEFT) {
+      // Join can be eliminated since the right-hand side cannot have any effect (nothing is being selected,
+      // and LEFT means even if there is no match, a left-hand row will still be included).
+      relBuilder.push(left);
+    } else {
+      final DruidSemiJoin druidSemiJoin = DruidSemiJoin.from(
+          left,
+          right,
+          joinInfo.leftKeys,
+          joinInfo.rightKeys,
+          plannerConfig
+      );
+
+      if (druidSemiJoin == null) {
+        return;
+      }
+
       // Check maxQueryCount.
       if (plannerConfig.getMaxQueryCount() > 0 && druidSemiJoin.getQueryCount() > plannerConfig.getMaxQueryCount()) {
         return;
       }
 
-      call.transformTo(druidSemiJoin);
+      relBuilder.push(druidSemiJoin);
     }
+
+    call.transformTo(
+        relBuilder
+            .project(project.getProjects(), project.getRowType().getFieldNames())
+            .build()
+    );
   }
 }
