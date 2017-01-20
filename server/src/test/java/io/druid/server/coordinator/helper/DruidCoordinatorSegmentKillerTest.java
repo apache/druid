@@ -111,7 +111,8 @@ public class DruidCoordinatorSegmentKillerTest
             1000,
             null,
             false,
-            false
+            false,
+            Duration.ZERO
         )
     );
 

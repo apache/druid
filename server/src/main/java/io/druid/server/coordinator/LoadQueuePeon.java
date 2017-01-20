@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
 
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
@@ -41,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -154,7 +156,6 @@ public class LoadQueuePeon
     log.info("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
     queuedSize.addAndGet(segment.getSize());
     segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Arrays.asList(callback)));
-    doNext();
   }
 
   public void dropSegment(
@@ -184,115 +185,98 @@ public class LoadQueuePeon
 
     log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Arrays.asList(callback)));
-    doNext();
   }
 
-  private void doNext()
-  {
-    synchronized (lock) {
-      if (currentlyProcessing == null) {
-        if (!segmentsToDrop.isEmpty()) {
-          currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-          log.info("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-        } else if (!segmentsToLoad.isEmpty()) {
-          currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-          log.info("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-        } else {
+  private void processSegmentChangeRequest() {
+    if (currentlyProcessing == null) {
+      if (!segmentsToDrop.isEmpty()) {
+        currentlyProcessing = segmentsToDrop.firstEntry().getValue();
+        log.info("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      } else if (!segmentsToLoad.isEmpty()) {
+        currentlyProcessing = segmentsToLoad.firstEntry().getValue();
+        log.info("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      } else {
+        return;
+      }
+
+      try {
+        if (currentlyProcessing == null) {
+          if(!stopped) {
+            log.makeAlert("Crazy race condition! server[%s]", basePath)
+                    .emit();
+          }
+          actionCompleted();
           return;
         }
 
-        processingExecutor.execute(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                synchronized (lock) {
-                  try {
-                    // expected when the coordinator looses leadership and LoadQueuePeon is stopped.
-                    if (currentlyProcessing == null) {
-                      if(!stopped) {
-                        log.makeAlert("Crazy race condition! server[%s]", basePath)
-                           .emit();
+        log.info("Server[%s] processing segment[%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+        final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentIdentifier());
+        final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
+        curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
+
+        processingExecutor.schedule(
+                new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    try {
+                      if (curator.checkExists().forPath(path) != null) {
+                        failAssign(new ISE("%s was never removed! Failing this operation!", path));
                       }
-                      actionCompleted();
-                      doNext();
-                      return;
                     }
-                    log.info("Server[%s] processing segment[%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-                    final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentIdentifier());
-                    final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
-                    curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-
-                    processingExecutor.schedule(
-                        new Runnable()
-                        {
-                          @Override
-                          public void run()
-                          {
-                            try {
-                              if (curator.checkExists().forPath(path) != null) {
-                                failAssign(new ISE("%s was never removed! Failing this operation!", path));
-                              }
-                            }
-                            catch (Exception e) {
-                              failAssign(e);
-                            }
-                          }
-                        },
-                        config.getLoadTimeoutDelay().getMillis(),
-                        TimeUnit.MILLISECONDS
-                    );
-
-                    final Stat stat = curator.checkExists().usingWatcher(
-                        new CuratorWatcher()
-                        {
-                          @Override
-                          public void process(WatchedEvent watchedEvent) throws Exception
-                          {
-                            switch (watchedEvent.getType()) {
-                              case NodeDeleted:
-                                entryRemoved(watchedEvent.getPath());
-                            }
-                          }
-                        }
-                    ).forPath(path);
-
-                    if (stat == null) {
-                      final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
-
-                      // Create a node and then delete it to remove the registered watcher.  This is a work-around for
-                      // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
-                      // that happens for that node.  If no events happen, the watcher stays registered foreverz.
-                      // Couple that with the fact that you cannot set a watcher when you create a node, but what we
-                      // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
-                      // set a watcher when you check to see if it exists so, we first create the node and then set a
-                      // watcher on its existence.  However, if already does not exist by the time the existence check
-                      // returns, then the watcher that was set will never fire (nobody will ever create the node
-                      // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
-                      // that watcher to fire and delete it right away.
-                      //
-                      // We do not create the existence watcher first, because then it will fire when we create the
-                      // node and we'll have the same race when trying to refresh that watcher.
-                      curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
-
-                      entryRemoved(path);
+                    catch (Exception e) {
+                      failAssign(e);
                     }
                   }
-                  catch (Exception e) {
-                    failAssign(e);
+                },
+                config.getLoadTimeoutDelay().getMillis(),
+                TimeUnit.MILLISECONDS
+        );
+
+        final Stat stat = curator.checkExists().usingWatcher(
+                new CuratorWatcher()
+                {
+                  @Override
+                  public void process(WatchedEvent watchedEvent) throws Exception
+                  {
+                    switch (watchedEvent.getType()) {
+                      case NodeDeleted:
+                        entryRemoved(watchedEvent.getPath());
+                    }
                   }
                 }
-              }
-            }
-        );
-      } else {
-        log.info(
-            "Server[%s] skipping doNext() because something is currently loading[%s].",
-            basePath,
-            currentlyProcessing.getSegmentIdentifier()
-        );
+        ).forPath(path);
+
+        if (stat == null) {
+          final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
+
+          // Create a node and then delete it to remove the registered watcher.  This is a work-around for
+          // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
+          // that happens for that node.  If no events happen, the watcher stays registered foreverz.
+          // Couple that with the fact that you cannot set a watcher when you create a node, but what we
+          // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
+          // set a watcher when you check to see if it exists so, we first create the node and then set a
+          // watcher on its existence.  However, if already does not exist by the time the existence check
+          // returns, then the watcher that was set will never fire (nobody will ever create the node
+          // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
+          // that watcher to fire and delete it right away.
+          //
+          // We do not create the existence watcher first, because then it will fire when we create the
+          // node and we'll have the same race when trying to refresh that watcher.
+          curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
+
+          entryRemoved(path);
+        }
+      } catch (Exception e) {
+        failAssign(e);
       }
+    } else {
+      log.info(
+              "Server[%s] skipping doNext() because something is currently loading[%s].",
+              basePath,
+              currentlyProcessing.getSegmentIdentifier()
+      );
     }
   }
 
@@ -324,6 +308,29 @@ public class LoadQueuePeon
           }
       );
     }
+  }
+
+  public void start()
+  {
+    ScheduledExecutors.scheduleAtFixedRate(
+        processingExecutor,
+        config.getLoadQueuePeonRepeatDelay(),
+        config.getLoadQueuePeonRepeatDelay(),
+        new Callable<ScheduledExecutors.Signal>()
+        {
+          @Override
+          public ScheduledExecutors.Signal call()
+          {
+            processSegmentChangeRequest();
+
+            if (stopped) {
+              return ScheduledExecutors.Signal.STOP;
+            } else {
+              return ScheduledExecutors.Signal.REPEAT;
+            }
+          }
+        }
+    );
   }
 
   public void stop()
@@ -371,8 +378,6 @@ public class LoadQueuePeon
       actionCompleted();
       log.info("Server[%s] done processing [%s]", basePath, path);
     }
-
-    doNext();
   }
 
   private void failAssign(Exception e)
@@ -382,7 +387,6 @@ public class LoadQueuePeon
       failedAssignCount.getAndIncrement();
       // Act like it was completed so that the coordinator gives it to someone else
       actionCompleted();
-      doNext();
     }
   }
 

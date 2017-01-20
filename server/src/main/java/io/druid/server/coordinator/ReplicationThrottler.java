@@ -28,16 +28,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The ReplicationThrottler is used to throttle the number of replicants that are created and destroyed.
+ * The ReplicationThrottler is used to throttle the number of replicants that are created.
  */
 public class ReplicationThrottler
 {
   private static final EmittingLogger log = new EmittingLogger(ReplicationThrottler.class);
 
   private final Map<String, Boolean> replicatingLookup = Maps.newHashMap();
-  private final Map<String, Boolean> terminatingLookup = Maps.newHashMap();
   private final ReplicatorSegmentHolder currentlyReplicating = new ReplicatorSegmentHolder();
-  private final ReplicatorSegmentHolder currentlyTerminating = new ReplicatorSegmentHolder();
 
   private volatile int maxReplicants;
   private volatile int maxLifetime;
@@ -56,11 +54,6 @@ public class ReplicationThrottler
   public void updateReplicationState(String tier)
   {
     update(tier, currentlyReplicating, replicatingLookup, "create");
-  }
-
-  public void updateTerminationState(String tier)
-  {
-    update(tier, currentlyTerminating, terminatingLookup, "terminate");
   }
 
   private void update(String tier, ReplicatorSegmentHolder holder, Map<String, Boolean> lookup, String type)
@@ -95,11 +88,6 @@ public class ReplicationThrottler
     return replicatingLookup.get(tier) && !currentlyReplicating.isAtMaxReplicants(tier);
   }
 
-  public boolean canDestroyReplicant(String tier)
-  {
-    return terminatingLookup.get(tier) && !currentlyTerminating.isAtMaxReplicants(tier);
-  }
-
   public void registerReplicantCreation(String tier, String segmentId, String serverId)
   {
     currentlyReplicating.addSegment(tier, segmentId, serverId);
@@ -108,16 +96,6 @@ public class ReplicationThrottler
   public void unregisterReplicantCreation(String tier, String segmentId, String serverId)
   {
     currentlyReplicating.removeSegment(tier, segmentId, serverId);
-  }
-
-  public void registerReplicantTermination(String tier, String segmentId, String serverId)
-  {
-    currentlyTerminating.addSegment(tier, segmentId, serverId);
-  }
-
-  public void unregisterReplicantTermination(String tier, String segmentId, String serverId)
-  {
-    currentlyTerminating.removeSegment(tier, segmentId, serverId);
   }
 
   private class ReplicatorSegmentHolder

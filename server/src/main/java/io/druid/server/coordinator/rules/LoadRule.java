@@ -203,33 +203,9 @@ public abstract class LoadRule implements Rule
         }
 
         if (holder.isServingSegment(segment)) {
-          if (expectedNumReplicantsForTier > 0) { // don't throttle unless we are removing extra replicants
-            if (!replicationManager.canDestroyReplicant(tier)) {
-              serverQueue.add(holder);
-              break;
-            }
-
-            replicationManager.registerReplicantTermination(
-                tier,
-                segment.getIdentifier(),
-                holder.getServer().getHost()
-            );
-          }
-
           holder.getPeon().dropSegment(
               segment,
-              new LoadPeonCallback()
-              {
-                @Override
-                public void execute()
-                {
-                  replicationManager.unregisterReplicantTermination(
-                      tier,
-                      segment.getIdentifier(),
-                      holder.getServer().getHost()
-                  );
-                }
-              }
+              null
           );
           --loadedNumReplicantsForTier;
           stats.addToTieredStat(droppedCount, tier, 1);

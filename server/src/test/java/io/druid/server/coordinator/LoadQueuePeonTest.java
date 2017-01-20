@@ -88,8 +88,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
-        new TestDruidCoordinatorConfig(null, null, null, null, null, null, 10, null, false, false)
+        new TestDruidCoordinatorConfig(null, null, null, null, null, null, 10, null, false, false, Duration.ZERO)
     );
+
+    loadQueuePeon.start();
 
     final CountDownLatch[] loadRequestSignal = new CountDownLatch[5];
     final CountDownLatch[] dropRequestSignal = new CountDownLatch[5];
@@ -294,8 +296,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig(null, null, null, new Duration(1), null, null, 10, null, false, false)
+        new TestDruidCoordinatorConfig(null, null, null, new Duration(1), null, null, 10, null, false, false, new Duration("PT1s"))
     );
+
+    loadQueuePeon.start();
 
     loadQueueCache.getListenable().addListener(
         new PathChildrenCacheListener()

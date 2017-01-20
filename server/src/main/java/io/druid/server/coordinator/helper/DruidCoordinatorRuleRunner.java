@@ -118,7 +118,6 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
-      replicatorThrottler.updateTerminationState(tier);
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExistingWithoutAvailableSegments()
