@@ -1598,6 +1598,31 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testSelectDistinctWithLimit() throws Exception
+  {
+    // Should use topN even if approximate topNs are off, because this query is exact.
+
+    testQuery(
+        "SELECT DISTINCT dim2 FROM druid.foo LIMIT 10",
+        ImmutableList.<Query>of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(QueryGranularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(10)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"abc"}
+        )
+    );
+  }
+
+  @Test
   public void testCountDistinct() throws Exception
   {
     testQuery(
