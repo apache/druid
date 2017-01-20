@@ -60,9 +60,9 @@ import java.util.Map;
 
 /**
  */
-public class SchemalessIndex
+public class SchemalessIndexTest
 {
-  private static final Logger log = new Logger(SchemalessIndex.class);
+  private static final Logger log = new Logger(SchemalessIndexTest.class);
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private static final String testFile = "druid.sample.json";
