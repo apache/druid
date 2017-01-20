@@ -19,7 +19,9 @@
 
 package io.druid.sql.calcite.rel;
 
-import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryDataSource;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
@@ -58,7 +60,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
    */
   public abstract int getQueryCount();
 
-  public abstract void accumulate(Function<Row, Void> sink);
+  public abstract Sequence<Object[]> runQuery();
 
   public abstract T withQueryBuilder(DruidQueryBuilder newQueryBuilder);
 
@@ -80,6 +82,14 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
     return queryMaker;
   }
 
+  public abstract T asDruidConvention();
+
+  @Override
+  public Class<Object[]> getElementType()
+  {
+    return Object[].class;
+  }
+
   @Override
   public Node implement(InterpreterImplementor implementor)
   {
@@ -89,7 +99,23 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
       @Override
       public void run() throws InterruptedException
       {
-        accumulate(QueryMaker.sinkFunction(sink));
+        runQuery().accumulate(
+            sink,
+            new Accumulator<Sink, Object[]>()
+            {
+              @Override
+              public Sink accumulate(final Sink theSink, final Object[] in)
+              {
+                try {
+                  theSink.send(Row.of(in));
+                }
+                catch (InterruptedException e) {
+                  throw Throwables.propagate(e);
+                }
+                return theSink;
+              }
+            }
+        );
       }
     };
   }

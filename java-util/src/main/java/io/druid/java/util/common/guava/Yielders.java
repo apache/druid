@@ -28,6 +28,22 @@ import java.io.IOException;
  */
 public class Yielders
 {
+  public static <T> Yielder<T> each(final Sequence<T> sequence)
+  {
+    return sequence.toYielder(
+        null,
+        new YieldingAccumulator<T, T>()
+        {
+          @Override
+          public T accumulate(T accumulated, T in)
+          {
+            yield();
+            return in;
+          }
+        }
+    );
+  }
+
   public static <T> Yielder<T> done(final T finalVal, final Closeable closeable)
   {
     return new Yielder<T>()

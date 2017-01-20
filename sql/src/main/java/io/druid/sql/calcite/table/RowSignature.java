@@ -32,8 +32,10 @@ import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.planner.Calcites;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.List;
@@ -118,31 +120,38 @@ public class RowSignature
   public RelDataType getRelDataType(final RelDataTypeFactory typeFactory)
   {
     final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
-    for (int columnNumber = 0; columnNumber < columnNames.size(); columnNumber++) {
-      final String columnName = columnNames.get(columnNumber);
+    for (final String columnName : columnNames) {
       final ValueType columnType = getColumnType(columnName);
-      final RelDataType sqlTypeName;
+      final RelDataType type;
 
       if (Column.TIME_COLUMN_NAME.equals(columnName)) {
-        sqlTypeName = typeFactory.createSqlType(SqlTypeName.TIMESTAMP);
+        type = typeFactory.createSqlType(SqlTypeName.TIMESTAMP);
       } else {
         switch (columnType) {
           case STRING:
             // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
-            sqlTypeName = typeFactory.createSqlType(SqlTypeName.VARCHAR, RelDataType.PRECISION_NOT_SPECIFIED);
+            type = typeFactory.createTypeWithCharsetAndCollation(
+                typeFactory.createSqlType(SqlTypeName.VARCHAR),
+                Calcites.defaultCharset(),
+                SqlCollation.IMPLICIT
+            );
             break;
           case LONG:
-            sqlTypeName = typeFactory.createSqlType(SqlTypeName.BIGINT);
+            type = typeFactory.createSqlType(SqlTypeName.BIGINT);
             break;
           case FLOAT:
-            sqlTypeName = typeFactory.createSqlType(SqlTypeName.FLOAT);
+            type = typeFactory.createSqlType(SqlTypeName.FLOAT);
+            break;
+          case COMPLEX:
+            // Loses information about exactly what kind of complex column this is.
+            type = typeFactory.createSqlType(SqlTypeName.OTHER);
             break;
           default:
             throw new ISE("WTF?! valueType[%s] not translatable?", columnType);
         }
       }
 
-      builder.add(columnName, sqlTypeName);
+      builder.add(columnName, type);
     }
 
     return builder.build();

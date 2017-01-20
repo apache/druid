@@ -19,12 +19,12 @@
 
 package io.druid.sql.calcite.rel;
 
-import com.google.common.base.Function;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryDataSource;
 import io.druid.query.filter.DimFilter;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
-import org.apache.calcite.interpreter.Row;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -92,16 +92,17 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   }
 
   @Override
-  public void accumulate(final Function<Row, Void> sink)
+  public Sequence<Object[]> runQuery()
   {
     final QueryDataSource queryDataSource = sourceRel.asDataSource();
     if (queryDataSource != null) {
-      getQueryMaker().accumulate(
+      return getQueryMaker().runQuery(
           queryDataSource,
           sourceRel.getOutputRowSignature(),
-          queryBuilder,
-          sink
+          queryBuilder
       );
+    } else {
+      return Sequences.empty();
     }
   }
 
@@ -147,9 +148,14 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
   }
 
   @Override
-  public Class<Object[]> getElementType()
+  public DruidNestedGroupBy asDruidConvention()
   {
-    return Object[].class;
+    return new DruidNestedGroupBy(
+        getCluster(),
+        getTraitSet().plus(DruidConvention.instance()),
+        sourceRel,
+        queryBuilder
+    );
   }
 
   @Override

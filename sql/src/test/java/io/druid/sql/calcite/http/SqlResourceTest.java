@@ -26,12 +26,13 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.QueryInterruptedException;
 import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
-import org.apache.calcite.jdbc.CalciteConnection;
-import org.junit.After;
+import org.apache.calcite.schema.SchemaPlus;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -55,28 +56,21 @@ public class SqlResourceTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private CalciteConnection connection;
   private SqlResource resource;
 
   @Before
   public void setUp() throws Exception
   {
+    Calcites.setSystemProperties();
     final PlannerConfig plannerConfig = new PlannerConfig();
-    connection = Calcites.jdbc(
+    final SchemaPlus rootSchema = Calcites.createRootSchema(
         CalciteTests.createMockSchema(
-            CalciteTests.createWalker(temporaryFolder.newFolder()),
+            CalciteTests.createMockWalker(temporaryFolder.newFolder()),
             plannerConfig
-        ),
-        plannerConfig
+        )
     );
-    resource = new SqlResource(JSON_MAPPER, connection);
-  }
-
-  @After
-  public void tearDown() throws Exception
-  {
-    connection.close();
-    connection = null;
+    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+    resource = new SqlResource(JSON_MAPPER, new PlannerFactory(rootSchema, operatorTable, plannerConfig));
   }
 
   @Test
@@ -152,8 +146,7 @@ public class SqlResourceTest
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "EnumerableInterpreter\n"
-                + "  DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
             )
         ),
         rows
@@ -161,7 +154,7 @@ public class SqlResourceTest
   }
 
   @Test
-  public void testCannotPlan() throws Exception
+  public void testCannotValidate() throws Exception
   {
     expectedException.expect(QueryInterruptedException.class);
     expectedException.expectMessage("Column 'dim3' not found in any table");
@@ -169,6 +162,18 @@ public class SqlResourceTest
     doPost(
         new SqlQuery("SELECT dim3 FROM druid.foo")
     );
+
+    Assert.fail();
+  }
+
+  @Test
+  public void testCannotConvert() throws Exception
+  {
+    expectedException.expect(QueryInterruptedException.class);
+    expectedException.expectMessage("Cannot build plan for query: SELECT TRIM(dim1) FROM druid.foo");
+
+    // TRIM unsupported
+    doPost(new SqlQuery("SELECT TRIM(dim1) FROM druid.foo"));
 
     Assert.fail();
   }

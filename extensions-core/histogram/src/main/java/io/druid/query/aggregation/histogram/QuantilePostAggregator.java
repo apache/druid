@@ -87,6 +87,32 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   }
 
   @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final QuantilePostAggregator that = (QuantilePostAggregator) o;
+
+    if (Float.compare(that.probability, probability) != 0) {
+      return false;
+    }
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = (probability != +0.0f ? Float.floatToIntBits(probability) : 0);
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
+
+  @Override
   public String toString()
   {
     return "QuantilePostAggregator{" +

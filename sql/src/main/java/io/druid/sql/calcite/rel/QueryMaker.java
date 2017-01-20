@@ -22,14 +22,14 @@ package io.druid.sql.calcite.rel;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DataSource;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QuerySegmentWalker;
@@ -48,15 +48,16 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.Column;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.interpreter.Row;
-import org.apache.calcite.interpreter.Sink;
+import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,29 +78,10 @@ public class QueryMaker
     this.plannerConfig = plannerConfig;
   }
 
-  public static Function<Row, Void> sinkFunction(final Sink sink)
-  {
-    return new Function<Row, Void>()
-    {
-      @Override
-      public Void apply(final Row row)
-      {
-        try {
-          sink.send(row);
-          return null;
-        }
-        catch (InterruptedException e) {
-          throw Throwables.propagate(e);
-        }
-      }
-    };
-  }
-
-  public void accumulate(
+  public Sequence<Object[]> runQuery(
       final DataSource dataSource,
       final RowSignature sourceRowSignature,
-      final DruidQueryBuilder queryBuilder,
-      final Function<Row, Void> sink
+      final DruidQueryBuilder queryBuilder
   )
   {
     if (dataSource instanceof QueryDataSource) {
@@ -109,14 +91,12 @@ public class QueryMaker
         throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
       }
 
-      executeGroupBy(queryBuilder, outerQuery, sink);
-      return;
+      return executeGroupBy(queryBuilder, outerQuery);
     }
 
     final TimeseriesQuery timeseriesQuery = queryBuilder.toTimeseriesQuery(dataSource, sourceRowSignature);
     if (timeseriesQuery != null) {
-      executeTimeseries(queryBuilder, timeseriesQuery, sink);
-      return;
+      return executeTimeseries(queryBuilder, timeseriesQuery);
     }
 
     final TopNQuery topNQuery = queryBuilder.toTopNQuery(
@@ -126,212 +106,248 @@ public class QueryMaker
         plannerConfig.isUseApproximateTopN()
     );
     if (topNQuery != null) {
-      executeTopN(queryBuilder, topNQuery, sink);
-      return;
+      return executeTopN(queryBuilder, topNQuery);
     }
 
     final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, sourceRowSignature);
     if (groupByQuery != null) {
-      executeGroupBy(queryBuilder, groupByQuery, sink);
-      return;
+      return executeGroupBy(queryBuilder, groupByQuery);
     }
 
     final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, sourceRowSignature);
     if (selectQuery != null) {
-      executeSelect(queryBuilder, selectQuery, sink);
-      return;
+      return executeSelect(queryBuilder, selectQuery);
     }
 
     throw new IllegalStateException("WTF?! Cannot execute query even though we planned it?");
   }
 
-  private void executeSelect(
+  private Sequence<Object[]> executeSelect(
       final DruidQueryBuilder queryBuilder,
-      final SelectQuery baseQuery,
-      final Function<Row, Void> sink
+      final SelectQuery baseQuery
   )
   {
     Preconditions.checkState(queryBuilder.getGrouping() == null, "grouping must be null");
 
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
     final Integer limit = queryBuilder.getLimitSpec() != null ? queryBuilder.getLimitSpec().getLimit() : null;
 
-    // Loop through pages.
-    final AtomicBoolean morePages = new AtomicBoolean(true);
-    final AtomicReference<Map<String, Integer>> pagingIdentifiers = new AtomicReference<>();
-    final AtomicLong rowsRead = new AtomicLong();
-
-    while (morePages.get()) {
-      final SelectQuery query = baseQuery.withPagingSpec(
-          new PagingSpec(
-              pagingIdentifiers.get(),
-              plannerConfig.getSelectThreshold(),
-              true
-          )
-      );
-
-      Hook.QUERY_PLAN.run(query);
-
-      morePages.set(false);
-      final AtomicBoolean gotResult = new AtomicBoolean();
-
-      query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-          null,
-          new Accumulator<Object, Result<SelectResultValue>>()
+    // Select is paginated, we need to make multiple queries.
+    final Sequence<Sequence<Object[]>> sequenceOfSequences = Sequences.simple(
+        new Iterable<Sequence<Object[]>>()
+        {
+          @Override
+          public Iterator<Sequence<Object[]>> iterator()
           {
-            @Override
-            public Object accumulate(final Object accumulated, final Result<SelectResultValue> result)
+            final AtomicBoolean morePages = new AtomicBoolean(true);
+            final AtomicReference<Map<String, Integer>> pagingIdentifiers = new AtomicReference<>();
+            final AtomicLong rowsRead = new AtomicLong();
+
+            // Each Sequence<Object[]> is one page.
+            return new Iterator<Sequence<Object[]>>()
             {
-              if (!gotResult.compareAndSet(false, true)) {
-                throw new ISE("WTF?! Expected single result from Select query but got multiple!");
+              @Override
+              public boolean hasNext()
+              {
+                return morePages.get();
               }
 
-              pagingIdentifiers.set(result.getValue().getPagingIdentifiers());
+              @Override
+              public Sequence<Object[]> next()
+              {
+                final SelectQuery query = baseQuery.withPagingSpec(
+                    new PagingSpec(
+                        pagingIdentifiers.get(),
+                        plannerConfig.getSelectThreshold(),
+                        true
+                    )
+                );
 
-              for (EventHolder holder : result.getValue().getEvents()) {
-                morePages.set(true);
-                final Map<String, Object> map = holder.getEvent();
-                for (RelDataTypeField field : fieldList) {
-                  final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
-                  if (outputName.equals(Column.TIME_COLUMN_NAME)) {
-                    rowBuilder.set(
-                        field.getIndex(),
-                        coerce(holder.getTimestamp().getMillis(), field.getType().getSqlTypeName())
-                    );
-                  } else {
-                    rowBuilder.set(
-                        field.getIndex(),
-                        coerce(map.get(outputName), field.getType().getSqlTypeName())
-                    );
-                  }
-                }
-                if (limit == null || rowsRead.incrementAndGet() <= limit) {
-                  sink.apply(rowBuilder.build());
-                } else {
-                  morePages.set(false);
-                  break;
-                }
-                rowBuilder.reset();
+                Hook.QUERY_PLAN.run(query);
+
+                morePages.set(false);
+                final AtomicBoolean gotResult = new AtomicBoolean();
+
+                return Sequences.concat(
+                    Sequences.map(
+                        query.run(walker, Maps.<String, Object>newHashMap()),
+                        new Function<Result<SelectResultValue>, Sequence<Object[]>>()
+                        {
+                          @Override
+                          public Sequence<Object[]> apply(final Result<SelectResultValue> result)
+                          {
+                            if (!gotResult.compareAndSet(false, true)) {
+                              throw new ISE("WTF?! Expected single result from Select query but got multiple!");
+                            }
+
+                            pagingIdentifiers.set(result.getValue().getPagingIdentifiers());
+                            final List<Object[]> retVals = new ArrayList<>();
+
+                            for (EventHolder holder : result.getValue().getEvents()) {
+                              morePages.set(true);
+                              final Map<String, Object> map = holder.getEvent();
+                              final Object[] retVal = new Object[fieldList.size()];
+                              for (RelDataTypeField field : fieldList) {
+                                final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                                if (outputName.equals(Column.TIME_COLUMN_NAME)) {
+                                  retVal[field.getIndex()] = coerce(
+                                      holder.getTimestamp().getMillis(),
+                                      field.getType().getSqlTypeName()
+                                  );
+                                } else {
+                                  retVal[field.getIndex()] = coerce(
+                                      map.get(outputName),
+                                      field.getType().getSqlTypeName()
+                                  );
+                                }
+                              }
+                              if (limit == null || rowsRead.incrementAndGet() <= limit) {
+                                retVals.add(retVal);
+                              } else {
+                                morePages.set(false);
+                                return Sequences.simple(retVals);
+                              }
+                            }
+
+                            return Sequences.simple(retVals);
+                          }
+                        }
+                    )
+                );
               }
 
-              return null;
-            }
+              @Override
+              public void remove()
+              {
+                throw new UnsupportedOperationException();
+              }
+            };
           }
-      );
-    }
+        }
+    );
+
+    return Sequences.concat(sequenceOfSequences);
   }
 
-  private void executeTimeseries(
+  private Sequence<Object[]> executeTimeseries(
       final DruidQueryBuilder queryBuilder,
-      final TimeseriesQuery query,
-      final Function<Row, Void> sink
+      final TimeseriesQuery query
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
     final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
     final String timeOutputName = dimensions.isEmpty() ? null : Iterables.getOnlyElement(dimensions).getOutputName();
-    final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
 
     Hook.QUERY_PLAN.run(query);
 
-    query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-        null,
-        new Accumulator<Object, Result<TimeseriesResultValue>>()
+    return Sequences.map(
+        query.run(walker, Maps.<String, Object>newHashMap()),
+        new Function<Result<TimeseriesResultValue>, Object[]>()
         {
           @Override
-          public Object accumulate(final Object accumulated, final Result<TimeseriesResultValue> result)
+          public Object[] apply(final Result<TimeseriesResultValue> result)
           {
             final Map<String, Object> row = result.getValue().getBaseObject();
+            final Object[] retVal = new Object[fieldList.size()];
 
             for (final RelDataTypeField field : fieldList) {
               final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
               if (outputName.equals(timeOutputName)) {
-                rowBuilder.set(field.getIndex(), coerce(result.getTimestamp(), field.getType().getSqlTypeName()));
+                retVal[field.getIndex()] = coerce(result.getTimestamp(), field.getType().getSqlTypeName());
               } else {
-                rowBuilder.set(field.getIndex(), coerce(row.get(outputName), field.getType().getSqlTypeName()));
+                retVal[field.getIndex()] = coerce(row.get(outputName), field.getType().getSqlTypeName());
               }
             }
 
-            sink.apply(rowBuilder.build());
-            rowBuilder.reset();
-
-            return null;
+            return retVal;
           }
         }
     );
   }
 
-  private void executeTopN(
+  private Sequence<Object[]> executeTopN(
       final DruidQueryBuilder queryBuilder,
-      final TopNQuery query,
-      final Function<Row, Void> sink
+      final TopNQuery query
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
 
     Hook.QUERY_PLAN.run(query);
 
-    query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-        null,
-        new Accumulator<Object, Result<TopNResultValue>>()
-        {
-          @Override
-          public Object accumulate(final Object accumulated, final Result<TopNResultValue> result)
-          {
-            final List<DimensionAndMetricValueExtractor> values = result.getValue().getValue();
+    return Sequences.concat(
+        Sequences.map(
+            query.run(walker, Maps.<String, Object>newHashMap()),
+            new Function<Result<TopNResultValue>, Sequence<Object[]>>()
+            {
+              @Override
+              public Sequence<Object[]> apply(final Result<TopNResultValue> result)
+              {
+                final List<DimensionAndMetricValueExtractor> rows = result.getValue().getValue();
+                final List<Object[]> retVals = new ArrayList<>(rows.size());
 
-            for (DimensionAndMetricValueExtractor value : values) {
-              for (final RelDataTypeField field : fieldList) {
-                final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
-                rowBuilder.set(field.getIndex(), coerce(value.getMetric(outputName), field.getType().getSqlTypeName()));
+                for (DimensionAndMetricValueExtractor row : rows) {
+                  final Object[] retVal = new Object[fieldList.size()];
+                  for (final RelDataTypeField field : fieldList) {
+                    final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                    retVal[field.getIndex()] = coerce(row.getMetric(outputName), field.getType().getSqlTypeName());
+                  }
+
+                  retVals.add(retVal);
+                }
+
+                return Sequences.simple(retVals);
               }
-
-              sink.apply(rowBuilder.build());
-              rowBuilder.reset();
             }
-
-            return null;
-          }
-        }
+        )
     );
   }
 
-  private void executeGroupBy(
+  private Sequence<Object[]> executeGroupBy(
       final DruidQueryBuilder queryBuilder,
-      final GroupByQuery query,
-      final Function<Row, Void> sink
+      final GroupByQuery query
   )
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final Row.RowBuilder rowBuilder = Row.newBuilder(fieldList.size());
 
     Hook.QUERY_PLAN.run(query);
 
-    query.run(walker, Maps.<String, Object>newHashMap()).accumulate(
-        null,
-        new Accumulator<Object, io.druid.data.input.Row>()
+    return Sequences.map(
+        query.run(walker, Maps.<String, Object>newHashMap()),
+        new Function<io.druid.data.input.Row, Object[]>()
         {
           @Override
-          public Object accumulate(final Object accumulated, final io.druid.data.input.Row row)
+          public Object[] apply(final io.druid.data.input.Row row)
           {
+            final Object[] retVal = new Object[fieldList.size()];
             for (RelDataTypeField field : fieldList) {
-              rowBuilder.set(
-                  field.getIndex(),
-                  coerce(
-                      row.getRaw(queryBuilder.getRowOrder().get(field.getIndex())),
-                      field.getType().getSqlTypeName()
-                  )
+              retVal[field.getIndex()] = coerce(
+                  row.getRaw(queryBuilder.getRowOrder().get(field.getIndex())),
+                  field.getType().getSqlTypeName()
               );
             }
-            sink.apply(rowBuilder.build());
-            rowBuilder.reset();
-
-            return null;
+            return retVal;
           }
         }
     );
+  }
+
+  public static ColumnMetaData.Rep rep(final SqlTypeName sqlType)
+  {
+    if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
+      return ColumnMetaData.Rep.of(String.class);
+    } else if (SqlTypeName.DATETIME_TYPES.contains(sqlType)) {
+      return ColumnMetaData.Rep.of(Long.class);
+    } else if (sqlType == SqlTypeName.INTEGER) {
+      return ColumnMetaData.Rep.of(Integer.class);
+    } else if (sqlType == SqlTypeName.BIGINT) {
+      return ColumnMetaData.Rep.of(Long.class);
+    } else if (sqlType == SqlTypeName.FLOAT || sqlType == SqlTypeName.DOUBLE) {
+      return ColumnMetaData.Rep.of(Double.class);
+    } else if (sqlType == SqlTypeName.OTHER) {
+      return ColumnMetaData.Rep.of(Object.class);
+    } else {
+      throw new ISE("No rep for SQL type[%s]", sqlType);
+    }
   }
 
   private static Object coerce(final Object value, final SqlTypeName sqlType)
@@ -391,6 +407,9 @@ public class QueryMaker
       } else {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
+    } else if (sqlType == SqlTypeName.OTHER) {
+      // Complex type got out somehow.
+      coercedValue = value.getClass().getName();
     } else {
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
     }

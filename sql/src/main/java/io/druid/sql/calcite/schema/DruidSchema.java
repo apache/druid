@@ -17,17 +17,15 @@
  * under the License.
  */
 
-package io.druid.sql.calcite;
+package io.druid.sql.calcite.schema;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
@@ -53,10 +51,6 @@ import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.timeline.DataSegment;
-import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.schema.Function;
-import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.joda.time.DateTime;
@@ -72,6 +66,8 @@ import java.util.concurrent.ExecutorService;
 @ManageLifecycle
 public class DruidSchema extends AbstractSchema
 {
+  public static final String NAME = "druid";
+
   private static final EmittingLogger log = new EmittingLogger(DruidSchema.class);
 
   private final QuerySegmentWalker walker;
@@ -275,39 +271,9 @@ public class DruidSchema extends AbstractSchema
   }
 
   @Override
-  public boolean isMutable()
-  {
-    return true;
-  }
-
-  @Override
-  public boolean contentsHaveChangedSince(final long lastCheck, final long now)
-  {
-    return false;
-  }
-
-  @Override
-  public Expression getExpression(final SchemaPlus parentSchema, final String name)
-  {
-    return super.getExpression(parentSchema, name);
-  }
-
-  @Override
   protected Map<String, Table> getTableMap()
   {
     return ImmutableMap.copyOf(tables);
-  }
-
-  @Override
-  protected Multimap<String, Function> getFunctionMultimap()
-  {
-    return ImmutableMultimap.of();
-  }
-
-  @Override
-  protected Map<String, Schema> getSubSchemaMap()
-  {
-    return ImmutableMap.of();
   }
 
   private DruidTable computeTable(final String dataSource)
@@ -338,14 +304,14 @@ public class DruidSchema extends AbstractSchema
         continue;
       }
 
-      final ValueType valueType;
+      ValueType valueType;
       try {
         valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
       }
       catch (IllegalArgumentException e) {
-        // Ignore unrecognized types. This includes complex types like hyperUnique, etc.
-        // So, that means currently they are not supported.
-        continue;
+        // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
+        // what kind of complex column it is, which we may want to preserve some day.
+        valueType = ValueType.COMPLEX;
       }
 
       columnValueTypes.put(entry.getKey(), valueType);

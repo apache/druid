@@ -36,7 +36,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
-import io.druid.java.util.common.guava.YieldingAccumulator;
+import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
@@ -226,18 +226,7 @@ public class QueryResource implements QueryCountStatsProvider
         results = res;
       }
 
-      final Yielder yielder = results.toYielder(
-          null,
-          new YieldingAccumulator()
-          {
-            @Override
-            public Object accumulate(Object accumulated, Object in)
-            {
-              yield();
-              return in;
-            }
-          }
-      );
+      final Yielder yielder = Yielders.each(results);
 
       try {
         final Query theQuery = query;

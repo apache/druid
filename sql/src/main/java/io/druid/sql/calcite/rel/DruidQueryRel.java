@@ -19,16 +19,16 @@
 
 package io.druid.sql.calcite.rel;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryDataSource;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
-import org.apache.calcite.interpreter.Row;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -70,14 +70,13 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
    */
   public static DruidQueryRel fullScan(
       final RelOptCluster cluster,
-      final RelTraitSet traitSet,
       final RelOptTable table,
       final DruidTable druidTable
   )
   {
     return new DruidQueryRel(
         cluster,
-        traitSet,
+        cluster.traitSetOf(Convention.NONE),
         table,
         druidTable,
         DruidQueryBuilder.fullScan(druidTable.getRowSignature(), cluster.getTypeFactory())
@@ -115,6 +114,18 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
+  public DruidQueryRel asDruidConvention()
+  {
+    return new DruidQueryRel(
+        getCluster(),
+        getTraitSet().replace(DruidConvention.instance()),
+        table,
+        druidTable,
+        queryBuilder
+    );
+  }
+
+  @Override
   public RowSignature getSourceRowSignature()
   {
     return druidTable.getRowSignature();
@@ -145,21 +156,15 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public void accumulate(final Function<Row, Void> sink)
+  public Sequence<Object[]> runQuery()
   {
-    getQueryMaker().accumulate(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder, sink);
+    return getQueryMaker().runQuery(druidTable.getDataSource(), druidTable.getRowSignature(), queryBuilder);
   }
 
   @Override
   public RelOptTable getTable()
   {
     return table;
-  }
-
-  @Override
-  public Class<Object[]> getElementType()
-  {
-    return Object[].class;
   }
 
   @Override

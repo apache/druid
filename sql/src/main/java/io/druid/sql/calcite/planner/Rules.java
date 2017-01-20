@@ -20,13 +20,12 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.sql.calcite.rule.DruidBindableConverterRule;
 import io.druid.sql.calcite.rule.DruidFilterRule;
+import io.druid.sql.calcite.rule.DruidRelToBindableRule;
+import io.druid.sql.calcite.rule.DruidRelToDruidRule;
 import io.druid.sql.calcite.rule.DruidSemiJoinRule;
 import io.druid.sql.calcite.rule.GroupByRules;
 import io.druid.sql.calcite.rule.SelectRules;
-import org.apache.calcite.adapter.enumerable.EnumerableInterpreterRule;
-import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.volcano.AbstractConverter;
@@ -64,11 +63,16 @@ import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
+import org.apache.calcite.tools.Program;
+import org.apache.calcite.tools.Programs;
 
 import java.util.List;
 
 public class Rules
 {
+  public static final int DRUID_CONVENTION_RULES = 0;
+  public static final int BINDABLE_CONVENTION_RULES = 1;
+
   // Rules from CalcitePrepareImpl's DEFAULT_RULES, minus AggregateExpandDistinctAggregatesRule
   // and AggregateReduceFunctionsRule.
   private static final List<RelOptRule> DEFAULT_RULES =
@@ -97,9 +101,7 @@ public class Rules
       ImmutableList.of(
           Bindables.BINDABLE_TABLE_SCAN_RULE,
           ProjectTableScanRule.INSTANCE,
-          ProjectTableScanRule.INTERPRETER,
-          EnumerableInterpreterRule.INSTANCE,
-          EnumerableRules.ENUMERABLE_VALUES_RULE
+          ProjectTableScanRule.INTERPRETER
       );
 
   // Rules from CalcitePrepareImpl's CONSTANT_REDUCTION_RULES.
@@ -113,30 +115,6 @@ public class Rules
           ValuesReduceRule.PROJECT_FILTER_INSTANCE,
           ValuesReduceRule.PROJECT_INSTANCE,
           AggregateValuesRule.INSTANCE
-      );
-
-  // Rules from CalcitePrepareImpl's ENUMERABLE_RULES.
-  private static final List<RelOptRule> ENUMERABLE_RULES =
-      ImmutableList.of(
-          EnumerableRules.ENUMERABLE_JOIN_RULE,
-          EnumerableRules.ENUMERABLE_MERGE_JOIN_RULE,
-          EnumerableRules.ENUMERABLE_SEMI_JOIN_RULE,
-          EnumerableRules.ENUMERABLE_CORRELATE_RULE,
-          EnumerableRules.ENUMERABLE_PROJECT_RULE,
-          EnumerableRules.ENUMERABLE_FILTER_RULE,
-          EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-          EnumerableRules.ENUMERABLE_SORT_RULE,
-          EnumerableRules.ENUMERABLE_LIMIT_RULE,
-          EnumerableRules.ENUMERABLE_COLLECT_RULE,
-          EnumerableRules.ENUMERABLE_UNCOLLECT_RULE,
-          EnumerableRules.ENUMERABLE_UNION_RULE,
-          EnumerableRules.ENUMERABLE_INTERSECT_RULE,
-          EnumerableRules.ENUMERABLE_MINUS_RULE,
-          EnumerableRules.ENUMERABLE_TABLE_MODIFICATION_RULE,
-          EnumerableRules.ENUMERABLE_VALUES_RULE,
-          EnumerableRules.ENUMERABLE_WINDOW_RULE,
-          EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-          EnumerableRules.ENUMERABLE_TABLE_FUNCTION_SCAN_RULE
       );
 
   // Rules from VolcanoPlanner's registerAbstractRelationalRules.
@@ -180,7 +158,37 @@ public class Rules
     // No instantiation.
   }
 
-  public static List<RelOptRule> ruleSet(final PlannerConfig plannerConfig)
+  public static List<Program> programs(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+  {
+    return ImmutableList.of(
+        Programs.ofRules(druidConventionRuleSet(operatorTable, plannerConfig)),
+        Programs.ofRules(bindableConventionRuleSet(operatorTable, plannerConfig))
+    );
+  }
+
+  private static List<RelOptRule> druidConventionRuleSet(
+      final DruidOperatorTable operatorTable,
+      final PlannerConfig plannerConfig
+  )
+  {
+    return ImmutableList.<RelOptRule>builder()
+        .addAll(baseRuleSet(operatorTable, plannerConfig))
+        .add(DruidRelToDruidRule.instance())
+        .build();
+  }
+
+  private static List<RelOptRule> bindableConventionRuleSet(
+      final DruidOperatorTable operatorTable,
+      final PlannerConfig plannerConfig
+  )
+  {
+    return ImmutableList.<RelOptRule>builder()
+        .addAll(baseRuleSet(operatorTable, plannerConfig))
+        .addAll(Bindables.RULES)
+        .build();
+  }
+
+  private static List<RelOptRule> baseRuleSet(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
   {
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
 
@@ -192,7 +200,7 @@ public class Rules
     rules.addAll(RELOPTUTIL_ABSTRACT_RULES);
 
     if (plannerConfig.isUseFallback()) {
-      rules.addAll(ENUMERABLE_RULES);
+      rules.add(DruidRelToBindableRule.instance());
     }
 
     // Druid-specific rules.
@@ -203,10 +211,7 @@ public class Rules
     }
 
     rules.addAll(SelectRules.rules());
-    rules.addAll(GroupByRules.rules(plannerConfig));
-
-    // Allow conversion of Druid queries to Bindable convention.
-    rules.add(DruidBindableConverterRule.instance());
+    rules.addAll(GroupByRules.rules(operatorTable, plannerConfig));
 
     return rules.build();
   }

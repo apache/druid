@@ -34,8 +34,6 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -47,10 +45,13 @@ import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.sql.calcite.aggregation.Aggregation;
+import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
+import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidNestedGroupBy;
 import io.druid.sql.calcite.rel.DruidRel;
@@ -77,17 +78,19 @@ import java.util.Map;
 
 public class GroupByRules
 {
+  private static final ApproxCountDistinctSqlAggregator APPROX_COUNT_DISTINCT = new ApproxCountDistinctSqlAggregator();
+
   private GroupByRules()
   {
     // No instantiation.
   }
 
-  public static List<RelOptRule> rules(final PlannerConfig plannerConfig)
+  public static List<RelOptRule> rules(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
   {
     return ImmutableList.of(
-        new DruidAggregateRule(plannerConfig),
-        new DruidAggregateProjectRule(plannerConfig),
-        new DruidAggregateProjectFilterRule(plannerConfig),
+        new DruidAggregateRule(operatorTable, plannerConfig),
+        new DruidAggregateProjectRule(operatorTable, plannerConfig),
+        new DruidAggregateProjectFilterRule(operatorTable, plannerConfig),
         new DruidGroupByPostAggregationRule(),
         new DruidGroupByHavingRule(),
         new DruidGroupByLimitRule()
@@ -150,11 +153,13 @@ public class GroupByRules
 
   public static class DruidAggregateRule extends RelOptRule
   {
+    private final DruidOperatorTable operatorTable;
     private final PlannerConfig plannerConfig;
 
-    private DruidAggregateRule(final PlannerConfig plannerConfig)
+    private DruidAggregateRule(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
     {
       super(operand(Aggregate.class, operand(DruidRel.class, none())));
+      this.operatorTable = operatorTable;
       this.plannerConfig = plannerConfig;
     }
 
@@ -176,6 +181,7 @@ public class GroupByRules
           null,
           null,
           aggregate,
+          operatorTable,
           plannerConfig.isUseApproximateCountDistinct(),
           plannerConfig.getMaxQueryCount()
       );
@@ -187,11 +193,13 @@ public class GroupByRules
 
   public static class DruidAggregateProjectRule extends RelOptRule
   {
+    private final DruidOperatorTable operatorTable;
     private final PlannerConfig plannerConfig;
 
-    private DruidAggregateProjectRule(final PlannerConfig plannerConfig)
+    private DruidAggregateProjectRule(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
     {
       super(operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, none()))));
+      this.operatorTable = operatorTable;
       this.plannerConfig = plannerConfig;
     }
 
@@ -215,6 +223,7 @@ public class GroupByRules
           null,
           project,
           aggregate,
+          operatorTable,
           plannerConfig.isUseApproximateCountDistinct(),
           plannerConfig.getMaxQueryCount()
       );
@@ -226,11 +235,13 @@ public class GroupByRules
 
   public static class DruidAggregateProjectFilterRule extends RelOptRule
   {
+    private final DruidOperatorTable operatorTable;
     private final PlannerConfig plannerConfig;
 
-    private DruidAggregateProjectFilterRule(final PlannerConfig plannerConfig)
+    private DruidAggregateProjectFilterRule(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
     {
       super(operand(Aggregate.class, operand(Project.class, operand(Filter.class, operand(DruidRel.class, none())))));
+      this.operatorTable = operatorTable;
       this.plannerConfig = plannerConfig;
     }
 
@@ -256,6 +267,7 @@ public class GroupByRules
           filter,
           project,
           aggregate,
+          operatorTable,
           plannerConfig.isUseApproximateCountDistinct(),
           plannerConfig.getMaxQueryCount()
       );
@@ -367,6 +379,7 @@ public class GroupByRules
       final Filter filter0,
       final Project project0,
       final Aggregate aggregate,
+      final DruidOperatorTable operatorTable,
       final boolean approximateCountDistinct,
       final int maxQueryCount
   )
@@ -451,6 +464,8 @@ public class GroupByRules
           sourceRowSignature,
           project,
           aggCall,
+          operatorTable,
+          aggregations,
           i,
           approximateCountDistinct
       );
@@ -713,6 +728,8 @@ public class GroupByRules
       final RowSignature sourceRowSignature,
       final Project project,
       final AggregateCall call,
+      final DruidOperatorTable operatorTable,
+      final List<Aggregation> existingAggregations,
       final int aggNumber,
       final boolean approximateCountDistinct
   )
@@ -740,47 +757,25 @@ public class GroupByRules
       filters.add(filter);
     }
 
-    if (call.getAggregation().getKind() == SqlKind.COUNT && call.getArgList().isEmpty()) {
+    if (kind == SqlKind.COUNT && call.getArgList().isEmpty()) {
       // COUNT(*)
       retVal = Aggregation.create(new CountAggregatorFactory(name));
-    } else if (call.getAggregation().getKind() == SqlKind.COUNT && call.isDistinct() && approximateCountDistinct) {
+    } else if (kind == SqlKind.COUNT && call.isDistinct()) {
       // COUNT(DISTINCT x)
-      final RowExtraction rex = Expressions.toRowExtraction(
-          rowOrder,
-          Expressions.fromFieldAccess(
-              sourceRowSignature,
-              project,
-              Iterables.getOnlyElement(call.getArgList())
-          )
-      );
-      if (rex == null) {
-        return null;
-      }
-
-      final DimensionSpec dimensionSpec = rex.toDimensionSpec(
+      retVal = approximateCountDistinct ? APPROX_COUNT_DISTINCT.toDruidAggregation(
+          name,
           sourceRowSignature,
-          aggInternalName(aggNumber, "dimSpec")
-      );
-      if (dimensionSpec == null) {
-        return null;
-      }
-
-      retVal = Aggregation.createFinalizable(
-          ImmutableList.<AggregatorFactory>of(
-              new CardinalityAggregatorFactory(name, ImmutableList.of(dimensionSpec), false)
-          ),
-          null,
-          new PostAggregatorFactory()
-          {
-            @Override
-            public PostAggregator factorize(String outputName)
-            {
-              return new HyperUniqueFinalizingPostAggregator(outputName, name);
-            }
-          }
-      );
-    } else if (!call.isDistinct() && call.getArgList().size() == 1) {
-      // AGG(xxx), not distinct, not COUNT(*)
+          existingAggregations,
+          project,
+          call
+      ) : null;
+    } else if (kind == SqlKind.COUNT
+               || kind == SqlKind.SUM
+               || kind == SqlKind.SUM0
+               || kind == SqlKind.MIN
+               || kind == SqlKind.MAX
+               || kind == SqlKind.AVG) {
+      // Built-in agg, not distinct, not COUNT(*)
       boolean forceCount = false;
       final FieldOrExpression input;
 
@@ -840,7 +835,7 @@ public class GroupByRules
           return null;
         }
       } else {
-        // Can't translate aggregator expression.
+        // Can't translate operand.
         return null;
       }
 
@@ -852,7 +847,7 @@ public class GroupByRules
         // COUNT(x)
         retVal = Aggregation.create(new CountAggregatorFactory(name));
       } else {
-        // All aggregators other than COUNT expect a single argument with no extractionFn.
+        // Built-in aggregator that is not COUNT.
         final String fieldName = input.getFieldName();
         final String expression = input.getExpression();
 
@@ -890,11 +885,20 @@ public class GroupByRules
               )
           );
         } else {
-          retVal = null;
+          // Not reached.
+          throw new ISE("WTF?! Kind[%s] got into the built-in aggregator path somehow?!", kind);
         }
       }
     } else {
-      retVal = null;
+      // Not a built-in aggregator, check operator table.
+      final SqlAggregator sqlAggregator = operatorTable.lookupAggregator(call.getAggregation().getName());
+      retVal = sqlAggregator != null ? sqlAggregator.toDruidAggregation(
+          name,
+          sourceRowSignature,
+          existingAggregations,
+          project,
+          call
+      ) : null;
     }
 
     final DimFilter filter = filters.isEmpty()
