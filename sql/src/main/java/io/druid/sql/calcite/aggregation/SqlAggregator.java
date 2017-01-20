@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.aggregation;
 
+import io.druid.query.filter.DimFilter;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
@@ -44,9 +45,11 @@ public interface SqlAggregator
    *
    * @param name                 desired output name of the aggregation
    * @param rowSignature         signature of the rows being aggregated
-   * @param existingAggregations existing aggregations for this query; useful for re-using aggregators
-   * @param project              SQL projection to apply before the aggregate call
+   * @param existingAggregations existing aggregations for this query; useful for re-using aggregations. May be safely
+   *                             ignored if you do not want to re-use existing aggregations.
+   * @param project              SQL projection to apply before the aggregate call, may be null
    * @param aggregateCall        SQL aggregate call
+   * @param filter               filter that should be applied to the aggregation, may be null
    *
    * @return aggregation, or null if the call cannot be translated
    */
@@ -56,6 +59,7 @@ public interface SqlAggregator
       final RowSignature rowSignature,
       final List<Aggregation> existingAggregations,
       final Project project,
-      final AggregateCall aggregateCall
+      final AggregateCall aggregateCall,
+      final DimFilter filter
   );
 }

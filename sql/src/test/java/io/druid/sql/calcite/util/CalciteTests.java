@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.util;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -36,8 +37,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -65,19 +64,14 @@ import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
-import io.druid.sql.calcite.rel.QueryMaker;
-import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
 import org.joda.time.DateTime;
 
 import java.io.File;
@@ -208,7 +202,7 @@ public class CalciteTests
       .withRollup(false)
       .build();
 
-  private static final List<InputRow> ROWS1 = ImmutableList.of(
+  public static final List<InputRow> ROWS1 = ImmutableList.of(
       createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))),
       createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())),
       createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))),
@@ -217,20 +211,11 @@ public class CalciteTests
       createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "dim1", "abc"))
   );
 
-  private static final List<InputRow> ROWS2 = ImmutableList.of(
+  public static final List<InputRow> ROWS2 = ImmutableList.of(
       createRow("2000-01-01", "דרואיד", "he", 1.0),
       createRow("2000-01-01", "druid", "en", 1.0),
       createRow("2000-01-01", "друид", "ru", 1.0)
   );
-
-  private static final Map<String, ValueType> COLUMN_TYPES = ImmutableMap.<String, ValueType>builder()
-      .put("__time", ValueType.LONG)
-      .put("cnt", ValueType.LONG)
-      .put("dim1", ValueType.STRING)
-      .put("dim2", ValueType.STRING)
-      .put("m1", ValueType.FLOAT)
-      .put("unique_dim1", ValueType.COMPLEX)
-      .build();
 
   private CalciteTests()
   {
@@ -282,23 +267,27 @@ public class CalciteTests
     return new DruidOperatorTable(ImmutableSet.<SqlAggregator>of(new ApproxCountDistinctSqlAggregator()));
   }
 
-  public static Schema createMockSchema(final QuerySegmentWalker walker, final PlannerConfig plannerConfig)
+  public static DruidSchema createMockSchema(
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig
+  )
   {
-    final QueryMaker queryMaker = new QueryMaker(walker, plannerConfig);
-    final DruidTable druidTable1 = new DruidTable(queryMaker, new TableDataSource(DATASOURCE1), COLUMN_TYPES);
-    final DruidTable druidTable2 = new DruidTable(queryMaker, new TableDataSource(DATASOURCE2), COLUMN_TYPES);
-    final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
-        DATASOURCE1, druidTable1,
-        DATASOURCE2, druidTable2
+    final DruidSchema schema = new DruidSchema(
+        walker,
+        new TestServerInventoryView(walker.getSegments()),
+        plannerConfig
     );
-    return new AbstractSchema()
-    {
-      @Override
-      protected Map<String, Table> getTableMap()
-      {
-        return tableMap;
-      }
-    };
+
+    schema.start();
+    try {
+      schema.awaitInitialization();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+
+    schema.stop();
+    return schema;
   }
 
   public static InputRow createRow(final ImmutableMap<String, ?> map)
