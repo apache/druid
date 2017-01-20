@@ -56,12 +56,12 @@ import java.util.concurrent.Callable;
 public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITKafkaIndexingServiceTest.class);
-  private static final int DELAY_BETWEEN_EVENTS_SECS = 5;
   private static final String INDEXER_FILE = "/indexer/kafka_supervisor_spec.json";
   private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
   private static final String DATASOURCE = "kafka_indexing_service_test";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
   private static final int MINUTES_TO_SEND = 4;
+  private static final long WAIT_TIME_MILIIS =  3 * 60 * 1000L;
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -184,15 +184,22 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         throw Throwables.propagate(ioe);
       }
 
-      try {
-        Thread.sleep(DELAY_BETWEEN_EVENTS_SECS * 1000);
-      }
-      catch (InterruptedException ex) { /* nothing */ }
       dtLast = dt;
       dt = new DateTime(zone);
     }
 
     producer.close();
+
+    long queryStartTime = System.currentTimeMillis() + WAIT_TIME_MILIIS;
+    while(queryStartTime > System.currentTimeMillis()) {
+      try {
+        Thread.sleep(5000);
+      }
+      catch (InterruptedException e) {
+        e.printStackTrace();
+        // do nothing
+      }
+    }
 
     InputStream is = ITKafkaIndexingServiceTest.class.getResourceAsStream(QUERIES_FILE);
     if (null == is) {
