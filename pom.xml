@@ -124,6 +124,7 @@
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
         <module>extensions-contrib/scan-query</module>
+        <module>extensions-contrib/sqlserver-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
