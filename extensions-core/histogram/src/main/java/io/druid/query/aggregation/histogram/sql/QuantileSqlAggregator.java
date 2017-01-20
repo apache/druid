@@ -21,7 +21,6 @@ package io.druid.query.aggregation.histogram.sql;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogram;
 import io.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
