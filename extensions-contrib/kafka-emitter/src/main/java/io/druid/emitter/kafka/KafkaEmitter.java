@@ -79,8 +79,8 @@ public class KafkaEmitter implements Emitter {
       }
     }
     try {
-      TypeReference<Map<String,String>> typeRef = new TypeReference<Map<String,String>>() {};
-      HashMap<String, String> result = jsonMapper.readValue(jsonMapper.writeValueAsString(event), typeRef);
+      TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {};
+      HashMap<String, Object> result = jsonMapper.readValue(jsonMapper.writeValueAsString(event), typeRef);
       result.put("clusterName", config.getClusterName());
       producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)));
     } catch (Exception e) {
