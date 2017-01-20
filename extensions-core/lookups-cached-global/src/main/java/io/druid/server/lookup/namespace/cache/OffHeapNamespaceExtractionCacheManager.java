@@ -19,27 +19,23 @@
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
-import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.mapdb.HTreeMap;
+import sun.misc.Cleaner;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -47,19 +43,98 @@ import java.util.concurrent.locks.Lock;
 public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
   private static final Logger log = new Logger(OffHeapNamespaceExtractionCacheManager.class);
+
+  private class MapDbCacheDisposer implements Runnable
+  {
+    final String mapDbKey;
+    /**
+     * Manages the race between dispose via {@link #disposeManually()} and automatic dispose by the JVM via
+     * {@link #run()}.
+     *
+     * <p>In case of actual race, we don't wait in those methods until the other one, which manages to switch this flag
+     * first, completes. This could result into the situation that neither one completes, if the JVM is shutting down
+     * and the thread from which {@link Cleaner#clean()} (delegating to {@link #run()}) is called started the disposal
+     * operation, then more deterministic shutdown hook / lifecycle.stop(), which may call {@link #disposeManually()}
+     * completed early, and then the whole process shuts down before {@link Cleaner#clean()} completes, because shutdown
+     * is not blocked by it. However this should be harmless because anyway we remove the whole MapDB's file in
+     * lifecycle.stop() (see {@link OffHeapNamespaceExtractionCacheManager#OffHeapNamespaceExtractionCacheManager}).
+     * However if we persist off-heap DB between JVM runs, this decision should be revised.
+     */
+    final AtomicBoolean disposed = new AtomicBoolean(false);
+
+    private MapDbCacheDisposer(String mapDbKey)
+    {
+      this.mapDbKey = mapDbKey;
+    }
+
+    /**
+     * To be called by the JVM via {@link Cleaner#clean()}. The only difference from {@link #disposeManually()} is
+     * exception treatment.
+     */
+    @Override
+    public void run()
+    {
+      if (disposed.compareAndSet(false, true)) {
+        try {
+          doDispose();
+          // Log statement goes after doDispose(), because logging may fail (e. g. if we are in shutdownHooks).
+          log.error("OffHeapNamespaceExtractionCacheManager.disposeCache() was not called, disposed resources by the JVM");
+        }
+        catch (Throwable t) {
+          try {
+            log.error(t, "Error while deleting key %s from MapDb", mapDbKey);
+          }
+          catch (Exception e) {
+            t.addSuppressed(e);
+          }
+          Throwables.propagateIfInstanceOf(t, Error.class);
+          // Must not throw exceptions in the cleaner thread, run by the JVM.
+        }
+      }
+    }
+
+    /**
+     * To be called from {@link #disposeCache(CacheHandler)}. The only difference from {@link #run()} is exception
+     * treatment, disposeManually() lefts all exceptions thrown in DB.delete() to the caller.
+     */
+    void disposeManually()
+    {
+      if (disposed.compareAndSet(false, true)) {
+        // TODO: resolve what happens here if query is actively going on
+        doDispose();
+      }
+    }
+
+    private void doDispose()
+    {
+      if (!mmapDB.isClosed()) {
+        mmapDB.delete(mapDbKey);
+      }
+      cacheCount.decrementAndGet();
+    }
+  }
+
+  private static class MapDbCacheDisposerAndCleaner
+  {
+    final MapDbCacheDisposer cacheDisposer;
+    final Cleaner cleaner;
+
+    private MapDbCacheDisposerAndCleaner(MapDbCacheDisposer cacheDisposer, Cleaner cleaner)
+    {
+      this.cacheDisposer = cacheDisposer;
+      this.cleaner = cleaner;
+    }
+  }
+
   private final DB mmapDB;
-  private ConcurrentMap<String, String> currentNamespaceCache = new ConcurrentHashMap<>();
-  private Striped<Lock> nsLocks = Striped.lazyWeakLock(1024); // Needed to make sure delete() doesn't do weird things
   private final File tmpFile;
+  private AtomicLong mapDbKeyCounter = new AtomicLong(0);
+  private AtomicInteger cacheCount = new AtomicInteger(0);
 
   @Inject
-  public OffHeapNamespaceExtractionCacheManager(
-      Lifecycle lifecycle,
-      ServiceEmitter emitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap
-  )
+  public OffHeapNamespaceExtractionCacheManager(Lifecycle lifecycle, ServiceEmitter serviceEmitter)
   {
-    super(lifecycle, emitter, namespaceFunctionFactoryMap);
+    super(lifecycle, serviceEmitter);
     try {
       tmpFile = File.createTempFile("druidMapDB", getClass().getCanonicalName());
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());
@@ -107,75 +182,58 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
-  protected boolean swapAndClearCache(String namespaceKey, String cacheKey)
+  public CacheHandler createCache()
   {
-    final Lock lock = nsLocks.get(namespaceKey);
-    lock.lock();
-    try {
-      Preconditions.checkArgument(mmapDB.exists(cacheKey), "Namespace [%s] does not exist", cacheKey);
-
-      final String swapCacheKey = UUID.randomUUID().toString();
-      mmapDB.rename(cacheKey, swapCacheKey);
-
-      final String priorCache = currentNamespaceCache.put(namespaceKey, swapCacheKey);
-      if (priorCache != null) {
-        // TODO: resolve what happens here if query is actively going on
-        mmapDB.delete(priorCache);
-        return true;
-      } else {
-        return false;
+    ConcurrentMap<String, String> cache;
+    String mapDbKey;
+    // This loop will succeed because 2^64 cache maps couldn't exist in memory simultaneously
+    while (true) {
+      mapDbKey = Long.toString(mapDbKeyCounter.getAndIncrement());
+      try {
+        HTreeMap<String, String> hTreeMap = mmapDB.createHashMap(mapDbKey).make();
+        // Access MapDB's HTreeMap and create a cleaner via proxy, because there is no 100% confidence that there are
+        // no memory leaks in MapDB and in OffHeapCacheManager. Otherwise JVM will never be able to clean the cleaner
+        // and dispose leaked cache.
+        cache = new CacheProxy(hTreeMap);
+        cacheCount.incrementAndGet();
+        break;
+      }
+      catch (IllegalArgumentException e) {
+        // failed to create a map, the key exists, go to the next iteration
       }
     }
-    finally {
-      lock.unlock();
-    }
+    MapDbCacheDisposer cacheDisposer = new MapDbCacheDisposer(mapDbKey);
+    // Cleaner is "the second level of defence". Normally all users of createCache() must call disposeCache() with
+    // the returned CacheHandler instance manually. But if they don't do this for whatever reason, JVM will cleanup
+    // the cache itself.
+    Cleaner cleaner = Cleaner.create(cache, cacheDisposer);
+    MapDbCacheDisposerAndCleaner disposerAndCleaner = new MapDbCacheDisposerAndCleaner(
+        cacheDisposer,
+        cleaner
+    );
+    return new CacheHandler(this, cache, disposerAndCleaner);
   }
 
   @Override
-  public boolean delete(final String namespaceKey)
+  void disposeCache(CacheHandler cacheHandler)
   {
-    // `super.delete` has a synchronization in it, don't call it in the lock.
-    if (!super.delete(namespaceKey)) {
-      return false;
-    }
-    final Lock lock = nsLocks.get(namespaceKey);
-    lock.lock();
-    try {
-      final String mmapDBkey = currentNamespaceCache.remove(namespaceKey);
-      if (mmapDBkey == null) {
-        return false;
-      }
-      final long pre = tmpFile.length();
-      mmapDB.delete(mmapDBkey);
-      log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
-      return true;
-    }
-    finally {
-      lock.unlock();
-    }
+    MapDbCacheDisposerAndCleaner disposerAndCleaner = (MapDbCacheDisposerAndCleaner) cacheHandler.id;
+    disposerAndCleaner.cacheDisposer.disposeManually();
+    // This clean() call effectively just removes the Cleaner from the internal linked list of all cleaners.
+    // The thunk.run() will be a no-op because cacheDisposer.disposed is already set to true.
+    disposerAndCleaner.cleaner.clean();
   }
 
   @Override
-  public ConcurrentMap<String, String> getCacheMap(String namespaceKey)
+  int cacheCount()
   {
-    final Lock lock = nsLocks.get(namespaceKey);
-    lock.lock();
-    try {
-      String mapDBKey = currentNamespaceCache.get(namespaceKey);
-      if (mapDBKey == null) {
-        // Not something created by swapAndClearCache
-        mapDBKey = namespaceKey;
-      }
-      return mmapDB.createHashMap(mapDBKey).makeOrGet();
-    }
-    finally {
-      lock.unlock();
-    }
+    return cacheCount.get();
   }
 
   @Override
-  protected void monitor(ServiceEmitter serviceEmitter)
+  void monitor(ServiceEmitter serviceEmitter)
   {
+    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/count", cacheCount()));
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/diskSize", tmpFile.length()));
   }
 }

@@ -20,8 +20,8 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.GenericIndexed;
 

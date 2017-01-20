@@ -19,7 +19,9 @@
 
 package io.druid.query.lookup.namespace;
 
-import java.util.Map;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
+
+import javax.annotation.Nullable;
 
 /**
  *
@@ -27,24 +29,25 @@ import java.util.Map;
 public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
 {
   /**
-   * This function is called once if `ExtractionNamespace.getUpdateMs() == 0`, or every update if
-   * `ExtractionNamespace.getUpdateMs() > 0`
-   * For ExtractionNamespace which have the NamespaceExtractionCacheManager handle regular updates, this function
-   * is used to populate the namespace cache each time.
-   * For ExtractionNamespace implementations which do not have regular updates, this function can be used to
-   * initialize resources.
-   * If the returned version is the same as what is passed in as lastVersion, then no swap takes place, and the swap
-   * is discarded.
+   * If the lookup source, encapsulated by this {@code ExtractionNamespaceCacheFactory}, has data newer than identified
+   * by the given {@code lastVersion} (which is null at the first run of this method, or the version from the previous
+   * run), this method creates a new {@code CacheScheduler.VersionedCache} with {@link
+   * CacheScheduler#createVersionedCache}, called on the given {@code scheduler}, with the version string identifying
+   * the current version of lookup source, populates the created {@code VersionedCache} and returns it. If the lookup
+   * source is up-to-date, this methods returns null.
    *
-   * @param id                  The ID of ExtractionNamespace
-   * @param extractionNamespace The ExtractionNamespace for which to populate data.
-   * @param lastVersion         The version which was last cached
-   * @param swap                The temporary Map into which data may be placed and will be "swapped" with the proper
-   *                            namespace Map in NamespaceExtractionCacheManager. Implementations which cannot offer
-   *                            a swappable cache of the data may ignore this but must make sure `buildFn(...)` returns
-   *                            a proper Function.
-   *
-   * @return return the (new) version string used in the populating
+   * @param namespace The ExtractionNamespace for which to populate data.
+   * @param id An object uniquely corresponding to the {@link CacheScheduler.Entry}, for which this populateCache()
+   *           method is called. Also it has the same toString() representation, that is useful for logging
+   * @param lastVersion The version which was last cached
+   * @param scheduler Should be used only to call {@link CacheScheduler#createVersionedCache}.
+   * @return the new cache along with the new version, or null if the last version is up-to-date.
    */
-  String populateCache(String id, T extractionNamespace, String lastVersion, Map<String, String> swap) throws Exception;
+  @Nullable
+  CacheScheduler.VersionedCache populateCache(
+      T namespace,
+      CacheScheduler.EntryImpl<T> id,
+      String lastVersion,
+      CacheScheduler scheduler
+  ) throws Exception;
 }

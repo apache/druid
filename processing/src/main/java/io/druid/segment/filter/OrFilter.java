@@ -21,13 +21,13 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +67,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
 
@@ -80,7 +80,7 @@ public class OrFilter implements BooleanFilter
   @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
-      ValueMatcherFactory valueMatcherFactory,
+      ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   )
   {
@@ -91,7 +91,7 @@ public class OrFilter implements BooleanFilter
       if (filter.supportsBitmapIndex(selector)) {
         bitmaps.add(filter.getBitmapIndex(selector));
       } else {
-        ValueMatcher matcher = filter.makeMatcher(valueMatcherFactory);
+        ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);
       }
     }

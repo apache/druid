@@ -149,7 +149,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         );
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
-      Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
@@ -191,7 +191,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             }
           }
 
-          shardSpecs.put(bucket, actualSpecs);
+          shardSpecs.put(bucket.getMillis(), actualSpecs);
 
         } else {
           log.info("Path[%s] didn't exist!?", partitionInfoPath);
@@ -323,7 +323,12 @@ public class DetermineHashedPartitionsJob implements Jobby
             HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
         );
       }
-      Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
+      Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
+
+      if (!intervalOptional.isPresent()) {
+        throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+      }
+      Interval interval = intervalOptional.get();
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(

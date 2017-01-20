@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
+import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Pair;
@@ -37,15 +38,13 @@ import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -56,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -64,6 +64,7 @@ public class GroupByRowProcessor
   public static Sequence<Row> process(
       final Query queryParam,
       final Sequence<Row> rows,
+      final Map<String, ValueType> rowSignature,
       final GroupByQueryConfig config,
       final BlockingPool<ByteBuffer> mergeBufferPool,
       final ObjectMapper spillMapper
@@ -89,10 +90,15 @@ public class GroupByRowProcessor
         query,
         Filters.toFilter(query.getDimFilter())
     );
-    final RowBasedValueMatcherFactory filterMatcherFactory = new RowBasedValueMatcherFactory();
+
+    final SettableSupplier<Row> rowSupplier = new SettableSupplier<>();
+    final RowBasedColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        rowSupplier,
+        rowSignature
+    );
     final ValueMatcher filterMatcher = filter == null
                                        ? new BooleanValueMatcher(true)
-                                       : filter.makeMatcher(filterMatcherFactory);
+                                       : filter.makeMatcher(columnSelectorFactory);
 
     final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(
         rows,
@@ -111,7 +117,7 @@ public class GroupByRowProcessor
             if (!inInterval) {
               return false;
             }
-            filterMatcherFactory.setRow(input);
+            rowSupplier.set(input);
             return filterMatcher.matches();
           }
         }
@@ -195,77 +201,5 @@ public class GroupByRowProcessor
           }
         }
     );
-  }
-
-  private static class RowBasedValueMatcherFactory implements ValueMatcherFactory
-  {
-    private Row row;
-
-    public void setRow(Row row)
-    {
-      this.row = row;
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
-    {
-      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            return value.equals(row.getTimestampFromEpoch());
-          }
-        };
-      } else {
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            return row.getDimension(dimension).contains(value);
-          }
-        };
-      }
-    }
-
-    // There is no easy way to determine the dimension value type from the map based row, so this defaults all
-    // dimensions (except time) to string, and provide the string value matcher. This has some performance impact
-    // on filtering, but should provide the same result. It should be changed to support dimension types when better
-    // type hinting is implemented
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
-    {
-      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-        return new ValueMatcher()
-        {
-          final DruidLongPredicate predicate = predicateFactory.makeLongPredicate();
-
-          @Override
-          public boolean matches()
-          {
-            return predicate.applyLong(row.getTimestampFromEpoch());
-          }
-        };
-      } else {
-        return new ValueMatcher()
-        {
-          final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-
-          @Override
-          public boolean matches()
-          {
-            List<String> values = row.getDimension(dimension);
-            for (String value : values) {
-              if (predicate.apply(value)) {
-                return true;
-              }
-            }
-            return false;
-          }
-        };
-      }
-    }
   }
 }

@@ -41,31 +41,16 @@ public class PortFinder
 
   private static boolean canBind(int portNum)
   {
-    ServerSocket ss = null;
-    boolean isFree = false;
     try {
-      ss = new ServerSocket(portNum);
-      isFree = true;
+      new ServerSocket(portNum).close();
+      return true;
     }
     catch (BindException be) {
-      isFree = false; // port in use,
+      return false;
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    finally {
-      if (ss != null) {
-        while (!ss.isClosed()) {
-          try {
-            ss.close();
-          }
-          catch (IOException e) {
-            // ignore
-          }
-        }
-      }
-    }
-    return isFree;
   }
 
   public synchronized int findUnusedPort()

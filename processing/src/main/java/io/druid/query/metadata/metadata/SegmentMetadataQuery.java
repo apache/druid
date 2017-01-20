@@ -86,7 +86,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
   public static final EnumSet<AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
       AnalysisType.CARDINALITY,
-      AnalysisType.SIZE,
       AnalysisType.INTERVAL,
       AnalysisType.MINMAX
   );

@@ -19,12 +19,19 @@
 
 package io.druid.math.expr;
 
+import com.google.common.base.Strings;
 import io.druid.common.guava.GuavaUtils;
+import io.druid.java.util.common.logger.Logger;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
 public class Evals
 {
+  private static final Logger log = new Logger(Evals.class);
+
   public static Number toNumber(Object value)
   {
     if (value == null) {
@@ -39,5 +46,70 @@ public class Evals
       return Double.valueOf(stringValue);
     }
     return longValue;
+  }
+
+  public static boolean isConstant(Expr expr)
+  {
+    return expr instanceof ConstantExpr;
+  }
+
+  public static boolean isAllConstants(Expr... exprs)
+  {
+    return isAllConstants(Arrays.asList(exprs));
+  }
+
+  public static boolean isAllConstants(List<Expr> exprs)
+  {
+    for (Expr expr : exprs) {
+      if (!(expr instanceof ConstantExpr)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // for binary operator not providing constructor of form <init>(String, Expr, Expr),
+  // you should create it explicitly in here
+  public static Expr binaryOp(BinaryOpExprBase binary, Expr left, Expr right)
+  {
+    try {
+      return binary.getClass()
+                   .getDeclaredConstructor(String.class, Expr.class, Expr.class)
+                   .newInstance(binary.op, left, right);
+    }
+    catch (Exception e) {
+      log.warn(e, "failed to rewrite expression " + binary);
+      return binary;  // best effort.. keep it working
+    }
+  }
+
+  public static long asLong(boolean x)
+  {
+    return x ? 1L : 0L;
+  }
+
+  public static double asDouble(boolean x)
+  {
+    return x ? 1D : 0D;
+  }
+
+  public static String asString(boolean x)
+  {
+    return String.valueOf(x);
+  }
+
+  public static boolean asBoolean(long x)
+  {
+    return x > 0;
+  }
+
+  public static boolean asBoolean(double x)
+  {
+    return x > 0;
+  }
+
+  public static boolean asBoolean(String x)
+  {
+    return !Strings.isNullOrEmpty(x) && Boolean.valueOf(x);
   }
 }

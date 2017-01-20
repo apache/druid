@@ -24,7 +24,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |`druid.extensions.directory`|The root extension directory where user can put extensions related files. Druid will load extensions stored under this directory.|`extensions` (This is a relative path to Druid's working directory)|
 |`druid.extensions.hadoopDependenciesDir`|The root hadoop dependencies directory where user can put hadoop related dependencies files. Druid will load the dependencies based on the hadoop coordinate specified in the hadoop index task.|`hadoop-dependencies` (This is a relative path to Druid's working directory|
 |`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches hadoop jobs and this configuration provides way to explicitly set the user classpath for the hadoop job. By default this is computed automatically by druid based on the druid process classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between druid and hadoop.|null|
-|`druid.extensions.loadList`|A JSON array of extensions to load from extension directories by Druid. If it is not specified, its value will be `null` and Druid will load all the extensions under `druid.extensions.directory`. If its value is empty list `[]`, then no extensions will be loaded at all.|null|
+|`druid.extensions.loadList`|A JSON array of extensions to load from extension directories by Druid. If it is not specified, its value will be `null` and Druid will load all the extensions under `druid.extensions.directory`. If its value is empty list `[]`, then no extensions will be loaded at all. It is also allowed to specify absolute path of other custom extensions not stored in the common extensions directory.|null|
 |`druid.extensions.searchCurrentClassloader`|This is a boolean flag that determines if Druid will search the main classloader for extensions.  It defaults to true but can be turned off if you have reason to not automatically add all modules on the classpath.|true|
 
 ### Zookeeper
@@ -75,6 +75,23 @@ The following path is used for service discovery. It is **not** affected by `dru
 |--------|-----------|-------|
 |`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
 
+### Exhibitor
+
+[Exhibitor](https://github.com/Netflix/exhibitor/wiki) is a supervisor system for ZooKeeper.
+Exhibitor can dynamically scale-up/down the cluster of ZooKeeper servers.
+Druid can update self-owned list of ZooKeeper servers through Exhibitor without restarting.
+That is, it allows Druid to keep the connections of Exhibitor-supervised ZooKeeper servers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.exhibitor.service.hosts`|A JSON array which contains the hostnames of Exhibitor instances. Please specify this property if you want to use Exhibitor-supervised cluster.|none|
+|`druid.exhibitor.service.port`|The REST port used to connect to Exhibitor.|`8080`|
+|`druid.exhibitor.service.restUriPath`|The path of the REST call used to get the server set.|`/exhibitor/v1/cluster/list`|
+|`druid.exhibitor.service.useSsl`|Boolean flag for whether or not to use https protocol.|`false`|
+|`druid.exhibitor.service.pollingMs`|How ofter to poll the exhibitors for the list|`10000`|
+
+Note that `druid.zk.service.host` is used as a backup in case an Exhibitor instance can't be contacted and therefore should still be set.
+
 ### Startup Logging
 
 All nodes can log debugging information on startup.
@@ -92,7 +109,7 @@ All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|noop|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -134,6 +151,22 @@ MDC fields populated with `setMDC`:
 |`resultOrdering`|The ordering of results|
 |`descending`|If the query is a descending query|
 
+#### Filtered Request Logging
+Filtered Request Logger filters requests based on a configurable query/time threshold. Only request logs where query/time is above the threshold are emitted.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
+|`druid.request.logging.delegate`|Delegate request logger to log requests.|none|
+
+#### Composite Request Logging
+Composite Request Logger emits request logs to multiple request loggers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
+
+
 ### Enabling Metrics
 
 Druid nodes periodically emit metrics and different metrics monitors can be included. Each node can overwrite the default list of monitors.
@@ -153,6 +186,7 @@ The following monitors are available:
 |`com.metamx.metrics.JvmMonitor`|Reports JVM-related statistics.|
 |`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
 |`io.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
+|`io.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
 
 ### Emitting Metrics
 
@@ -306,7 +340,7 @@ You can enable caching of results at the broker, historical, or realtime level u
 |--------|-----------|-------|
 |`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
 |`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
-|`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
+|`druid.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
 

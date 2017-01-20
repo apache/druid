@@ -19,7 +19,9 @@
 
 package io.druid.server.initialization;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
@@ -80,7 +82,17 @@ public class EmitterModule implements Module
   public ServiceEmitter getServiceEmitter(@Self Supplier<DruidNode> configSupplier, Emitter emitter)
   {
     final DruidNode config = configSupplier.get();
-    final ServiceEmitter retVal = new ServiceEmitter(config.getServiceName(), config.getHostAndPort(), emitter);
+    String version = getClass().getPackage().getImplementationVersion();
+    final ImmutableMap<String, String> otherServiceDimensions = ImmutableMap.of(
+        "version",
+        Strings.nullToEmpty(version) // Version is null during `mvn test`.
+    );
+    final ServiceEmitter retVal = new ServiceEmitter(
+        config.getServiceName(),
+        config.getHostAndPort(),
+        emitter,
+        otherServiceDimensions
+    );
     EmittingLogger.registerEmitter(retVal);
     return retVal;
   }

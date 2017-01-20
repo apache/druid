@@ -20,27 +20,18 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import io.druid.granularity.QueryGranularity;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
@@ -50,23 +41,23 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
-import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
-import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -201,6 +192,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Sequence<Cursor> makeCursors(
       final Filter filter,
       final Interval interval,
+      final VirtualColumns virtualColumns,
       final QueryGranularity gran,
       final boolean descending
   )
@@ -241,13 +233,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           EntryHolder currEntry = new EntryHolder();
 
           @Override
-          public Cursor apply(@Nullable final Long input)
+          public Cursor apply(final Long input)
           {
             final long timeStart = Math.max(input, actualInterval.getStartMillis());
 
             return new Cursor()
             {
-              private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this, currEntry);
+              private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this);
               private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
               private Iterable<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> cursorIterable;
               private boolean emptyRange;
@@ -503,11 +495,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(column);
 
-                if (dimensionDesc != null) {
+                if (dimensionDesc == null) {
+                  VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(column);
+                  if (virtualColumn != null) {
+                    return virtualColumn.init(column, this);
+                  }
+                  return null;
+                } else {
 
                   final int dimensionIndex = dimensionDesc.getIndex();
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  final ColumnCapabilities capabilities = dimensionDesc.getCapabilities();
 
                   return new ObjectColumnSelector<Object>()
                   {
@@ -536,63 +533,21 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     }
                   };
                 }
-
-                return null;
               }
 
+              @Nullable
               @Override
               public ColumnCapabilities getColumnCapabilities(String columnName)
               {
-                return index.getCapabilities(columnName);
-              }
-
-              @Override
-              public NumericColumnSelector makeMathExpressionSelector(String expression)
-              {
-                final Expr parsed = Parser.parse(expression);
-
-                final List<String> required = Parser.findRequiredBindings(parsed);
-                final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-
-                for (String columnName : index.getMetricNames()) {
-                  if (!required.contains(columnName)) {
-                    continue;
-                  }
-                  ValueType type = index.getCapabilities(columnName).getType();
-                  if (type == ValueType.FLOAT) {
-                    final int metricIndex = index.getMetricIndex(columnName);
-                    values.put(
-                        columnName, new Supplier<Number>()
-                        {
-                          @Override
-                          public Number get()
-                          {
-                            return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
-                          }
-                        }
-                    );
-                  } else if (type == ValueType.LONG) {
-                    final int metricIndex = index.getMetricIndex(columnName);
-                    values.put(
-                        columnName, new Supplier<Number>()
-                        {
-                          @Override
-                          public Number get()
-                          {
-                            return index.getMetricLongValue(currEntry.getValue(), metricIndex);
-                          }
-                        }
-                    );
+                ColumnCapabilities capabilities = index.getCapabilities(columnName);
+                if (capabilities == null && !virtualColumns.isEmpty()) {
+                  VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
+                  if (virtualColumn != null) {
+                    Class clazz = virtualColumn.init(columnName, this).classOfObject();
+                    capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
                   }
                 }
-                final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                return new NumericColumnSelector() {
-                  @Override
-                  public Number get()
-                  {
-                    return parsed.eval(binding).numericValue();
-                  }
-                };
+                return capabilities;
               }
             };
           }
@@ -600,19 +555,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     );
   }
 
-  private boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
-  private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor, final EntryHolder holder)
+  private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor)
   {
     return filter == null
            ? new BooleanValueMatcher(true)
-           : filter.makeMatcher(new CursorAndEntryHolderValueMatcherFactory(cursor, holder));
+           : filter.makeMatcher(cursor);
   }
 
   public static class EntryHolder
@@ -637,84 +584,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     public Integer getValue()
     {
       return currEntry.getValue();
-    }
-  }
-
-
-  private class CursorAndEntryHolderValueMatcherFactory implements ValueMatcherFactory
-  {
-    private final EntryHolder holder;
-    private final Cursor cursor;
-
-    public CursorAndEntryHolderValueMatcherFactory(
-        Cursor cursor,
-        EntryHolder holder
-    )
-    {
-      this.cursor = cursor;
-      this.holder = holder;
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Comparable originalValue)
-    {
-      IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
-      if (dimensionDesc == null) {
-        // filtering on long metrics and __time is supported as well
-        final Integer metricIndexInt = index.getMetricIndex(dimension);
-        if (metricIndexInt != null || dimension.equals(Column.TIME_COLUMN_NAME)) {
-          ValueType type = getTypeForDimension(dimension);
-          switch (type) {
-            case LONG:
-              return Filters.getLongValueMatcher(cursor.makeLongColumnSelector(dimension), originalValue);
-            default:
-              return new BooleanValueMatcher(isComparableNullOrEmpty(originalValue));
-          }
-        } else {
-          return new BooleanValueMatcher(isComparableNullOrEmpty(originalValue));
-        }
-      } else {
-        final DimensionIndexer indexer = dimensionDesc.getIndexer();
-        final int dimIndex = dimensionDesc.getIndex();
-        return indexer.makeIndexingValueMatcher(originalValue, holder, dimIndex);
-      }
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
-    {
-      IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
-      if (dimensionDesc == null) {
-        // filtering on long metrics and __time is supported as well
-        final Integer metricIndexInt = index.getMetricIndex(dimension);
-        if (metricIndexInt != null || dimension.equals(Column.TIME_COLUMN_NAME)) {
-          ValueType type = getTypeForDimension(dimension);
-          switch (type) {
-            case LONG:
-              return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-            default:
-              return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-          }
-        } else {
-          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-        }
-      } else {
-        final DimensionIndexer indexer = dimensionDesc.getIndexer();
-        final int dimIndex = dimensionDesc.getIndex();
-        return indexer.makeIndexingValueMatcher(predicateFactory, holder, dimIndex);
-      }
-    }
-
-    // for long metrics and __time
-    private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
-    {
-      return Filters.getLongPredicateMatcher(cursor.makeLongColumnSelector(dimension), predicate);
-    }
-
-    private ValueType getTypeForDimension(String dimension)
-    {
-      ColumnCapabilities capabilities = index.getCapabilities(dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 

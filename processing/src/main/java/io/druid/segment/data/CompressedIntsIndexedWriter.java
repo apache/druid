@@ -129,7 +129,8 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
     channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput());
-    ByteStreams.copy(from, channel);
+    try (final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput())) {
+      ByteStreams.copy(from, channel);
+    }
   }
 }

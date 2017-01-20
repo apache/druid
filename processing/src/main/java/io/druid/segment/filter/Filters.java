@@ -22,26 +22,36 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Query;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
+import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  */
@@ -85,6 +95,84 @@ public class Filters
   public static Filter toFilter(DimFilter dimFilter)
   {
     return dimFilter == null ? null : dimFilter.toFilter();
+  }
+
+  /**
+   * Create a ValueMatcher that compares row values to the provided string.
+   *
+   * An implementation of this method should be able to handle dimensions of various types.
+   *
+   * @param columnSelectorFactory Selector for columns.
+   * @param columnName            The column to filter.
+   * @param value                 The value to match against, represented as a String.
+   *
+   * @return An object that matches row values on the provided value.
+   */
+  public static ValueMatcher makeValueMatcher(
+      final ColumnSelectorFactory columnSelectorFactory,
+      final String columnName,
+      final String value
+  )
+  {
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+
+    // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
+    if (capabilities != null && capabilities.getType() == ValueType.LONG) {
+      return getLongValueMatcher(
+          columnSelectorFactory.makeLongColumnSelector(columnName),
+          value
+      );
+    }
+
+    final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
+        DimensionHandlerUtils.createColumnSelectorPlus(
+            ValueMatcherColumnSelectorStrategyFactory.instance(),
+            DefaultDimensionSpec.of(columnName),
+            columnSelectorFactory
+        );
+
+    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), value);
+  }
+
+  /**
+   * Create a ValueMatcher that applies a predicate to row values.
+   *
+   * The caller provides a predicate factory that can create a predicate for each value type supported by Druid.
+   * See {@link DruidPredicateFactory} for more information.
+   *
+   * When creating the ValueMatcher, the ValueMatcherFactory implementation should decide what type of predicate
+   * to create from the predicate factory based on the ValueType of the specified dimension.
+   *
+   * @param columnSelectorFactory Selector for columns.
+   * @param columnName            The column to filter.
+   * @param predicateFactory      Predicate factory
+   *
+   * @return An object that applies a predicate to row values
+   */
+  public static ValueMatcher makeValueMatcher(
+      final ColumnSelectorFactory columnSelectorFactory,
+      final String columnName,
+      final DruidPredicateFactory predicateFactory
+  )
+  {
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+
+    // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
+    if (capabilities != null && capabilities.getType() == ValueType.LONG) {
+      return getLongPredicateMatcher(
+          columnSelectorFactory.makeLongColumnSelector(columnName),
+          predicateFactory.makeLongPredicate()
+      );
+    }
+
+    final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
+        DimensionHandlerUtils.createColumnSelectorPlus(
+            ValueMatcherColumnSelectorStrategyFactory.instance(),
+            DefaultDimensionSpec.of(columnName),
+            columnSelectorFactory
+        );
+
+    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), predicateFactory);
   }
 
   public static ImmutableBitmap allFalse(final BitmapIndexSelector selector)
@@ -140,26 +228,42 @@ public class Filters
           {
             return new Iterator<ImmutableBitmap>()
             {
-              int currIndex = 0;
+              private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
+              private int nextIndex = 0;
+              private ImmutableBitmap nextBitmap;
+
+              {
+                findNextBitmap();
+              }
+
+              private void findNextBitmap()
+              {
+                while (nextIndex < bitmapIndexCardinality) {
+                  if (predicate.apply(dimValues.get(nextIndex))) {
+                    nextBitmap = bitmapIndex.getBitmap(nextIndex);
+                    nextIndex++;
+                    return;
+                  }
+                  nextIndex++;
+                }
+                nextBitmap = null;
+              }
 
               @Override
               public boolean hasNext()
               {
-                return currIndex < bitmapIndex.getCardinality();
+                return nextBitmap != null;
               }
 
               @Override
               public ImmutableBitmap next()
               {
-                while (currIndex < bitmapIndex.getCardinality() && !predicate.apply(dimValues.get(currIndex))) {
-                  currIndex++;
+                ImmutableBitmap bitmap = nextBitmap;
+                if (bitmap == null) {
+                  throw new NoSuchElementException();
                 }
-
-                if (currIndex == bitmapIndex.getCardinality()) {
-                  return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
-                }
-
-                return bitmapIndex.getBitmap(currIndex++);
+                findNextBitmap();
+                return bitmap;
               }
 
               @Override
@@ -175,14 +279,14 @@ public class Filters
 
   public static ValueMatcher getLongValueMatcher(
       final LongColumnSelector longSelector,
-      Comparable value
+      final String value
   )
   {
-    if (value == null) {
+    if (Strings.isNullOrEmpty(value)) {
       return new BooleanValueMatcher(false);
     }
 
-    final Long longValue = GuavaUtils.tryParseLong(value.toString());
+    final Long longValue = GuavaUtils.tryParseLong(value);
     if (longValue == null) {
       return new BooleanValueMatcher(false);
     }
@@ -190,7 +294,7 @@ public class Filters
     return new ValueMatcher()
     {
       // store the primitive, so we don't unbox for every comparison
-      final long unboxedLong = longValue.longValue();
+      final long unboxedLong = longValue;
 
       @Override
       public boolean matches()

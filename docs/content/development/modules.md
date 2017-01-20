@@ -49,7 +49,7 @@ If your jar has this file, then when it is added to the classpath or as an exten
 
 ### Adding a new deep storage implementation
 
-Check the `azure-storage`, `cassandra-storage`, `hdfs-storage` and `s3-extensions` modules for examples of how to do this.
+Check the `azure-storage`, `google-storage`, `cassandra-storage`, `hdfs-storage` and `s3-extensions` modules for examples of how to do this.
 
 The basic idea behind the extension is that you need to add bindings for your DataSegmentPusher and DataSegmentPuller objects.  The way to add them is something like (taken from HdfsStorageDruidModule)
 

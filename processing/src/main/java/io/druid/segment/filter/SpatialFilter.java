@@ -20,14 +20,14 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.spatial.search.Bound;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.incremental.SpatialDimensionRowTransformer;
 
 /**
@@ -54,9 +54,10 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    return factory.makeValueMatcher(
+    return Filters.makeValueMatcher(
+        factory,
         dimension,
         new DruidPredicateFactory()
         {

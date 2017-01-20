@@ -19,6 +19,8 @@
 
 package io.druid.query.filter;
 
+import io.druid.segment.ColumnSelectorFactory;
+
 import java.util.List;
 
 public interface BooleanFilter extends Filter
@@ -33,16 +35,17 @@ public interface BooleanFilter extends Filter
    * An implementation should either:
    * - return a ValueMatcher that checks row values, using the provided ValueMatcherFactory
    * - or, if possible, get a bitmap index for this filter using the BitmapIndexSelector, and
-   *   return a ValueMatcher that checks the current row offset, created using the bitmap index.
+   * return a ValueMatcher that checks the current row offset, created using the bitmap index.
    *
-   * @param selector Object used to retrieve bitmap indexes
-   * @param valueMatcherFactory Object used to create ValueMatchers
+   * @param selector                Object used to retrieve bitmap indexes
+   * @param columnSelectorFactory   Object used to select columns for making ValueMatchers
    * @param rowOffsetMatcherFactory Object used to create RowOffsetMatchers
+   *
    * @return ValueMatcher that applies this filter
    */
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
-      ValueMatcherFactory valueMatcherFactory,
+      ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   );
 }

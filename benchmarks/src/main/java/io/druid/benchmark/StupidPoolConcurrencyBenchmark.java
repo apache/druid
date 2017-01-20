@@ -65,6 +65,7 @@ public class StupidPoolConcurrencyBenchmark
   {
     private final AtomicLong numPools = new AtomicLong(0L);
     private final StupidPool<Object> pool = new StupidPool<>(
+        "simpleObject pool",
         new Supplier<Object>()
         {
           @Override

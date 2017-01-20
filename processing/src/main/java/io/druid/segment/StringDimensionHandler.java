@@ -32,7 +32,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
@@ -120,23 +119,19 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
               dimValName
           );
         }
+      } else {
+        throw new SegmentValidationException(
+            "Dim [%s] value lengths not equal. Expected %d found %d",
+            dimensionName,
+            lhsLen,
+            rhsLen
+        );
       }
-    } else {
-      throw new SegmentValidationException(
-          "Dim [%s] value lengths not equal. Expected %d found %d",
-          dimensionName,
-          lhsLen,
-          rhsLen
-      );
     }
 
     for (int j = 0; j < Math.max(lhsLen, rhsLen); ++j) {
       final int dIdex1 = lhsLen <= j ? -1 : lhs[j];
       final int dIdex2 = rhsLen <= j ? -1 : rhs[j];
-
-      if (dIdex1 == dIdex2) {
-        continue;
-      }
 
       final String dim1ValName = dIdex1 < 0 ? null : lhsEncodings.get(dIdex1);
       final String dim2ValName = dIdex2 < 0 ? null : rhsEncodings.get(dIdex2);
@@ -218,20 +213,4 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   {
     return new StringDimensionMergerLegacy(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
   }
-
-  public static final Comparator<Integer> ENCODED_COMPARATOR = new Comparator<Integer>()
-  {
-    @Override
-    public int compare(Integer o1, Integer o2)
-    {
-      if (o1 == null) {
-        return o2 == null ? 0 : -1;
-      }
-      if (o2 == null) {
-        return 1;
-      }
-      return o1.compareTo(o2);
-    }
-  };
-
 }

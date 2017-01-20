@@ -26,7 +26,7 @@ public class NoopServiceEmitter extends ServiceEmitter
 {
   public NoopServiceEmitter()
   {
-    super(null, null, null);
+    super("", "", null);
   }
 
   @Override

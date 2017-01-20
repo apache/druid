@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.metamx.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -124,7 +124,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   {
     for (String dim : availableDimensions) {
       ColumnCapabilities capabilities = getColumn(dim).getCapabilities();
-      DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dim, capabilities, null);
+      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
       dimensionHandlers.put(dim, handler);
     }
   }

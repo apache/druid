@@ -25,10 +25,10 @@ import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.spatial.ImmutableRTree;
-import com.metamx.collections.spatial.RTree;
-import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.spatial.ImmutableRTree;
+import io.druid.collections.spatial.RTree;
+import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ByteBufferUtils;
@@ -213,4 +213,12 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
       spatialIoPeon.cleanup();
     }
   }
+
+  @Override
+  public File makeDimFile() throws IOException
+  {
+    return IndexIO.makeDimFile(outDir, dimensionName);
+  }
 }
+
+

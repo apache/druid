@@ -48,6 +48,7 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
@@ -61,6 +62,7 @@ import java.util.Map;
 public class GroupByStrategyV2 implements GroupByStrategy
 {
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
+  public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
@@ -158,7 +160,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
                     ImmutableMap.<String, Object>of(
                         "finalize", false,
                         GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-                        CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis())
+                        CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
+                        CTX_KEY_OUTERMOST, false
                     )
                 ),
                 responseContext
@@ -168,9 +171,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
               @Override
               public Row apply(final Row row)
               {
-                // Maybe apply postAggregators.
+                // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
 
-                if (query.getPostAggregatorSpecs().isEmpty()) {
+                if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+                  return row;
+                }
+
+                if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
                   return row;
                 }
 
@@ -186,7 +193,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                   }
                 }
 
-                return new MapBasedRow(row.getTimestamp(), newMap);
+                return new MapBasedRow(fudgeTimestamp != null ? fudgeTimestamp : row.getTimestamp(), newMap);
               }
             }
         )
@@ -201,6 +208,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final Sequence<Row> results = GroupByRowProcessor.process(
         query,
         subqueryResult,
+        GroupByQueryHelper.rowSignatureFor(subquery),
         configSupplier.get(),
         mergeBufferPool,
         spillMapper

@@ -25,6 +25,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
@@ -50,6 +52,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 /**
  */
@@ -179,13 +182,18 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(5).build())
             .build();
@@ -199,8 +207,8 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -276,13 +284,18 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -294,8 +307,8 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -367,13 +380,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(segmentReplicantLookup)
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -385,8 +403,8 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -432,6 +450,11 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withEmitter(emitter)
@@ -439,15 +462,15 @@ public class DruidCoordinatorRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
     ruleRunner.run(params);
 
+    exec.shutdown();
     EasyMock.verify(emitter);
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -554,13 +577,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+        .withBalancerStrategy(balancerStrategy)
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -569,8 +597,8 @@ public class DruidCoordinatorRuleRunnerTest
 
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    exec.shutdown();
     EasyMock.verify(coordinator);
-    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -633,13 +661,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+        .withBalancerStrategy(balancerStrategy)
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -649,8 +682,8 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -719,13 +752,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+        .withBalancerStrategy(balancerStrategy)
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -735,8 +773,8 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -801,13 +839,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+        .withBalancerStrategy(balancerStrategy)
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -817,8 +860,8 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount") == null);
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -896,13 +939,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+        .withBalancerStrategy(balancerStrategy)
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -911,9 +959,9 @@ public class DruidCoordinatorRuleRunnerTest
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
 
+    exec.shutdown();
     EasyMock.verify(mockPeon);
     EasyMock.verify(anotherMockPeon);
-    params.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -971,13 +1019,18 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -999,7 +1052,6 @@ public class DruidCoordinatorRuleRunnerTest
         1,
         0
     );
-    afterParams.getBalancerStrategyFactory().close();
 
     afterParams = ruleRunner.run(
         new DruidCoordinatorRuntimeParams.Builder()
@@ -1007,7 +1059,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withEmitter(emitter)
             .withAvailableSegments(Arrays.asList(overFlowSegment))
             .withDatabaseRuleManager(databaseRuleManager)
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build()
@@ -1019,7 +1071,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
-    afterParams.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
 
   /**
@@ -1096,12 +1148,17 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
@@ -1116,7 +1173,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
 
   @Test
@@ -1193,13 +1250,18 @@ public class DruidCoordinatorRuleRunnerTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(longerAvailableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+        .withBalancerStrategy(balancerStrategy)
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -1208,7 +1270,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
 
   @Test
@@ -1274,13 +1336,18 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+            new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(5).build())
             .build();
@@ -1298,7 +1365,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertEquals(availableSegments, afterParams.getAvailableSegments());
 
     EasyMock.verify(mockPeon);
-    params.getBalancerStrategyFactory().close();
+    exec.shutdown();
   }
 
   private void mockCoordinator()

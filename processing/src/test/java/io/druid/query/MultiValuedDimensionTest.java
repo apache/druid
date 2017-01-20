@@ -43,6 +43,8 @@ import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.topn.TopNQuery;
@@ -64,15 +66,20 @@ import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class MultiValuedDimensionTest
 {
   private AggregationTestHelper helper;
@@ -82,11 +89,25 @@ public class MultiValuedDimensionTest
 
   private static File persistedSegmentDir;
 
-  public MultiValuedDimensionTest() throws Exception
+  public MultiValuedDimensionTest(
+      final GroupByQueryConfig config
+  ) throws Exception
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        ImmutableList.<Module>of(), null
+        ImmutableList.<Module>of(),
+        config,
+        null
     );
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      constructors.add(new Object[]{config});
+    }
+    return constructors;
   }
 
   @BeforeClass
@@ -118,6 +139,7 @@ public class MultiValuedDimensionTest
         "2011-01-12T00:00:00.000Z,product_1,t1\tt2\tt3",
         "2011-01-13T00:00:00.000Z,product_2,t3\tt4\tt5",
         "2011-01-14T00:00:00.000Z,product_3,t5\tt6\tt7",
+        "2011-01-14T00:00:00.000Z,product_4"
     };
 
     for (String row : rows) {
@@ -159,6 +181,7 @@ public class MultiValuedDimensionTest
     );
 
     List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t2", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L),
@@ -169,14 +192,6 @@ public class MultiValuedDimensionTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
-
-    result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.<Segment>of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
-        ),
-        query
-    );
   }
 
   @Test

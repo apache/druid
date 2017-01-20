@@ -20,14 +20,15 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,23 +48,36 @@ public class AndFilter implements BooleanFilter
     this.filters = filters;
   }
 
-  @Override
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  public static ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector, List<Filter> filters)
   {
     if (filters.size() == 1) {
       return filters.get(0).getBitmapIndex(selector);
     }
 
-    List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-    for (int i = 0; i < filters.size(); i++) {
-      bitmaps.add(filters.get(i).getBitmapIndex(selector));
+    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(filters.size());
+    for (final Filter filter : filters) {
+      Preconditions.checkArgument(filter.supportsBitmapIndex(selector),
+                                  "Filter[%s] does not support bitmap index", filter
+      );
+      final ImmutableBitmap bitmapIndex = filter.getBitmapIndex(selector);
+      if (bitmapIndex.isEmpty()) {
+        // Short-circuit.
+        return Filters.allFalse(selector);
+      }
+      bitmaps.add(bitmapIndex);
     }
 
     return selector.getBitmapFactory().intersection(bitmaps);
   }
 
   @Override
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
+  {
+    return getBitmapIndex(selector, filters);
+  }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     if (filters.size() == 0) {
       return new BooleanValueMatcher(false);
@@ -80,7 +94,7 @@ public class AndFilter implements BooleanFilter
   @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
-      ValueMatcherFactory valueMatcherFactory,
+      ColumnSelectorFactory columnSelectorFactory,
       RowOffsetMatcherFactory rowOffsetMatcherFactory
   )
   {
@@ -91,7 +105,7 @@ public class AndFilter implements BooleanFilter
       if (filter.supportsBitmapIndex(selector)) {
         bitmaps.add(filter.getBitmapIndex(selector));
       } else {
-        ValueMatcher matcher = filter.makeMatcher(valueMatcherFactory);
+        ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);
       }
     }

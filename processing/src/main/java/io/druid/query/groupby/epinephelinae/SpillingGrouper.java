@@ -40,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -48,7 +49,7 @@ import java.util.List;
  *
  * When the underlying grouper is full, its contents are sorted and written to temporary files using "spillMapper".
  */
-public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Grouper<KeyType>
+public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(SpillingGrouper.class);
 
@@ -57,6 +58,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
   private final AggregatorFactory[] aggregatorFactories;
+  private final Comparator<KeyType> keyObjComparator;
 
   private final List<File> files = Lists.newArrayList();
   private final List<Closeable> closeables = Lists.newArrayList();
@@ -77,6 +79,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   )
   {
     this.keySerde = keySerdeFactory.factorize();
+    this.keyObjComparator = keySerdeFactory.objectComparator();
     this.grouper = new BufferGrouper<>(
         buffer,
         keySerde,
@@ -172,7 +175,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
       closeables.add(fileIterator);
     }
 
-    return Groupers.mergeIterators(iterators, sorted);
+    return Groupers.mergeIterators(iterators, sorted ? keyObjComparator : null);
   }
 
   private void spill() throws IOException

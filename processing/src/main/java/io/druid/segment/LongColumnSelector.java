@@ -21,7 +21,7 @@ package io.druid.segment;
 
 /**
  */
-public interface LongColumnSelector
+public interface LongColumnSelector extends ColumnValueSelector
 {
   public long get();
 }

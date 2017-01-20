@@ -49,6 +49,7 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
@@ -222,6 +223,7 @@ public class IncrementalIndexStorageAdapterTest
             }
         ),
         new StupidPool(
+            "GroupByQueryEngine-bufferPool",
             new Supplier<ByteBuffer>()
             {
               @Override
@@ -263,6 +265,7 @@ public class IncrementalIndexStorageAdapterTest
       Sequence<Cursor> cursorSequence = adapter.makeCursors(
           new SelectorFilter("sally", "bo"),
           interval,
+          null,
           QueryGranularities.NONE,
           descending
       );
@@ -304,6 +307,7 @@ public class IncrementalIndexStorageAdapterTest
 
     TopNQueryEngine engine = new TopNQueryEngine(
         new StupidPool<ByteBuffer>(
+            "TopNQueryEngine-bufferPool",
             new Supplier<ByteBuffer>()
             {
               @Override
@@ -402,7 +406,7 @@ public class IncrementalIndexStorageAdapterTest
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
     Sequence<Cursor> cursors = sa.makeCursors(
-        null, new Interval(timestamp - 60_000, timestamp + 60_000), QueryGranularities.ALL, false
+        null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, QueryGranularities.ALL, false
     );
 
     Sequences.toList(

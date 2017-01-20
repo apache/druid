@@ -39,6 +39,10 @@
             <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
+    <properties>
+        <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
+        <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
+    </properties>
 
     <build>
         <plugins>
@@ -100,6 +104,9 @@
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions.contrib:scan-query</argument>
+                                <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
                     </execution>

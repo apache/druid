@@ -19,7 +19,6 @@
 
 package io.druid.server.lookup.namespace;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.data.SearchableVersionedDataFinder;
@@ -31,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
+import io.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 /**
  *
  */
-public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<URIExtractionNamespace>
+public final class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<URIExtractionNamespace>
 {
   private static final int DEFAULT_NUM_RETRIES = 3;
   private static final Logger log = new Logger(URIExtractionNamespaceCacheFactory.class);
@@ -59,11 +59,12 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
   }
 
   @Override
-  public String populateCache(
-      final String id,
+  @Nullable
+  public CacheScheduler.VersionedCache populateCache(
       final URIExtractionNamespace extractionNamespace,
+      final CacheScheduler.EntryImpl<URIExtractionNamespace> entryId,
       @Nullable final String lastVersion,
-      final Map<String, String> cache
+      final CacheScheduler scheduler
   ) throws Exception
   {
     final boolean doSearch = extractionNamespace.getUriPrefix() != null;
@@ -99,14 +100,12 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
       );
 
       if (uri == null) {
-        throw new RuntimeException(
-            new FileNotFoundException(
-                String.format(
-                    "Could not find match for pattern `%s` in [%s] for %s",
-                    versionRegex,
-                    originalUri,
-                    extractionNamespace
-                )
+        throw new FileNotFoundException(
+            String.format(
+                "Could not find match for pattern `%s` in [%s] for %s",
+                versionRegex,
+                originalUri,
+                extractionNamespace
             )
         );
       }
@@ -116,71 +115,79 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
 
     final String uriPath = uri.getPath();
 
-    try {
-      return RetryUtils.retry(
-          new Callable<String>()
+    return RetryUtils.retry(
+        new Callable<CacheScheduler.VersionedCache>()
+        {
+          @Override
+          public CacheScheduler.VersionedCache call() throws Exception
           {
-            @Override
-            public String call() throws Exception
-            {
-              final String version = puller.getVersion(uri);
-              try {
-                // Important to call equals() against version because lastVersion could be null
-                if (version.equals(lastVersion)) {
-                  log.debug(
-                      "URI [%s] for namespace [%s] has the same last modified time [%s] as the last cached. " +
-                      "Skipping ",
-                      uri.toString(),
-                      id,
-                      version
-                  );
-                  return lastVersion;
+            final String version = puller.getVersion(uri);
+            try {
+              // Important to call equals() against version because lastVersion could be null
+              if (version.equals(lastVersion)) {
+                log.debug(
+                    "URI [%s] for [%s] has the same last modified time [%s] as the last cached. " +
+                    "Skipping ",
+                    uri.toString(),
+                    entryId,
+                    version
+                );
+                return null;
+              }
+            }
+            catch (NumberFormatException ex) {
+              log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
+            }
+            final ByteSource source;
+            if (CompressionUtils.isGz(uriPath)) {
+              // Simple gzip stream
+              log.debug("Loading gz");
+              source = new ByteSource()
+              {
+                @Override
+                public InputStream openStream() throws IOException
+                {
+                  return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
                 }
-              }
-              catch (NumberFormatException ex) {
-                log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
-              }
-              final ByteSource source;
-              if (CompressionUtils.isGz(uriPath)) {
-                // Simple gzip stream
-                log.debug("Loading gz");
-                source = new ByteSource()
+              };
+            } else {
+              source = new ByteSource()
+              {
+                @Override
+                public InputStream openStream() throws IOException
                 {
-                  @Override
-                  public InputStream openStream() throws IOException
-                  {
-                    return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
-                  }
-                };
-              } else {
-                source = new ByteSource()
-                {
-                  @Override
-                  public InputStream openStream() throws IOException
-                  {
-                    return puller.getInputStream(uri);
-                  }
-                };
-              }
+                  return puller.getInputStream(uri);
+                }
+              };
+            }
+
+            CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
+            try {
               final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
                   extractionNamespace.getNamespaceParseSpec()
                                      .getParser()
-              ).populate(source, cache);
+              ).populate(source, versionedCache.getCache());
               log.info(
-                  "Finished loading %,d values from %,d lines for namespace [%s]",
+                  "Finished loading %,d values from %,d lines for [%s]",
                   populateResult.getEntries(),
                   populateResult.getLines(),
-                  id
+                  entryId
               );
-              return version;
+              return versionedCache;
             }
-          },
-          puller.shouldRetryPredicate(),
-          DEFAULT_NUM_RETRIES
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+            catch (Throwable t) {
+              try {
+                versionedCache.close();
+              }
+              catch (Exception e) {
+                t.addSuppressed(e);
+              }
+              throw t;
+            }
+          }
+        },
+        puller.shouldRetryPredicate(),
+        DEFAULT_NUM_RETRIES
+    );
   }
 }

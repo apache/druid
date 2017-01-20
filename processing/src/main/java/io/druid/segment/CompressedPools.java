@@ -37,6 +37,7 @@ public class CompressedPools
 
   public static final int BUFFER_SIZE = 0x10000;
   private static final StupidPool<BufferRecycler> bufferRecyclerPool = new StupidPool<BufferRecycler>(
+      "bufferRecyclerPool",
       new Supplier<BufferRecycler>()
       {
         private final AtomicLong counter = new AtomicLong(0);
@@ -56,6 +57,7 @@ public class CompressedPools
   }
 
   private static final StupidPool<byte[]> outputBytesPool = new StupidPool<byte[]>(
+      "outputBytesPool",
       new Supplier<byte[]>()
       {
         private final AtomicLong counter = new AtomicLong(0);
@@ -75,6 +77,7 @@ public class CompressedPools
   }
 
   private static final StupidPool<ByteBuffer> bigEndByteBufPool = new StupidPool<ByteBuffer>(
+      "bigEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
         private final AtomicLong counter = new AtomicLong(0);
@@ -89,6 +92,7 @@ public class CompressedPools
   );
 
   private static final StupidPool<ByteBuffer> littleEndByteBufPool = new StupidPool<ByteBuffer>(
+      "littleEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
         private final AtomicLong counter = new AtomicLong(0);

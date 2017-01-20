@@ -31,6 +31,71 @@ Returns dimension values transformed using the given [extraction function](#extr
 }
 ```
 
+### Filtered DimensionSpecs
+
+These are only useful for multi-value dimensions. If you have a row in druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
+
+It happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.html) for more details.
+Then groupBy/topN processing pipeline "explodes" all multi-value dimensions resulting 3 rows for "v1", "v2" and "v3" each.
+
+In addition to "query filter" which efficiently selects the rows to be processed, you can use the filtered dimension spec to filter for specific values within the values of a multi-value dimension. These dimensionSpecs take a delegate DimensionSpec and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
+
+The following filtered dimension spec acts as a whitelist or blacklist for values as per the "isWhitelist" attribute value.
+
+```json
+{ "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
+```
+
+Following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist usecase.
+
+```json
+{ "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
+```
+
+For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
+
+### Lookup DimensionSpecs
+
+<div class="note caution">
+Lookups are an <a href="../development/experimental.html">experimental</a> feature.
+</div>
+
+Lookup DimensionSpecs can be used to define directly a lookup implementation as dimension spec.
+Generally speaking there is two different kind of lookups implementations.
+The first kind is passed at the query time like `map` implementation.
+
+```json
+{
+  "type":"lookup",
+  "dimension":"dimensionName",
+  "outputName":"dimensionOutputName",
+  "replaceMissingValueWith":"missing_value",
+  "retainMissingValue":false,
+  "lookup":{"type": "map", "map":{"key":"value"}, "isOneToOne":false}
+}
+```
+
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property.
+Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup.
+The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
+
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
+
+A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
+
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
+
+The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
+
+```json
+{
+  "type":"lookup",
+  "dimension":"dimensionName",
+  "outputName":"dimensionOutputName",
+  "name":"lookupName"
+}
+```
+
 ## Extraction Functions
 
 Extraction functions define the transformation applied to each dimension value.
@@ -85,9 +150,13 @@ matches, otherwise returns null.
 
 ### Substring Extraction Function
 
-Returns a substring of the dimension value starting from the supplied index and of the desired length. If the desired
-length exceeds the length of the dimension value, the remainder of the string starting at index will be returned. 
-If index is greater than the length of the dimension value, null will be returned.
+Returns a substring of the dimension value starting from the supplied index and of the desired length. Both index
+and length are measured in the number of Unicode code units present in the string as if it were encoded in UTF-16.
+Note that some Unicode characters may be represented by two code units. This is the same behavior as the Java String
+class's "substring" method.
+
+If the desired length exceeds the length of the dimension value, the remainder of the string starting at index will
+be returned. If index is greater than the length of the dimension value, null will be returned.
 
 ```json
 { "type" : "substring", "index" : 1, "length" : 4 }
@@ -100,6 +169,17 @@ or null if index greater than the length of the dimension value.
 { "type" : "substring", "index" : 3 }
 ```
 
+### Strlen Extraction Function
+
+Returns the length of dimension values, as measured in the number of Unicode code units present in the string as if it
+were encoded in UTF-16. Note that some Unicode characters may be represented by two code units. This is the same
+behavior as the Java String class's "length" method.
+
+null strings are considered as having zero length.
+
+```json
+{ "type" : "strlen" }
+```
 
 ### Time Format Extraction Function
 
@@ -115,13 +195,15 @@ For a regular dimension, it assumes the string is formatted in
 * `locale` : locale (language and country) to use, given as a [IETF BCP 47 language tag](http://www.oracle.com/technetwork/java/javase/java8locales-2095355.html#util-text), e.g. `en-US`, `en-GB`, `fr-FR`, `fr-CA`, etc.
 * `timeZone` : time zone to use in [IANA tz database format](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones), e.g. `Europe/Berlin` (this can possibly be different than the aggregation time-zone)
 * `granularity` : [granularity](granularities.html) to apply before formatting, or omit to not apply any granularity.
+* `asMillis` : boolean value, set to true to treat input strings as millis rather than ISO8601 strings. Additionally, if `format` is null or not specified, output will be in millis rather than ISO8601.
 
 ```json
 { "type" : "timeFormat",
   "format" : <output_format> (optional),
   "timeZone" : <time_zone> (optional),
   "locale" : <locale> (optional),
-  "granularity" : <granularity> (optional) }
+  "granularity" : <granularity> (optional) },
+  "asMillis" : <true or false> (optional) }
 ```
 
 For example, the following dimension spec returns the day of the week for Montréal in French:
@@ -378,29 +460,6 @@ Returns the dimension value formatted according to the given format string.
 
 For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string. "nullHandling" can be one of `nullString`, `emptyString` or `returnNull`. With "[%s]" format, each configuration will result `[null]`, `[]`, `null`. Default is `nullString`.
 
-### Filtered DimensionSpecs
-
-These are only valid for multi-value dimensions. If you have a row in druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
-
-It happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.html) for more details.
-Then groupBy/topN processing pipeline "explodes" all multi-value dimensions resulting 3 rows for "v1", "v2" and "v3" each.
-
-In addition to "query filter" which efficiently selects the rows to be processed, you can use the filtered dimension spec to filter for specific values within the values of a multi-value dimension. These dimensionSpecs take a delegate DimensionSpec and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
-
-The following filtered dimension spec acts as a whitelist or blacklist for values as per the "isWhitelist" attribute value.
-
-```json
-{ "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
-```
-
-Following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist usecase.
-
-```json
-{ "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
-```
-
-For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
-
 ### Upper and Lower extraction functions.
 
 Returns the dimension values as all upper case or lower case.
@@ -438,44 +497,19 @@ The following extraction function creates buckets of 5 starting from 2. In this 
 }
 ```
 
-### Lookup DimensionSpecs
+### Bucket Extraction Function
 
-<div class="note caution">
-Lookups are an <a href="../development/experimental.html">experimental</a> feature.
-</div>
+Bucket extraction function is used to bucket numerical values in each range of the given size by converting them to the same base value. Non numeric values are converted to null.
 
-Lookup DimensionSpecs can be used to define directly a lookup implementation as dimension spec.
-Generally speaking there is two different kind of lookups implementations. 
-The first kind is passed at the query time like `map` implementation.
+* `size` : the size of the buckets (optional, default 1)
+* `offset` : the offset for the buckets (optional, default 0)
 
-```json
-{ 
-  "type":"lookup",
-  "dimension":"dimensionName",
-  "outputName":"dimensionOutputName",
-  "replaceMissingValueWith":"missing_value",
-  "retainMissingValue":false,
-  "lookup":{"type": "map", "map":{"key":"value"}, "isOneToOne":false}
-}
-```
-
-A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. 
-Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. 
-The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
- 
-It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
-
-A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
-
-A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
-
-The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
+The following extraction function creates buckets of 5 starting from 2. In this case, values in the range of [2, 7) will be converted to 2, values in [7, 12) will be converted to 7, etc.
 
 ```json
-{ 
-  "type":"lookup"
-  "dimension":"dimensionName"
-  "outputName":"dimensionOutputName"
-  "name":"lookupName"
+{
+  "type" : "bucket",
+  "size" : 5,
+  "offset" : 2
 }
 ```

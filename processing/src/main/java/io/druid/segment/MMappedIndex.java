@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.spatial.ImmutableRTree;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;

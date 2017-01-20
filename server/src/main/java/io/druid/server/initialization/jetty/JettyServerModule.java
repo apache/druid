@@ -59,6 +59,7 @@ import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -95,8 +96,9 @@ public class JettyServerModule extends JerseyServletModule
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
 
-    //Adding empty binding for ServletFilterHolders so that injector returns
-    //an empty set when no external modules provide ServletFilterHolder impls
+    // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none
+    // are provided by extensions.
+    Multibinder.newSetBinder(binder, Handler.class);
     Multibinder.newSetBinder(binder, ServletFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);

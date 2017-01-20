@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Sequence;
@@ -31,6 +32,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
@@ -44,6 +46,7 @@ import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -62,17 +65,20 @@ import java.util.Map;
 public class SearchQueryRunnerTest
 {
   private static final Logger LOG = new Logger(SearchQueryRunnerTest.class);
+  private static final SearchQueryConfig config = new SearchQueryConfig();
   private static final SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest(
-      new SearchQueryConfig(),
+      config,
       QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
   );
+  private static final SearchStrategySelector selector = new SearchStrategySelector(Suppliers.ofInstance(config));
 
-  @Parameterized.Parameters(name="{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
             new SearchQueryRunnerFactory(
+                selector,
                 toolChest,
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -89,7 +95,7 @@ public class SearchQueryRunnerTest
   {
     this.runner = runner;
     this.decoratedRunner = toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
   }
 
   @Test
@@ -387,7 +393,8 @@ public class SearchQueryRunnerTest
                   new AndDimFilter(
                       Arrays.<DimFilter>asList(
                           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
-                          new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null))))
+                          new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
+                      )))
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .dimensions(QueryRunnerTestHelper.qualityDimension)
               .query("a")
@@ -598,6 +605,33 @@ public class SearchQueryRunnerTest
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 186));
+
+    checkSearchQuery(searchQuery, expectedHits);
+  }
+
+  @Test
+  public void testSearchOnTime()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .query("Friday")
+                                    .dimensions(new ExtractionDimensionSpec(
+                                        Column.TIME_COLUMN_NAME,
+                                        "__time2",
+                                        new TimeFormatExtractionFn(
+                                            "EEEE",
+                                            null,
+                                            null,
+                                            null,
+                                            false
+                                        )
+                                    ))
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit("__time2", "Friday", 169));
 
     checkSearchQuery(searchQuery, expectedHits);
   }

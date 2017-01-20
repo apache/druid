@@ -65,7 +65,7 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertNotNull(config.getBasePersistDirectory());
-    Assert.assertEquals(false, config.getBuildV9Directly());
+    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
@@ -88,7 +88,7 @@ public class RealtimeTuningConfigTest
                      + "  \"windowPeriod\": \"PT1H\",\n"
                      + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
-                     + "  \"buildV9Directly\": true,\n"
+                     + "  \"buildV9Directly\": false,\n"
                      + "  \"persistThreadPriority\": 100,\n"
                      + "  \"mergeThreadPriority\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
@@ -107,7 +107,7 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertEquals("/tmp/xxx", config.getBasePersistDirectory().toString());
-    Assert.assertEquals(true, config.getBuildV9Directly());
+    Assert.assertEquals(false, config.getBuildV9Directly());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());

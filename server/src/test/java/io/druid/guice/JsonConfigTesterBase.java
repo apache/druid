@@ -35,6 +35,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -125,10 +126,15 @@ public abstract class JsonConfigTesterBase<T>
       final String propertyKey = getPropertyKey(field);
       if (null != propertyKey) {
         field.setAccessible(true);
-        if (field.getType().isAssignableFrom(String.class)) {
+        Class<?> fieldType = field.getType();
+        if (String.class.isAssignableFrom(fieldType)) {
           propertyValues.put(propertyKey, UUID.randomUUID().toString());
+        } else if (Collection.class.isAssignableFrom(fieldType)) {
+          propertyValues.put(propertyKey, "[]");
+        } else if (Map.class.isAssignableFrom(fieldType)) {
+          propertyValues.put(propertyKey, "{}");
         } else {
-          propertyValues.put(propertyKey, field.get(fakeValues).toString());
+          propertyValues.put(propertyKey, String.valueOf(field.get(fakeValues)));
         }
       }
     }

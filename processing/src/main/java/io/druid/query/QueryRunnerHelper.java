@@ -29,6 +29,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -45,6 +46,7 @@ public class QueryRunnerHelper
       final StorageAdapter adapter,
       List<Interval> queryIntervals,
       Filter filter,
+      VirtualColumns virtualColumns,
       boolean descending,
       QueryGranularity granularity,
       final Function<Cursor, Result<T>> mapFn
@@ -56,7 +58,7 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), granularity, descending),
+            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending),
             new Function<Cursor, Result<T>>()
             {
               @Override

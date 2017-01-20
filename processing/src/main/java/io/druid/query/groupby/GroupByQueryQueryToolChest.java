@@ -38,6 +38,7 @@ import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
@@ -153,6 +154,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
           subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
         }
+        subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
       }
       catch (ClassCastException e) {
@@ -171,7 +173,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           runner,
           context
       );
-      return strategySelector.strategize(query).processSubqueryResult(subquery, query, subqueryResult);
+
+      final Sequence<Row> finalizingResults;
+      if (GroupByQuery.getContextFinalize(subquery, false)) {
+        finalizingResults = new MappedSequence<>(
+            subqueryResult,
+            makePreComputeManipulatorFn(
+                subquery,
+                MetricManipulatorFns.finalizing()
+            )
+        );
+      } else {
+        finalizingResults = subqueryResult;
+      }
+
+      return strategySelector.strategize(query).processSubqueryResult(subquery, query, finalizingResults);
     } else {
       return strategySelector.strategize(query).mergeResults(runner, query, context);
     }

@@ -102,6 +102,12 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
+  public List<Interval> inputIntervals()
+  {
+    return inputIntervals == null ? ImmutableList.<Interval>of() : ImmutableList.copyOf(inputIntervals);
+  }
+
+  @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
     return wrappedSpec.bucketInterval(dt);
@@ -182,5 +188,10 @@ public class UniformGranularitySpec implements GranularitySpec
     result = 31 * result + (inputIntervals != null ? inputIntervals.hashCode() : 0);
     result = 31 * result + (wrappedSpec != null ? wrappedSpec.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+    return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals, timezone);
   }
 }

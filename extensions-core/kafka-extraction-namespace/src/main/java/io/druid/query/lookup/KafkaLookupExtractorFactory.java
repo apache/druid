@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -31,13 +31,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.druid.concurrent.Execs;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.server.lookup.namespace.cache.CacheHandler;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -82,6 +82,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final String factoryId;
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
+  private CacheHandler cacheHandler;
 
   private volatile ConsumerConnector consumerConnector;
   private volatile ListenableFuture<?> future = null;
@@ -182,7 +183,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       kafkaProperties.setProperty("group.id", factoryId);
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
-      final Map<String, String> map = cacheManager.getCacheMap(factoryId);
+      cacheHandler = cacheManager.createCache();
+      final Map<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
       // Enable publish-subscribe
       kafkaProperties.setProperty("auto.offset.reset", "smallest");
@@ -280,7 +282,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
           LOG.warn("Could not cancel kafka listening thread");
         }
         LOG.error(e, "Failed to start kafka extraction factory");
-        cacheManager.delete(factoryId);
+        cacheHandler.close();
         return false;
       }
 
@@ -319,10 +321,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
           return false;
         }
       }
-      if (!cacheManager.delete(factoryId)) {
-        LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, getKafkaTopic());
-        return false;
-      }
+      cacheHandler.close();
       return true;
     }
   }

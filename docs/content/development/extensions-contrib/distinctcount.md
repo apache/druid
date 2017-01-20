@@ -4,15 +4,14 @@ layout: doc_page
 
 # DistinctCount aggregator
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-distinctcount` extension.
+To use this extension, make sure to [include](../../operations/including-extensions.html) the `druid-distinctcount` extension.
 
 Additionally, follow these steps:
 
-(1) First use single dimension hash-based partitioning to partition data by a dimension for example visitor_id, this to make sure all rows with a particular value for that dimension will go into the same segment or this might over count.
-(2) Second use distinctCount to calculate exact distinct count, make sure queryGranularity is divide exactly by segmentGranularity or else the result will be wrong.
-There is some limitations, when use with groupBy, the groupBy keys' numbers should not exceed maxIntermediateRows in every segment, if exceed the result will wrong. And when use with topN, numValuesPerPass should not too big, if too big the distinctCount will use many memory and cause the JVM out of service.
+(1) First, use a single dimension hash-based partition spec to partition data by a single dimension. For example visitor_id. This to make sure all rows with a particular value for that dimension will go into the same segment, or this might over count.
+(2) Second, use distinctCount to calculate the distinct count, make sure queryGranularity is divided exactly by segmentGranularity or else the result will be wrong.
 
-This has been used in production.
+There are some limitations, when used with groupBy, the groupBy keys' numbers should not exceed maxIntermediateRows in every segment. If exceeded the result will be wrong. When used with topN, numValuesPerPass should not be too big. If too big the distinctCount will use a lot of memory and might cause the JVM to go our of memory.
 
 Example:
 # Timeseries Query

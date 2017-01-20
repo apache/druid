@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 public class SingleScanTimeDimSelector implements DimensionSelector
 {
@@ -81,7 +82,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       }
       currentTimestamp = timestamp;
       final String value = extractionFn.apply(timestamp);
-      if (!value.equals(currentValue)) {
+      if (!Objects.equals(value, currentValue)) {
         currentValue = value;
         ++index;
         timeValues.put(index, currentValue);

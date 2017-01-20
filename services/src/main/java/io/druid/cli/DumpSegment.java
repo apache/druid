@@ -35,10 +35,10 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.RoaringBitmapFactory;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.collections.bitmap.ConciseBitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.RoaringBitmapFactory;
 
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -71,6 +71,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.QueryableIndexStorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
@@ -251,6 +252,7 @@ public class DumpSegment extends GuiceRunnable
     final Sequence<Cursor> cursors = adapter.makeCursors(
         Filters.toFilter(filter),
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
+        VirtualColumns.EMPTY,
         QueryGranularities.ALL,
         false
     );

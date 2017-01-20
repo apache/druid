@@ -20,6 +20,7 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -28,9 +29,12 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
+import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -57,11 +61,28 @@ import org.joda.time.Interval;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
 public class GroupByQuery extends BaseQuery<Row>
 {
+  public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+
+  private final static Comparator NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+
+  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = new Comparator<Row>()
+  {
+    @Override
+    public int compare(Row lhs, Row rhs)
+    {
+      return Longs.compare(
+          lhs.getTimestampFromEpoch(),
+          rhs.getTimestampFromEpoch()
+      );
+    }
+  };
+
   public static Builder builder()
   {
     return new Builder();
@@ -106,6 +127,11 @@ public class GroupByQuery extends BaseQuery<Row>
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
 
+    // Verify no duplicate names between dimensions, aggregators, and postAggregators.
+    // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
+    // We're not counting __time, even though that name is problematic. See: https://github.com/druid-io/druid/pull/3684
+    verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
+
     Function<Sequence<Row>, Sequence<Row>> postProcFn =
         this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
@@ -117,6 +143,7 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public Sequence<Row> apply(Sequence<Row> input)
             {
+              GroupByQuery.this.havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
               return Sequences.filter(
                   input,
                   new Predicate<Row>()
@@ -226,10 +253,15 @@ public class GroupByQuery extends BaseQuery<Row>
     return GROUP_BY;
   }
 
+  @JsonIgnore
+  public boolean getContextSortByDimsFirst()
+  {
+    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+  }
+
   @Override
   public Ordering getResultOrdering()
   {
-    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
     final Ordering<Row> rowOrdering = getRowOrdering(false);
 
     return Ordering.from(
@@ -242,7 +274,7 @@ public class GroupByQuery extends BaseQuery<Row>
               return rowOrdering.compare((Row) lhs, (Row) rhs);
             } else {
               // Probably bySegment queries
-              return naturalNullsFirst.compare(lhs, rhs);
+              return NATURAL_NULLS_FIRST.compare(lhs, rhs);
             }
           }
         }
@@ -251,48 +283,102 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public Ordering<Row> getRowOrdering(final boolean granular)
   {
-    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
+    final boolean sortByDimsFirst = getContextSortByDimsFirst();
 
-    return Ordering.from(
-        new Comparator<Row>()
-        {
-          @Override
-          public int compare(Row lhs, Row rhs)
+    final Comparator<Row> timeComparator = getTimeComparator(granular);
+
+    if (timeComparator == null) {
+      return Ordering.from(
+          new Comparator<Row>()
           {
-            final int timeCompare;
-
-            if (granular) {
-              timeCompare = Longs.compare(
-                  granularity.truncate(lhs.getTimestampFromEpoch()),
-                  granularity.truncate(rhs.getTimestampFromEpoch())
-              );
-            } else {
-              timeCompare = Longs.compare(
-                  lhs.getTimestampFromEpoch(),
-                  rhs.getTimestampFromEpoch()
-              );
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              return compareDims(dimensions, lhs, rhs);
             }
-
-            if (timeCompare != 0) {
-              return timeCompare;
-            }
-
-            for (DimensionSpec dimension : dimensions) {
-              final int dimCompare = naturalNullsFirst.compare(
-                  lhs.getRaw(dimension.getOutputName()),
-                  rhs.getRaw(dimension.getOutputName())
-              );
-              if (dimCompare != 0) {
-                return dimCompare;
-              }
-            }
-
-            return 0;
           }
-        }
-    );
+      );
+    } else if (sortByDimsFirst) {
+      return Ordering.from(
+          new Comparator<Row>()
+          {
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              final int cmp = compareDims(dimensions, lhs, rhs);
+              if (cmp != 0) {
+                return cmp;
+              }
+
+              return timeComparator.compare(lhs, rhs);
+            }
+          }
+      );
+    } else {
+      return Ordering.from(
+          new Comparator<Row>()
+          {
+            @Override
+            public int compare(Row lhs, Row rhs)
+            {
+              final int timeCompare = timeComparator.compare(lhs, rhs);
+
+              if (timeCompare != 0) {
+                return timeCompare;
+              }
+
+              return compareDims(dimensions, lhs, rhs);
+            }
+          }
+      );
+    }
   }
 
+  private Comparator<Row> getTimeComparator(boolean granular)
+  {
+    if (QueryGranularities.ALL.equals(granularity)) {
+      return null;
+    } else if (granular) {
+      return new Comparator<Row>()
+      {
+        @Override
+        public int compare(Row lhs, Row rhs)
+        {
+          return Longs.compare(
+              granularity.truncate(lhs.getTimestampFromEpoch()),
+              granularity.truncate(rhs.getTimestampFromEpoch())
+          );
+        }
+      };
+    } else {
+      return NON_GRANULAR_TIME_COMP;
+    }
+  }
+
+  private static int compareDims(List<DimensionSpec> dimensions, Row lhs, Row rhs)
+  {
+    for (DimensionSpec dimension : dimensions) {
+      final int dimCompare = NATURAL_NULLS_FIRST.compare(
+          lhs.getRaw(dimension.getOutputName()),
+          rhs.getRaw(dimension.getOutputName())
+      );
+      if (dimCompare != 0) {
+        return dimCompare;
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Apply the havingSpec and limitSpec. Because havingSpecs are not thread safe, and because they are applied during
+   * accumulation of the returned sequence, callers must take care to avoid accumulating two different Sequences
+   * returned by this method in two different threads.
+   *
+   * @param results sequence of rows to apply havingSpec and limitSpec to
+   *
+   * @return sequence of rows after applying havingSpec and limitSpec
+   */
   public Sequence<Row> applyLimit(Sequence<Row> results)
   {
     return limitFn.apply(results);
@@ -434,6 +520,32 @@ public class GroupByQuery extends BaseQuery<Row>
         limitFn,
         getContext()
     );
+  }
+
+  private static void verifyOutputNames(
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggregators,
+      List<PostAggregator> postAggregators
+  )
+  {
+    final Set<String> outputNames = Sets.newHashSet();
+    for (DimensionSpec dimension : dimensions) {
+      if (!outputNames.add(dimension.getOutputName())) {
+        throw new IAE("Duplicate output name[%s]", dimension.getOutputName());
+      }
+    }
+
+    for (AggregatorFactory aggregator : aggregators) {
+      if (!outputNames.add(aggregator.getName())) {
+        throw new IAE("Duplicate output name[%s]", aggregator.getName());
+      }
+    }
+
+    for (PostAggregator postAggregator : postAggregators) {
+      if (!outputNames.add(postAggregator.getName())) {
+        throw new IAE("Duplicate output name[%s]", postAggregator.getName());
+      }
+    }
   }
 
   public static class Builder

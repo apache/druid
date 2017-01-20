@@ -69,6 +69,7 @@ public class ApproximateHistogramTopNQueryTest
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
                     new StupidPool<ByteBuffer>(
+                        "TopNQueryRunnerFactory-bufferPool",
                         new Supplier<ByteBuffer>()
                         {
                           @Override

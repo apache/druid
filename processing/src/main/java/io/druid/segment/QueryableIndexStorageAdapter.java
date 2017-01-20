@@ -20,35 +20,27 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.math.expr.Expr;
-import io.druid.math.expr.Parser;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
@@ -58,12 +50,12 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.BooleanValueMatcher;
-import io.druid.segment.filter.Filters;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -205,7 +197,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran, boolean descending)
+  public Sequence<Cursor> makeCursors(
+      Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      QueryGranularity gran,
+      boolean descending
+  )
   {
     Interval actualInterval = interval;
 
@@ -275,13 +273,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (preFilters.size() == 0) {
         offset = new NoFilterOffset(0, index.getNumRows(), descending);
       } else {
-        List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-        for (Filter prefilter : preFilters) {
-          bitmaps.add(prefilter.getBitmapIndex(selector));
-        }
+        // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
         offset = new BitmapOffset(
             selector.getBitmapFactory(),
-            selector.getBitmapFactory().intersection(bitmaps),
+            AndFilter.getBitmapIndex(selector, preFilters),
             descending
         );
       }
@@ -298,8 +293,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     return Sequences.filter(
         new CursorSequenceBuilder(
-            index,
+            this,
             actualInterval,
+            virtualColumns,
             gran,
             offset,
             minDataTimestamp,
@@ -321,21 +317,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return columnObj.getCapabilities();
   }
 
-  private interface CursorAdvancer
-  {
-    public void advance();
-
-    public void advanceTo(int offset);
-
-    public boolean isDone();
-
-    public void reset();
-  }
-
   private static class CursorSequenceBuilder
   {
-    private final ColumnSelector index;
+    private final StorageAdapter storageAdapter;
+    private final QueryableIndex index;
     private final Interval interval;
+    private final VirtualColumns virtualColumns;
     private final QueryGranularity gran;
     private final Offset offset;
     private final long minDataTimestamp;
@@ -345,8 +332,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final ColumnSelectorBitmapIndexSelector bitmapIndexSelector;
 
     public CursorSequenceBuilder(
-        ColumnSelector index,
+        QueryableIndexStorageAdapter storageAdapter,
         Interval interval,
+        VirtualColumns virtualColumns,
         QueryGranularity gran,
         Offset offset,
         long minDataTimestamp,
@@ -356,8 +344,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         ColumnSelectorBitmapIndexSelector bitmapIndexSelector
     )
     {
-      this.index = index;
+      this.storageAdapter = storageAdapter;
+      this.index = storageAdapter.index;
       this.interval = interval;
+      this.virtualColumns = virtualColumns;
       this.gran = gran;
       this.offset = offset;
       this.minDataTimestamp = minDataTimestamp;
@@ -678,6 +668,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedColumnVals == null) {
+                        VirtualColumn vc = virtualColumns.getVirtualColumn(column);
+                        if (vc != null) {
+                          return vc.init(column, this);
+                        }
                         return null;
                       }
 
@@ -804,64 +798,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       };
                     }
 
-                    @Override
-                    public NumericColumnSelector makeMathExpressionSelector(String expression)
-                    {
-                      final Expr parsed = Parser.parse(expression);
-                      final List<String> required = Parser.findRequiredBindings(parsed);
-
-                      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
-                      for (String columnName : index.getColumnNames()) {
-                        if (!required.contains(columnName)) {
-                          continue;
-                        }
-                        final GenericColumn column = index.getColumn(columnName).getGenericColumn();
-                        if (column == null) {
-                          continue;
-                        }
-                        closer.register(column);
-                        if (column.getType() == ValueType.FLOAT) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getFloatSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else if (column.getType() == ValueType.LONG) {
-                          values.put(
-                              columnName, new Supplier<Number>()
-                              {
-                                @Override
-                                public Number get()
-                                {
-                                  return column.getLongSingleValueRow(cursorOffset.getOffset());
-                                }
-                              }
-                          );
-                        } else {
-                          throw new UnsupportedOperationException(
-                              "Not supported type " + column.getType() + " for column " + columnName
-                          );
-                        }
-                      }
-                      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
-                      return new NumericColumnSelector() {
-                        @Override
-                        public Number get()
-                        {
-                          return parsed.eval(binding).numericValue();
-                        }
-                      };
-                    }
-
+                    @Nullable
                     @Override
                     public ColumnCapabilities getColumnCapabilities(String columnName)
                     {
-                      return getColumnCapabilites(index, columnName);
+                      ColumnCapabilities capabilities = getColumnCapabilites(index, columnName);
+                      if (capabilities == null && !virtualColumns.isEmpty()) {
+                        VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
+                        if (virtualColumn != null) {
+                          Class clazz = virtualColumn.init(columnName, this).classOfObject();
+                          capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
+                        }
+                      }
+                      return capabilities;
                     }
                   }
 
@@ -913,21 +862,18 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   } else {
                     return new QueryableIndexBaseCursor()
                     {
-                      CursorOffsetHolderValueMatcherFactory valueMatcherFactory = new CursorOffsetHolderValueMatcherFactory(
-                          index,
-                          this
-                      );
                       RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
                           cursorOffsetHolder,
                           descending
                       );
 
                       final ValueMatcher filterMatcher;
+
                       {
                         if (postFilter instanceof BooleanFilter) {
                           filterMatcher = ((BooleanFilter) postFilter).makeMatcher(
                               bitmapIndexSelector,
-                              valueMatcherFactory,
+                              this,
                               rowOffsetMatcherFactory
                           );
                         } else {
@@ -935,7 +881,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(postFilter.getBitmapIndex(
                                 bitmapIndexSelector));
                           } else {
-                            filterMatcher = postFilter.makeMatcher(valueMatcherFactory);
+                            filterMatcher = postFilter.makeMatcher(this);
                           }
                         }
                       }
@@ -1025,125 +971,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static boolean isComparableNullOrEmpty(final Comparable value)
-  {
-    if (value instanceof String) {
-      return Strings.isNullOrEmpty((String) value);
-    }
-    return value == null;
-  }
-
-  private static class CursorOffsetHolderValueMatcherFactory implements ValueMatcherFactory
-  {
-    private final ColumnSelector index;
-    private final ColumnSelectorFactory cursor;
-
-    public CursorOffsetHolderValueMatcherFactory(
-        ColumnSelector index,
-        ColumnSelectorFactory cursor
-    )
-    {
-      this.index = index;
-      this.cursor = cursor;
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
-    {
-      if (getTypeForDimension(dimension) == ValueType.LONG) {
-        return Filters.getLongValueMatcher(
-            cursor.makeLongColumnSelector(dimension),
-            value
-        );
-      }
-
-      final DimensionSelector selector = cursor.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      // if matching against null, rows with size 0 should also match
-      final boolean matchNull = isComparableNullOrEmpty(value);
-
-      final int id = selector.lookupId((String) value);
-      if (id < 0) {
-        return new BooleanValueMatcher(false);
-      } else {
-        return new ValueMatcher()
-        {
-          @Override
-          public boolean matches()
-          {
-            IndexedInts row = selector.getRow();
-            if (row.size() == 0) {
-              return matchNull;
-            }
-            for (int i = 0; i < row.size(); i++) {
-              if (row.get(i) == id) {
-                return true;
-              }
-            }
-            return false;
-          }
-        };
-      }
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
-    {
-      ValueType type = getTypeForDimension(dimension);
-      switch (type) {
-        case LONG:
-          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
-        case STRING:
-          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
-        default:
-          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
-      }
-    }
-
-    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<String> predicate)
-    {
-      final DimensionSelector selector = cursor.makeDimensionSelector(
-          new DefaultDimensionSpec(dimension, dimension)
-      );
-
-      return new ValueMatcher()
-      {
-        final boolean matchNull = predicate.apply(null);
-
-        @Override
-        public boolean matches()
-        {
-          IndexedInts row = selector.getRow();
-          if (row.size() == 0) {
-            return matchNull;
-          }
-          for (int i = 0; i < row.size(); i++) {
-            if (predicate.apply(selector.lookupName(row.get(i)))) {
-              return true;
-            }
-          }
-          return false;
-        }
-      };
-    }
-
-    private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)
-    {
-      return Filters.getLongPredicateMatcher(
-          cursor.makeLongColumnSelector(dimension),
-          predicate
-      );
-    }
-
-    private ValueType getTypeForDimension(String dimension)
-    {
-      ColumnCapabilities capabilities = getColumnCapabilites(index, dimension);
-      return capabilities == null ? ValueType.STRING : capabilities.getType();
-    }
-  }
-
   private static class CursorOffsetHolderRowOffsetMatcherFactory implements RowOffsetMatcherFactory
   {
     private final CursorOffsetHolder holder;
@@ -1158,12 +985,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     // Use an iterator-based implementation, ImmutableBitmap.get(index) works differently for Concise and Roaring.
     // ImmutableConciseSet.get(index) is also inefficient, it performs a linear scan on each call
     @Override
-    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap) {
+    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap)
+    {
       final IntIterator iter = descending ?
                                BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
                                rowBitmap.iterator();
 
-      if(!iter.hasNext()) {
+      if (!iter.hasNext()) {
         return new BooleanValueMatcher(false);
       }
 
@@ -1252,7 +1080,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public Offset clone() {
+    public Offset clone()
+    {
       throw new IllegalStateException("clone");
     }
   }
@@ -1326,7 +1155,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     private final int rowCount;
     private final boolean descending;
-    private volatile int currentOffset;
+    private int currentOffset;
 
     NoFilterOffset(int currentOffset, int rowCount, boolean descending)
     {
