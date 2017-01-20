@@ -102,6 +102,8 @@ public class DruidQueryBuilder
         valueType = ValueType.LONG;
       } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
         valueType = ValueType.STRING;
+      } else if (SqlTypeName.OTHER == sqlTypeName) {
+        valueType = ValueType.COMPLEX;
       } else {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
       }
@@ -115,10 +117,7 @@ public class DruidQueryBuilder
   public static DruidQueryBuilder fullScan(final RowSignature rowSignature, final RelDataTypeFactory relDataTypeFactory)
   {
     final RelDataType rowType = rowSignature.getRelDataType(relDataTypeFactory);
-    final List<String> rowOrder = Lists.newArrayListWithCapacity(rowType.getFieldCount());
-    for (RelDataTypeField field : rowType.getFieldList()) {
-      rowOrder.add(field.getName());
-    }
+    final List<String> rowOrder = rowSignature.getRowOrder();
     return new DruidQueryBuilder(null, null, null, null, null, rowType, rowOrder);
   }
 
