@@ -1751,6 +1751,116 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testTopNFilterJoin() throws Exception
+  {
+    // Filters on top N values of some dimension by using an inner join.
+    testQuery(
+        "SELECT t1.dim1, SUM(t1.cnt)\n"
+        + "FROM druid.foo t1\n"
+        + "  INNER JOIN (\n"
+        + "  SELECT\n"
+        + "    SUM(cnt) AS sum_cnt,\n"
+        + "    dim2\n"
+        + "  FROM druid.foo\n"
+        + "  GROUP BY dim2\n"
+        + "  ORDER BY 1 DESC\n"
+        + "  LIMIT 2\n"
+        + ") t2 ON (t1.dim2 = t2.dim2)\n"
+        + "GROUP BY t1.dim1\n"
+        + "ORDER BY 1\n",
+        ImmutableList.<Query>of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(QueryGranularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                .metric(new NumericTopNMetricSpec("a0"))
+                .threshold(2)
+                .build(),
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimFilter(IN("dim2", ImmutableList.of("", "a"), null))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
+                        .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.ASCENDING,
+                                        StringComparators.LEXICOGRAPHIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"1", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testRemovableLeftJoin() throws Exception
+  {
+    // LEFT JOIN where the right-hand side can be ignored.
+
+    testQuery(
+        "SELECT t1.dim1, SUM(t1.cnt)\n"
+        + "FROM druid.foo t1\n"
+        + "  LEFT JOIN (\n"
+        + "  SELECT\n"
+        + "    SUM(cnt) AS sum_cnt,\n"
+        + "    dim2\n"
+        + "  FROM druid.foo\n"
+        + "  GROUP BY dim2\n"
+        + "  ORDER BY 1 DESC\n"
+        + "  LIMIT 2\n"
+        + ") t2 ON (t1.dim2 = t2.dim2)\n"
+        + "GROUP BY t1.dim1\n"
+        + "ORDER BY 1\n",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
+                        .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.ASCENDING,
+                                        StringComparators.LEXICOGRAPHIC
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"1", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testExactCountDistinctOfSemiJoinResult() throws Exception
   {
     testQuery(
@@ -1770,7 +1880,7 @@ public class CalciteQueryTest
                         .setDimFilter(NOT(SELECTOR("dim1", "", null)))
                         .setDimensions(DIMS(new ExtractionDimensionSpec(
                             "dim1",
-                            "v0",
+                            "d0",
                             new SubstringDimExtractionFn(0, 1)
                         )))
                         .build(),
@@ -2707,7 +2817,7 @@ public class CalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(QueryGranularities.ALL)
                         .setDimFilter(NOT(SELECTOR("dim1", "", null)))
-                        .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "v0")))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .build(),
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2830,7 +2940,7 @@ public class CalciteQueryTest
                         .setGranularity(QueryGranularities.ALL)
                         .setDimFilter(NOT(SELECTOR("dim1", "", null)))
                         .setDimensions(
-                            DIMS(new ExtractionDimensionSpec("dim1", "v0", new SubstringDimExtractionFn(0, 1)))
+                            DIMS(new ExtractionDimensionSpec("dim1", "d0", new SubstringDimExtractionFn(0, 1)))
                         )
                         .build(),
             GroupByQuery.builder()
