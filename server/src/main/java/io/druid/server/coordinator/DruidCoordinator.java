@@ -776,6 +776,7 @@ public class DruidCoordinator
                     if (!loadManagementPeons.containsKey(server.getName())) {
                       String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
                       LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
+                      loadQueuePeon.start();
                       log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
 
                       loadManagementPeons.put(server.getName(), loadQueuePeon);

@@ -89,7 +89,6 @@ public class LoadRuleTest
     throttler = new ReplicationThrottler(2, 1);
     for (String tier : Arrays.asList("hot", DruidServer.DEFAULT_TIER)) {
       throttler.updateReplicationState(tier);
-      throttler.updateTerminationState(tier);
     }
     segment = new DataSegment(
         "foo",
