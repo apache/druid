@@ -195,8 +195,8 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         Thread.sleep(5000);
       }
       catch (InterruptedException e) {
-        e.printStackTrace();
-        // do nothing
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
       }
     }
 
