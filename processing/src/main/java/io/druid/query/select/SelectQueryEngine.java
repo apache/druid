@@ -64,7 +64,7 @@ public class SelectQueryEngine
 {
   private static final SelectStrategyFactory STRATEGY_FACTORY = new SelectStrategyFactory();
 
-  private static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
+  public static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
@@ -202,23 +202,12 @@ public class SelectQueryEngine
 
             int lastOffset = offset.startOffset();
             for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
-              final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-              theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
-
-              for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
-                selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);
-              }
-
-              for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
-                final String metric = metSelector.getKey();
-                final ObjectColumnSelector selector = metSelector.getValue();
-
-                if (selector == null) {
-                  theEvent.put(metric, null);
-                } else {
-                  theEvent.put(metric, selector.get());
-                }
-              }
+              final Map<String, Object> theEvent = singleEvent(
+                  EventHolder.timestampKey,
+                  timestampColumnSelector,
+                  selectorPlusList,
+                  metSelectors
+              );
 
               builder.addEntry(
                   new EventHolder(
@@ -235,5 +224,32 @@ public class SelectQueryEngine
           }
         }
     );
+  }
+
+  public static Map<String, Object> singleEvent(
+      String timestampKey,
+      LongColumnSelector timestampColumnSelector,
+      List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList,
+      Map<String, ObjectColumnSelector> metSelectors
+  )
+  {
+    final Map<String, Object> theEvent = Maps.newLinkedHashMap();
+    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.get()));
+
+    for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+      selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);
+    }
+
+    for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
+      final String metric = metSelector.getKey();
+      final ObjectColumnSelector selector = metSelector.getValue();
+
+      if (selector == null) {
+        theEvent.put(metric, null);
+      } else {
+        theEvent.put(metric, selector.get());
+      }
+    }
+    return theEvent;
   }
 }

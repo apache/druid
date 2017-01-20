@@ -19,10 +19,12 @@
 
 package io.druid.sql.calcite.rel;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryDataSource;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.filter.AndDimFilter;
@@ -32,10 +34,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableConvention;
-import org.apache.calcite.interpreter.Row;
-import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -49,8 +48,8 @@ import java.util.Set;
 
 public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
-  private final DruidRel left;
-  private final DruidRel right;
+  private final DruidRel<?> left;
+  private final DruidRel<?> right;
   private final List<RowExtraction> leftRowExtractions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
@@ -103,12 +102,6 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
-  public Class<Object[]> getElementType()
-  {
-    return Object[].class;
-  }
-
-  @Override
   public RowSignature getSourceRowSignature()
   {
     return left.getSourceRowSignature();
@@ -146,7 +139,21 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   {
     return new DruidSemiJoin(
         getCluster(),
-        getTraitSet().plus(BindableConvention.INSTANCE),
+        getTraitSet().replace(BindableConvention.INSTANCE),
+        left,
+        right,
+        leftRowExtractions,
+        rightKeys,
+        maxSemiJoinRowsInMemory
+    );
+  }
+
+  @Override
+  public DruidSemiJoin asDruidConvention()
+  {
+    return new DruidSemiJoin(
+        getCluster(),
+        getTraitSet().replace(DruidConvention.instance()),
         left,
         right,
         leftRowExtractions,
@@ -162,18 +169,14 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
-  public void accumulate(final Function<Row, Void> sink)
+  public Sequence<Object[]> runQuery()
   {
-    final DruidRel rel = getLeftRelWithFilter();
+    final DruidRel<?> rel = getLeftRelWithFilter();
     if (rel != null) {
-      rel.accumulate(sink);
+      return rel.runQuery();
+    } else {
+      return Sequences.empty();
     }
-  }
-
-  @Override
-  public Enumerable<Object[]> bind(final DataContext dataContext)
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -202,21 +205,22 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
    * Returns a copy of the left rel with the filter applied from the right-hand side. This is an expensive operation
    * since it actually executes the right-hand side query.
    */
-  private DruidRel getLeftRelWithFilter()
+  private DruidRel<?> getLeftRelWithFilter()
   {
     // Build list of acceptable values from right side.
     final Set<List<String>> valuess = Sets.newHashSet();
     final List<DimFilter> filters = Lists.newArrayList();
-    right.accumulate(
-        new Function<Row, Void>()
+    right.runQuery().accumulate(
+        null,
+        new Accumulator<Object, Object[]>()
         {
           @Override
-          public Void apply(final Row row)
+          public Object accumulate(final Object dummyValue, final Object[] row)
           {
             final List<String> values = Lists.newArrayListWithCapacity(rightKeys.size());
 
             for (int i : rightKeys) {
-              final Object value = row.getObject(i);
+              final Object value = row[i];
               final String stringValue = value != null ? String.valueOf(value) : "";
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {

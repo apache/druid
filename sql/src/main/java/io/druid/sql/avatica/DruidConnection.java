@@ -17,37 +17,36 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.rule;
+package io.druid.sql.avatica;
 
-import io.druid.sql.calcite.rel.DruidRel;
-import org.apache.calcite.interpreter.BindableConvention;
-import org.apache.calcite.plan.Convention;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.convert.ConverterRule;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Future;
 
-public class DruidBindableConverterRule extends ConverterRule
+/**
+ * Connection tracking for {@link DruidMeta}. Not thread-safe.
+ */
+public class DruidConnection
 {
-  private static DruidBindableConverterRule INSTANCE = new DruidBindableConverterRule();
+  private final Map<Integer, DruidStatement> statements;
+  private Future<?> timeoutFuture;
 
-  private DruidBindableConverterRule()
+  public DruidConnection()
   {
-    super(
-        DruidRel.class,
-        Convention.NONE,
-        BindableConvention.INSTANCE,
-        DruidBindableConverterRule.class.getSimpleName()
-    );
+    this.statements = new HashMap<>();
   }
 
-  public static DruidBindableConverterRule instance()
+  public Map<Integer, DruidStatement> statements()
   {
-    return INSTANCE;
+    return statements;
   }
 
-  @Override
-  public RelNode convert(RelNode rel)
+  public DruidConnection sync(final Future<?> newTimeoutFuture)
   {
-    final DruidRel druidRel = (DruidRel) rel;
-    return druidRel.asBindable();
+    if (timeoutFuture != null) {
+      timeoutFuture.cancel(false);
+    }
+    timeoutFuture = newTimeoutFuture;
+    return this;
   }
 }

@@ -31,21 +31,22 @@ import io.druid.guice.LifecycleModule;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.sql.avatica.AvaticaMonitor;
+import io.druid.sql.avatica.AvaticaServerConfig;
 import io.druid.sql.avatica.DruidAvaticaHandler;
-import io.druid.sql.calcite.DruidSchema;
+import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.http.SqlResource;
-import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.schema.SchemaPlus;
 
-import java.sql.SQLException;
 import java.util.Properties;
 
 public class SqlModule implements Module
 {
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
-  private static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.server.enableJsonOverHttp";
-  private static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.server.enableAvatica";
+  private static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
+  private static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
 
   @Inject
   private Properties props;
@@ -58,8 +59,12 @@ public class SqlModule implements Module
   public void configure(Binder binder)
   {
     if (isEnabled()) {
+      Calcites.setSystemProperties();
+
       JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
+      JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
       LifecycleModule.register(binder, DruidSchema.class);
+      SqlBindings.addAggregator(binder, ApproxCountDistinctSqlAggregator.class);
 
       if (isJsonOverHttpEnabled()) {
         Jerseys.addResource(binder, SqlResource.class);
@@ -74,15 +79,12 @@ public class SqlModule implements Module
   }
 
   @Provides
-  public CalciteConnection createCalciteConnection(
-      final DruidSchema druidSchema,
-      final PlannerConfig plannerConfig
-  ) throws SQLException
+  public SchemaPlus createRootSchema(final DruidSchema druidSchema)
   {
     if (isEnabled()) {
-      return Calcites.jdbc(druidSchema, plannerConfig);
+      return Calcites.createRootSchema(druidSchema);
     } else {
-      throw new IllegalStateException("Cannot provide CalciteConnection when SQL is disabled.");
+      throw new IllegalStateException("Cannot provide SchemaPlus when SQL is disabled.");
     }
   }
 

@@ -17,10 +17,10 @@
  * under the License.
  */
 
-package io.druid.sql.calcite;
+package io.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.util.CalciteTests;
@@ -48,20 +48,6 @@ import java.util.Properties;
 public class DruidSchemaTest
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
-  private static final PlannerConfig PLANNER_CONFIG_NO_TOPN = new PlannerConfig()
-  {
-    @Override
-    public int getMaxTopNLimit()
-    {
-      return 0;
-    }
-
-    @Override
-    public boolean isUseApproximateTopN()
-    {
-      return false;
-    }
-  };
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -73,7 +59,8 @@ public class DruidSchemaTest
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createWalker(temporaryFolder.newFolder());
+    Calcites.setSystemProperties();
+    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
 
     Properties props = new Properties();
     props.setProperty("caseSensitive", "true");
@@ -103,17 +90,16 @@ public class DruidSchemaTest
   @Test
   public void testGetTableMap()
   {
-    Assert.assertEquals(ImmutableSet.of("foo"), schema.getTableNames());
+    Assert.assertEquals(ImmutableSet.of("foo", "foo2"), schema.getTableNames());
 
     final Map<String, Table> tableMap = schema.getTableMap();
-    Assert.assertEquals(1, tableMap.size());
-    Assert.assertEquals("foo", Iterables.getOnlyElement(tableMap.keySet()));
+    Assert.assertEquals(ImmutableSet.of("foo", "foo2"), tableMap.keySet());
 
-    final DruidTable druidTable = (DruidTable) Iterables.getOnlyElement(tableMap.values());
-    final RelDataType rowType = druidTable.getRowType(new JavaTypeFactoryImpl());
+    final DruidTable fooTable = (DruidTable) tableMap.get("foo");
+    final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(5, fields.size());
+    Assert.assertEquals(6, fields.size());
 
     Assert.assertEquals("__time", fields.get(0).getName());
     Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
@@ -129,5 +115,8 @@ public class DruidSchemaTest
 
     Assert.assertEquals("m1", fields.get(4).getName());
     Assert.assertEquals(SqlTypeName.FLOAT, fields.get(4).getType().getSqlTypeName());
+
+    Assert.assertEquals("unique_dim1", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
   }
 }
