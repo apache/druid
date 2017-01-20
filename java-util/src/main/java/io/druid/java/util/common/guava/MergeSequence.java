@@ -22,6 +22,7 @@ package io.druid.java.util.common.guava;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
+import com.google.common.io.Closer;
 
 import java.io.IOException;
 import java.util.PriorityQueue;
@@ -150,9 +151,11 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
       @Override
       public void close() throws IOException
       {
+        Closer closer = Closer.create();
         while (!pQueue.isEmpty()) {
-          pQueue.remove().close();
+          closer.register(pQueue.remove());
         }
+        closer.close();
       }
     };
   }

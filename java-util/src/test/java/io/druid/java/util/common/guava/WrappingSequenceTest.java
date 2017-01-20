@@ -24,13 +24,14 @@ import org.junit.Test;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class ResourceClosingSequenceTest
+public class WrappingSequenceTest
 {
   @Test
   public void testSanity() throws Exception
@@ -53,5 +54,45 @@ public class ResourceClosingSequenceTest
 
     closedCounter.set(0);
     SequenceTestHelper.testClosed(closedCounter, Sequences.withBaggage(new UnsupportedSequence(), closeable));
+  }
+
+  @Test
+  public void testConsistentCloseOrder()
+  {
+    final AtomicInteger closed1 = new AtomicInteger();
+    final AtomicInteger closed2 = new AtomicInteger();
+    final AtomicInteger counter = new AtomicInteger();
+
+    Sequence<Integer> sequence = Sequences.withBaggage(
+        Sequences.withBaggage(
+            Sequences.simple(Arrays.asList(1, 2, 3)),
+            new Closeable()
+            {
+              @Override
+              public void close() throws IOException
+              {
+                closed1.set(counter.incrementAndGet());
+              }
+            }
+        ),
+        new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            closed2.set(counter.incrementAndGet());
+          }
+        }
+    );
+    // Run sequence via accumulate
+    Sequences.toList(sequence, new ArrayList<Integer>());
+    Assert.assertEquals(1, closed1.get());
+    Assert.assertEquals(2, closed2.get());
+
+    // Ensure sequence runs via Yielder, because LimitedSequence extends YieldingSequenceBase
+    Sequence<Integer> yieldingSequence = Sequences.limit(sequence, 1);
+    Sequences.toList(yieldingSequence, new ArrayList<Integer>());
+    Assert.assertEquals(3, closed1.get());
+    Assert.assertEquals(4, closed2.get());
   }
 }

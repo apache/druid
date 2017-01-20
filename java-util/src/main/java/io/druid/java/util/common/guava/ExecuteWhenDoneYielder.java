@@ -56,9 +56,28 @@ public class ExecuteWhenDoneYielder<T> implements Yielder<T>
   @Override
   public void close() throws IOException
   {
-    if (isDone()) {
-      executor.execute(runnable);
+    boolean done = isDone();
+    Throwable thrown = null;
+    try {
+      baseYielder.close();
     }
-    baseYielder.close();
+    catch (Throwable t) {
+      thrown = t;
+      throw t;
+    }
+    finally {
+      if (done) {
+        if (thrown != null) {
+          try {
+            executor.execute(runnable);
+          }
+          catch (Throwable t) {
+            thrown.addSuppressed(t);
+          }
+        } else {
+          executor.execute(runnable);
+        }
+      }
+    }
   }
 }

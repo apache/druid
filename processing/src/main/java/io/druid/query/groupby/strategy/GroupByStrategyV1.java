@@ -33,7 +33,6 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.guava.ResourceClosingSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.GroupByMergedQueryRunner;
@@ -120,7 +119,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
         true
     );
 
-    return new ResourceClosingSequence<>(query.applyLimit(GroupByQueryHelper.postAggregate(query, index)), index);
+    return Sequences.withBaggage(query.applyLimit(GroupByQueryHelper.postAggregate(query, index)), index);
   }
 
   @Override
@@ -222,7 +221,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
     innerQueryResultIndex.close();
 
-    return new ResourceClosingSequence<>(
+    return Sequences.withBaggage(
         outerQuery.applyLimit(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
         outerQueryResultIndex
     );

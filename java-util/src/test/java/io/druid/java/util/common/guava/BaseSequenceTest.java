@@ -34,14 +34,14 @@ public class BaseSequenceTest
   public void testSanity() throws Exception
   {
     final List<Integer> vals = Arrays.asList(1, 2, 3, 4, 5);
-    SequenceTestHelper.testAll(BaseSequence.simple(vals), vals);
+    SequenceTestHelper.testAll(Sequences.simple(vals), vals);
   }
 
   @Test
   public void testNothing() throws Exception
   {
     final List<Integer> vals = Arrays.asList();
-    SequenceTestHelper.testAll(BaseSequence.simple(vals), vals);
+    SequenceTestHelper.testAll(Sequences.simple(vals), vals);
   }
 
   @Test
