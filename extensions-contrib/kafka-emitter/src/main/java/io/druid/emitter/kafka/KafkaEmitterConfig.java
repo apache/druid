@@ -30,7 +30,7 @@ public class KafkaEmitterConfig {
   final private String bootstrapServers;
   @JsonProperty
   final private String topic;
-  @JsonProperty("clustername")
+  @JsonProperty
   final private String clusterName;
 
   @Override
@@ -54,7 +54,7 @@ public class KafkaEmitterConfig {
   }
   @JsonCreator
   public KafkaEmitterConfig(@JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
-                            @JsonProperty("topic") String topic, @JsonProperty("clustername") String clusterName) {
+                            @JsonProperty("topic") String topic, @JsonProperty("clusterName") String clusterName) {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.topic = Preconditions.checkNotNull(topic, "topic can not be null");
     this.clusterName = (clusterName == null || clusterName.isEmpty()) ? "NONAME" : clusterName;
