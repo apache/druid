@@ -34,6 +34,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -368,18 +369,27 @@ public class DruidQueryBuilder
       final boolean useApproximateTopN
   )
   {
-    // Must have GROUP BY one column, ORDER BY one column, limit less than maxTopNLimit, and no HAVING.
-    if (grouping == null
-        || grouping.getDimensions().size() != 1
-        || limitSpec == null
-        || limitSpec.getColumns().size() != 1
-        || limitSpec.getLimit() > maxTopNLimit
-        || having != null) {
+    // Must have GROUP BY one column, ORDER BY zero or one column, limit less than maxTopNLimit, and no HAVING.
+    final boolean topNOk = grouping != null
+                           && grouping.getDimensions().size() == 1
+                           && limitSpec != null
+                           && (limitSpec.getColumns().size() <= 1 && limitSpec.getLimit() <= maxTopNLimit)
+                           && having == null;
+    if (!topNOk) {
       return null;
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions());
-    final OrderByColumnSpec limitColumn = Iterables.getOnlyElement(limitSpec.getColumns());
+    final OrderByColumnSpec limitColumn;
+    if (limitSpec.getColumns().isEmpty()) {
+      limitColumn = new OrderByColumnSpec(
+          dimensionSpec.getOutputName(),
+          OrderByColumnSpec.Direction.ASCENDING,
+          StringComparators.LEXICOGRAPHIC
+      );
+    } else {
+      limitColumn = Iterables.getOnlyElement(limitSpec.getColumns());
+    }
     final TopNMetricSpec topNMetricSpec;
 
     if (limitColumn.getDimension().equals(dimensionSpec.getOutputName())) {
