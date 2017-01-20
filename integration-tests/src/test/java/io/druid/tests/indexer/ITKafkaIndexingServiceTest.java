@@ -21,7 +21,6 @@ package io.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
@@ -61,7 +60,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   private static final String DATASOURCE = "kafka_indexing_service_test";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
   private static final int NUM_EVENTS_TO_SEND = 60;
-  private static final long WAIT_TIME_MILIIS =  2 * 60 * 1000L;
+  private static final long WAIT_TIME_MILIIS = 2 * 60 * 1000L;
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -189,16 +188,14 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     producer.close();
 
     LOG.info("Waiting for [%s] millis for Kafka indexing tasks to consume events", WAIT_TIME_MILIIS);
-    long queryStartTime = System.currentTimeMillis() + WAIT_TIME_MILIIS;
-    while(queryStartTime > System.currentTimeMillis()) {
-      try {
-        Thread.sleep(5000);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
+    try {
+      Thread.sleep(WAIT_TIME_MILIIS);
     }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+
 
     InputStream is = ITKafkaIndexingServiceTest.class.getResourceAsStream(QUERIES_FILE);
     if (null == is) {
