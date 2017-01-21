@@ -60,7 +60,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   private static final String DATASOURCE = "kafka_indexing_service_test";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
   private static final int NUM_EVENTS_TO_SEND = 60;
-  private static final long WAIT_TIME_MILIIS = 2 * 60 * 1000L;
+  private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -168,7 +168,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     int num_events = 0;
 
     // send data to kafka
-    while (num_events < NUM_EVENTS_TO_SEND) {  // as long as we're within the time span
+    while (num_events < NUM_EVENTS_TO_SEND) {
       num_events++;
       added += num_events;
       // construct the event to send
@@ -187,9 +187,9 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
 
     producer.close();
 
-    LOG.info("Waiting for [%s] millis for Kafka indexing tasks to consume events", WAIT_TIME_MILIIS);
+    LOG.info("Waiting for [%s] millis for Kafka indexing tasks to consume events", WAIT_TIME_MILLIS);
     try {
-      Thread.sleep(WAIT_TIME_MILIIS);
+      Thread.sleep(WAIT_TIME_MILLIS);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
