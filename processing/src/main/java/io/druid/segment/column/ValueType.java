@@ -34,6 +34,9 @@ public enum ValueType
   @JsonCreator
   public static ValueType fromString(String name)
   {
+    if (name == null) {
+      return ValueType.STRING;
+    }
     return valueOf(name.toUpperCase());
   }
 

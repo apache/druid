@@ -48,7 +48,6 @@ import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -6870,7 +6869,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("__time", "time_alias")))
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG)))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -6879,12 +6878,6 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("index_alias", ValueType.LONG)
-            )
-        )
         .build();
 
     // Only GroupBy V2 supports grouping on non-Strings.
@@ -6935,12 +6928,6 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("index_alias", ValueType.LONG)
-            )
-        )
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -6974,7 +6961,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("index", "index_alias")))
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -6983,12 +6970,6 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("index_alias", ValueType.FLOAT)
-            )
-        )
         .build();
 
     List<Row> expectedResults;
@@ -7060,12 +7041,6 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("index_alias", ValueType.FLOAT)
-            )
-        )
         .build();
 
     List<Row> expectedResults;

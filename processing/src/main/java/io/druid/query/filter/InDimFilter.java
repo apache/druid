@@ -38,12 +38,15 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.filter.InFilter;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -52,8 +55,7 @@ public class InDimFilter implements DimFilter
 {
   // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
-  public static final int LONG_HASHING_THRESHOLD = 16;
-  public static final int FLOAT_HASHING_THRESHOLD = 16;
+  public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
   private final ImmutableSortedSet<String> values;
   private final String dimension;
@@ -276,7 +278,7 @@ public class InDimFilter implements DimFilter
             return;
           }
 
-          List<Long> longs = new ArrayList<>();
+          LongArrayList longs = new LongArrayList(values.size());
           for (String value : values) {
             Long longValue = GuavaUtils.tryParseLong(value);
             if (longValue != null) {
@@ -284,8 +286,8 @@ public class InDimFilter implements DimFilter
             }
           }
 
-          if (longs.size() > LONG_HASHING_THRESHOLD) {
-            final HashSet<Long> longHashSet = new HashSet<>(longs);
+          if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
+            final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
 
             predicate = new DruidLongPredicate()
             {
@@ -296,11 +298,7 @@ public class InDimFilter implements DimFilter
               }
             };
           } else {
-            final long[] longArray;
-            longArray = new long[longs.size()];
-            for (int i = 0; i < longs.size(); i++) {
-              longArray[i] = longs.get(i).longValue();
-            }
+            final long[] longArray = longs.toLongArray();
             Arrays.sort(longArray);
 
             predicate = new DruidLongPredicate()
@@ -342,39 +340,35 @@ public class InDimFilter implements DimFilter
             return;
           }
 
-          List<Float> floats = new ArrayList<>();
+          IntArrayList floatInts = new IntArrayList(values.size());
           for (String value : values) {
             Float floatValue = Floats.tryParse(value);
             if (floatValue != null) {
-              floats.add(floatValue);
+              floatInts.add(Float.floatToIntBits(floatValue));
             }
           }
 
-          if (floats.size() > FLOAT_HASHING_THRESHOLD) {
-            final HashSet<Float> floatHashSet = new HashSet<>(floats);
+          if (floatInts.size() > NUMERIC_HASHING_THRESHOLD) {
+            final IntOpenHashSet floatIntsHashSet = new IntOpenHashSet(floatInts);
 
             predicate = new DruidFloatPredicate()
             {
               @Override
               public boolean applyFloat(float input)
               {
-                return floatHashSet.contains(input);
+                return floatIntsHashSet.contains(Float.floatToIntBits(input));
               }
             };
           } else {
-            final float[] floatArray;
-            floatArray = new float[floats.size()];
-            for (int i = 0; i < floats.size(); i++) {
-              floatArray[i] = floats.get(i).floatValue();
-            }
-            Arrays.sort(floatArray);
+            final int[] floatIntsArray = floatInts.toIntArray();
+            Arrays.sort(floatIntsArray);
 
             predicate = new DruidFloatPredicate()
             {
               @Override
               public boolean applyFloat(float input)
               {
-                return Arrays.binarySearch(floatArray, input) >= 0;
+                return Arrays.binarySearch(floatIntsArray, Float.floatToIntBits(input)) >= 0;
               }
             };
           }

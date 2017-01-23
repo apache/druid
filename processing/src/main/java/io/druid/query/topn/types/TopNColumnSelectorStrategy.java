@@ -26,12 +26,17 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.segment.Capabilities;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
+import io.druid.segment.column.ValueType;
 
 import java.util.Map;
 
 public interface TopNColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
 {
+  int CARDINALITY_UNKNOWN = -1;
+
   int getCardinality(ValueSelectorType selector);
+
+  ValueType getValueType();
 
   /**
    * Used by DimExtractionTopNAlgorithm.

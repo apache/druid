@@ -35,6 +35,6 @@ public class FloatCardinalityAggregatorColumnSelectorStrategy implements Cardina
   @Override
   public void hashValues(FloatColumnSelector dimSelector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(String.valueOf(dimSelector.get())).asBytes());
+    collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(dimSelector.get())).asBytes());
   }
 }

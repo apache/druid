@@ -26,6 +26,7 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
 import java.util.Map;
@@ -39,17 +40,18 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
   }
 
   @Override
+  public ValueType getValueType()
+  {
+    return ValueType.STRING;
+  }
+
+  @Override
   public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, Capabilities capabilities)
   {
     // This method is used for the DimExtractionTopNAlgorithm only.
     // Unlike regular topN we cannot rely on ordering to optimize.
     // Optimization possibly requires a reverse lookup from value to ID, which is
     // not possible when applying an extraction function
-
-    if (params.getCardinality() < 0) {
-      return null;
-    }
-
     final BaseTopNAlgorithm.AggregatorArrayProvider provider = new BaseTopNAlgorithm.AggregatorArrayProvider(
         (DimensionSelector) params.getSelectorPlus().getSelector(),
         query,
@@ -69,10 +71,10 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
       Map<Comparable, Aggregator[]> aggregatesStore
   )
   {
-    if (selector.getValueCardinality() < 0) {
-      dimExtractionScanAndAggregateNoCardinality(selector, rowSelector, aggregatesStore, cursor, query);
-    } else {
+    if (selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN) {
       dimExtractionScanAndAggregateWithCardinality(selector, rowSelector, aggregatesStore, cursor, query);
+    } else {
+      dimExtractionScanAndAggregateNoCardinality(selector, aggregatesStore, cursor, query);
     }
   }
 
@@ -106,7 +108,6 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
 
   private void dimExtractionScanAndAggregateNoCardinality(
       DimensionSelector selector,
-      Aggregator[][] rowSelector,
       Map<Comparable, Aggregator[]> aggregatesStore,
       Cursor cursor,
       TopNQuery query

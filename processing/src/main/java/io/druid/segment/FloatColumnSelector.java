@@ -26,5 +26,8 @@ package io.druid.segment;
  */
 public interface FloatColumnSelector extends ColumnValueSelector
 {
+  // Float columns do not currently support multi-value rows
+  public static int ROW_SIZE = 1;
+
   public float get();
 }

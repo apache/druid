@@ -26,10 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.segment.column.Column;
-import io.druid.segment.column.ValueType;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -68,61 +65,6 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   public static <T> int getContextUncoveredIntervalsLimit(Query<T> query, int defaultValue)
   {
     return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
-  }
-
-  public static <T> Map<String, Object> getContextTypeHints(Query<T> query)
-  {
-    return query.getContextValue(QueryContextKeys.TYPE_HINTS);
-  }
-
-  public static <T> Map<String, ValueType> getContextTypeHints(Query<T> query, List<DimensionSpec> dimensions)
-  {
-    Map<String, ValueType> queryTypeHints = convertTypeHintsValues(
-        getContextTypeHints(query)
-    );
-
-    if (dimensions != null) {
-      Map<String, ValueType> newTypeHints = Maps.newLinkedHashMap();
-      for (DimensionSpec dimSpec : dimensions) {
-        String dimName = dimSpec.getOutputName();
-        ValueType valType;
-        if (Column.TIME_COLUMN_NAME.equals(dimSpec.getDimension())) {
-          valType = ValueType.LONG;
-        } else {
-          valType = ValueType.STRING;
-        }
-
-        if (queryTypeHints != null) {
-          ValueType typeHint = queryTypeHints.get(dimName);
-          if (typeHint != null) {
-            valType = typeHint;
-          }
-        }
-
-        if (dimSpec.getExtractionFn() != null) {
-          valType = ValueType.STRING;
-        }
-
-        newTypeHints.put(dimName, valType);
-      }
-      return newTypeHints;
-    } else {
-      return queryTypeHints;
-    }
-  }
-
-  private static <T> Map<String, ValueType> convertTypeHintsValues(Map<String, Object> oldMap)
-  {
-    if (oldMap == null) {
-      return null;
-    }
-
-    Map<String, ValueType> newMap = Maps.newHashMap();
-    for (Map.Entry<String, Object> entry : oldMap.entrySet()) {
-      ValueType type = ValueType.convertObjectToValueType(entry.getValue());
-      newMap.put(entry.getKey(), type);
-    }
-    return newMap;
   }
 
   private static <T> int parseInt(Query<T> query, String key, int defaultValue)

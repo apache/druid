@@ -28,12 +28,13 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
   public ValueMatcher makeValueMatcher(final FloatColumnSelector selector, final String value)
   {
     final float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
+    final int matchValIntBits = Float.floatToIntBits(matchVal);
     return new ValueMatcher()
     {
       @Override
       public boolean matches()
       {
-        return selector.get() == matchVal;
+        return Float.floatToIntBits(selector.get()) == matchValIntBits;
       }
     };
   }

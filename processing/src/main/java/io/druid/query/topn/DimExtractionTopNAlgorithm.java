@@ -19,6 +19,7 @@
 
 package io.druid.query.topn;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
@@ -108,19 +109,42 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
-      Aggregator[] aggs = entry.getValue();
-      if (aggs != null && aggs.length > 0) {
-        Object[] vals = new Object[aggs.length];
-        for (int i = 0; i < aggs.length; i++) {
-          vals[i] = aggs[i].get();
-        }
+    if (needsResultTypeConversion(params)) {
+      final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(
+          query.getDimensionSpec().getOutputType()
+      );
 
-        resultBuilder.addEntry(
-            entry.getKey(),
-            entry.getKey(),
-            vals
-        );
+      for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
+        Aggregator[] aggs = entry.getValue();
+        if (aggs != null && aggs.length > 0) {
+          Object[] vals = new Object[aggs.length];
+          for (int i = 0; i < aggs.length; i++) {
+            vals[i] = aggs[i].get();
+          }
+
+          Comparable convertedKey = (Comparable) valueTransformer.apply(entry.getKey());
+          resultBuilder.addEntry(
+              convertedKey,
+              convertedKey,
+              vals
+          );
+        }
+      }
+    } else {
+      for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
+        Aggregator[] aggs = entry.getValue();
+        if (aggs != null && aggs.length > 0) {
+          Object[] vals = new Object[aggs.length];
+          for (int i = 0; i < aggs.length; i++) {
+            vals[i] = aggs[i].get();
+          }
+
+          resultBuilder.addEntry(
+              entry.getKey(),
+              entry.getKey(),
+              vals
+          );
+        }
       }
     }
   }
@@ -138,5 +162,12 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   public void cleanup(TopNParams params)
   {
+  }
+
+  private boolean needsResultTypeConversion(TopNParams params)
+  {
+    ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    TopNColumnSelectorStrategy strategy = selectorPlus.getColumnSelectorStrategy();
+    return query.getDimensionSpec().getOutputType() != strategy.getValueType();
   }
 }

@@ -23,6 +23,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.topn.types.TopNColumnSelectorStrategy;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -72,12 +73,22 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       DimValSelector dimValSelector
   )
   {
+    if (params.getCardinality() != TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN) {
+      runWithCardinalityKnown(params, resultBuilder, dimValSelector);
+    } else {
+      runWithCardinalityUnknown(params, resultBuilder);
+    }
+  }
+
+  public void runWithCardinalityKnown(
+      Parameters params,
+      TopNResultBuilder resultBuilder,
+      DimValSelector dimValSelector
+  )
+  {
     boolean hasDimValSelector = (dimValSelector != null);
 
     int cardinality = params.getCardinality();
-    if (cardinality < 0) {
-      cardinality = Integer.MAX_VALUE;
-    }
     int numProcessed = 0;
     while (numProcessed < cardinality) {
       final int numToProcess;
@@ -104,6 +115,21 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       numProcessed += numToProcess;
       params.getCursor().reset();
     }
+  }
+
+  // This function currently handles TopNs on long and float columns, which do not provide cardinality or an ID lookup.
+  // When cardinality is unknown, process everything in one pass.
+  // Existing implementations of makeDimValSelector() require cardinality as well, so the DimValSelector is not used.
+  public void runWithCardinalityUnknown(
+      Parameters params,
+      TopNResultBuilder resultBuilder
+  )
+  {
+    DimValAggregateStore aggregatesStore = makeDimValAggregateStore(params);
+    scanAndAggregate(params, null, aggregatesStore, 0);
+    updateResults(params, null, aggregatesStore, resultBuilder);
+    closeAggregators(aggregatesStore);
+    params.getCursor().reset();
   }
 
   protected abstract DimValSelector makeDimValSelector(Parameters params, int numProcessed, int numToProcess);
@@ -199,6 +225,10 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       ignoreAfterThreshold = false;
       ignoreFirstN = 0;
       keepOnlyN = dimSelector.getValueCardinality();
+
+      if (keepOnlyN < 0) {
+        throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
+      }
     }
 
     @Override

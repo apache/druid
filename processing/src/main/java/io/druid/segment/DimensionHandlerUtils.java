@@ -31,6 +31,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -64,6 +65,15 @@ public final class DimensionHandlerUtils
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
     return new StringDimensionHandler(dimensionName, multiValueHandling);
+  }
+
+  public static List<ValueType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)
+  {
+    List<ValueType> types = new ArrayList<>(dimSpecs.size());
+    for (DimensionSpec dimSpec : dimSpecs) {
+      types.add(dimSpec.getOutputType());
+    }
+    return types;
   }
 
   /**
@@ -154,7 +164,8 @@ public final class DimensionHandlerUtils
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
-    // Currently, all extractionFns output Strings, so force the type if present
+    // Currently, all extractionFns output Strings, so the column will return String values via a
+    // DimensionSelector if an extractionFn is present.
     if (hasExFn) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
@@ -195,9 +206,12 @@ public final class DimensionHandlerUtils
 
   private static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
 
-  // TopNBinaryFn relies on this returning the same Long object when no conversion is needed
   public static Long convertObjectToLong(Object valObj)
   {
+    if (valObj == null) {
+      return 0L;
+    }
+
     if (valObj instanceof Long) {
       return (Long) valObj;
     } else if (valObj instanceof Number) {
@@ -215,7 +229,6 @@ public final class DimensionHandlerUtils
     }
   }
 
-  // TopNBinaryFn relies on this returning the same Float object when no conversion is needed
   public static Float convertObjectToFloat(Object valObj)
   {
     if (valObj == null) {

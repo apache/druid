@@ -26,6 +26,7 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.column.ValueType;
 
 import java.util.Map;
 
@@ -34,7 +35,13 @@ public class FloatTopNColumnSelectorStrategy implements TopNColumnSelectorStrate
   @Override
   public int getCardinality(FloatColumnSelector selector)
   {
-    return -1;
+    return TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN;
+  }
+
+  @Override
+  public ValueType getValueType()
+  {
+    return ValueType.FLOAT;
   }
 
   @Override

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListBasedIndexedInts;
 
@@ -59,6 +60,13 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   public String getOutputName()
   {
     return delegate.getOutputName();
+  }
+
+  @Override
+  public ValueType getOutputType()
+  {
+    // The filtered dimension specs only operate on String columns
+    return ValueType.STRING;
   }
 
   @Override

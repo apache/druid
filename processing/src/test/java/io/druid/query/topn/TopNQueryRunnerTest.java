@@ -38,7 +38,6 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
-import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -3687,7 +3686,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "index_alias"))
+        .dimension(new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "index_alias", ValueType.FLOAT))
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -3700,12 +3699,6 @@ public class TopNQueryRunnerTest
                         new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
-            )
-        )
-        .context(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("index_alias", ValueType.FLOAT)
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -3783,12 +3776,6 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .context(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("index_alias", ValueType.FLOAT)
-            )
-        )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -3846,7 +3833,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias"))
+        .dimension(new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias", ValueType.LONG))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -3859,12 +3846,6 @@ public class TopNQueryRunnerTest
                         new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
-            )
-        )
-        .context(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("time_alias", ValueType.LONG)
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -3941,12 +3922,6 @@ public class TopNQueryRunnerTest
                         new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
-            )
-        )
-        .context(
-            ImmutableMap.<String, Object>of(
-                QueryContextKeys.TYPE_HINTS,
-                ImmutableMap.of("time_alias", ValueType.LONG)
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))

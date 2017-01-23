@@ -15,8 +15,17 @@ The following JSON fields can be used in a query to operate on dimension values.
 Returns dimension values as is and optionally renames the dimension.
 
 ```json
-{ "type" : "default", "dimension" : <dimension>, "outputName": <output_name> }
+{
+  "type" : "default",
+  "dimension" : <dimension>,
+  "outputName": <output_name>,
+  "outputType": <"STRING"|"LONG"|"FLOAT">
+}
 ```
+
+When specifying a DimensionSpec on a numeric column, the user should include the type of the column in the `outputType` field. This is necessary as it is possible for a column with given name to have different value types in different segments: result merging may fail unless results of different type are converted to the type specified by `outputType`
+
+If left unspecified, the `outputType` defaults to STRING.
 
 ### Extraction DimensionSpec
 

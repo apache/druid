@@ -24,5 +24,14 @@ package io.druid.query.filter;
  */
 public interface DruidFloatPredicate
 {
+  DruidFloatPredicate FALSE_PREDICATE = new DruidFloatPredicate()
+  {
+    @Override
+    public boolean applyFloat(float input)
+    {
+      return false;
+    }
+  };
+
   boolean applyFloat(float input);
 }

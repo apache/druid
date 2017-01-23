@@ -99,21 +99,3 @@ Possible codes for the *error* field include:
 |`Query cancelled`|The query was cancelled through the query cancellation API.|
 |`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
 |`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
-
-
-Column Types
------------
-It is possible to run queries with non-String columns as dimensions, for example, grouping on a column previously ingested as a long metric.
-
-When including a non-String column as a dimension, its desired return type must be specified in the query context. See `typeHints` in [Context](../querying/query-context.html) for more information.
-
-For example, if a grouping on a long column named "longNumbers", the GroupBy query should contain a `typeHints` map within its query context:
-
-```json
-
-"context": {
-  "typeHints" : {
-    "longNumbers": "LONG"
-  }
-}
-```

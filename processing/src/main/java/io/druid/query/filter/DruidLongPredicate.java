@@ -24,5 +24,14 @@ package io.druid.query.filter;
  */
 public interface DruidLongPredicate
 {
+  DruidLongPredicate FALSE_PREDICATE = new DruidLongPredicate()
+  {
+    @Override
+    public boolean applyLong(long input)
+    {
+      return false;
+    }
+  };
+
   boolean applyLong(long input);
 }

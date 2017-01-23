@@ -37,7 +37,6 @@ import io.druid.granularity.AllGranularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Accumulator;
-import io.druid.query.BaseQuery;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.GroupByQuery;
@@ -63,7 +62,6 @@ import java.util.Map;
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
-
   public static Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
       final boolean isInputRaw,
@@ -78,8 +76,7 @@ public class RowBasedGrouperHelper
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
     Preconditions.checkArgument(concurrencyHint >= 1 || concurrencyHint == -1, "invalid concurrencyHint");
 
-    final Map<String, ValueType> typeHints = BaseQuery.getContextTypeHints(query, query.getDimensions());
-    final List<ValueType> valueTypes = Lists.newArrayList(typeHints.values());
+    final List<ValueType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
@@ -88,7 +85,7 @@ public class RowBasedGrouperHelper
         query.getContextSortByDimsFirst(),
         query.getDimensions().size(),
         querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint),
-        typeHints
+        valueTypes
     );
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
     final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
@@ -184,10 +181,10 @@ public class RowBasedGrouperHelper
             value = index.size() == 0 ? "" : dimensionSelectors[i - dimStart].lookupName(index.get(0));
             key[i] = Strings.nullToEmpty(value);
           } else {
-            // only V2 groupby supports non-String types
+            // only GroupByV2 (isInputRaw == false) supports non-String types
             Object valObj = row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
 
-            // convert types to what typeHints specifies, for merging purposes
+            // convert values to the output type specified by the DimensionSpec, for merging purposes
             switch (valueTypes.get(i - dimStart)) {
               case STRING:
                 valObj = valObj == null ? "" : valObj.toString();
@@ -282,9 +279,14 @@ public class RowBasedGrouperHelper
     @JsonCreator
     public static RowBasedKey fromJsonArray(final Object[] key)
     {
-      // Type info is lost during serde. We know we don't want ints as timestamps, so adjust.
-      if (key.length > 0 && key[0] instanceof Integer) {
-        key[0] = ((Integer) key[0]).longValue();
+      // Type info is lost during serde:
+      // Floats may be deserialized as doubles, Longs may be deserialized as integers, convert them back
+      for (int i = 0; i < key.length; i++) {
+        if (key[i] instanceof Integer) {
+          key[i] = ((Integer) key[i]).longValue();
+        } else if (key[i] instanceof Double) {
+          key[i] = ((Double) key[i]).floatValue();
+        }
       }
 
       return new RowBasedKey(key);
@@ -330,21 +332,27 @@ public class RowBasedGrouperHelper
     private final boolean sortByDimsFirst;
     private final int dimCount;
     private final long maxDictionarySize;
-    private final Map<String, ValueType> typeHints;
+    private final List<ValueType> valueTypes;
 
-    RowBasedKeySerdeFactory(boolean includeTimestamp, boolean sortByDimsFirst, int dimCount, long maxDictionarySize, Map<String, ValueType> typeHints)
+    RowBasedKeySerdeFactory(
+        boolean includeTimestamp,
+        boolean sortByDimsFirst,
+        int dimCount,
+        long maxDictionarySize,
+        List<ValueType> valueTypes
+    )
     {
       this.includeTimestamp = includeTimestamp;
       this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
-      this.typeHints = typeHints;
+      this.valueTypes = valueTypes;
     }
 
     @Override
     public Grouper.KeySerde<RowBasedKey> factorize()
     {
-      return new RowBasedKeySerde(includeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize, typeHints);
+      return new RowBasedKeySerde(includeTimestamp, sortByDimsFirst, dimCount, maxDictionarySize, valueTypes);
     }
 
     @Override
@@ -418,7 +426,7 @@ public class RowBasedGrouperHelper
     private final ByteBuffer keyBuffer;
     private final List<String> dictionary = Lists.newArrayList();
     private final Map<String, Integer> reverseDictionary = Maps.newHashMap();
-    private final Map<String, ValueType> typeHints;
+    private final List<ValueType> valueTypes;
     private final List<RowBasedKeySerdeHelper> serdeHelpers;
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
@@ -433,15 +441,15 @@ public class RowBasedGrouperHelper
         final boolean sortByDimsFirst,
         final int dimCount,
         final long maxDictionarySize,
-        final Map<String, ValueType> typeHints
+        final List<ValueType> valueTypes
     )
     {
       this.includeTimestamp = includeTimestamp;
       this.sortByDimsFirst = sortByDimsFirst;
       this.dimCount = dimCount;
       this.maxDictionarySize = maxDictionarySize;
-      this.typeHints = typeHints;
-      this.serdeHelpers = getSerdeHelpers();
+      this.valueTypes = valueTypes;
+      this.serdeHelpers = makeSerdeHelpers();
       this.keySize = (includeTimestamp ? Longs.BYTES : 0) + getTotalKeySize();
       this.keyBuffer = ByteBuffer.allocate(keySize);
     }
@@ -471,7 +479,7 @@ public class RowBasedGrouperHelper
         dimStart = 0;
       }
       for (int i = dimStart; i < key.getKey().length; i++) {
-        if (!serdeHelpers.get(i - dimStart).putToByteBuffer(key, i)) {
+        if (!serdeHelpers.get(i - dimStart).putToKeyBuffer(key, i)) {
           return null;
         }
       }
@@ -499,6 +507,7 @@ public class RowBasedGrouperHelper
       }
 
       for (int i = dimStart; i < key.length; i++) {
+        // Writes value from buffer to key[i]
         serdeHelpers.get(i - dimStart).getFromByteBuffer(buffer, dimsPosition, i, key);
       }
 
@@ -660,11 +669,11 @@ public class RowBasedGrouperHelper
       return size;
     }
 
-    private List<RowBasedKeySerdeHelper> getSerdeHelpers()
+    private List<RowBasedKeySerdeHelper> makeSerdeHelpers()
     {
       List<RowBasedKeySerdeHelper> helpers = new ArrayList<>();
       int keyBufferPosition = 0;
-      for (ValueType valType : typeHints.values()) {
+      for (ValueType valType : valueTypes) {
         RowBasedKeySerdeHelper helper;
         switch (valType) {
           case STRING:
@@ -677,7 +686,7 @@ public class RowBasedGrouperHelper
             helper = new FloatRowBasedKeySerdeHelper(keyBufferPosition);
             break;
           default:
-            throw new IAE("invalid type");
+            throw new IAE("invalid type: %s", valType);
         }
         keyBufferPosition += helper.getKeyBufferValueSize();
         helpers.add(helper);
@@ -687,12 +696,48 @@ public class RowBasedGrouperHelper
 
     private interface RowBasedKeySerdeHelper
     {
+      /**
+       * @return The size in bytes for a value of the column handled by this SerdeHelper.
+       */
       int getKeyBufferValueSize();
 
-      boolean putToByteBuffer(RowBasedKey key, int idx);
+      /**
+       * Read a value from RowBasedKey at `idx` and put the value at the current position of RowBasedKeySerde's keyBuffer.
+       * advancing the position by the size returned by getKeyBufferValueSize().
+       *
+       * If an internal resource limit has been reached and the value could not be added to the keyBuffer,
+       * (e.g., maximum dictionary size exceeded for Strings), this method returns false.
+       *
+       * @param key RowBasedKey containing the grouping key values for a row.
+       * @param idx Index of the grouping key column within that this SerdeHelper handles
+       * @return true if the value was added to the key, false otherwise
+       */
+      boolean putToKeyBuffer(RowBasedKey key, int idx);
 
+      /**
+       * Read a value from a ByteBuffer containing a grouping key in the same format as RowBasedKeySerde's keyBuffer and
+       * put the value in `dimValues` at `dimValIdx`.
+       *
+       * The value to be read resides in the buffer at position (`initialOffset` + the SerdeHelper's keyBufferPosition).
+       *
+       * @param buffer ByteBuffer containing an array of grouping keys for a row
+       * @param initialOffset Offset where non-timestamp grouping key columns start, needed because timestamp is not
+       *                      always included in the buffer.
+       * @param dimValIdx Index within dimValues to store the value read from the buffer
+       * @param dimValues Output array containing grouping key values for a row
+       */
       void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
 
+      /**
+       * Compare the values at lhsBuffer[lhsPosition] and rhsBuffer[rhsPosition] using the natural ordering
+       * for this SerdeHelper's value type.
+       *
+       * @param lhsBuffer ByteBuffer containing an array of grouping keys for a row
+       * @param rhsBuffer ByteBuffer containing an array of grouping keys for a row
+       * @param lhsPosition Position of value within lhsBuffer
+       * @param rhsPosition Position of value within rhsBuffer
+       * @return Negative number if lhs < rhs, positive if lhs > rhs, 0 if lhs == rhs
+       */
       int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
     }
 
@@ -712,7 +757,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public boolean putToByteBuffer(RowBasedKey key, int idx)
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
         final int id = addToDictionary((String) key.getKey()[idx]);
         if (id < 0) {
@@ -754,7 +799,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public boolean putToByteBuffer(RowBasedKey key, int idx)
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
         keyBuffer.putLong((Long) key.getKey()[idx]);
         return true;
@@ -792,7 +837,7 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public boolean putToByteBuffer(RowBasedKey key, int idx)
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
         keyBuffer.putFloat((Float) key.getKey()[idx]);
         return true;

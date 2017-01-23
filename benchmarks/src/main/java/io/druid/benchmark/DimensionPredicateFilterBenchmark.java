@@ -87,27 +87,13 @@ public class DimensionPredicateFilterBenchmark
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return false;
-            }
-          };
+          return DruidLongPredicate.FALSE_PREDICATE;
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return false;
-            }
-          };
+          return DruidFloatPredicate.FALSE_PREDICATE;
         }
       },
       null

@@ -26,6 +26,7 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.column.ValueType;
 
 import java.util.Map;
 
@@ -34,7 +35,13 @@ public class LongTopNColumnSelectorStrategy implements TopNColumnSelectorStrateg
   @Override
   public int getCardinality(LongColumnSelector selector)
   {
-    return -1;
+    return TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN;
+  }
+
+  @Override
+  public ValueType getValueType()
+  {
+    return ValueType.LONG;
   }
 
   @Override

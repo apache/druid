@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -65,17 +66,28 @@ public class DefaultDimensionSpec implements DimensionSpec
   private static final byte CACHE_TYPE_ID = 0x0;
   private final String dimension;
   private final String outputName;
+  private final ValueType outputType;
 
   @JsonCreator
   public DefaultDimensionSpec(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("outputName") String outputName
+      @JsonProperty("outputName") String outputName,
+      @JsonProperty("outputType") ValueType outputType
   )
   {
     this.dimension = dimension;
+    this.outputType = outputType;
 
     // Do null check for legacy backwards compatibility, callers should be setting the value.
     this.outputName = outputName == null ? dimension : outputName;
+  }
+
+  public DefaultDimensionSpec(
+      String dimension,
+      String outputName
+  )
+  {
+    this(dimension, outputName, ValueType.STRING);
   }
 
   @Override
@@ -90,6 +102,13 @@ public class DefaultDimensionSpec implements DimensionSpec
   public String getOutputName()
   {
     return outputName;
+  }
+
+  @Override
+  @JsonProperty
+  public ValueType getOutputType()
+  {
+    return outputType;
   }
 
   @Override

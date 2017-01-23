@@ -136,8 +136,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             query.getTopNMetricSpec(),
             query.getThreshold(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs(),
-            BaseQuery.getContextTypeHints(query, Lists.<DimensionSpec>newArrayList(query.getDimensionSpec()))
+            query.getPostAggregatorSpecs()
         );
       }
     };

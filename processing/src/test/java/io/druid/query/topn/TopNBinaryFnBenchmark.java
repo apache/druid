@@ -121,8 +121,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
         new NumericTopNMetricSpec("index"),
         100,
         aggregatorFactories,
-        postAggregators,
-        null
+        postAggregators
     );
   }
 

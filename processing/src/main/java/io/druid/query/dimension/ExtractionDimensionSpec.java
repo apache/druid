@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 
@@ -74,6 +75,13 @@ public class ExtractionDimensionSpec implements DimensionSpec
   public String getOutputName()
   {
     return outputName;
+  }
+
+  @Override
+  public ValueType getOutputType()
+  {
+    // Extraction functions always output String
+    return ValueType.STRING;
   }
 
   @Override
