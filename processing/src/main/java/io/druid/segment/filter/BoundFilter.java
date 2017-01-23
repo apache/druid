@@ -31,6 +31,7 @@ import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.BitmapIndex;
 
@@ -56,22 +57,14 @@ public class BoundFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    if (boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC) && extractionFn == null) {
-      // Optimization for lexicographic bounds with no extractionFn => binary search through the index
-
+    if (supportShortCircuit()) {
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
 
       if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
         return doesMatch(null) ? Filters.allTrue(selector) : Filters.allFalse(selector);
       }
 
-      // search for start, end indexes in the bitmaps; then include all bitmaps between those points
-      final Pair<Integer, Integer> indexes = getStartEndIndexes(bitmapIndex);
-      final int startIndex = indexes.lhs;
-      final int endIndex = indexes.rhs;
-
-      return selector.getBitmapFactory().union(
-          getBitmapIterator(startIndex, endIndex, bitmapIndex)
+      return selector.getBitmapFactory().union(getBitmapIterator(boundDimFilter, bitmapIndex)
       );
     } else {
       return Filters.matchPredicate(
@@ -80,6 +73,38 @@ public class BoundFilter implements Filter
           getPredicateFactory().makeStringPredicate()
       );
     }
+  }
+
+  @Override
+  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  {
+    if (supportShortCircuit()) {
+      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(boundDimFilter.getDimension());
+
+      if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
+        return doesMatch(null) ? 1. : 0.;
+      }
+
+      return Filters.estimatePredicateSelectivity(
+          columnSelector,
+          boundDimFilter.getDimension(),
+          getBitmapIterator(boundDimFilter, bitmapIndex),
+          indexSelector.getNumRows()
+      );
+    } else {
+      return Filters.estimatePredicateSelectivity(
+          columnSelector,
+          boundDimFilter.getDimension(),
+          indexSelector,
+          getPredicateFactory().makeStringPredicate()
+      );
+    }
+  }
+
+  private boolean supportShortCircuit()
+  {
+    // Optimization for lexicographic bounds with no extractionFn => binary search through the index
+    return boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC) && extractionFn == null;
   }
 
   @Override
@@ -94,38 +119,10 @@ public class BoundFilter implements Filter
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
   }
 
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
-  {
-    if (selector.getBitmapIndex(boundDimFilter.getDimension()) != null) {
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
-
-      if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
-        return doesMatch(null) ? 1. : 0.;
-      }
-
-      // search for start, end indexes in the bitmaps; then include all bitmaps between those points
-      final Pair<Integer, Integer> indexes = getStartEndIndexes(bitmapIndex);
-      final int startIndex = indexes.lhs;
-      final int endIndex = indexes.rhs;
-
-      long matchRowNum = 0;
-      for (final ImmutableBitmap bitmap : getBitmapIterator(startIndex, endIndex, bitmapIndex)) {
-        matchRowNum += bitmap.size();
-      }
-
-      return (double) matchRowNum / totalNumRows;
-    } else {
-      return Filters.estimatePredicateSelectivity(
-          boundDimFilter.getDimension(),
-          selector,
-          getPredicateFactory().makeStringPredicate(),
-          totalNumRows
-      );
-    }
-  }
-
-  private Pair<Integer, Integer> getStartEndIndexes(final BitmapIndex bitmapIndex)
+  private static Pair<Integer, Integer> getStartEndIndexes(
+      final BoundDimFilter boundDimFilter,
+      final BitmapIndex bitmapIndex
+  )
   {
     final int startIndex; // inclusive
     final int endIndex; // exclusive
@@ -156,11 +153,15 @@ public class BoundFilter implements Filter
   }
 
   private static Iterable<ImmutableBitmap> getBitmapIterator(
-      final int startIndex,
-      final int endIndex,
+      final BoundDimFilter boundDimFilter,
       final BitmapIndex bitmapIndex
   )
   {
+    // search for start, end indexes in the bitmaps; then include all bitmaps between those points
+    final Pair<Integer, Integer> indexes = getStartEndIndexes(boundDimFilter, bitmapIndex);
+    final int startIndex = indexes.lhs;
+    final int endIndex = indexes.rhs;
+
     return new Iterable<ImmutableBitmap>()
     {
       @Override

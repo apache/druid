@@ -40,6 +40,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.LongColumnSelector;
@@ -52,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Random;
 
 /**
  */
@@ -59,6 +61,8 @@ public class Filters
 {
   public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(ValueType.STRING, ValueType.LONG);
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
+  private static final Random random = new Random(System.currentTimeMillis());
+  private static final int SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION = 100;
 
   /**
    * Convert a list of DimFilters to a list of Filters.
@@ -194,6 +198,8 @@ public class Filters
    * @param predicate predicate to use
    *
    * @return bitmap of matching rows
+   *
+   * @see Filters#estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
    */
   public static ImmutableBitmap matchPredicate(
       final String dimension,
@@ -208,60 +214,109 @@ public class Filters
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
     final Indexed<String> dimValues = selector.getDimensionValues(dimension);
     if (dimValues == null || dimValues.size() == 0) {
-      if (predicate.apply(null)) {
-        return selector.getBitmapFactory().complement(
-            selector.getBitmapFactory().makeEmptyImmutableBitmap(),
-            selector.getNumRows()
-        );
-      } else {
-        return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-      }
+      return predicate.apply(null) ? allTrue(selector) : allFalse(selector);
     }
 
     // Apply predicate to all dimension values and union the matching bitmaps
     final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
     return selector.getBitmapFactory()
-                   .union(createPredicateQualifyingBitmapIterator(bitmapIndex, predicate, dimValues));
+                   .union(makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues));
   }
 
+  /**
+   * Return an estimated selectivity for bitmaps of all values matching the given predicate.
+   *
+   * @param columnSelector column selector
+   * @param dimension      dimension to look at
+   * @param indexSelector  bitmap selector
+   * @param predicate      predicate to use
+   *
+   * @return estimated selectivity
+   *
+   * @see Filters#matchPredicate(String, BitmapIndexSelector, Predicate)
+   */
   static double estimatePredicateSelectivity(
+      final ColumnSelector columnSelector,
       final String dimension,
-      final BitmapIndexSelector selector,
-      final Predicate<String> predicate,
-      final long totalNumRows
+      final BitmapIndexSelector indexSelector,
+      final Predicate<String> predicate
   )
   {
     Preconditions.checkNotNull(dimension, "dimension");
-    Preconditions.checkNotNull(selector, "selector");
+    Preconditions.checkNotNull(indexSelector, "selector");
     Preconditions.checkNotNull(predicate, "predicate");
 
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+    final Indexed<String> dimValues = indexSelector.getDimensionValues(dimension);
     if (dimValues == null || dimValues.size() == 0) {
-      if (predicate.apply(null)) {
-        return 1.;
-      } else {
-        return 0.;
-      }
+      return predicate.apply(null) ? 1. : 0.;
     }
 
     // Apply predicate to all dimension values and union the matching bitmaps
-    final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-    final Iterator<ImmutableBitmap> iterator = createPredicateQualifyingBitmapIterator(
-        bitmapIndex,
-        predicate,
-        dimValues
-    ).iterator();
-
-    long matchRowNum = 0;
-    while (iterator.hasNext()) {
-      final ImmutableBitmap next = iterator.next();
-      matchRowNum += next.size();
-    }
-    return (double) matchRowNum / totalNumRows;
+    final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
+    return estimatePredicateSelectivity(
+        columnSelector,
+        dimension,
+        makePredicateQualifyingBitmapIterable(
+            bitmapIndex,
+            predicate,
+            dimValues
+        ),
+        indexSelector.getNumRows()
+    );
   }
 
-  private static Iterable<ImmutableBitmap> createPredicateQualifyingBitmapIterator(
+  static double estimatePredicateSelectivity(
+      ColumnSelector columnSelector,
+      String dimension,
+      Iterable<ImmutableBitmap> bitmaps,
+      long totalNumRows
+  )
+  {
+    final ColumnCapabilities columnCapabilities = columnSelector.getColumn(dimension).getCapabilities();
+    return estimatePredicateSelectivity(
+        bitmaps,
+        totalNumRows,
+        columnCapabilities == null || columnCapabilities.hasMultipleValues()
+    );
+  }
+
+  static double estimatePredicateSelectivity(
+      Iterable<ImmutableBitmap> bitmaps,
+      long totalNumRows,
+      boolean isMultiValueDimension
+  )
+  {
+    long numMatchedRows = 0;
+    final List<ImmutableBitmap> bitmapList = Lists.newArrayList(bitmaps);
+    for (ImmutableBitmap bitmap : bitmapList) {
+      numMatchedRows += bitmap.size();
+    }
+
+    // assume multi-value column if columnCapabilities is null
+    if (isMultiValueDimension) {
+      final double estimated = numMatchedRows * Filters.computeNonOverlapRatioFromBitmapSamples(bitmapList)
+                               / totalNumRows;
+      return Math.min(1., estimated);
+    } else {
+      return (double) numMatchedRows / totalNumRows;
+    }
+  }
+
+  private static double computeNonOverlapRatioFromBitmapSamples(List<ImmutableBitmap> bitmaps)
+  {
+    final int sampleNum = Math.min(SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION, bitmaps.size());
+    double nonOverlapRatioSum = 0.;
+    for (int i = 0; i < sampleNum; i++) {
+      final ImmutableBitmap b1 = bitmaps.get(random.nextInt(bitmaps.size()));
+      final ImmutableBitmap b2 = bitmaps.get(random.nextInt(bitmaps.size()));
+
+      nonOverlapRatioSum += b1.union(b2).size() / (b1.size() + b2.size());
+    }
+    return nonOverlapRatioSum / sampleNum;
+  }
+
+  private static Iterable<ImmutableBitmap> makePredicateQualifyingBitmapIterable(
       final BitmapIndex bitmapIndex,
       final Predicate<String> predicate,
       final Indexed<String> dimValues

@@ -27,6 +27,7 @@ import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.incremental.SpatialDimensionRowTransformer;
 
@@ -102,12 +103,13 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
-    long matchRowNum = 0;
-    for (final ImmutableBitmap bitmap : selector.getSpatialIndex(dimension).search(bound)) {
-      matchRowNum += bitmap.size();
-    }
-    return (double) matchRowNum / totalNumRows;
+    // handle rtree overlap
+    return Filters.estimatePredicateSelectivity(
+        indexSelector.getSpatialIndex(dimension).search(bound),
+        indexSelector.getNumRows(),
+        true
+    );
   }
 }

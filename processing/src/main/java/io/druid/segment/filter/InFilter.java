@@ -31,6 +31,7 @@ import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Set;
@@ -61,18 +62,7 @@ public class InFilter implements Filter
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
     if (extractionFn == null) {
-      return selector.getBitmapFactory().union(
-          Iterables.transform(
-              values, new Function<String, ImmutableBitmap>()
-              {
-                @Override
-                public ImmutableBitmap apply(String value)
-                {
-                  return selector.getBitmapIndex(dimension, value);
-                }
-              }
-          )
-      );
+      return selector.getBitmapFactory().union(getBitmapIterable(selector));
     } else {
       return Filters.matchPredicate(
           dimension,
@@ -80,6 +70,40 @@ public class InFilter implements Filter
           getPredicateFactory().makeStringPredicate()
       );
     }
+  }
+
+  @Override
+  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  {
+    if (extractionFn == null) {
+      return Filters.estimatePredicateSelectivity(
+          columnSelector,
+          dimension,
+          getBitmapIterable(indexSelector),
+          indexSelector.getNumRows()
+      );
+    } else {
+      return Filters.estimatePredicateSelectivity(
+          columnSelector,
+          dimension,
+          indexSelector,
+          getPredicateFactory().makeStringPredicate()
+      );
+    }
+  }
+
+  private Iterable<ImmutableBitmap> getBitmapIterable(final BitmapIndexSelector selector)
+  {
+    return Iterables.transform(
+        values, new Function<String, ImmutableBitmap>()
+        {
+          @Override
+          public ImmutableBitmap apply(String value)
+          {
+            return selector.getBitmapIndex(dimension, value);
+          }
+        }
+    );
   }
 
   @Override
@@ -92,25 +116,6 @@ public class InFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
-  }
-
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
-  {
-    if (extractionFn == null) {
-      long matchedNumRows = 0;
-      for (final String eachVal : values) {
-        matchedNumRows += selector.getBitmapIndex(dimension, eachVal).size();
-      }
-      return (double) matchedNumRows / totalNumRows;
-    } else {
-      return Filters.estimatePredicateSelectivity(
-          dimension,
-          selector,
-          getPredicateFactory().makeStringPredicate(),
-          totalNumRows
-      );
-    }
   }
 
   private DruidPredicateFactory getPredicateFactory()

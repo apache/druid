@@ -43,6 +43,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -387,7 +388,7 @@ public abstract class BaseFilterTest
       }
 
       @Override
-      public double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows)
+      public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
         return 1.0;
       }

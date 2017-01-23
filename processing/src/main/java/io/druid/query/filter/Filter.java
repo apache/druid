@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 /**
@@ -30,15 +31,37 @@ public interface Filter
    * Get a bitmap index, indicating rows that match this filter.
    *
    * @param selector Object used to retrieve bitmap indexes
+   *
    * @return A bitmap indicating rows that match this filter.
+   *
+   * @see Filter#estimateSelectivity(ColumnSelector, BitmapIndexSelector)
    */
   ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+
+
+  /**
+   * Estimate selectivity of this filter.
+   * This method can be used for cost-based query planning like in {@link io.druid.query.search.search.AutoStrategy}.
+   * To avoid significant performance degradation for calculating the exact cost,
+   * implementation of this method targets to achieve rapid selectivity estimation
+   * with reasonable sacrifice of the accuracy.
+   * As a result, the estimated selectivity might be different from the exact value.
+   *
+   * @param columnSelector Column selector to retrieve column capabilities
+   * @param indexSelector  Object used to retrieve bitmap indexes
+   *
+   * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
+   *
+   * @see Filter#getBitmapIndex(BitmapIndexSelector)
+   */
+  double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector);
 
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
    *
    * @param factory Object used to create ValueMatchers
+   *
    * @return ValueMatcher that applies this filter to row values.
    */
   ValueMatcher makeMatcher(ColumnSelectorFactory factory);
@@ -49,16 +72,8 @@ public interface Filter
    * the information provided by the input BitmapIndexSelector.
    *
    * @param selector Object used to retrieve bitmap indexes
+   *
    * @return true if this Filter can provide a bitmap index using the selector, false otherwise
    */
   boolean supportsBitmapIndex(BitmapIndexSelector selector);
-
-  /**
-   * Estimate selectivity of this filter. The estimated selectivity might be different from the exact value.
-   *
-   * @param selector Object used to retrieve bitmap indexes
-   * @param totalNumRows total number of rows in a segment
-   * @return Selectivity ranging from 0 to 1.
-   */
-  double estimateSelectivity(BitmapIndexSelector selector, long totalNumRows);
 }

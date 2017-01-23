@@ -76,10 +76,10 @@ public class AutoStrategy extends SearchStrategy
         // c_cursor = (# of rows in a segment) * (filter selectivity) * (# of dimensions)
         //            * (search predicate processing cost)
         final SearchQueryDecisionHelper helper = getDecisionHelper(index);
-        final long totalNumRows = index.getNumRows();
         final double useIndexStrategyCost = helper.getBitmapIntersectCost() * computeTotalCard(index, dimsToSearch);
-        final double cursorOnlyStrategyCost = (filter == null ? 1. : filter.estimateSelectivity(selector, totalNumRows))
-                                              * totalNumRows * dimsToSearch.size();
+        final double cursorOnlyStrategyCost = (filter == null ? 1. : filter.estimateSelectivity(index, selector))
+                                              * selector.getNumRows()
+                                              * dimsToSearch.size();
 
         log.debug("Use-index strategy cost: %f, cursor-only strategy cost: %f",
                   useIndexStrategyCost, cursorOnlyStrategyCost
