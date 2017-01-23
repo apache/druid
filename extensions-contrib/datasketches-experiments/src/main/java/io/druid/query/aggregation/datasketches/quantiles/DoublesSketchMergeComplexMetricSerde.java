@@ -30,14 +30,14 @@ import io.druid.segment.serde.ComplexMetricSerde;
 
 import java.nio.ByteBuffer;
 
-public class QuantilesSketchMergeComplexMetricSerde extends ComplexMetricSerde
+public class DoublesSketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
-  private QuantilesSketchObjectStrategy strategy = new QuantilesSketchObjectStrategy();
+  private DoublesSketchObjectStrategy strategy = new DoublesSketchObjectStrategy();
 
   @Override
   public String getTypeName()
   {
-    return QuantilesSketchModule.QUANTILES_SKETCH;
+    return DoublesSketchModule.QUANTILES_SKETCH;
   }
 
   @Override
@@ -55,11 +55,10 @@ public class QuantilesSketchMergeComplexMetricSerde extends ComplexMetricSerde
       public Object extractValue(InputRow inputRow, String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        //would need to handle Memory here when off-heap is supported.
-        if (object == null || object instanceof DoublesSketch) {
+        if (object == null) {
           return object;
         }
-        return QuantilesSketchUtils.deserialize(object);
+        return DoublesSketchHolder.deserialize(object);
       }
     };
   }

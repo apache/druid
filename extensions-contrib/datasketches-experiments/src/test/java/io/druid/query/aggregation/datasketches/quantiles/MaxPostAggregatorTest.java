@@ -30,7 +30,7 @@ public class MaxPostAggregatorTest
 
   public MaxPostAggregatorTest()
   {
-    mapper = QuantilesSketchAggregatorFactoryTest.buildObjectMapper();
+    mapper = DoublesSketchAggregatorFactoryTest.buildObjectMapper();
   }
 
   @Test

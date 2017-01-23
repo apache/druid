@@ -19,34 +19,41 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
+import com.yahoo.sketches.quantiles.DoublesUnion;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.ObjectColumnSelector;
 
-public class EmptyQuantilesSketchAggregator implements Aggregator
+public class DoublesSketchAggregator implements Aggregator
 {
+  private final ObjectColumnSelector selector;
   private final String name;
-  private final DoublesSketch result;
 
-  public EmptyQuantilesSketchAggregator(String name)
+  private DoublesUnion quantilesSketchUnion;
+
+  public DoublesSketchAggregator(String name, ObjectColumnSelector selector, int size)
   {
     this.name = name;
-    result = QuantilesSketchUtils.buildSketch(QuantilesSketchUtils.MIN_K);
+    this.selector = selector;
+    this.quantilesSketchUnion = DoublesSketchHolder.buildUnion(size);
   }
 
   @Override
   public void aggregate()
   {
+    updateUnion(quantilesSketchUnion, selector.get());
   }
 
   @Override
   public void reset()
   {
+    quantilesSketchUnion.reset();
   }
 
   @Override
   public Object get()
   {
-    return result;
+    return DoublesSketchHolder.of(quantilesSketchUnion.getResult());
   }
 
   @Override
@@ -70,5 +77,23 @@ public class EmptyQuantilesSketchAggregator implements Aggregator
   @Override
   public void close()
   {
+    quantilesSketchUnion = null;
+  }
+
+  static void updateUnion(DoublesUnion union, Object update)
+  {
+    if (update == null) {
+      return;
+    }
+
+    if (update instanceof DoublesSketchHolder) {
+      ((DoublesSketchHolder) update).updateUnion(union);
+    } else if (update instanceof Number) {
+      union.update(((Number) update).doubleValue());
+    } else if (update instanceof String) {
+      union.update(Double.parseDouble((String) update));
+    } else {
+      throw new ISE("Illegal type received while quantiles sketch merging [%s]", update.getClass());
+    }
   }
 }

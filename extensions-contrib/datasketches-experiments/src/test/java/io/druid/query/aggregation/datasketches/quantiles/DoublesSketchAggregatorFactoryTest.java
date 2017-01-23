@@ -21,7 +21,6 @@ package io.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.DoublesSketchBuilder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -30,14 +29,14 @@ import org.junit.Test;
 
 /**
  */
-public class QuantilesSketchAggregatorFactoryTest
+public class DoublesSketchAggregatorFactoryTest
 {
   private final ObjectMapper mapper;
 
-  public QuantilesSketchAggregatorFactoryTest()
+  public DoublesSketchAggregatorFactoryTest()
   {
     mapper = new DefaultObjectMapper();
-    QuantilesSketchModule sm = new QuantilesSketchModule();
+    DoublesSketchModule sm = new DoublesSketchModule();
     for(Module mod : sm.getJacksonModules()) {
       mapper.registerModule(mod);
     }
@@ -48,27 +47,27 @@ public class QuantilesSketchAggregatorFactoryTest
   {
     assertAggregatorFactorySerde(
         makeJson("name", "fieldName", 16, null, null),
-        new QuantilesSketchAggregatorFactory("name", "fieldName", 16, false, null)
+        new DoublesSketchAggregatorFactory("name", "fieldName", 16, false, null, false)
     );
 
     assertAggregatorFactorySerde(
         makeJson("name", "fieldName", 16, true, 1024),
-        new QuantilesSketchAggregatorFactory("name", "fieldName", 16, true, 1024)
+        new DoublesSketchAggregatorFactory("name", "fieldName", 16, true, 1024, false)
     );
 
     assertAggregatorFactorySerde(
         makeJson("name", "fieldName", 16, false, 4096),
-        new QuantilesSketchAggregatorFactory("name", "fieldName", 16, false, 4096)
+        new DoublesSketchAggregatorFactory("name", "fieldName", 16, false, 4096, false)
     );
   }
 
   @Test
   public void testFinalization() throws Exception
   {
-    DoublesSketch sketch = new DoublesSketchBuilder().build();
+    DoublesSketchHolder holder = DoublesSketchHolder.of(new DoublesSketchBuilder().build());
 
-    QuantilesSketchAggregatorFactory agg = new QuantilesSketchAggregatorFactory("name", "fieldName", 16, false, null);
-    Assert.assertEquals(0L, agg.finalizeComputation(sketch));
+    DoublesSketchAggregatorFactory agg = new DoublesSketchAggregatorFactory("name", "fieldName", 16, false, null, false);
+    Assert.assertEquals(0L, agg.finalizeComputation(holder));
   }
 
   private String makeJson(
@@ -121,7 +120,7 @@ public class QuantilesSketchAggregatorFactoryTest
   public static final ObjectMapper buildObjectMapper()
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    QuantilesSketchModule sm = new QuantilesSketchModule();
+    DoublesSketchModule sm = new DoublesSketchModule();
     for(Module mod : sm.getJacksonModules()) {
       mapper.registerModule(mod);
     }

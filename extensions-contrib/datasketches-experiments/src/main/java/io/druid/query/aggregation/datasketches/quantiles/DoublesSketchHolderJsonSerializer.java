@@ -23,16 +23,15 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.yahoo.sketches.quantiles.DoublesSketch;
 
 import java.io.IOException;
 
-public class QuantilesSketchJsonSerializer extends JsonSerializer<DoublesSketch>
+public class DoublesSketchHolderJsonSerializer extends JsonSerializer<DoublesSketchHolder>
 {
   @Override
-  public void serialize(DoublesSketch sketch, JsonGenerator jgen, SerializerProvider provider)
+  public void serialize(DoublesSketchHolder sketchHolder, JsonGenerator jgen, SerializerProvider provider)
       throws IOException, JsonProcessingException
   {
-    jgen.writeBinary(sketch.toByteArray());
+    jgen.writeBinary(sketchHolder.getSketch().toByteArray());
   }
 }

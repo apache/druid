@@ -27,42 +27,30 @@ import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
 
-public class QuantilesSketchObjectStrategy implements ObjectStrategy
+public class DoublesSketchObjectStrategy implements ObjectStrategy
 {
-
-  private static final DoublesSketch EMPTY_SKETCH = QuantilesSketchUtils.buildSketch(QuantilesSketchUtils.MIN_K);
   private static final byte[] EMPTY_BYTES = new byte[]{};
 
   @Override
   public int compare(Object s1, Object s2)
   {
-    if (s1 instanceof DoublesSketch) {
-      if (s2 instanceof DoublesSketch) {
-        return QuantilesSketchAggregatorFactory.COMPARATOR.compare((DoublesSketch) s1, (DoublesSketch) s2);
-      } else {
-        return -1;
-      }
-    }
-
-    //would need to handle Memory here once off-heap is supported.
-    throw new IAE("Unknwon class[%s], toString[%s]", s1.getClass(), s1);
+    return DoublesSketchHolder.COMPARATOR.compare(s1, s2);
   }
 
   @Override
-  public Class<? extends DoublesSketch> getClazz()
+  public Class<?> getClazz()
   {
-    return DoublesSketch.class;
+    return Object.class;
   }
 
   @Override
   public Object fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
     if (numBytes == 0) {
-      return EMPTY_SKETCH;
+      return DoublesSketchHolder.EMPTY;
     }
 
-    //would need to handle Memory here once off-heap is supported.
-    return DoublesSketch.heapify(
+    return DoublesSketchHolder.of(
         new MemoryRegion(
             new NativeMemory(buffer),
             buffer.position(),
@@ -74,9 +62,8 @@ public class QuantilesSketchObjectStrategy implements ObjectStrategy
   @Override
   public byte[] toBytes(Object obj)
   {
-    //would need to handle Memory here once off-heap is supported
-    if (obj instanceof DoublesSketch) {
-      DoublesSketch sketch = (DoublesSketch) obj;
+    if (obj instanceof DoublesSketchHolder) {
+      DoublesSketch sketch = ((DoublesSketchHolder) obj).getSketch();
       if (sketch.isEmpty()) {
         return EMPTY_BYTES;
       }

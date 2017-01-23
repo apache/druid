@@ -24,7 +24,7 @@ import io.druid.segment.serde.ComplexMetricExtractor;
 
 /**
  */
-public class QuantilesSketchBuildComplexMetricSerde extends QuantilesSketchMergeComplexMetricSerde
+public class DoublesSketchBuildComplexMetricSerde extends DoublesSketchMergeComplexMetricSerde
 {
   @Override
   public ComplexMetricExtractor getExtractor()

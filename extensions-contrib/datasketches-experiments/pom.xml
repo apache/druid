@@ -42,7 +42,7 @@
     <dependency>
       <groupId>com.yahoo.datasketches</groupId>
       <artifactId>sketches-core</artifactId>
-      <version>0.8.3</version>
+      <version>0.8.4</version>
     </dependency>
     <dependency>
       <groupId>io.druid</groupId>

@@ -23,14 +23,13 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.yahoo.sketches.quantiles.DoublesSketch;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class QuantilesSketchModule implements DruidModule
+public class DoublesSketchModule implements DruidModule
 {
   public static final String QUANTILES_SKETCH = "datasketchesQuantilesSketch";
 
@@ -48,15 +47,15 @@ public class QuantilesSketchModule implements DruidModule
   public void configure(Binder binder)
   {
     if (ComplexMetrics.getSerdeForType(QUANTILES_SKETCH) == null) {
-      ComplexMetrics.registerSerde(QUANTILES_SKETCH, new QuantilesSketchMergeComplexMetricSerde());
+      ComplexMetrics.registerSerde(QUANTILES_SKETCH, new DoublesSketchMergeComplexMetricSerde());
     }
 
     if (ComplexMetrics.getSerdeForType(QUANTILES_SKETCH_MERGE_AGG) == null) {
-      ComplexMetrics.registerSerde(QUANTILES_SKETCH_MERGE_AGG, new QuantilesSketchMergeComplexMetricSerde());
+      ComplexMetrics.registerSerde(QUANTILES_SKETCH_MERGE_AGG, new DoublesSketchMergeComplexMetricSerde());
     }
 
     if (ComplexMetrics.getSerdeForType(QUANTILES_SKETCH_BUILD_AGG) == null) {
-      ComplexMetrics.registerSerde(QUANTILES_SKETCH_BUILD_AGG, new QuantilesSketchBuildComplexMetricSerde());
+      ComplexMetrics.registerSerde(QUANTILES_SKETCH_BUILD_AGG, new DoublesSketchBuildComplexMetricSerde());
     }
   }
 
@@ -66,7 +65,7 @@ public class QuantilesSketchModule implements DruidModule
     return Arrays.<Module>asList(
         new SimpleModule("QuantilesSketchModule")
             .registerSubtypes(
-                new NamedType(QuantilesSketchAggregatorFactory.class, QUANTILES_SKETCH),
+                new NamedType(DoublesSketchAggregatorFactory.class, QUANTILES_SKETCH),
                 new NamedType(QuantilesPostAggregator.class, QUANTILES_POST_AGG),
                 new NamedType(QuantilePostAggregator.class, QUANTILE_POST_AGG),
                 new NamedType(CustomSplitsHistogramPostAggregator.class, CUSTOM_SPLITS_HISTOGRAM_POST_AGG),
@@ -75,9 +74,8 @@ public class QuantilesSketchModule implements DruidModule
                 new NamedType(MaxPostAggregator.class, MAX_POST_AGG)
             )
             .addSerializer(
-                DoublesSketch.class, new QuantilesSketchJsonSerializer()
+                DoublesSketchHolder.class, new DoublesSketchHolderJsonSerializer()
             )
-        //would need to handle Memory here once off-heap is supported.
     );
   }
 }

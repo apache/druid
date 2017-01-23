@@ -69,7 +69,7 @@ public class CustomSplitsHistogramPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    DoublesSketch sketch = (DoublesSketch) combinedAggregators.get(fieldName);
+    DoublesSketch sketch = ((DoublesSketchHolder) combinedAggregators.get(fieldName)).getSketch();
     long n = sketch.getN();
     double[] result = sketch.getPMF(splits);
     for (int i = 0; i < result.length; i++) {

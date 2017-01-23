@@ -50,13 +50,13 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
-public class QuantilesSketchAggregationGroupByQueryTest
+public class DoublesSketchAggregationGroupByQueryTest
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private GroupByQueryConfig config;
-  private QuantilesSketchModule sm;
+  private DoublesSketchModule sm;
   private File s1;
   private File s2;
 
@@ -70,7 +70,7 @@ public class QuantilesSketchAggregationGroupByQueryTest
     return constructors;
   }
 
-  public QuantilesSketchAggregationGroupByQueryTest(final GroupByQueryConfig config)
+  public DoublesSketchAggregationGroupByQueryTest(final GroupByQueryConfig config)
   {
     this.config = config;
   }
@@ -78,7 +78,7 @@ public class QuantilesSketchAggregationGroupByQueryTest
   @Before
   public void setup() throws Exception
   {
-    sm = new QuantilesSketchModule();
+    sm = new DoublesSketchModule();
     sm.configure(null);
     AggregationTestHelper aggTestHelper = AggregationTestHelper.createSelectQueryAggregationTestHelper(
         sm.getJacksonModules(),
@@ -155,7 +155,7 @@ public class QuantilesSketchAggregationGroupByQueryTest
   private final static String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
-        new File(QuantilesSketchAggregationGroupByQueryTest.class.getClassLoader().getResource(fileName).getFile()),
+        new File(DoublesSketchAggregationGroupByQueryTest.class.getClassLoader().getResource(fileName).getFile()),
         Charset.forName("UTF-8")
     ).read();
   }

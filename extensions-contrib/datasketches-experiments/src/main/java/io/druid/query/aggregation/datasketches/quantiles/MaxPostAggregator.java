@@ -64,7 +64,7 @@ public class MaxPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    DoublesSketch sketch = (DoublesSketch) combinedAggregators.get(fieldName);
+    DoublesSketch sketch = ((DoublesSketchHolder) combinedAggregators.get(fieldName)).getSketch();
     return sketch.getMaxValue();
   }
 

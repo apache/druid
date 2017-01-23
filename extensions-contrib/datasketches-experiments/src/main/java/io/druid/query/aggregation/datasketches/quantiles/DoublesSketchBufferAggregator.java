@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-public class QuantilesSketchBufferAggregator implements BufferAggregator
+public class DoublesSketchBufferAggregator implements BufferAggregator
 {
   private final ObjectColumnSelector selector;
   private final int size;
@@ -43,12 +43,12 @@ public class QuantilesSketchBufferAggregator implements BufferAggregator
 
   private final Map<Integer, DoublesSketch> quantilesSketches = new HashMap<>(); //position in BB -> Quantiles sketch
 
-  public QuantilesSketchBufferAggregator(ObjectColumnSelector selector, int size, int maxOffheapSize)
+  public DoublesSketchBufferAggregator(ObjectColumnSelector selector, int size, int maxOffheapSize)
   {
     this.selector = selector;
     this.size = size;
     this.maxOffheapSize = maxOffheapSize;
-    this.emptySketch = QuantilesSketchUtils.buildSketch(size);
+    this.emptySketch = DoublesSketchHolder.buildSketch(size);
   }
 
   @Override
@@ -58,7 +58,7 @@ public class QuantilesSketchBufferAggregator implements BufferAggregator
       nm = new NativeMemory(buf);
     }
 
-    saveQuantilesSketchUnion(buf, position, QuantilesSketchUtils.buildUnion(size));
+    saveQuantilesSketchUnion(buf, position, DoublesSketchHolder.buildUnion(size));
   }
 
   @Override
@@ -66,14 +66,14 @@ public class QuantilesSketchBufferAggregator implements BufferAggregator
   {
     //TODO: do we need a synchronization wrapper for this?
     DoublesUnion union = getQuantilesSketchUnion(buf, position);
-    QuantilesSketchAggregator.updateQuantilesSketch(union, selector.get());
+    DoublesSketchAggregator.updateUnion(union, selector.get());
     saveQuantilesSketchUnion(buf, position, union);
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return getQuantilesSketchUnion(buf, position).getResult();
+    return DoublesSketchHolder.of(getQuantilesSketchUnion(buf, position).getResult());
   }
 
   @Override

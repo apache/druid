@@ -30,7 +30,7 @@ public class MinPostAggregatorTest
 
   public MinPostAggregatorTest()
   {
-    mapper = QuantilesSketchAggregatorFactoryTest.buildObjectMapper();
+    mapper = DoublesSketchAggregatorFactoryTest.buildObjectMapper();
   }
 
   @Test

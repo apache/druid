@@ -32,7 +32,7 @@ public class QuantilesPostAggregatorTest
 
   public QuantilesPostAggregatorTest()
   {
-    mapper = QuantilesSketchAggregatorFactoryTest.buildObjectMapper();
+    mapper = DoublesSketchAggregatorFactoryTest.buildObjectMapper();
   }
 
   @Test

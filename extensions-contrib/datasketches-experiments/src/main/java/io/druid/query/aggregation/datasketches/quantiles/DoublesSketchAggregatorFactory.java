@@ -22,11 +22,8 @@ package io.druid.query.aggregation.datasketches.quantiles;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.yahoo.sketches.Util;
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.DoublesUnion;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -41,7 +38,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class QuantilesSketchAggregatorFactory extends AggregatorFactory
+public class DoublesSketchAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 16;
 
@@ -52,23 +49,16 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   protected final int size;
   private final boolean isInputSketch;
   private final int maxIntermediateSize;
-
-  public static final Comparator<DoublesSketch> COMPARATOR = new Comparator<DoublesSketch>()
-  {
-    @Override
-    public int compare(DoublesSketch o, DoublesSketch o1)
-    {
-      return Doubles.compare(o.getN(), o1.getN());
-    }
-  };
+  private final boolean useOnheapAggreagtion;
 
   @JsonCreator
-  public QuantilesSketchAggregatorFactory(
+  public DoublesSketchAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty("size") Integer size,
       @JsonProperty("isInputSketch") boolean isInputSketch,
-      @JsonProperty("maxIntermediateSize") Integer maxIntermediateSize
+      @JsonProperty("maxIntermediateSize") Integer maxIntermediateSize,
+      @JsonProperty("useOnHeapAggregation") boolean useOnheapAggreagtion
   )
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -79,12 +69,14 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
     //validate the size with sketch library
     Util.checkIfPowerOf2(this.size, "size");
     //dummy sketch creation just to ensure all size restrictions are fulfilled.
-    QuantilesSketchUtils.buildSketch(this.size);
+    DoublesSketchHolder.buildSketch(this.size);
 
-    this.maxIntermediateSize = (maxIntermediateSize == null) ? 1 : maxIntermediateSize;
+    //Note: can this be computed based on the size provided?
+    this.maxIntermediateSize = (maxIntermediateSize == null) ? 64*1024 : maxIntermediateSize;
     Preconditions.checkArgument(this.maxIntermediateSize > 0, "maxIntermediateSize must be > 0.");
 
     this.isInputSketch = isInputSketch;
+    this.useOnheapAggreagtion = useOnheapAggreagtion;
   }
 
   @SuppressWarnings("unchecked")
@@ -93,9 +85,9 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   {
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
     if (selector == null) {
-      return new EmptyQuantilesSketchAggregator(name);
+      return new EmptyDoublesSketchAggregator(name);
     } else {
-      return new QuantilesSketchAggregator(name, selector, size);
+      return new DoublesSketchAggregator(name, selector, size);
     }
   }
 
@@ -105,40 +97,30 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   {
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
     if (selector == null) {
-      return new EmptyQuantilesSketchBufferAggregator();
+      return new EmptyDoublesSketchBufferAggregator();
+    } else if (useOnheapAggreagtion){
+      return new DoublesSketchBufferAggregator(selector, size, getMaxIntermediateSize());
     } else {
-      return new QuantilesSketchBufferAggregator(selector, size, getMaxIntermediateSize());
+      return new DoublesSketchOffheapBufferAggregator(selector, size, getMaxIntermediateSize());
     }
   }
 
   @Override
   public Object deserialize(Object object)
   {
-    return QuantilesSketchUtils.deserialize(object);
+    return DoublesSketchHolder.deserialize(object);
   }
 
   @Override
-  public Comparator<DoublesSketch> getComparator()
+  public Comparator<Object> getComparator()
   {
-    return COMPARATOR;
+    return DoublesSketchHolder.COMPARATOR;
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    if (lhs == null || ((DoublesSketch) lhs).isEmpty()) {
-      return rhs;
-    }
-
-    if (rhs == null || ((DoublesSketch) rhs).isEmpty()) {
-      return lhs;
-    }
-
-    DoublesUnion union = QuantilesSketchUtils.buildUnion(size);
-    union.update((DoublesSketch) lhs);
-    union.update((DoublesSketch) rhs);
-
-    return union.getResult();
+    return DoublesSketchHolder.combine(lhs, rhs, size);
   }
 
   @Override
@@ -176,7 +158,7 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object getAggregatorStartValue()
   {
-    return QuantilesSketchUtils.buildSketch(size);
+    return DoublesSketchHolder.buildSketch(size);
   }
 
   @Override
@@ -189,12 +171,13 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.<AggregatorFactory>singletonList(
-        new QuantilesSketchAggregatorFactory(
+        new DoublesSketchAggregatorFactory(
             fieldName,
             fieldName,
             size,
             isInputSketch,
-            maxIntermediateSize
+            maxIntermediateSize,
+            useOnheapAggreagtion
         )
     );
   }
@@ -202,21 +185,22 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new QuantilesSketchAggregatorFactory(name, name, size, false, maxIntermediateSize);
+    return new DoublesSketchAggregatorFactory(name, name, size, false, maxIntermediateSize, useOnheapAggreagtion);
   }
 
   @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    if (other.getName().equals(this.getName()) && other instanceof QuantilesSketchAggregatorFactory) {
-      QuantilesSketchAggregatorFactory castedOther = (QuantilesSketchAggregatorFactory) other;
+    if (other.getName().equals(this.getName()) && other instanceof DoublesSketchAggregatorFactory) {
+      DoublesSketchAggregatorFactory castedOther = (DoublesSketchAggregatorFactory) other;
 
-      return new QuantilesSketchAggregatorFactory(
+      return new DoublesSketchAggregatorFactory(
           name,
           name,
           Math.max(size, castedOther.size),
           false,
-          maxIntermediateSize
+          maxIntermediateSize,
+          useOnheapAggreagtion
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
@@ -234,16 +218,16 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    return ((DoublesSketch) object).getN();
+    return ((DoublesSketchHolder) object).getSketch().getN();
   }
 
   @Override
   public String getTypeName()
   {
     if (isInputSketch) {
-      return QuantilesSketchModule.QUANTILES_SKETCH_MERGE_AGG;
+      return DoublesSketchModule.QUANTILES_SKETCH_MERGE_AGG;
     } else {
-      return QuantilesSketchModule.QUANTILES_SKETCH_BUILD_AGG;
+      return DoublesSketchModule.QUANTILES_SKETCH_BUILD_AGG;
     }
   }
 
@@ -274,7 +258,7 @@ public class QuantilesSketchAggregatorFactory extends AggregatorFactory
       return false;
     }
 
-    QuantilesSketchAggregatorFactory that = (QuantilesSketchAggregatorFactory) o;
+    DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) o;
 
     if (size != that.size) {
       return false;

@@ -30,7 +30,7 @@ public class EqualSplitsHistogramPostAggregatorTest
 
   public EqualSplitsHistogramPostAggregatorTest()
   {
-    mapper = QuantilesSketchAggregatorFactoryTest.buildObjectMapper();
+    mapper = DoublesSketchAggregatorFactoryTest.buildObjectMapper();
   }
 
   @Test

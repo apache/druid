@@ -19,19 +19,15 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
 import io.druid.query.aggregation.BufferAggregator;
 
 import java.nio.ByteBuffer;
 
-public class EmptyQuantilesSketchBufferAggregator implements BufferAggregator
+public class EmptyDoublesSketchBufferAggregator implements BufferAggregator
 {
 
-  private final DoublesSketch result;
-
-  public EmptyQuantilesSketchBufferAggregator()
+  public EmptyDoublesSketchBufferAggregator()
   {
-    result = QuantilesSketchUtils.buildSketch(QuantilesSketchUtils.MIN_K);
   }
 
   @Override
@@ -47,7 +43,7 @@ public class EmptyQuantilesSketchBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return result;
+    return DoublesSketchHolder.EMPTY;
   }
 
   @Override

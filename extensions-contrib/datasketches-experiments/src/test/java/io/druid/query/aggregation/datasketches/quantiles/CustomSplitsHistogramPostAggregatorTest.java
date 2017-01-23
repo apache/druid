@@ -30,7 +30,7 @@ public class CustomSplitsHistogramPostAggregatorTest
 
   public CustomSplitsHistogramPostAggregatorTest()
   {
-    mapper = QuantilesSketchAggregatorFactoryTest.buildObjectMapper();
+    mapper = DoublesSketchAggregatorFactoryTest.buildObjectMapper();
   }
 
   @Test

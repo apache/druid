@@ -68,7 +68,7 @@ public class EqualSplitsHistogramPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    DoublesSketch sketch = (DoublesSketch) combinedAggregators.get(fieldName);
+    DoublesSketch sketch = ((DoublesSketchHolder) combinedAggregators.get(fieldName)).getSketch();
 
     double min = sketch.getMinValue();
     double max = sketch.getMaxValue();

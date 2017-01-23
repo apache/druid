@@ -19,42 +19,31 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.DoublesUnion;
-import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.ObjectColumnSelector;
 
-public class QuantilesSketchAggregator implements Aggregator
+public class EmptyDoublesSketchAggregator implements Aggregator
 {
-  private final ObjectColumnSelector selector;
   private final String name;
 
-  private DoublesUnion quantilesSketchUnion;
-
-  public QuantilesSketchAggregator(String name, ObjectColumnSelector selector, int size)
+  public EmptyDoublesSketchAggregator(String name)
   {
     this.name = name;
-    this.selector = selector;
-    this.quantilesSketchUnion = QuantilesSketchUtils.buildUnion(size);
   }
 
   @Override
   public void aggregate()
   {
-    updateQuantilesSketch(quantilesSketchUnion, selector.get());
   }
 
   @Override
   public void reset()
   {
-    quantilesSketchUnion.reset();
   }
 
   @Override
   public Object get()
   {
-    return quantilesSketchUnion.getResult();
+    return DoublesSketchHolder.EMPTY;
   }
 
   @Override
@@ -78,26 +67,5 @@ public class QuantilesSketchAggregator implements Aggregator
   @Override
   public void close()
   {
-    quantilesSketchUnion = null;
-  }
-
-  static void updateQuantilesSketch(DoublesUnion quantilesSketchUnion, Object update)
-  {
-    if (update == null) {
-      return;
-    }
-
-    //would need to handle Memory when off-heap is supported.
-    if (update instanceof DoublesSketch) {
-      if (!((DoublesSketch) update).isEmpty()) {
-        quantilesSketchUnion.update((DoublesSketch) update);
-      }
-    } else if (update instanceof Number) {
-      quantilesSketchUnion.update(((Number) update).doubleValue());
-    } else if (update instanceof String) {
-      quantilesSketchUnion.update(Double.parseDouble((String) update));
-    } else {
-      throw new ISE("Illegal type received while quantiles sketch merging [%s]", update.getClass());
-    }
   }
 }
