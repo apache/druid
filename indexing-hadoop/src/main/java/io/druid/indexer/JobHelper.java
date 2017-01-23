@@ -413,13 +413,17 @@ public class JobHelper
     zipPusher.push();
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
 
-    final Path finalIndexZipFilePath = new Path(segmentBasePath, "index.zip");
-    final URI indexOutURI = finalIndexZipFilePath.toUri();
+    Path finalIndexZipFilePath = new Path(segmentBasePath, "index.zip");
+    URI indexOutURI = finalIndexZipFilePath.toUri();
     final ImmutableMap<String, Object> loadSpec;
     // TODO: Make this a part of Pushers or Pullers
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
+        StringBuilder indexUriStringBuilder= new StringBuilder(indexOutURI.toString());
+        indexUriStringBuilder.setCharAt(indexUriStringBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
+        finalIndexZipFilePath = new Path(indexUriStringBuilder.toString());
+        indexOutURI = finalIndexZipFilePath.toUri();
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
@@ -463,10 +467,18 @@ public class JobHelper
           )
       );
     }
+    Path finalDescriptorPath = new Path(segmentBasePath, "descriptor.json");
+
+    if("hdfs".equals(outputFS.getScheme()) || "viewfs".equals(outputFS.getScheme()))
+    {
+      StringBuilder descriptorUriStringBuilder= new StringBuilder(finalDescriptorPath.toUri().toString());
+      descriptorUriStringBuilder.setCharAt(descriptorUriStringBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
+      finalDescriptorPath = new Path(descriptorUriStringBuilder.toString());
+    }
     writeSegmentDescriptor(
         outputFS,
         finalSegment,
-        new Path(segmentBasePath, "descriptor.json"),
+        finalDescriptorPath,
         progressable
     );
     return finalSegment;

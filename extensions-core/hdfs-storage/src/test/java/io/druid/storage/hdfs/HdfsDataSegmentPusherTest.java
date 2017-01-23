@@ -109,23 +109,34 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush);
 
+    StringBuilder indexBuilder =  new StringBuilder(String.format(
+        "%s/%s/index.zip",
+        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+        DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
+    ));
+    indexBuilder.setCharAt(indexBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
+
+    String indexUri = indexBuilder.toString();
+
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(segmentToPush, segment);
     Assert.assertEquals(ImmutableMap.of(
         "type",
         "hdfs",
         "path",
-        String.format(
-            "%s/%s/index.zip",
-            FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-            DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
-        )
+        indexUri
     ), segment.getLoadSpec());
     // rename directory after push
     final String segmentPath = DataSegmentPusherUtil.getHdfsStorageDir(segment);
-    File indexFile = new File(String.format("%s/%s/index.zip", storageDirectory, segmentPath));
+    indexBuilder = new StringBuilder(String.format("%s/%s/index.zip", storageDirectory, segmentPath));
+    indexBuilder.setCharAt(indexBuilder.lastIndexOf("/"), '_');
+
+    StringBuilder descriptorBuilder = new StringBuilder(String.format("%s/%s/descriptor.json", storageDirectory, segmentPath));
+    descriptorBuilder.setCharAt(descriptorBuilder.lastIndexOf("/"), '_');
+
+    File indexFile = new File(indexBuilder.toString());
     Assert.assertTrue(indexFile.exists());
-    File descriptorFile = new File(String.format("%s/%s/descriptor.json", storageDirectory, segmentPath));
+    File descriptorFile = new File(descriptorBuilder.toString());
     Assert.assertTrue(descriptorFile.exists());
 
     // push twice will fail and temp dir cleaned
