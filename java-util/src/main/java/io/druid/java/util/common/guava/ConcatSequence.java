@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
@@ -100,11 +101,14 @@ public class ConcatSequence<T> implements Sequence<T>
     try {
       return makeYielder(yielderYielder, initValue, accumulator);
     }
-    catch (RuntimeException e) {
-      // We caught a RuntimeException instead of returning a really, real, live, real boy, errr, iterator
-      // So we better try to close our stuff, 'cause the exception is what is making it out of here.
-      CloseQuietly.close(yielderYielder);
-      throw e;
+    catch (Throwable t) {
+      try {
+        yielderYielder.close();
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
     }
   }
 
@@ -195,8 +199,9 @@ public class ConcatSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
-        yielder.close();
-        yielderYielder.close();
+        try (Closeable toClose = yielderYielder) {
+          yielder.close();
+        }
       }
     };
   }

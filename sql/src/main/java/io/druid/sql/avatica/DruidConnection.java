@@ -17,51 +17,36 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.sql.avatica;
 
-import io.druid.java.util.common.parsers.CloseableIterator;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Future;
 
 /**
+ * Connection tracking for {@link DruidMeta}. Not thread-safe.
  */
-public class IteratorWithBaggage<T> implements CloseableIterator<T>
+public class DruidConnection
 {
-  private final Iterator<T> baseIter;
-  private final Closeable baggage;
+  private final Map<Integer, DruidStatement> statements;
+  private Future<?> timeoutFuture;
 
-  public IteratorWithBaggage(
-      Iterator<T> baseIter,
-      Closeable baggage
-  )
+  public DruidConnection()
   {
-    this.baseIter = baseIter;
-    this.baggage = baggage;
+    this.statements = new HashMap<>();
   }
 
-  @Override
-  public boolean hasNext()
+  public Map<Integer, DruidStatement> statements()
   {
-    return baseIter.hasNext();
+    return statements;
   }
 
-  @Override
-  public T next()
+  public DruidConnection sync(final Future<?> newTimeoutFuture)
   {
-    return baseIter.next();
-  }
-
-  @Override
-  public void remove()
-  {
-    baseIter.remove();
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    baggage.close();
+    if (timeoutFuture != null) {
+      timeoutFuture.cancel(false);
+    }
+    timeoutFuture = newTimeoutFuture;
+    return this;
   }
 }

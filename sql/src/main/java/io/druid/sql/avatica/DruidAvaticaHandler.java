@@ -22,12 +22,9 @@ package io.druid.sql.avatica;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
-import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.server.AvaticaJsonHandler;
-import org.apache.calcite.jdbc.CalciteConnection;
-import org.apache.calcite.jdbc.CalciteMetaImpl;
 import org.eclipse.jetty.server.Request;
 
 import javax.servlet.ServletException;
@@ -42,16 +39,12 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
 
   @Inject
   public DruidAvaticaHandler(
-      final CalciteConnection connection,
+      final DruidMeta druidMeta,
       @Self final DruidNode druidNode,
       final AvaticaMonitor avaticaMonitor
   ) throws InstantiationException, IllegalAccessException, InvocationTargetException
   {
-    super(
-        new LocalService((Meta) CalciteMetaImpl.class.getConstructors()[0].newInstance(connection), avaticaMonitor),
-        avaticaMonitor
-    );
-
+    super(new LocalService(druidMeta), avaticaMonitor);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPort()));
   }
 

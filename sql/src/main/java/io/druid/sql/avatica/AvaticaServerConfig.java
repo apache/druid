@@ -17,40 +17,34 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.sql.avatica;
 
-import java.util.Iterator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
-
-/**
- */
-public class SimpleSequence<T> extends BaseSequence<T, Iterator<T>>
+public class AvaticaServerConfig
 {
-  public static <T> Sequence<T> create(Iterable<T> iterable)
+  @JsonProperty
+  public int maxConnections = 25;
+
+  @JsonProperty
+  public int maxStatementsPerConnection = 4;
+
+  @JsonProperty
+  public Period connectionIdleTimeout = new Period("PT30M");
+
+  public int getMaxConnections()
   {
-    return new SimpleSequence<>(iterable);
+    return maxConnections;
   }
 
-  public SimpleSequence(
-      final Iterable<T> iterable
-  )
+  public int getMaxStatementsPerConnection()
   {
-    super(
-        new IteratorMaker<T, Iterator<T>>()
-        {
-          @Override
-          public Iterator<T> make()
-          {
-            return iterable.iterator();
-          }
-
-          @Override
-          public void cleanup(Iterator<T> iterFromMake)
-          {
-
-          }
-        }
-    );
+    return maxStatementsPerConnection;
   }
 
+  public Period getConnectionIdleTimeout()
+  {
+    return connectionIdleTimeout;
+  }
 }

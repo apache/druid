@@ -487,8 +487,6 @@ public class DumpSegment extends GuiceRunnable
           {
             return null;
           }
-
-          public void close() {}
         }
     );
   }

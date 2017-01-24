@@ -62,16 +62,7 @@ public class CombiningSequence<T> implements Sequence<T>
   @Override
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> accumulator)
   {
-    final CombiningAccumulator<OutType> combiningAccumulator = new CombiningAccumulator<>(
-        Suppliers.ofInstance(initValue),
-        accumulator
-    );
-    T lastValue = baseSequence.accumulate((T) null, combiningAccumulator);
-    if (combiningAccumulator.accumulatedSomething()) {
-      return accumulator.accumulate(combiningAccumulator.retVal, lastValue);
-    } else {
-      return initValue;
-    }
+    return accumulate(Suppliers.ofInstance(initValue), accumulator);
   }
 
   @Override

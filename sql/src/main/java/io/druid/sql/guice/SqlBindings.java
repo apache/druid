@@ -17,11 +17,20 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.sql.guice;
 
-/**
- */
-public interface YieldSign<T>
+import com.google.inject.Binder;
+import com.google.inject.multibindings.Multibinder;
+import io.druid.sql.calcite.aggregation.SqlAggregator;
+
+public class SqlBindings
 {
-  public T yield(T toYield);
+  public static void addAggregator(
+      final Binder binder,
+      final Class<? extends SqlAggregator> aggregatorClass
+  )
+  {
+    final Multibinder<SqlAggregator> setBinder = Multibinder.newSetBinder(binder, SqlAggregator.class);
+    setBinder.addBinding().to(aggregatorClass);
+  }
 }

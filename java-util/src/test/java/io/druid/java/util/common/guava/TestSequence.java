@@ -21,12 +21,12 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.base.Supplier;
 
+import java.io.Closeable;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
-*/
+ */
 public class TestSequence<T> implements Sequence<T>
 {
   public static <T> TestSequence<T> create(Iterable<T> iterable)
@@ -44,21 +44,17 @@ public class TestSequence<T> implements Sequence<T>
 
   public TestSequence(final Iterable<T> iterable)
   {
-    base = new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
-    {
-      @Override
-      public Iterator<T> make()
-      {
-        return iterable.iterator();
-      }
-
-      @Override
-      public void cleanup(Iterator<T> iterFromMake)
-      {
-        closed.set(true);
-      }
-    });
+    base = Sequences.withBaggage(
+        Sequences.simple(iterable),
+        new Closeable()
+        {
+          @Override
+          public void close()
+          {
+            closed.set(true);
+          }
+        }
+    );
   }
 
   @Override

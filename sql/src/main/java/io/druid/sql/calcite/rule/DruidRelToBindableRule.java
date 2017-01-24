@@ -17,49 +17,36 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.sql.calcite.rule;
 
-import java.io.Closeable;
-import java.io.IOException;
+import io.druid.sql.calcite.rel.DruidRel;
+import org.apache.calcite.interpreter.BindableConvention;
+import org.apache.calcite.plan.Convention;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.convert.ConverterRule;
 
-
-/**
- */
-public class ResourceClosingYielder<OutType> implements Yielder<OutType>
+public class DruidRelToBindableRule extends ConverterRule
 {
-  private final Yielder<OutType> baseYielder;
-  private final Closeable closeable;
+  private static DruidRelToBindableRule INSTANCE = new DruidRelToBindableRule();
 
-  public ResourceClosingYielder(Yielder<OutType> baseYielder, Closeable closeable)
+  private DruidRelToBindableRule()
   {
-    this.baseYielder = baseYielder;
-    this.closeable = closeable;
+    super(
+        DruidRel.class,
+        Convention.NONE,
+        BindableConvention.INSTANCE,
+        DruidRelToBindableRule.class.getSimpleName()
+    );
+  }
+
+  public static DruidRelToBindableRule instance()
+  {
+    return INSTANCE;
   }
 
   @Override
-  public OutType get()
+  public RelNode convert(RelNode rel)
   {
-    return baseYielder.get();
-  }
-
-  @Override
-  public Yielder<OutType> next(OutType initValue)
-  {
-    return new ResourceClosingYielder<>(baseYielder.next(initValue), closeable);
-  }
-
-  @Override
-  public boolean isDone()
-  {
-    return baseYielder.isDone();
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    if (closeable != null) {
-      closeable.close();
-    }
-    baseYielder.close();
+    return ((DruidRel) rel).asBindable();
   }
 }

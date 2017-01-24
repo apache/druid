@@ -20,8 +20,6 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
-import io.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -31,29 +29,8 @@ import java.util.Iterator;
  */
 public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T>
 {
-  private static final Logger log = new Logger(BaseSequence.class);
 
   private final IteratorMaker<T, IterType> maker;
-
-  public static <T> Sequence<T> simple(final Iterable<T> iterable)
-  {
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
-        {
-          @Override
-          public Iterator<T> make()
-          {
-            return iterable.iterator();
-          }
-
-          @Override
-          public void cleanup(Iterator<T> iterFromMake)
-          {
-
-          }
-        }
-    );
-  }
 
   public BaseSequence(
       IteratorMaker<T, IterType> maker
@@ -85,11 +62,18 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
       while (iterator.hasNext()) {
         initValue = fn.accumulate(initValue, iterator.next());
       }
-      return initValue;
     }
-    finally {
-      maker.cleanup(iterator);
+    catch (Throwable t) {
+      try {
+        maker.cleanup(iterator);
+      }
+      catch (Exception e) {
+        t.addSuppressed(e);
+      }
+      throw t;
     }
+    maker.cleanup(iterator);
+    return initValue;
   }
 
   @Override
@@ -100,16 +84,14 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
     try {
       return makeYielder(initValue, accumulator, iterator);
     }
-    catch (Exception e) {
-      // We caught an Exception instead of returning a really, real, live, real boy, errr, iterator
-      // So we better try to close our stuff, 'cause the exception is what is making it out of here.
+    catch (Throwable t) {
       try {
         maker.cleanup(iterator);
       }
-      catch (RuntimeException e1) {
-        log.error(e1, "Exception thrown when closing maker.  Logging and ignoring.");
+      catch (Exception e) {
+        t.addSuppressed(e);
       }
-      throw Throwables.propagate(e);
+      throw t;
     }
   }
 
@@ -125,16 +107,14 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
       // after making the iterator
       return makeYielder(initValue.get(), accumulator, iterator);
     }
-    catch (Exception e) {
-      // We caught an Exception instead of returning a really, real, live, real boy, errr, iterator
-      // So we better try to close our stuff, 'cause the exception is what is making it out of here.
+    catch (Throwable t) {
       try {
         maker.cleanup(iterator);
       }
-      catch (RuntimeException e1) {
-        log.error(e1, "Exception thrown when closing maker.  Logging and ignoring.");
+      catch (Exception e) {
+        t.addSuppressed(e);
       }
-      throw Throwables.propagate(e);
+      throw t;
     }
   }
 
@@ -179,16 +159,14 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
         try {
           return makeYielder(initValue, accumulator, iter);
         }
-        catch (Exception e) {
-          // We caught an Exception instead of returning a really, real, live, real boy, errr, iterator
-          // So we better try to close our stuff, 'cause the exception is what is making it out of here.
+        catch (Throwable t) {
           try {
             maker.cleanup(iter);
           }
-          catch (RuntimeException e1) {
-            log.error(e1, "Exception thrown when closing maker.  Logging and ignoring.");
+          catch (Exception e) {
+            t.addSuppressed(e);
           }
-          throw Throwables.propagate(e);
+          throw t;
         }
       }
 
@@ -206,10 +184,10 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
     };
   }
 
-  public static interface IteratorMaker<T, IterType extends Iterator<T>>
+  public interface IteratorMaker<T, IterType extends Iterator<T>>
   {
-    public IterType make();
+    IterType make();
 
-    public void cleanup(IterType iterFromMake);
+    void cleanup(IterType iterFromMake);
   }
 }

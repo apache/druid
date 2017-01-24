@@ -176,15 +176,18 @@ public class GroupByRowProcessor
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
               closeOnFailure.add(grouper);
 
-              final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(new Supplier<Grouper<RowBasedKey>>()
-              {
-                @Override
-                public Grouper<RowBasedKey> get()
-                {
-                  grouper.init();
-                  return grouper;
-                }
-              }, accumulator);
+              final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(
+                  new Supplier<Grouper<RowBasedKey>>()
+                  {
+                    @Override
+                    public Grouper<RowBasedKey> get()
+                    {
+                      grouper.init();
+                      return grouper;
+                    }
+                  },
+                  accumulator
+              );
               if (retVal != grouper) {
                 throw new ResourceLimitExceededException("Grouping resources exhausted");
               }

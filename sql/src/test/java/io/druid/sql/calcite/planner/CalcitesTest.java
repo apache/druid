@@ -17,41 +17,24 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.sql.calcite.planner;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-/**
- */
-public class ResourceClosingSequenceTest
+public class CalcitesTest
 {
   @Test
-  public void testSanity() throws Exception
+  public void testEscapeStringLiteral()
   {
-    final AtomicInteger closedCounter = new AtomicInteger(0);
-    Closeable closeable = new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        closedCounter.incrementAndGet();
-      }
-    };
-
-    final List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5);
-
-    SequenceTestHelper.testAll(Sequences.withBaggage(Sequences.simple(nums), closeable), nums);
-
-    Assert.assertEquals(3, closedCounter.get());
-
-    closedCounter.set(0);
-    SequenceTestHelper.testClosed(closedCounter, Sequences.withBaggage(new UnsupportedSequence(), closeable));
+    Assert.assertEquals("''", Calcites.escapeStringLiteral(null));
+    Assert.assertEquals("''", Calcites.escapeStringLiteral(""));
+    Assert.assertEquals("'foo'", Calcites.escapeStringLiteral("foo"));
+    Assert.assertEquals("'foo bar'", Calcites.escapeStringLiteral("foo bar"));
+    Assert.assertEquals("U&'foö bar'", Calcites.escapeStringLiteral("foö bar"));
+    Assert.assertEquals("U&'foo \\0026\\0026 bar'", Calcites.escapeStringLiteral("foo && bar"));
+    Assert.assertEquals("U&'foo \\005C bar'", Calcites.escapeStringLiteral("foo \\ bar"));
+    Assert.assertEquals("U&'foo\\0027s bar'", Calcites.escapeStringLiteral("foo's bar"));
+    Assert.assertEquals("U&'друид'", Calcites.escapeStringLiteral("друид"));
   }
 }

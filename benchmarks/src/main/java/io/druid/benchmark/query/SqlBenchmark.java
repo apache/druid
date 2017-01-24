@@ -34,6 +34,7 @@ import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -41,18 +42,25 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.segment.IndexBuilder;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.planner.PlannerFactory;
+import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.calcite.jdbc.CalciteConnection;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.tools.Planner;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -71,8 +79,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -96,7 +102,7 @@ public class SqlBenchmark
 
   private File tmpDir;
   private SpecificSegmentsQuerySegmentWalker walker;
-  private CalciteConnection calciteConnection;
+  private PlannerFactory plannerFactory;
   private GroupByQuery groupByQuery;
   private String sqlQuery;
 
@@ -130,7 +136,23 @@ public class SqlBenchmark
     log.info("%,d/%,d rows generated.", rows.size(), rowsPerSegment);
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    walker = CalciteTests.createWalker(tmpDir, rows);
+    final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
+    final QueryableIndex index = IndexBuilder.create()
+                                             .tmpDir(new File(tmpDir, "1"))
+                                             .indexMerger(TestHelper.getTestIndexMergerV9())
+                                             .rows(rows)
+                                             .buildMMappedIndex();
+
+    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index
+    );
+
     final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
         "foo",
         new DruidTable(
@@ -152,7 +174,11 @@ public class SqlBenchmark
         return tableMap;
       }
     };
-    calciteConnection = Calcites.jdbc(druidSchema, plannerConfig);
+    plannerFactory = new PlannerFactory(
+        Calcites.createRootSchema(druidSchema),
+        CalciteTests.createOperatorTable(),
+        plannerConfig
+    );
     groupByQuery = GroupByQuery
         .builder()
         .setDataSource("foo")
@@ -160,7 +186,7 @@ public class SqlBenchmark
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec("dimZipf", "d0"),
-    new DefaultDimensionSpec("dimSequential", "d1")
+                new DefaultDimensionSpec("dimSequential", "d1")
             )
         )
         .setAggregatorSpecs(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("c")))
@@ -204,15 +230,12 @@ public class SqlBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void querySql(Blackhole blackhole) throws Exception
+  public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    final ResultSet resultSet = calciteConnection.createStatement().executeQuery(sqlQuery);
-    final ResultSetMetaData metaData = resultSet.getMetaData();
-
-    while (resultSet.next()) {
-      for (int i = 0; i < metaData.getColumnCount(); i++) {
-        blackhole.consume(resultSet.getObject(i + 1));
-      }
+    try (final Planner planner = plannerFactory.createPlanner()) {
+      final PlannerResult plannerResult = Calcites.plan(planner, sqlQuery);
+      final ArrayList<Object[]> results = Sequences.toList(plannerResult.run(), Lists.<Object[]>newArrayList());
+      blackhole.consume(results);
     }
   }
 }

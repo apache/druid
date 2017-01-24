@@ -31,6 +31,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,20 +53,55 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
   public DimFilter process(DimFilter filter)
   {
     if (filter instanceof AndDimFilter) {
-      final List<DimFilter> children = ((AndDimFilter) filter).getFields();
+      final List<DimFilter> children = getAndFilterChildren((AndDimFilter) filter);
       final DimFilter one = doSimplifyAnd(children);
       final DimFilter two = negate(doSimplifyOr(negateAll(children)));
       return computeCost(one) <= computeCost(two) ? one : two;
     } else if (filter instanceof OrDimFilter) {
-      final List<DimFilter> children = ((OrDimFilter) filter).getFields();
+      final List<DimFilter> children = getOrFilterChildren((OrDimFilter) filter);
       final DimFilter one = doSimplifyOr(children);
       final DimFilter two = negate(doSimplifyAnd(negateAll(children)));
       return computeCost(one) <= computeCost(two) ? one : two;
     } else if (filter instanceof NotDimFilter) {
-      return negate(((NotDimFilter) filter).getField());
+      final DimFilter field = ((NotDimFilter) filter).getField();
+      final DimFilter candidate;
+      if (field instanceof OrDimFilter) {
+        candidate = doSimplifyAnd(negateAll(getOrFilterChildren((OrDimFilter) field)));
+      } else if (field instanceof AndDimFilter) {
+        candidate = doSimplifyOr(negateAll(getAndFilterChildren((AndDimFilter) field)));
+      } else {
+        candidate = negate(field);
+      }
+      return computeCost(filter) <= computeCost(candidate) ? filter : candidate;
     } else {
       return filter;
     }
+  }
+
+  private List<DimFilter> getAndFilterChildren(final AndDimFilter filter)
+  {
+    final List<DimFilter> children = new ArrayList<>();
+    for (final DimFilter field : filter.getFields()) {
+      if (field instanceof AndDimFilter) {
+        children.addAll(getAndFilterChildren((AndDimFilter) field));
+      } else {
+        children.add(field);
+      }
+    }
+    return children;
+  }
+
+  private List<DimFilter> getOrFilterChildren(final OrDimFilter filter)
+  {
+    final List<DimFilter> children = new ArrayList<>();
+    for (final DimFilter field : filter.getFields()) {
+      if (field instanceof OrDimFilter) {
+        children.addAll(getOrFilterChildren((OrDimFilter) field));
+      } else {
+        children.add(field);
+      }
+    }
+    return children;
   }
 
   private static DimFilter doSimplifyAnd(final List<DimFilter> children)

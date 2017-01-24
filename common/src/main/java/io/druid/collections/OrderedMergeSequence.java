@@ -21,8 +21,10 @@ package io.druid.collections;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
+import com.google.common.io.Closer;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
@@ -64,14 +66,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
   @Override
   public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
   {
-    Yielder<OutType> yielder = null;
-    try {
-      yielder = toYielder(initValue, YieldingAccumulators.fromAccumulator(accumulator));
-      return yielder.get();
-    }
-    finally {
-      CloseQuietly.close(yielder);
-    }
+    return accumulate(Suppliers.ofInstance(initValue), accumulator);
   }
 
   @Override
@@ -92,10 +87,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
-    final Yielder<Yielder<T>> oldDudeAtCrosswalk = makeOldDudeAtCrosswalk();
-
-    return makeYielder(pQueue, oldDudeAtCrosswalk, initValue, accumulator);
+    return toYielder(Suppliers.ofInstance(initValue), accumulator);
   }
 
   @Override
@@ -237,9 +229,11 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
+        Closer closer = Closer.create();
         while (!pQueue.isEmpty()) {
-          pQueue.remove().close();
+          closer.register(pQueue.remove());
         }
+        closer.close();
       }
     };
   }

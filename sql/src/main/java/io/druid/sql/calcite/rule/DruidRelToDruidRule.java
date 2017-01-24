@@ -17,36 +17,36 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.sql.calcite.rule;
 
-import com.google.common.base.Function;
+import io.druid.sql.calcite.rel.DruidConvention;
+import io.druid.sql.calcite.rel.DruidRel;
+import org.apache.calcite.plan.Convention;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.convert.ConverterRule;
 
-import java.util.Map;
-
-/**
- */
-public class Fns
+public class DruidRelToDruidRule extends ConverterRule
 {
-  public static Function<String, String[]> splitFn(final String splitChar, final int numCols)
+  private static DruidRelToDruidRule INSTANCE = new DruidRelToDruidRule();
+
+  private DruidRelToDruidRule()
   {
-    return new Function<String, String[]>()
-    {
-      public String[] apply(String input)
-      {
-        return input.split(splitChar, numCols);
-      }
-    };
+    super(
+        DruidRel.class,
+        Convention.NONE,
+        DruidConvention.instance(),
+        DruidRelToDruidRule.class.getSimpleName()
+    );
   }
 
-  public static <KeyType, OutType> Function<Map<KeyType, OutType>, OutType> getFromMap(final KeyType key)
+  public static DruidRelToDruidRule instance()
   {
-    return new Function<Map<KeyType, OutType>, OutType>()
-    {
-      @Override
-      public OutType apply(Map<KeyType, OutType> in)
-      {
-        return in.get(key);
-      }
-    };
+    return INSTANCE;
+  }
+
+  @Override
+  public RelNode convert(RelNode rel)
+  {
+    return ((DruidRel) rel).asDruidConvention();
   }
 }
