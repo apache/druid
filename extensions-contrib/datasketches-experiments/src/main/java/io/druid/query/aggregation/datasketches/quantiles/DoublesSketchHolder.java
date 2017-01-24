@@ -210,7 +210,8 @@ public class DoublesSketchHolder
 
   private static DoublesSketch deserializeFromMemory(Memory mem)
   {
-    return DoublesSketch.wrap(mem);
+    return DoublesSketch.heapify(mem);
+//    return DoublesSketch.wrap(mem);
   }
 
   public static DoublesUnion buildUnion(int size)
