@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.kerberos;
+package io.druid.security.kerberos;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Preconditions;
@@ -30,10 +30,11 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Global;
-import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.guice.http.HttpClientModule;
+import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.initialization.DruidModule;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
+import io.druid.server.router.Router;
 
 import java.util.List;
 import java.util.Properties;
@@ -43,8 +44,7 @@ import java.util.Properties;
 public class DruidKerberosModule implements DruidModule
 {
 
-  private static final String PROPERTY_AUTH_TYPE = "druid.authentication.type";
-  private static final String KERBEROS = "kerberos";
+  private static final String KERBEROS_ENABLED = "druid.authentication.kerberos.enabled";
 
   @Inject
   private Properties props;
@@ -66,17 +66,20 @@ public class DruidKerberosModule implements DruidModule
       Multibinder.newSetBinder(binder, ServletFilterHolder.class)
                  .addBinding()
                  .to(SpnegoFilterHolder.class);
-      JsonConfigProvider.bind(binder, "druid.global.http", DruidHttpClientConfig.class, Global.class);
+
       binder.bind(HttpClient.class)
             .annotatedWith(Global.class)
             .toProvider(new KerberosHttpClientProvider(new HttpClientModule.HttpClientProvider(Global.class)))
             .in(LazySingleton.class);
 
-      JsonConfigProvider.bind(binder, "druid.broker.http", DruidHttpClientConfig.class, Client.class);
-
       binder.bind(HttpClient.class)
             .annotatedWith(Client.class)
             .toProvider(new KerberosHttpClientProvider(new HttpClientModule.HttpClientProvider(Client.class)))
+            .in(LazySingleton.class);
+
+      binder.bind(org.eclipse.jetty.client.HttpClient.class)
+            .annotatedWith(Router.class)
+            .toProvider(new KerberosJettyHttpClientProvider(new JettyHttpClientModule.HttpClientProvider(Router.class)))
             .in(LazySingleton.class);
     }
   }
@@ -84,7 +87,7 @@ public class DruidKerberosModule implements DruidModule
   private boolean isKerberosSecurityEnabled()
   {
     Preconditions.checkNotNull(props, "props");
-    return props.getProperty(PROPERTY_AUTH_TYPE, "").equalsIgnoreCase(KERBEROS);
+    return Boolean.getBoolean(props.getProperty(KERBEROS_ENABLED, "false"));
   }
 
 

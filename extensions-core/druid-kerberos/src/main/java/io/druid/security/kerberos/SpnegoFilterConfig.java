@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.kerberos;
+package io.druid.security.kerberos;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

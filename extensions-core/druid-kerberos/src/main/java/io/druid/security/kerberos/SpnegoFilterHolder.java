@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.kerberos;
+package io.druid.security.kerberos;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
@@ -62,6 +62,9 @@ public class SpnegoFilterHolder implements ServletFilterHolder
       {
         ClassLoader prevLoader = Thread.currentThread().getContextClassLoader();
         try {
+          // AuthenticationHandler is created during Authenticationfilter.init using reflection with thread context class loader.
+          // In case of druid since the class is actually loaded as an extension and filter init is done in main thread.
+          // We need to set the classloader explicitly to extension class loader.
           Thread.currentThread().setContextClassLoader(AuthenticationFilter.class.getClassLoader());
           super.init(filterConfig);
         }
@@ -103,7 +106,6 @@ public class SpnegoFilterHolder implements ServletFilterHolder
   @Override
   public Map<String, String> getInitParameters()
   {
-    System.out.println(config);
     Map<String, String> params = new HashMap<String, String>();
     try {
       params.put(
