@@ -23,12 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 
+import java.util.Collections;
 import java.util.List;
 
 public class SpnegoFilterConfig
 {
 
-  public static final List<String> DEFAULT_EXCLUDED_PATHS = ImmutableList.of("/status");
+  public static final List<String> DEFAULT_EXCLUDED_PATHS = Collections.emptyList();
 
   @JsonProperty
   private final String principal;
