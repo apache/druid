@@ -28,10 +28,18 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
 {
   private static final Logger log = new Logger(ReferenceCountingResourceHolder.class);
+
+  private static final AtomicLong leakedResources = new AtomicLong();
+
+  public static long leakedResources()
+  {
+    return leakedResources.get();
+  }
 
   private final T object;
   private final Closeable closer;
@@ -134,6 +142,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
         }
         if (refCount.compareAndSet(count, 0)) {
           try {
+            leakedResources.incrementAndGet();
             closer.close();
             return;
           }

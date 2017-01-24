@@ -19,6 +19,7 @@
 
 package io.druid.client.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import io.druid.collections.ResourceHolder;
@@ -27,6 +28,7 @@ import net.spy.memcached.MemcachedClientIF;
 import sun.misc.Cleaner;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Simple load balancing pool that always returns the least used {@link MemcachedClientIF}.
@@ -40,6 +42,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClientIF>>
 {
   private static final Logger log = new Logger(MemcacheClientPool.class);
+
+  private static final AtomicLong leakedClients = new AtomicLong(0);
+
+  public static long leakedClients()
+  {
+    return leakedClients.get();
+  }
 
   /**
    * The number of memcached connections is not expected to be small (<= 8), so it's easier to find the least used
@@ -63,7 +72,7 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
   }
 
   @Override
-  public synchronized ResourceHolder<MemcachedClientIF> get()
+  public synchronized IdempotentCloseableHolder get()
   {
     CountingHolder leastUsedClientHolder = connections[0];
     int minCount = leastUsedClientHolder.count.get();
@@ -93,7 +102,8 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     }
   }
 
-  private static class IdempotentCloseableHolder implements ResourceHolder<MemcachedClientIF>
+  @VisibleForTesting
+  static class IdempotentCloseableHolder implements ResourceHolder<MemcachedClientIF>
   {
     private CountingHolder countingHolder;
 
@@ -106,6 +116,11 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     public MemcachedClientIF get()
     {
       return countingHolder.clientIF;
+    }
+
+    int count()
+    {
+      return countingHolder.count.get();
     }
 
     @Override
@@ -134,6 +149,7 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     {
       final int shouldBeZero = count.get();
       if (shouldBeZero != 0) {
+        leakedClients.incrementAndGet();
         log.warn("Expected 0 resource count, got [%d]! Object was[%s].", shouldBeZero, clientIF);
       }
     }
