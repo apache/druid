@@ -33,6 +33,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.BitmapIndex;
 
 import java.util.Set;
 
@@ -62,7 +63,8 @@ public class InFilter implements Filter
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
     if (extractionFn == null) {
-      return selector.getBitmapFactory().union(getBitmapIterable(selector));
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+      return selector.getBitmapFactory().union(getBitmapIterable(bitmapIndex));
     } else {
       return Filters.matchPredicate(
           dimension,
@@ -76,10 +78,12 @@ public class InFilter implements Filter
   public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     if (extractionFn == null) {
+      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
       return Filters.estimatePredicateSelectivity(
+          bitmapIndex,
           columnSelector,
           dimension,
-          getBitmapIterable(indexSelector),
+          getBitmapIndexIterable(bitmapIndex),
           indexSelector.getNumRows()
       );
     } else {
@@ -92,15 +96,21 @@ public class InFilter implements Filter
     }
   }
 
-  private Iterable<ImmutableBitmap> getBitmapIterable(final BitmapIndexSelector selector)
+  private Iterable<ImmutableBitmap> getBitmapIterable(final BitmapIndex bitmapIndex)
+  {
+    return Filters.bitmapsFromIndexes(getBitmapIndexIterable(bitmapIndex), bitmapIndex);
+  }
+
+  private Iterable<Integer> getBitmapIndexIterable(final BitmapIndex bitmapIndex)
   {
     return Iterables.transform(
-        values, new Function<String, ImmutableBitmap>()
+        values,
+        new Function<String, Integer>()
         {
           @Override
-          public ImmutableBitmap apply(String value)
+          public Integer apply(String value)
           {
-            return selector.getBitmapIndex(dimension, value);
+            return bitmapIndex.getIndex(value);
           }
         }
     );

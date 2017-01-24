@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.GuavaUtils;
@@ -53,7 +54,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -61,7 +62,6 @@ public class Filters
 {
   public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(ValueType.STRING, ValueType.LONG);
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
-  private static final Random random = new Random(System.currentTimeMillis());
   private static final int SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION = 100;
 
   /**
@@ -191,6 +191,29 @@ public class Filters
   }
 
   /**
+   * Transform an iterable of indexes of bitmaps to an iterable of bitmaps
+   *
+   * @param indexes indexes of bitmaps
+   * @param bitmapIndex an object to retrieve bitmaps using indexes
+   *
+   * @return an iterable of bitmaps
+   */
+  static Iterable<ImmutableBitmap> bitmapsFromIndexes(final Iterable<Integer> indexes, final BitmapIndex bitmapIndex)
+  {
+    return Iterables.transform(
+        indexes,
+        new Function<Integer, ImmutableBitmap>()
+        {
+          @Override
+          public ImmutableBitmap apply(Integer index)
+          {
+            return bitmapIndex.getBitmap(index);
+          }
+        }
+    );
+  }
+
+  /**
    * Return the union of bitmaps for all values matching a particular predicate.
    *
    * @param dimension dimension to look at
@@ -199,7 +222,7 @@ public class Filters
    *
    * @return bitmap of matching rows
    *
-   * @see Filters#estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
+   * @see #estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
    */
   public static ImmutableBitmap matchPredicate(
       final String dimension,
@@ -233,7 +256,7 @@ public class Filters
    *
    * @return estimated selectivity
    *
-   * @see Filters#matchPredicate(String, BitmapIndexSelector, Predicate)
+   * @see #matchPredicate(String, BitmapIndexSelector, Predicate)
    */
   static double estimatePredicateSelectivity(
       final ColumnSelector columnSelector,
@@ -255,9 +278,10 @@ public class Filters
     // Apply predicate to all dimension values and union the matching bitmaps
     final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
     return estimatePredicateSelectivity(
+        bitmapIndex,
         columnSelector,
         dimension,
-        makePredicateQualifyingBitmapIterable(
+        makePredicateQualifyingIndexIterable(
             bitmapIndex,
             predicate,
             dimValues
@@ -267,53 +291,158 @@ public class Filters
   }
 
   static double estimatePredicateSelectivity(
+      BitmapIndex bitmapIndex,
       ColumnSelector columnSelector,
       String dimension,
-      Iterable<ImmutableBitmap> bitmaps,
+      Iterable<Integer> bitmapIndexes,
       long totalNumRows
   )
   {
     final ColumnCapabilities columnCapabilities = columnSelector.getColumn(dimension).getCapabilities();
-    return estimatePredicateSelectivity(
-        bitmaps,
+    return estimateSelectivityOfBitmapList(
+        bitmapIndex,
+        bitmapIndexes,
         totalNumRows,
+        // assume multi-value column if columnCapabilities is null
         columnCapabilities == null || columnCapabilities.hasMultipleValues()
     );
   }
 
-  static double estimatePredicateSelectivity(
-      Iterable<ImmutableBitmap> bitmaps,
+  private static double estimateSelectivityOfBitmapList(
+      BitmapIndex bitmapIndex,
+      Iterable<Integer> bitmapIndexeIterable,
       long totalNumRows,
       boolean isMultiValueDimension
   )
   {
+    final List<Integer> bitmapIndexes = ImmutableList.copyOf(bitmapIndexeIterable);
     long numMatchedRows = 0;
-    final List<ImmutableBitmap> bitmapList = Lists.newArrayList(bitmaps);
-    for (ImmutableBitmap bitmap : bitmapList) {
+    for (Integer index : bitmapIndexes) {
+      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(index);
       numMatchedRows += bitmap.size();
     }
 
-    // assume multi-value column if columnCapabilities is null
     if (isMultiValueDimension) {
-      final double estimated = numMatchedRows * Filters.computeNonOverlapRatioFromBitmapSamples(bitmapList)
-                               / totalNumRows;
+      final double estimated = numMatchedRows * computeNonOverlapRatioFromRandomBitmapSamples(
+          bitmapIndex,
+          bitmapIndexes
+      ) / totalNumRows;
       return Math.min(1., estimated);
     } else {
       return (double) numMatchedRows / totalNumRows;
     }
   }
 
-  private static double computeNonOverlapRatioFromBitmapSamples(List<ImmutableBitmap> bitmaps)
+  static double estimateSelectivityOfBitmapTree(
+      Iterable<ImmutableBitmap> bitmaps,
+      long totalNumRows,
+      boolean isMultiValueDimension
+  )
   {
-    final int sampleNum = Math.min(SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION, bitmaps.size());
+    long numMatchedRows = 0;
+    for (ImmutableBitmap bitmap : bitmaps) {
+      numMatchedRows += bitmap.size();
+    }
+
+    if (isMultiValueDimension) {
+      final double estimated = numMatchedRows * computeNonOverlapRatioFromFirstNBitmapSamples(
+          bitmaps
+      ) / totalNumRows;
+      return Math.min(1., estimated);
+    } else {
+      return (double) numMatchedRows / totalNumRows;
+    }
+  }
+
+  /**
+   * This method is to estimate how many bits of bitmaps are not overlapped in average.
+   * Since a multi-value dimension can have one or more values, one or more bitmaps for that dimension can be set for the same row.
+   * As a result, to get the exact size of unioned bitmaps, which is widely useful for query planning like
+   * filter selectivity estimation, expensive union operations of bitmaps are inevitable.
+   * To avoid such overhead, this method can be used to compute the approximate unioned size based on random sampling.
+   * <p>
+   * The non-overlap ratio can be computed like below.
+   * <p>
+   * nonOverlapRatio(b1, b2) = size(union(b1, b2)) / (size(b1) + size(b2))
+   * <p>
+   * Given bitmaps, this method calculates the non-overlap ratios of N bitmap samples,
+   * and then returns the average of them.
+   *
+   * @param bitmapIndex   bitmap index to retrieve bitmaps
+   * @param bitmapIndexes a list of indexes of bitmaps
+   *
+   * @return approximated average non-overlap ratio of bitmaps
+   *
+   * @see #estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
+   */
+  private static double computeNonOverlapRatioFromRandomBitmapSamples(
+      BitmapIndex bitmapIndex,
+      List<Integer> bitmapIndexes
+  )
+  {
+    Preconditions.checkArgument(bitmapIndexes.size() > 0, "empty index list");
+
     double nonOverlapRatioSum = 0.;
+    int sampleNum = Math.min(bitmapIndexes.size(), SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION);
     for (int i = 0; i < sampleNum; i++) {
-      final ImmutableBitmap b1 = bitmaps.get(random.nextInt(bitmaps.size()));
-      final ImmutableBitmap b2 = bitmaps.get(random.nextInt(bitmaps.size()));
+      final ImmutableBitmap b1 = bitmapIndex.getBitmap(
+          bitmapIndexes.get(ThreadLocalRandom.current().nextInt(bitmapIndexes.size())));
+      final ImmutableBitmap b2 = bitmapIndex.getBitmap(
+          bitmapIndexes.get(ThreadLocalRandom.current().nextInt(bitmapIndexes.size())));
 
       nonOverlapRatioSum += b1.union(b2).size() / (b1.size() + b2.size());
     }
     return nonOverlapRatioSum / sampleNum;
+  }
+
+  /**
+   * This method is to estimate how many bits of bitmaps are not overlapped in average.
+   * Since a multi-value dimension can have one or more values, one or more bitmaps for that dimension can be set for the same row.
+   * As a result, to get the exact size of unioned bitmaps, which is widely useful for query planning like
+   * filter selectivity estimation, expensive union operations of bitmaps are inevitable.
+   * To avoid such overhead, this method can be used to compute the approximate unioned size based on sampling.
+   * <p>
+   * The non-overlap ratio can be computed like below.
+   * <p>
+   * nonOverlapRatio(b1, b2) = size(union(b1, b2)) / (size(b1) + size(b2))
+   * <p>
+   * Given bitmaps, this method calculates the non-overlap ratios of the first N bitmap samples,
+   * and then returns the average of them.
+   *
+   * @param bitmaps  An iterable of bitmaps
+   *
+   * @return approximated average non-overlap ratio of bitmaps
+   *
+   * @see #estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
+   */
+  static double computeNonOverlapRatioFromFirstNBitmapSamples(
+      Iterable<ImmutableBitmap> bitmaps
+  )
+  {
+    final Iterator<ImmutableBitmap> iterator = bitmaps.iterator();
+    Preconditions.checkArgument(iterator.hasNext(), "empty iterator");
+
+    double nonOverlapRatioSum = 0.;
+    int sampleNum;
+    ImmutableBitmap b1 = iterator.next(), b2;
+
+    if (iterator.hasNext()) {
+      b2 = iterator.next();
+
+      for (sampleNum = 1; sampleNum <= SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION; sampleNum++) {
+        nonOverlapRatioSum += b1.union(b2).size() / (b1.size() + b2.size());
+
+        if (iterator.hasNext()) {
+          b1 = b2;
+          b2 = iterator.next();
+        } else {
+          break;
+        }
+      }
+      return nonOverlapRatioSum / sampleNum;
+    } else {
+      return 1.;
+    }
   }
 
   private static Iterable<ImmutableBitmap> makePredicateQualifyingBitmapIterable(
@@ -329,42 +458,83 @@ public class Filters
       {
         return new Iterator<ImmutableBitmap>()
         {
-          private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
-          private int nextIndex = 0;
-          private ImmutableBitmap nextBitmap;
+          final Iterator<Integer> indexIterator = makePredicateQualifyingIndexIterable(
+              bitmapIndex,
+              predicate,
+              dimValues
+          ).iterator();
 
+          @Override
+          public void remove()
           {
-            findNextBitmap();
-          }
-
-          private void findNextBitmap()
-          {
-            while (nextIndex < bitmapIndexCardinality) {
-              if (predicate.apply(dimValues.get(nextIndex))) {
-                nextBitmap = bitmapIndex.getBitmap(nextIndex);
-                nextIndex++;
-                return;
-              }
-              nextIndex++;
-            }
-            nextBitmap = null;
+            throw new UnsupportedOperationException();
           }
 
           @Override
           public boolean hasNext()
           {
-            return nextBitmap != null;
+            return indexIterator.hasNext();
           }
 
           @Override
           public ImmutableBitmap next()
           {
-            ImmutableBitmap bitmap = nextBitmap;
-            if (bitmap == null) {
+            return bitmapIndex.getBitmap(indexIterator.next());
+          }
+        };
+      }
+    };
+  }
+
+  private static Iterable<Integer> makePredicateQualifyingIndexIterable(
+      final BitmapIndex bitmapIndex,
+      final Predicate<String> predicate,
+      final Indexed<String> dimValues
+  )
+  {
+    return new Iterable<Integer>()
+    {
+      @Override
+      public Iterator<Integer> iterator()
+      {
+        return new Iterator<Integer>()
+        {
+          private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
+          private int nextIndex = 0;
+          private Integer found = null;
+
+          {
+            found = findNextBitmap();
+          }
+
+          private Integer findNextBitmap()
+          {
+            while (nextIndex < bitmapIndexCardinality && !predicate.apply(dimValues.get(nextIndex))) {
+              nextIndex++;
+            }
+
+            if (nextIndex < bitmapIndexCardinality) {
+              return nextIndex++;
+            } else {
+              return null;
+            }
+          }
+
+          @Override
+          public boolean hasNext()
+          {
+            return found != null;
+          }
+
+          @Override
+          public Integer next()
+          {
+            Integer found = this.found;
+            if (found == null) {
               throw new NoSuchElementException();
             }
-            findNextBitmap();
-            return bitmap;
+            this.found = findNextBitmap();
+            return found;
           }
 
           @Override

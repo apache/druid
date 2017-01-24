@@ -32,6 +32,7 @@ import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.Indexed;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class LikeFilter implements Filter
 {
@@ -53,10 +54,10 @@ public class LikeFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    if (directPrefixMatchable()) {
+    if (emptyExtractFn() && emptySuffixMatch()) {
       // dimension equals prefix
       return selector.getBitmapIndex(dimension, likeMatcher.getPrefix());
-    } else if (directPrefixAndSuffixMatchable()) {
+    } else if (emptyExtractFn() && nonEmptyPrefix()) {
       // dimension startsWith prefix and is accepted by likeMatcher.matchesSuffixOnly
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
 
@@ -84,11 +85,11 @@ public class LikeFilter implements Filter
   @Override
   public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
-    if (directPrefixMatchable()) {
+    if (emptyExtractFn() && emptySuffixMatch()) {
       // dimension equals prefix
       return (double) indexSelector.getBitmapIndex(dimension, likeMatcher.getPrefix()).size()
              / indexSelector.getNumRows();
-    } else if (directPrefixAndSuffixMatchable()) {
+    } else if (emptyExtractFn() && nonEmptyPrefix()) {
       // dimension startsWith prefix and is accepted by likeMatcher.matchesSuffixOnly
       final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
 
@@ -102,9 +103,10 @@ public class LikeFilter implements Filter
 
       // Use lazy iterator to allow getting bitmap size one by one and avoid materializing all of them at once.
       return Filters.estimatePredicateSelectivity(
+          bitmapIndex,
           columnSelector,
           dimension,
-          getBitmapIterator(bitmapIndex, likeMatcher, dimValues),
+          getBitmapIndexIterator(bitmapIndex, likeMatcher, dimValues),
           indexSelector.getNumRows()
       );
     } else {
@@ -118,14 +120,19 @@ public class LikeFilter implements Filter
     }
   }
 
-  private boolean directPrefixMatchable()
+  private boolean emptyExtractFn()
   {
-    return extractionFn == null && likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_EMPTY;
+    return extractionFn == null;
   }
 
-  private boolean directPrefixAndSuffixMatchable()
+  private boolean emptySuffixMatch()
   {
-    return extractionFn == null && !likeMatcher.getPrefix().isEmpty();
+    return likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_EMPTY;
+  }
+
+  private boolean nonEmptyPrefix()
+  {
+    return !likeMatcher.getPrefix().isEmpty();
   }
 
   @Override
@@ -146,6 +153,15 @@ public class LikeFilter implements Filter
       final Indexed<String> dimValues
   )
   {
+    return Filters.bitmapsFromIndexes(getBitmapIndexIterator(bitmapIndex, likeMatcher, dimValues), bitmapIndex);
+  }
+
+  private static Iterable<Integer> getBitmapIndexIterator(
+      final BitmapIndex bitmapIndex,
+      final LikeDimFilter.LikeMatcher likeMatcher,
+      final Indexed<String> dimValues
+  )
+  {
     final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
     final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
     final int startIndex; // inclusive
@@ -157,33 +173,50 @@ public class LikeFilter implements Filter
     final int upperFound = bitmapIndex.getIndex(upper);
     endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
 
-    return new Iterable<ImmutableBitmap>()
+    return new Iterable<Integer>()
     {
       @Override
-      public Iterator<ImmutableBitmap> iterator()
+      public Iterator<Integer> iterator()
       {
-        return new Iterator<ImmutableBitmap>()
+        return new Iterator<Integer>()
         {
           int currIndex = startIndex;
+          Integer found;
 
-          @Override
-          public boolean hasNext()
           {
-            return currIndex < endIndex;
+            found = findNext();
           }
 
-          @Override
-          public ImmutableBitmap next()
+          private Integer findNext()
           {
             while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
               currIndex++;
             }
 
-            if (currIndex == endIndex) {
-              return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
+            if (currIndex < endIndex) {
+              return currIndex++;
+            } else {
+              return null;
+            }
+          }
+
+          @Override
+          public boolean hasNext()
+          {
+            return found != null;
+          }
+
+          @Override
+          public Integer next()
+          {
+            Integer cur = found;
+
+            if (cur == null) {
+              throw new NoSuchElementException();
             }
 
-            return bitmapIndex.getBitmap(currIndex++);
+            found = findNext();
+            return cur;
           }
 
           @Override

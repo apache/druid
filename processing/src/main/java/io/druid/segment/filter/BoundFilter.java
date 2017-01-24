@@ -86,9 +86,10 @@ public class BoundFilter implements Filter
       }
 
       return Filters.estimatePredicateSelectivity(
+          bitmapIndex,
           columnSelector,
           boundDimFilter.getDimension(),
-          getBitmapIterator(boundDimFilter, bitmapIndex),
+          getBitmapIndexIterator(boundDimFilter, bitmapIndex),
           indexSelector.getNumRows()
       );
     } else {
@@ -157,17 +158,25 @@ public class BoundFilter implements Filter
       final BitmapIndex bitmapIndex
   )
   {
+    return Filters.bitmapsFromIndexes(getBitmapIndexIterator(boundDimFilter, bitmapIndex), bitmapIndex);
+  }
+
+  private static Iterable<Integer> getBitmapIndexIterator(
+      final BoundDimFilter boundDimFilter,
+      final BitmapIndex bitmapIndex
+  )
+  {
     // search for start, end indexes in the bitmaps; then include all bitmaps between those points
     final Pair<Integer, Integer> indexes = getStartEndIndexes(boundDimFilter, bitmapIndex);
     final int startIndex = indexes.lhs;
     final int endIndex = indexes.rhs;
 
-    return new Iterable<ImmutableBitmap>()
+    return new Iterable<Integer>()
     {
       @Override
-      public Iterator<ImmutableBitmap> iterator()
+      public Iterator<Integer> iterator()
       {
-        return new Iterator<ImmutableBitmap>()
+        return new Iterator<Integer>()
         {
           int currIndex = startIndex;
 
@@ -178,9 +187,9 @@ public class BoundFilter implements Filter
           }
 
           @Override
-          public ImmutableBitmap next()
+          public Integer next()
           {
-            return bitmapIndex.getBitmap(currIndex++);
+            return currIndex++;
           }
 
           @Override

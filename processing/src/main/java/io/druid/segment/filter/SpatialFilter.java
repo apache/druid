@@ -106,7 +106,7 @@ public class SpatialFilter implements Filter
   public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     // handle rtree overlap
-    return Filters.estimatePredicateSelectivity(
+    return Filters.estimateSelectivityOfBitmapTree(
         indexSelector.getSpatialIndex(dimension).search(bound),
         indexSelector.getNumRows(),
         true
