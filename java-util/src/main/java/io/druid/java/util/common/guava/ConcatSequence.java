@@ -123,6 +123,7 @@ public class ConcatSequence<T> implements Sequence<T>
     } else {
       // pass the supplier to get the first Yielder
       Yielder<OutType> yielder = yielderYielder.get().toYielder(initValSupplier, accumulator);
+
       if (accumulator.yielded()) {
         return wrapYielder(yielder, yielderYielder, accumulator);
       }

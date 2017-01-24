@@ -1699,6 +1699,51 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testApproxCountDistinct() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  APPROX_COUNT_DISTINCT(dim2),\n" // uppercase
+        + "  approx_count_distinct(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
+        + "  approx_count_distinct(unique_dim1)\n" // on native hyperUnique column
+        + "FROM druid.foo",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(QueryGranularities.ALL)
+                  .aggregators(
+                      AGGS(
+                          new LongSumAggregatorFactory("a0", "cnt"),
+                          new CardinalityAggregatorFactory(
+                              "a1",
+                              null,
+                              DIMS(new DefaultDimensionSpec("dim2", "dim2")),
+                              false
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CardinalityAggregatorFactory(
+                                  "a2",
+                                  null,
+                                  DIMS(new DefaultDimensionSpec("dim2", "dim2")),
+                                  false
+                              ),
+                              NOT(SELECTOR("dim2", "", null))
+                          ),
+                          new HyperUniquesAggregatorFactory("a3", "unique_dim1")
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L, 3L, 2L, 6L}
+        )
+    );
+  }
+
+  @Test
   public void testDoubleNestedGroupBy() throws Exception
   {
     testQuery(
@@ -3052,7 +3097,6 @@ public class CalciteQueryTest
   {
     for (int i = 0; i < results.size(); i++) {
       log.info("row #%d: %s", i, Arrays.toString(results.get(i)));
-    }
 
     Assert.assertEquals(String.format("result count: %s", sql), expectedResults.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
