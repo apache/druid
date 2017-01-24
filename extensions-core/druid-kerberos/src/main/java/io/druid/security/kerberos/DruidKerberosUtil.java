@@ -26,6 +26,8 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
@@ -49,25 +51,30 @@ public class DruidKerberosUtil
    * @throws Exception
    */
 
-  public static String kerberosChallenge(String server) throws GSSException
+  public static String kerberosChallenge(String server) throws AuthenticationException
   {
-    // This Oid for Kerberos GSS-API mechanism.
-    Oid mechOid = new Oid("1.2.840.113554.1.2.2");
-    GSSManager manager = GSSManager.getInstance();
-    // GSS name for server
-    GSSName serverName = manager.createName("HTTP@" + server, GSSName.NT_HOSTBASED_SERVICE);
-    // Create a GSSContext for authentication with the service.
-    // We're passing client credentials as null since we want them to be read from the Subject.
-    GSSContext gssContext =
-      manager.createContext(serverName.canonicalize(mechOid), mechOid, null, GSSContext.DEFAULT_LIFETIME);
-    gssContext.requestMutualAuth(true);
-    gssContext.requestCredDeleg(true);
-    // Establish context
-    byte[] inToken = new byte[0];
-    byte[] outToken = gssContext.initSecContext(inToken, 0, inToken.length);
-    gssContext.dispose();
-    // Base64 encoded and stringified token for server
-    return new String(base64codec.encode(outToken));
+    try {
+      // This Oid for Kerberos GSS-API mechanism.
+      Oid mechOid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
+      GSSManager manager = GSSManager.getInstance();
+      // GSS name for server
+      GSSName serverName = manager.createName("HTTP@" + server, GSSName.NT_HOSTBASED_SERVICE);
+      // Create a GSSContext for authentication with the service.
+      // We're passing client credentials as null since we want them to be read from the Subject.
+      GSSContext gssContext =
+        manager.createContext(serverName.canonicalize(mechOid), mechOid, null, GSSContext.DEFAULT_LIFETIME);
+      gssContext.requestMutualAuth(true);
+      gssContext.requestCredDeleg(true);
+      // Establish context
+      byte[] inToken = new byte[0];
+      byte[] outToken = gssContext.initSecContext(inToken, 0, inToken.length);
+      gssContext.dispose();
+      // Base64 encoded and stringified token for server
+      return new String(base64codec.encode(outToken));
+    }
+    catch (GSSException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+      throw new AuthenticationException(e);
+    }
   }
 
   public static void authenticateIfRequired(DruidKerberosConfig config)

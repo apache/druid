@@ -25,7 +25,6 @@ import com.metamx.http.client.AbstractHttpClient;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.HttpResponseHandler;
-import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.joda.time.Duration;

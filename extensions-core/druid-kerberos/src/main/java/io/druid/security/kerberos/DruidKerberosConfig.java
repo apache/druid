@@ -31,7 +31,8 @@ public class DruidKerberosConfig
   private final String keytab;
 
   @JsonCreator
-  public DruidKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab) {
+  public DruidKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab)
+  {
     this.principal = principal;
     this.keytab = keytab;
   }

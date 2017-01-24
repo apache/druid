@@ -21,7 +21,6 @@ package io.druid.security.kerberos;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 
 import java.util.Collections;
 import java.util.List;
