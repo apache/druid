@@ -19,11 +19,9 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Iterables;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -33,8 +31,13 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.column.BitmapIndex;
+import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
+import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -83,7 +86,7 @@ public class InFilter implements Filter
           bitmapIndex,
           columnSelector,
           dimension,
-          getBitmapIndexIterable(bitmapIndex),
+          IntIteratorUtils.toIntList(getBitmapIndexIterable(bitmapIndex).iterator()),
           indexSelector.getNumRows()
       );
     } else {
@@ -101,19 +104,31 @@ public class InFilter implements Filter
     return Filters.bitmapsFromIndexes(getBitmapIndexIterable(bitmapIndex), bitmapIndex);
   }
 
-  private Iterable<Integer> getBitmapIndexIterable(final BitmapIndex bitmapIndex)
+  private IntIterable getBitmapIndexIterable(final BitmapIndex bitmapIndex)
   {
-    return Iterables.transform(
-        values,
-        new Function<String, Integer>()
+    return new IntIterable()
+    {
+      @Override
+      public IntIterator iterator()
+      {
+        return new AbstractIntIterator()
         {
+          Iterator<String> iterator = values.iterator();
+
           @Override
-          public Integer apply(String value)
+          public boolean hasNext()
           {
-            return bitmapIndex.getIndex(value);
+            return iterator.hasNext();
           }
-        }
-    );
+
+          @Override
+          public int nextInt()
+          {
+            return bitmapIndex.getIndex(iterator.next());
+          }
+        };
+      }
+    };
   }
 
   @Override

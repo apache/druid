@@ -33,10 +33,14 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.column.BitmapIndex;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.util.Comparator;
-import java.util.Iterator;
 
 public class BoundFilter implements Filter
 {
@@ -89,7 +93,7 @@ public class BoundFilter implements Filter
           bitmapIndex,
           columnSelector,
           boundDimFilter.getDimension(),
-          getBitmapIndexIterator(boundDimFilter, bitmapIndex),
+          getBitmapIndexList(boundDimFilter, bitmapIndex),
           indexSelector.getNumRows()
       );
     } else {
@@ -161,7 +165,15 @@ public class BoundFilter implements Filter
     return Filters.bitmapsFromIndexes(getBitmapIndexIterator(boundDimFilter, bitmapIndex), bitmapIndex);
   }
 
-  private static Iterable<Integer> getBitmapIndexIterator(
+  private static IntList getBitmapIndexList(
+      final BoundDimFilter boundDimFilter,
+      final BitmapIndex bitmapIndex
+  )
+  {
+    return IntIteratorUtils.toIntList(getBitmapIndexIterator(boundDimFilter, bitmapIndex).iterator());
+  }
+
+  private static IntIterable getBitmapIndexIterator(
       final BoundDimFilter boundDimFilter,
       final BitmapIndex bitmapIndex
   )
@@ -171,33 +183,12 @@ public class BoundFilter implements Filter
     final int startIndex = indexes.lhs;
     final int endIndex = indexes.rhs;
 
-    return new Iterable<Integer>()
+    return new IntIterable()
     {
       @Override
-      public Iterator<Integer> iterator()
+      public IntIterator iterator()
       {
-        return new Iterator<Integer>()
-        {
-          int currIndex = startIndex;
-
-          @Override
-          public boolean hasNext()
-          {
-            return currIndex < endIndex;
-          }
-
-          @Override
-          public Integer next()
-          {
-            return currIndex++;
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        };
+        return IntIterators.fromTo(startIndex, endIndex);
       }
     };
   }

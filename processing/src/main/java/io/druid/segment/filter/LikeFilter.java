@@ -28,10 +28,14 @@ import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.Indexed;
+import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
 
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class LikeFilter implements Filter
@@ -106,7 +110,7 @@ public class LikeFilter implements Filter
           bitmapIndex,
           columnSelector,
           dimension,
-          getBitmapIndexIterator(bitmapIndex, likeMatcher, dimValues),
+          getBitmapIndexList(bitmapIndex, likeMatcher, dimValues),
           indexSelector.getNumRows()
       );
     } else {
@@ -156,7 +160,16 @@ public class LikeFilter implements Filter
     return Filters.bitmapsFromIndexes(getBitmapIndexIterator(bitmapIndex, likeMatcher, dimValues), bitmapIndex);
   }
 
-  private static Iterable<Integer> getBitmapIndexIterator(
+  private static IntList getBitmapIndexList(
+      final BitmapIndex bitmapIndex,
+      final LikeDimFilter.LikeMatcher likeMatcher,
+      final Indexed<String> dimValues
+  )
+  {
+    return IntIteratorUtils.toIntList(getBitmapIndexIterator(bitmapIndex, likeMatcher, dimValues).iterator());
+  }
+
+  private static IntIterable getBitmapIndexIterator(
       final BitmapIndex bitmapIndex,
       final LikeDimFilter.LikeMatcher likeMatcher,
       final Indexed<String> dimValues
@@ -173,21 +186,21 @@ public class LikeFilter implements Filter
     final int upperFound = bitmapIndex.getIndex(upper);
     endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
 
-    return new Iterable<Integer>()
+    return new IntIterable()
     {
       @Override
-      public Iterator<Integer> iterator()
+      public IntIterator iterator()
       {
-        return new Iterator<Integer>()
+        return new AbstractIntIterator()
         {
           int currIndex = startIndex;
-          Integer found;
+          int found = -1;
 
           {
             found = findNext();
           }
 
-          private Integer findNext()
+          private int findNext()
           {
             while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
               currIndex++;
@@ -196,33 +209,27 @@ public class LikeFilter implements Filter
             if (currIndex < endIndex) {
               return currIndex++;
             } else {
-              return null;
+              return -1;
             }
           }
 
           @Override
           public boolean hasNext()
           {
-            return found != null;
+            return found != -1;
           }
 
           @Override
-          public Integer next()
+          public int nextInt()
           {
-            Integer cur = found;
+            int cur = found;
 
-            if (cur == null) {
+            if (cur == -1) {
               throw new NoSuchElementException();
             }
 
             found = findNext();
             return cur;
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
           }
         };
       }
