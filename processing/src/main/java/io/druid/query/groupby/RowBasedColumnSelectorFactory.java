@@ -19,15 +19,18 @@
 
 package io.druid.query.groupby;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
@@ -41,6 +44,7 @@ import io.druid.segment.data.ZeroIndexedInts;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
 {
@@ -109,6 +113,34 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
+        public ValueMatcher makeValueMatcher(final String value)
+        {
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
+              return Objects.equals(rowValue, value);
+            }
+          };
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        {
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
+              return predicate.apply(rowValue);
+            }
+          };
+        }
+
+        @Override
         public int getValueCardinality()
         {
           return DimensionSelector.CARDINALITY_UNKNOWN;
@@ -121,9 +153,16 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public int lookupId(String name)
+        public boolean nameLookupPossibleInAdvance()
         {
-          throw new UnsupportedOperationException("lookupId");
+          return false;
+        }
+
+        @Nullable
+        @Override
+        public IdLookup idLookup()
+        {
+          return null;
         }
       };
     } else {
@@ -134,6 +173,95 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         {
           final List<String> dimensionValues = row.get().getDimension(dimension);
           return RangeIndexedInts.create(dimensionValues != null ? dimensionValues.size() : 0);
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(final String value)
+        {
+          if (extractionFn == null) {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                final List<String> dimensionValues = row.get().getDimension(dimension);
+                if (dimensionValues == null || dimensionValues.isEmpty()) {
+                  return value == null;
+                }
+
+                for (String dimensionValue : dimensionValues) {
+                  if (Objects.equals(Strings.emptyToNull(dimensionValue), value)) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+            };
+          } else {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                final List<String> dimensionValues = row.get().getDimension(dimension);
+                if (dimensionValues == null || dimensionValues.isEmpty()) {
+                  return value == null;
+                }
+
+                for (String dimensionValue : dimensionValues) {
+                  if (Objects.equals(extractionFn.apply(Strings.emptyToNull(dimensionValue)), value)) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+            };
+          }
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        {
+          final boolean matchNull = predicate.apply(null);
+          if (extractionFn == null) {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                final List<String> dimensionValues = row.get().getDimension(dimension);
+                if (dimensionValues == null || dimensionValues.isEmpty()) {
+                  return matchNull;
+                }
+
+                for (String dimensionValue : dimensionValues) {
+                  if (predicate.apply(Strings.emptyToNull(dimensionValue))) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+            };
+          } else {
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches()
+              {
+                final List<String> dimensionValues = row.get().getDimension(dimension);
+                if (dimensionValues == null || dimensionValues.isEmpty()) {
+                  return matchNull;
+                }
+
+                for (String dimensionValue : dimensionValues) {
+                  if (predicate.apply(extractionFn.apply(Strings.emptyToNull(dimensionValue)))) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+            };
+          }
         }
 
         @Override
@@ -150,9 +278,16 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public int lookupId(String name)
+        public boolean nameLookupPossibleInAdvance()
         {
-          throw new UnsupportedOperationException("lookupId");
+          return false;
+        }
+
+        @Nullable
+        @Override
+        public IdLookup idLookup()
+        {
+          return null;
         }
       };
     }

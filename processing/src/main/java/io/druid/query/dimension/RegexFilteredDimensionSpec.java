@@ -21,14 +21,16 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -62,17 +64,27 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
   public DimensionSelector decorate(final DimensionSelector selector)
   {
     if (selector == null) {
-      return selector;
+      return null;
+    }
+
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
+      return new PredicateFilteredDimensionSelector(
+          selector,
+          new Predicate<String>()
+          {
+            @Override
+            public boolean apply(@Nullable String input)
+            {
+              return compiledRegex.matcher(Strings.nullToEmpty(input)).matches();
+            }
+          }
+      );
     }
 
     int count = 0;
-    final Map<Integer,Integer> forwardMapping = new HashMap<>();
-
-    final int selectorCardinality = selector.getValueCardinality();
-    if (selectorCardinality < 0) {
-      throw new UnsupportedOperationException("Cannot decorate a selector with no dictionary");
-    }
-
+    final Int2IntMap forwardMapping = new Int2IntOpenHashMap();
+    forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
       if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {
         forwardMapping.put(i, count++);
@@ -80,10 +92,10 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
 
     final int[] reverseMapping = new int[forwardMapping.size()];
-    for (Map.Entry<Integer, Integer> e : forwardMapping.entrySet()) {
-      reverseMapping[e.getValue().intValue()] = e.getKey().intValue();
+    for (Int2IntMap.Entry e : forwardMapping.int2IntEntrySet()) {
+      reverseMapping[e.getIntValue()] = e.getIntKey();
     }
-    return BaseFilteredDimensionSpec.decorate(selector, forwardMapping, reverseMapping);
+    return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
   }
 
   @Override
