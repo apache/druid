@@ -96,10 +96,15 @@ public interface DimensionSelector extends ColumnValueSelector
    * Returns true if it is possible to {@link #lookupName(int)} by ids from 0 to {@link #getValueCardinality()}
    * before the rows with those ids are returned.
    *
-   * <p>Returns false if {@link #lookupName(int)} could be called only with ids, returned from the most recent call of
-   * {@link #getRow()} on this DimensionSelector, but not earlier and not later. If {@link #lookupName(int)} is called
-   * with an id, which is not present in the most recent {@link IndexedInts}, returned from {@link #getRow()}, result is
-   * undefined: exception could be thrown, or null returned, or some other random value.
+   * <p>Returns false if {@link #lookupName(int)} could be called with ids, returned from the most recent call of {@link
+   * #getRow()} on this DimensionSelector, but not earlier. If {@link #getValueCardinality()} of this DimensionSelector
+   * additionally returns {@link #CARDINALITY_UNKNOWN}, {@code lookupName()} couldn't be called with ids, returned by
+   * not the most recent call of {@link #getRow()}, i. e. names for ids couldn't be looked up "later". If {@link
+   * #getValueCardinality()} returns a non-negative number, {@code lookupName()} could be called with any ids, returned
+   * from {@code #getRow()} since the creation of this DimensionSelector.
+   *
+   * <p>If {@link #lookupName(int)} is called with an ineligible id, result is undefined: exception could be thrown, or
+   * null returned, or some other random value.
    */
   boolean nameLookupPossibleInAdvance();
 
