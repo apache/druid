@@ -193,9 +193,6 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     {
       this.dimSelector = dimSelector;
       this.idLookup = dimSelector.idLookup();
-      if (idLookup == null && capabilities.dimensionValuesSorted()) {
-        throw new IAE("Only DimensionSelectors which support idLookup() are supported yet");
-      }
       this.query = query;
       this.capabilities = capabilities;
 
@@ -240,6 +237,9 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       int startIndex = ignoreFirstN;
 
       if (previousStop != null) {
+        if (idLookup == null) {
+          throw new IAE("Only DimensionSelectors which support idLookup() are supported yet");
+        }
         int lookupId = idLookup.lookupId(previousStop) + 1;
         if (lookupId < 0) {
           lookupId *= -1;
