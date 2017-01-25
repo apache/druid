@@ -1,9 +1,5 @@
 package io.druid.extendedset.intset;
 
-import io.druid.extendedset.utilities.BitCount;
-
-import java.util.NoSuchElementException;
-
 /**
  */
 public class ConciseSetUtils
@@ -108,7 +104,7 @@ public class ConciseSetUtils
    */
   public static int maxLiteralLengthMultiplication(int n)
   {
-    return (n << 5) - n;
+    return n * 31;
   }
 
   /**
@@ -132,9 +128,8 @@ public class ConciseSetUtils
    */
   public static boolean isLiteral(int word)
   {
-    // "word" must be 1*
-    // NOTE: this is faster than "return (word & 0x80000000) == 0x80000000"
-    return (word & 0x80000000) != 0;
+    // the highest one bit should be 1, which means the word as a number is negative
+    return word < 0;
   }
 
   /**
@@ -173,7 +168,7 @@ public class ConciseSetUtils
    * @param word word to check
    *
    * @return <code>true</code> if the given word is a sequence of 0's or 1's
-   * but with no (un)set bit
+   *         but with no (un)set bit
    */
   public static boolean isSequenceWithNoBits(int word)
   {
@@ -205,7 +200,7 @@ public class ConciseSetUtils
    * @param word word to check
    *
    * @return the sequence corresponding to the given sequence and with no
-   * (un)set bits
+   *         (un)set bits
    */
   public static int getSequenceWithNoBits(int word)
   {
@@ -224,7 +219,7 @@ public class ConciseSetUtils
    * @param word word to check
    *
    * @return the literal contained within the given word, <i>with the most
-   * significant bit set to 1</i>.
+   *         significant bit set to 1</i>.
    */
   public static int getLiteral(int word, boolean simulateWAH)
   {
@@ -273,7 +268,7 @@ public class ConciseSetUtils
    * @param word sequence word to check
    *
    * @return the position of the set bit, from 0 to 31. If the sequence has no
-   * set/unset bit, returns -1.
+   *         set/unset bit, returns -1.
    */
   public static int getFlippedBit(int word)
   {
@@ -284,7 +279,7 @@ public class ConciseSetUtils
 
   public static int flipBitAsBinaryString(int flipBit)
   {
-    return ((Number) Math.pow(2, flipBit)).intValue();
+    return 1 << flipBit;
   }
 
   /**
@@ -296,7 +291,7 @@ public class ConciseSetUtils
    */
   public static int getLiteralBitCount(int word)
   {
-    return BitCount.count(getLiteralBits(word));
+    return Integer.bitCount(getLiteralBits(word));
   }
 
   /**
@@ -313,17 +308,19 @@ public class ConciseSetUtils
 
   public static boolean isAllOnesLiteral(int word)
   {
-    return (word & -1) == -1;
+    return word == -1;
   }
 
   public static boolean isAllZerosLiteral(int word)
   {
-    return (word | 0x80000000) == 0x80000000;
+    // Either 0x80000000 ("all zeros literal" as it is) or 0, that is "zero sequence of 1 block" = 31 bits,
+    // i. e. semantically equivalent to "all zeros literal".
+    return (word & ALL_ONES_WITHOUT_MSB) == 0;
   }
 
   public static boolean isLiteralWithSingleZeroBit(int word)
   {
-    return isLiteral(word) && (Integer.bitCount(~word) == 1);
+    return isLiteral(word) && Integer.bitCount(word) == 31;
   }
 
   public static boolean isLiteralWithSingleOneBit(int word)
@@ -338,226 +335,6 @@ public class ConciseSetUtils
 
   public static int onesUntil(int bit)
   {
-    return 0x80000000 | ((1 << bit) - 1);
-  }
-
-  public static LiteralAndZeroFillExpander newLiteralAndZeroFillExpander()
-  {
-    return new LiteralAndZeroFillExpander();
-  }
-
-  public static OneFillExpander newOneFillExpander()
-  {
-    return new OneFillExpander();
-  }
-
-  public interface WordExpander
-  {
-    public boolean hasNext();
-
-    public boolean hasPrevious();
-
-    public int next();
-
-    public int previous();
-
-    public void skipAllAfter(int i);
-
-    public void skipAllBefore(int i);
-
-    public void reset(int offset, int word, boolean fromBeginning);
-
-    public WordExpander clone();
-  }
-
-  /**
-   * Iterator over the bits of literal and zero-fill words
-   */
-  public static class LiteralAndZeroFillExpander implements WordExpander
-  {
-    final int[] buffer = new int[MAX_LITERAL_LENGTH];
-    int len = 0;
-    int current = 0;
-
-    @Override
-    public boolean hasNext()
-    {
-      return current < len;
-    }
-
-    @Override
-    public boolean hasPrevious()
-    {
-      return current > 0;
-    }
-
-    @Override
-    public int next()
-    {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      return buffer[current++];
-    }
-
-    @Override
-    public int previous()
-    {
-      if (!hasPrevious()) {
-        throw new NoSuchElementException();
-      }
-      return buffer[--current];
-    }
-
-    @Override
-    public void skipAllAfter(int i)
-    {
-      while (hasPrevious() && buffer[current - 1] > i) {
-        current--;
-      }
-    }
-
-    @Override
-    public void skipAllBefore(int i)
-    {
-      while (hasNext() && buffer[current] < i) {
-        current++;
-      }
-    }
-
-    @Override
-    public void reset(int offset, int word, boolean fromBeginning)
-    {
-      if (isLiteral(word)) {
-        len = 0;
-        for (int i = 0; i < MAX_LITERAL_LENGTH; i++) {
-          if ((word & (1 << i)) != 0) {
-            buffer[len++] = offset + i;
-          }
-        }
-        current = fromBeginning ? 0 : len;
-      } else {
-        if (isZeroSequence(word)) {
-          if (isSequenceWithNoBits(word)) {
-            len = 0;
-            current = 0;
-          } else {
-            len = 1;
-            buffer[0] = offset + ((0x3FFFFFFF & word) >>> 25) - 1;
-            current = fromBeginning ? 0 : 1;
-          }
-        } else {
-          throw new RuntimeException("sequence of ones!");
-        }
-      }
-    }
-
-    @Override
-    public WordExpander clone()
-    {
-      LiteralAndZeroFillExpander retVal = new LiteralAndZeroFillExpander();
-      System.arraycopy(buffer, 0, retVal.buffer, 0, buffer.length);
-      retVal.len = len;
-      retVal.current = current;
-      return retVal;
-    }
-  }
-
-  /**
-   * Iterator over the bits of one-fill words
-   */
-  public static class OneFillExpander implements WordExpander
-  {
-    int firstInt = 1;
-    int lastInt = -1;
-    int current = 0;
-    int exception = -1;
-
-    @Override
-    public boolean hasNext()
-    {
-      return current < lastInt;
-    }
-
-    @Override
-    public boolean hasPrevious()
-    {
-      return current > firstInt;
-    }
-
-    @Override
-    public int next()
-    {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      current++;
-      if (current == exception) {
-        current++;
-      }
-      return current;
-    }
-
-    @Override
-    public int previous()
-    {
-      if (!hasPrevious()) {
-        throw new NoSuchElementException();
-      }
-      current--;
-      if (current == exception) {
-        current--;
-      }
-      return current;
-    }
-
-    @Override
-    public void skipAllAfter(int i)
-    {
-      if (i >= current) {
-        return;
-      }
-      current = i + 1;
-    }
-
-    @Override
-    public void skipAllBefore(int i)
-    {
-      if (i <= current) {
-        return;
-      }
-      current = i - 1;
-    }
-
-    @Override
-    public void reset(int offset, int word, boolean fromBeginning)
-    {
-      if (!isOneSequence(word)) {
-        throw new RuntimeException("NOT a sequence of ones!");
-      }
-      firstInt = offset;
-      lastInt = offset + maxLiteralLengthMultiplication(getSequenceCount(word) + 1) - 1;
-
-      exception = offset + ((0x3FFFFFFF & word) >>> 25) - 1;
-      if (exception == firstInt) {
-        firstInt++;
-      }
-      if (exception == lastInt) {
-        lastInt--;
-      }
-
-      current = fromBeginning ? (firstInt - 1) : (lastInt + 1);
-    }
-
-    @Override
-    public WordExpander clone()
-    {
-      OneFillExpander retVal = new OneFillExpander();
-      retVal.firstInt = firstInt;
-      retVal.lastInt = lastInt;
-      retVal.current = current;
-      retVal.exception = exception;
-      return retVal;
-    }
+    return 0x80000000 | ((1<<bit) - 1);
   }
 }
