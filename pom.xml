@@ -91,6 +91,7 @@
         <module>aws-common</module>
         <module>java-util</module>
         <module>bytebuffer-collections</module>
+        <module>extendedset</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -122,6 +123,8 @@
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
+        <module>extensions-contrib/scan-query</module>
+        <module>extensions-contrib/sqlserver-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
@@ -199,6 +202,13 @@
                 <groupId>io.airlift</groupId>
                 <artifactId>airline</artifactId>
                 <version>0.7</version>
+                <exclusions>
+                    <exclusion>
+                        <!--LGPL licenced library-->
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>annotations</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.skife.config</groupId>
@@ -802,6 +812,30 @@
                                 <ignore>sun.nio.ch.DirectBuffer</ignore>
                                 <ignore>sun.misc.Cleaner</ignore>
                             </ignores>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.4.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-banned-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <!--LGPL licenced library-->
+                                        <exclude>com.google.code.findbugs:annotations</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
                         </configuration>
                     </execution>
                 </executions>

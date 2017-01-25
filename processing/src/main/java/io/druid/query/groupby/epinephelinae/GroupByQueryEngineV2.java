@@ -33,7 +33,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.java.util.common.guava.ResourceClosingSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ColumnSelectorPlus;
@@ -124,7 +123,7 @@ public class GroupByQueryEngineV2
                                     : new DateTime(Long.parseLong(fudgeTimestampString));
 
     return Sequences.concat(
-        new ResourceClosingSequence<>(
+        Sequences.withBaggage(
             Sequences.map(
                 cursors,
                 new Function<Cursor, Sequence<Row>>()

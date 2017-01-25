@@ -80,7 +80,7 @@ public class AndFilter implements BooleanFilter
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     if (filters.size() == 0) {
-      return new BooleanValueMatcher(false);
+      return BooleanValueMatcher.of(false);
     }
 
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];

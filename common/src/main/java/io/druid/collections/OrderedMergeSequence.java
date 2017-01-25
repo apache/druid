@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 
+import com.google.common.io.Closer;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
@@ -207,9 +208,11 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
+        Closer closer = Closer.create();
         while(!pQueue.isEmpty()) {
-          pQueue.remove().close();
+          closer.register(pQueue.remove());
         }
+        closer.close();
       }
     };
   }

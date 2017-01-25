@@ -30,6 +30,7 @@ import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -94,33 +95,65 @@ public class MapVirtualColumn implements VirtualColumn
       };
     }
 
-    final int keyId = keySelector.lookupId(dimension.substring(index + 1));
-
-    return new ObjectColumnSelector<String>()
-    {
-      @Override
-      public Class classOfObject()
-      {
-        return String.class;
+    IdLookup keyIdLookup = keySelector.idLookup();
+    if (keyIdLookup != null) {
+      final int keyId = keyIdLookup.lookupId(dimension.substring(index + 1));
+      if (keyId < 0) {
+        return NullStringObjectColumnSelector.instance();
       }
-
-      @Override
-      public String get()
+      return new ObjectColumnSelector<String>()
       {
-        final IndexedInts keyIndices = keySelector.getRow();
-        final IndexedInts valueIndices = valueSelector.getRow();
-        if (keyIndices == null || valueIndices == null) {
+        @Override
+        public Class classOfObject()
+        {
+          return String.class;
+        }
+
+        @Override
+        public String get()
+        {
+          final IndexedInts keyIndices = keySelector.getRow();
+          final IndexedInts valueIndices = valueSelector.getRow();
+          if (keyIndices == null || valueIndices == null) {
+            return null;
+          }
+          final int limit = Math.min(keyIndices.size(), valueIndices.size());
+          for (int i = 0; i < limit; i++) {
+            if (keyIndices.get(i) == keyId) {
+              return valueSelector.lookupName(valueIndices.get(i));
+            }
+          }
           return null;
         }
-        final int limit = Math.min(keyIndices.size(), valueIndices.size());
-        for (int i = 0; i < limit; i++) {
-          if (keyIndices.get(i) == keyId) {
-            return valueSelector.lookupName(valueIndices.get(i));
-          }
+      };
+    } else {
+      final String key = dimension.substring(index + 1);
+      return new ObjectColumnSelector<String>()
+      {
+        @Override
+        public Class classOfObject()
+        {
+          return String.class;
         }
-        return null;
-      }
-    };
+
+        @Override
+        public String get()
+        {
+          final IndexedInts keyIndices = keySelector.getRow();
+          final IndexedInts valueIndices = valueSelector.getRow();
+          if (keyIndices == null || valueIndices == null) {
+            return null;
+          }
+          final int limit = Math.min(keyIndices.size(), valueIndices.size());
+          for (int i = 0; i < limit; i++) {
+            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), key)) {
+              return valueSelector.lookupName(valueIndices.get(i));
+            }
+          }
+          return null;
+        }
+      };
+    }
   }
 
   @Override
