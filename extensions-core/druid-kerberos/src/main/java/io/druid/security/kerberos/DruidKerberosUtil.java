@@ -35,12 +35,16 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class DruidKerberosUtil
 {
   private static final Logger log = new Logger(DruidKerberosUtil.class);
 
   private static final Base64 base64codec = new Base64(0);
+
+  // A fair reentrant lock
+  private static ReentrantLock kerberosLock = new ReentrantLock(true);
 
   /**
    * This method always needs to be called within a doAs block so that the client's TGT credentials
@@ -53,6 +57,7 @@ public class DruidKerberosUtil
 
   public static String kerberosChallenge(String server) throws AuthenticationException
   {
+    kerberosLock.lock();
     try {
       // This Oid for Kerberos GSS-API mechanism.
       Oid mechOid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
@@ -74,6 +79,8 @@ public class DruidKerberosUtil
     }
     catch (GSSException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
       throw new AuthenticationException(e);
+    } finally {
+      kerberosLock.unlock();
     }
   }
 
