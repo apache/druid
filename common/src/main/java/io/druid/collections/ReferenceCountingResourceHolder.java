@@ -71,9 +71,14 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
 
   public Releaser increment()
   {
-    if (refCount.getAndIncrement() <= 0) {
-      refCount.decrementAndGet();
-      throw new ISE("Already closed!");
+    while (true) {
+      int count = this.refCount.get();
+      if (count <= 0) {
+        throw new ISE("Already closed!");
+      }
+      if (refCount.compareAndSet(count, count + 1)) {
+        break;
+      }
     }
 
     // This Releaser is supposed to be used from a single thread, so no synchronization/atomicity
