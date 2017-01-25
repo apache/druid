@@ -37,13 +37,13 @@ public class NullDimensionSelector implements DimensionSelector, IdLookup
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(String value, boolean matchNull)
+  public ValueMatcher makeValueMatcher(String value)
   {
     return BooleanValueMatcher.of(value == null);
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate, boolean matchNull)
+  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
   {
     return BooleanValueMatcher.of(predicate.apply(null));
   }

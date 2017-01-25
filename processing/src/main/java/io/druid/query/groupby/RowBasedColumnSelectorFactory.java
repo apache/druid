@@ -113,7 +113,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final String value, boolean matchNull)
+        public ValueMatcher makeValueMatcher(final String value)
         {
           return new ValueMatcher()
           {
@@ -127,9 +127,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(
-            final Predicate<String> predicate, boolean matchNull
-        )
+        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
         {
           return new ValueMatcher()
           {
@@ -178,7 +176,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final String value, final boolean matchNull)
+        public ValueMatcher makeValueMatcher(final String value)
         {
           if (extractionFn == null) {
             return new ValueMatcher()
@@ -188,7 +186,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               {
                 final List<String> dimensionValues = row.get().getDimension(dimension);
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
-                  return matchNull;
+                  return value == null;
                 }
 
                 for (String dimensionValue : dimensionValues) {
@@ -207,7 +205,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               {
                 final List<String> dimensionValues = row.get().getDimension(dimension);
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
-                  return matchNull;
+                  return value == null;
                 }
 
                 for (String dimensionValue : dimensionValues) {
@@ -222,8 +220,9 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate, final boolean matchNull)
+        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
         {
+          final boolean matchNull = predicate.apply(null);
           if (extractionFn == null) {
             return new ValueMatcher()
             {

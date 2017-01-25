@@ -36,24 +36,26 @@ public final class DimensionSelectorUtils
   {
   }
 
-  public static ValueMatcher makeRowBasedValueMatcher(
-      DimensionSelector selector,
-      String value,
-      boolean matchNull
-  )
+  /**
+   * Generic implementation of {@link DimensionSelector#makeValueMatcher(String)}, uses {@link
+   * DimensionSelector#getRow()} of the given {@link DimensionSelector}. "Lazy" DimensionSelectors could delegate
+   * {@code makeValueMatcher()} to this method, but encouraged to implement {@code makeValueMatcher()} themselves,
+   * bypassing the {@link IndexedInts} abstraction.
+   */
+  public static ValueMatcher makeValueMatcherGeneric(DimensionSelector selector, String value)
   {
     IdLookup idLookup = selector.idLookup();
     if (idLookup != null) {
-      return makeDictionaryEncodedRowBasedValueMatcher(selector, idLookup.lookupId(value), matchNull);
+      return makeDictionaryEncodedValueMatcherGeneric(selector, idLookup.lookupId(value), value == null);
     } else if (selector.getValueCardinality() >= 0 && selector.nameLookupPossibleInAdvance()) {
       // Employ precomputed BitSet optimization
-      return makeRowBasedValueMatcher(selector, Predicates.equalTo(value), matchNull);
+      return makeDictionaryEncodedValueMatcherGeneric(selector, Predicates.equalTo(value));
     } else {
-      return makeNonDictionaryEncodedRowBasedValueMatcher(selector, value, matchNull);
+      return makeNonDictionaryEncodedValueMatcherGeneric(selector, value);
     }
   }
 
-  private static ValueMatcher makeDictionaryEncodedRowBasedValueMatcher(
+  private static ValueMatcher makeDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
       final int valueId,
       final boolean matchNull
@@ -98,10 +100,9 @@ public final class DimensionSelectorUtils
     }
   }
 
-  private static ValueMatcher makeNonDictionaryEncodedRowBasedValueMatcher(
+  private static ValueMatcher makeNonDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
-      final String value,
-      final boolean matchNull
+      final String value
   )
   {
     return new ValueMatcher()
@@ -113,7 +114,7 @@ public final class DimensionSelectorUtils
         final int size = row.size();
         if (size == 0) {
           // null should match empty rows in multi-value columns
-          return matchNull;
+          return value == null;
         } else {
           for (int i = 0; i < size; ++i) {
             if (Objects.equals(selector.lookupName(row.get(i)), value)) {
@@ -126,27 +127,29 @@ public final class DimensionSelectorUtils
     };
   }
 
-  public static ValueMatcher makeRowBasedValueMatcher(
-      final DimensionSelector selector,
-      final Predicate<String> predicate,
-      final boolean matchNull
-  )
+  /**
+   * Generic implementation of {@link DimensionSelector#makeValueMatcher(Predicate)}, uses {@link
+   * DimensionSelector#getRow()} of the given {@link DimensionSelector}. "Lazy" DimensionSelectors could delegate
+   * {@code makeValueMatcher()} to this method, but encouraged to implement {@code makeValueMatcher()} themselves,
+   * bypassing the {@link IndexedInts} abstraction.
+   */
+  public static ValueMatcher makeValueMatcherGeneric(DimensionSelector selector, Predicate<String> predicate)
   {
     int cardinality = selector.getValueCardinality();
     if (cardinality >= 0 && selector.nameLookupPossibleInAdvance()) {
-      return makeDictionaryEncodedRowBasedValueMatcher(selector, predicate, matchNull);
+      return makeDictionaryEncodedValueMatcherGeneric(selector, predicate);
     } else {
-      return makeNonDictionaryEncodedRowBasedValueMatcher(selector, predicate, matchNull);
+      return makeNonDictionaryEncodedValueMatcherGeneric(selector, predicate);
     }
   }
 
-  private static ValueMatcher makeDictionaryEncodedRowBasedValueMatcher(
+  private static ValueMatcher makeDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
-      Predicate<String> predicate,
-      final boolean matchNull
+      Predicate<String> predicate
   )
   {
     final BitSet predicateMatchingValueIds = makePredicateMatchingSet(selector, predicate);
+    final boolean matchNull = predicate.apply(null);
     return new ValueMatcher()
     {
       @Override
@@ -169,12 +172,12 @@ public final class DimensionSelectorUtils
     };
   }
 
-  private static ValueMatcher makeNonDictionaryEncodedRowBasedValueMatcher(
+  private static ValueMatcher makeNonDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
-      final Predicate<String> predicate,
-      final boolean matchNull
+      final Predicate<String> predicate
   )
   {
+    final boolean matchNull = predicate.apply(null);
     return new ValueMatcher()
     {
       @Override

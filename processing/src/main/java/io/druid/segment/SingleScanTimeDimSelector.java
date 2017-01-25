@@ -64,7 +64,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final String value, boolean matchNull)
+  public ValueMatcher makeValueMatcher(final String value)
   {
     return new ValueMatcher()
     {
@@ -77,7 +77,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> predicate, boolean matchNull)
+  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
   {
     return new ValueMatcher()
     {

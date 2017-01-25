@@ -474,15 +474,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           }
 
                           @Override
-                          public ValueMatcher makeValueMatcher(String value, boolean matchNull)
+                          public ValueMatcher makeValueMatcher(String value)
                           {
-                            return DimensionSelectorUtils.makeRowBasedValueMatcher(this, value, matchNull);
+                            return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
                           }
 
                           @Override
-                          public ValueMatcher makeValueMatcher(Predicate<String> predicate, boolean matchNull)
+                          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
                           {
-                            return DimensionSelectorUtils.makeRowBasedValueMatcher(this, predicate, matchNull);
+                            return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
                           }
 
                           @Override
@@ -567,7 +567,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           }
 
                           @Override
-                          public ValueMatcher makeValueMatcher(final String value, boolean matchNull)
+                          public ValueMatcher makeValueMatcher(final String value)
                           {
                             if (extractionFn == null) {
                               final int valueId = lookupId(value);
@@ -585,12 +585,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               }
                             } else {
                               // Employ precomputed BitSet optimization
-                              return makeValueMatcher(Predicates.equalTo(value), matchNull);
+                              return makeValueMatcher(Predicates.equalTo(value));
                             }
                           }
 
                           @Override
-                          public ValueMatcher makeValueMatcher(final Predicate<String> predicate, boolean matchNull)
+                          public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
                           {
                             final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(
                                 this,

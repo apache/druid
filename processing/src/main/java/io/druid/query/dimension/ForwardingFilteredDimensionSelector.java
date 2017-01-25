@@ -77,12 +77,12 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final String value, final boolean matchNull)
+  public ValueMatcher makeValueMatcher(final String value)
   {
     IdLookup idLookup = idLookup();
     if (idLookup != null) {
       final int valueId = idLookup.lookupId(value);
-      if (valueId >= 0 || matchNull) {
+      if (valueId >= 0 || value == null) {
         return new ValueMatcher()
         {
           @Override
@@ -103,7 +103,7 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
               }
             }
             // null should match empty rows in multi-value columns
-            return nullRow && matchNull;
+            return nullRow && value == null;
           }
         };
       } else {
@@ -111,14 +111,15 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
       }
     } else {
       // Employ precomputed BitSet optimization
-      return makeValueMatcher(Predicates.equalTo(value), matchNull);
+      return makeValueMatcher(Predicates.equalTo(value));
     }
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate, final boolean matchNull)
+  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
   {
     final BitSet valueIds = DimensionSelectorUtils.makePredicateMatchingSet(this, predicate);
+    final boolean matchNull = predicate.apply(null);
     return new ValueMatcher()
     {
       @Override

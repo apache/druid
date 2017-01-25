@@ -56,7 +56,7 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final String value, final boolean matchNull)
+  public ValueMatcher makeValueMatcher(final String value)
   {
     return new ValueMatcher()
     {
@@ -76,14 +76,15 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
           }
         }
         // null should match empty rows in multi-value columns
-        return nullRow && matchNull;
+        return nullRow && value == null;
       }
     };
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> matcherPredicate, final boolean matchNull)
+  public ValueMatcher makeValueMatcher(final Predicate<String> matcherPredicate)
   {
+    final boolean matchNull = predicate.apply(null);
     return new ValueMatcher()
     {
       @Override

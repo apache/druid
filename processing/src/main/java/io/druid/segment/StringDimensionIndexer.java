@@ -431,11 +431,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(final String value, final boolean matchNull)
+      public ValueMatcher makeValueMatcher(final String value)
       {
         if (extractionFn == null) {
           final int valueId = lookupId(value);
-          if (valueId >= 0 || matchNull) {
+          if (valueId >= 0 || value == null) {
             return new ValueMatcher()
             {
               @Override
@@ -443,12 +443,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
               {
                 Object[] dims = currEntry.getKey().getDims();
                 if (dimIndex >= dims.length) {
-                  return matchNull;
+                  return value == null;
                 }
 
                 int[] dimsInt = (int[]) dims[dimIndex];
                 if (dimsInt == null || dimsInt.length == 0) {
-                  return matchNull;
+                  return value == null;
                 }
 
                 for (int id : dimsInt) {
@@ -464,14 +464,15 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           }
         } else {
           // Employ precomputed BitSet optimization
-          return makeValueMatcher(Predicates.equalTo(value), matchNull);
+          return makeValueMatcher(Predicates.equalTo(value));
         }
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(final Predicate<String> predicate, final boolean matchNull)
+      public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
       {
         final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(this, predicate);
+        final boolean matchNull = predicate.apply(null);
         return new ValueMatcher()
         {
           @Override

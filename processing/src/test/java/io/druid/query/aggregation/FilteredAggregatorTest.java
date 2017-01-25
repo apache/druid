@@ -111,15 +111,15 @@ public class FilteredAggregatorTest
                 }
 
                 @Override
-                public ValueMatcher makeValueMatcher(String value, boolean matchNull)
+                public ValueMatcher makeValueMatcher(String value)
                 {
-                  return DimensionSelectorUtils.makeRowBasedValueMatcher(this, value, matchNull);
+                  return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
                 }
 
                 @Override
-                public ValueMatcher makeValueMatcher(Predicate<String> predicate, boolean matchNull)
+                public ValueMatcher makeValueMatcher(Predicate<String> predicate)
                 {
-                  return DimensionSelectorUtils.makeRowBasedValueMatcher(this, predicate, matchNull);
+                  return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
                 }
 
                 @Override

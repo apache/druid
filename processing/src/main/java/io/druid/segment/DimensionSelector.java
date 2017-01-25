@@ -40,9 +40,12 @@ public interface DimensionSelector extends ColumnValueSelector
    */
   public IndexedInts getRow();
 
-  ValueMatcher makeValueMatcher(String value, boolean matchNull);
+  /**
+   * @param value nullable dimension value
+   */
+  ValueMatcher makeValueMatcher(String value);
 
-  ValueMatcher makeValueMatcher(Predicate<String> predicate, boolean matchNull);
+  ValueMatcher makeValueMatcher(Predicate<String> predicate);
 
   /**
    * Value cardinality is the cardinality of the different occurring values.  If there were 4 rows:
