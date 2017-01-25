@@ -17,20 +17,15 @@
  * under the License.
  */
 
-package io.druid.segment.filter;
-
-import io.druid.query.filter.ValueMatcher;
+package io.druid.segment;
 
 /**
-*/
-public final class BooleanValueMatcher
+ * "Mixin" for {@link DimensionSelector}.
+ */
+public interface IdLookup
 {
-  public static ValueMatcher of(boolean matches)
-  {
-    return matches ? TrueValueMatcher.instance() : FalseValueMatcher.instance();
-  }
-
-  private BooleanValueMatcher()
-  {
-  }
+  /**
+   * Inverse of {@link DimensionSelector#lookupName(int)}.
+   */
+  int lookupId(String name);
 }

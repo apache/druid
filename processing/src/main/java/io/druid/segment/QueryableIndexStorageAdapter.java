@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -59,6 +60,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
@@ -463,12 +465,24 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       if (column == null) {
                         return NULL_DIMENSION_SELECTOR;
                       } else if (columnDesc.getCapabilities().hasMultipleValues()) {
-                        return new DimensionSelector()
+                        class MultiValueDimensionSelector implements DimensionSelector, IdLookup
                         {
                           @Override
                           public IndexedInts getRow()
                           {
                             return column.getMultiValueRow(cursorOffset.getOffset());
+                          }
+
+                          @Override
+                          public ValueMatcher makeValueMatcher(String value)
+                          {
+                            return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
+                          }
+
+                          @Override
+                          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+                          {
+                            return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
                           }
 
                           @Override
@@ -487,6 +501,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           }
 
                           @Override
+                          public boolean nameLookupPossibleInAdvance()
+                          {
+                            return true;
+                          }
+
+                          @Nullable
+                          @Override
+                          public IdLookup idLookup()
+                          {
+                            return extractionFn == null ? this : null;
+                          }
+
+                          @Override
                           public int lookupId(String name)
                           {
                             if (extractionFn != null) {
@@ -496,9 +523,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             }
                             return column.lookupId(name);
                           }
-                        };
+                        }
+                        return new MultiValueDimensionSelector();
                       } else {
-                        return new DimensionSelector()
+                        class SingleValueDimensionSelector implements DimensionSelector, IdLookup
                         {
                           @Override
                           public IndexedInts getRow()
@@ -539,6 +567,47 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           }
 
                           @Override
+                          public ValueMatcher makeValueMatcher(final String value)
+                          {
+                            if (extractionFn == null) {
+                              final int valueId = lookupId(value);
+                              if (valueId >= 0) {
+                                return new ValueMatcher()
+                                {
+                                  @Override
+                                  public boolean matches()
+                                  {
+                                    return column.getSingleValueRow(cursorOffset.getOffset()) == valueId;
+                                  }
+                                };
+                              } else {
+                                return BooleanValueMatcher.of(false);
+                              }
+                            } else {
+                              // Employ precomputed BitSet optimization
+                              return makeValueMatcher(Predicates.equalTo(value));
+                            }
+                          }
+
+                          @Override
+                          public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+                          {
+                            final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(
+                                this,
+                                predicate
+                            );
+                            return new ValueMatcher()
+                            {
+                              @Override
+                              public boolean matches()
+                              {
+                                int rowValueId = column.getSingleValueRow(cursorOffset.getOffset());
+                                return predicateMatchingValueIds.get(rowValueId);
+                              }
+                            };
+                          }
+
+                          @Override
                           public int getValueCardinality()
                           {
                             return column.getCardinality();
@@ -552,6 +621,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           }
 
                           @Override
+                          public boolean nameLookupPossibleInAdvance()
+                          {
+                            return true;
+                          }
+
+                          @Nullable
+                          @Override
+                          public IdLookup idLookup()
+                          {
+                            return extractionFn == null ? this : null;
+                          }
+
+                          @Override
                           public int lookupId(String name)
                           {
                             if (extractionFn != null) {
@@ -561,7 +643,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             }
                             return column.lookupId(name);
                           }
-                        };
+                        }
+                        return new SingleValueDimensionSelector();
                       }
                     }
 
@@ -992,7 +1075,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                rowBitmap.iterator();
 
       if (!iter.hasNext()) {
-        return new BooleanValueMatcher(false);
+        return BooleanValueMatcher.of(false);
       }
 
       if (descending) {

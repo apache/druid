@@ -19,14 +19,15 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.Maps;
+import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
+import io.druid.segment.data.SingleIndexedInt;
 
-import java.io.IOException;
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class SingleScanTimeDimSelector implements DimensionSelector
@@ -35,7 +36,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   private final LongColumnSelector selector;
   private final boolean descending;
 
-  private final Map<Integer, String> timeValues = Maps.newHashMap();
+  private final List<String> timeValues = new ArrayList<>();
   private String currentValue = null;
   private long currentTimestamp = Long.MIN_VALUE;
   private int index = -1;
@@ -59,13 +60,44 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   @Override
   public IndexedInts getRow()
   {
+    return new SingleIndexedInt(getDimensionValueIndex());
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(final String value)
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return Objects.equals(lookupName(getDimensionValueIndex()), value);
+      }
+    };
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return predicate.apply(lookupName(getDimensionValueIndex()));
+      }
+    };
+  }
+
+  private int getDimensionValueIndex()
+  {
     // if this the first timestamp, apply and cache extraction function result
     final long timestamp = selector.get();
     if (index < 0) {
       currentTimestamp = timestamp;
       currentValue = extractionFn.apply(timestamp);
       ++index;
-      timeValues.put(index, currentValue);
+      timeValues.add(currentValue);
     }
     // if this is a new timestamp, apply and cache extraction function result
     // since timestamps are assumed grouped and scanned once, we only need to
@@ -85,7 +117,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       if (!Objects.equals(value, currentValue)) {
         currentValue = value;
         ++index;
-        timeValues.put(index, currentValue);
+        timeValues.add(currentValue);
       }
       // Note: this could be further optimized by checking if the new value is one we have
       // previously seen, but would require keeping track of both the current and the maximum index
@@ -93,39 +125,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
     // otherwise, if the current timestamp is the same as the previous timestamp,
     // keep using the same dimension value index
 
-    final int dimensionValueIndex = index;
-    return new IndexedInts()
-    {
-      @Override
-      public int size()
-      {
-        return 1;
-      }
-
-      @Override
-      public int get(int i)
-      {
-        return dimensionValueIndex;
-      }
-
-      @Override
-      public IntIterator iterator()
-      {
-        return IntIterators.singleton(dimensionValueIndex);
-      }
-
-      @Override
-      public void fill(int index, int[] toFill)
-      {
-        throw new UnsupportedOperationException("fill not supported");
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-
-      }
-    };
+    return index;
   }
 
   @Override
@@ -145,8 +145,15 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   }
 
   @Override
-  public int lookupId(String name)
+  public boolean nameLookupPossibleInAdvance()
   {
-    throw new UnsupportedOperationException("time column does not support lookups");
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public IdLookup idLookup()
+  {
+    return null;
   }
 }

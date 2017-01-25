@@ -19,6 +19,7 @@
 
 package io.druid.query.topn;
 
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -26,6 +27,7 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.IdLookup;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -179,6 +181,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     private volatile int keepOnlyN;
 
     private final DimensionSelector dimSelector;
+    private final IdLookup idLookup;
     private final TopNQuery query;
     private final Capabilities capabilities;
 
@@ -189,6 +192,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     )
     {
       this.dimSelector = dimSelector;
+      this.idLookup = dimSelector.idLookup();
       this.query = query;
       this.capabilities = capabilities;
 
@@ -198,7 +202,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       keepOnlyN = dimSelector.getValueCardinality();
 
       if (keepOnlyN < 0) {
-        throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
+        throw new IAE("Cannot operate on a dimension with no dictionary");
       }
     }
 
@@ -233,7 +237,10 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       int startIndex = ignoreFirstN;
 
       if (previousStop != null) {
-        int lookupId = dimSelector.lookupId(previousStop) + 1;
+        if (idLookup == null) {
+          throw new UnsupportedOperationException("Only DimensionSelectors which support idLookup() are supported yet");
+        }
+        int lookupId = idLookup.lookupId(previousStop) + 1;
         if (lookupId < 0) {
           lookupId *= -1;
         }

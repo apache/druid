@@ -17,52 +17,51 @@
  * under the License.
  */
 
-package io.druid.query.dimension;
+package io.druid.segment.data;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import io.druid.query.extraction.ExtractionFn;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
-/**
- */
-public abstract class BaseFilteredDimensionSpec implements DimensionSpec
+import java.io.IOException;
+
+public final class SingleIndexedInt implements IndexedInts
 {
-  protected final DimensionSpec delegate;
+  private final int value;
 
-  public BaseFilteredDimensionSpec(
-      @JsonProperty("delegate") DimensionSpec delegate
-  )
+  public SingleIndexedInt(int value)
   {
-    this.delegate = Preconditions.checkNotNull(delegate, "delegate must not be null");
-  }
-
-  @JsonProperty
-  public DimensionSpec getDelegate()
-  {
-    return delegate;
+    this.value = value;
   }
 
   @Override
-  public String getDimension()
+  public int size()
   {
-    return delegate.getDimension();
+    return 1;
   }
 
   @Override
-  public String getOutputName()
+  public int get(int i)
   {
-    return delegate.getOutputName();
+    if (i != 0) {
+      throw new IllegalArgumentException(i + " != 0");
+    }
+    return value;
   }
 
   @Override
-  public ExtractionFn getExtractionFn()
+  public IntIterator iterator()
   {
-    return delegate.getExtractionFn();
+    return IntIterators.singleton(value);
   }
 
   @Override
-  public boolean preservesOrdering()
+  public void fill(int index, int[] toFill)
   {
-    return delegate.preservesOrdering();
+    throw new UnsupportedOperationException("fill not supported");
+  }
+
+  @Override
+  public void close() throws IOException
+  {
   }
 }

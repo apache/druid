@@ -19,34 +19,66 @@
 
 package io.druid.segment.data;
 
+import io.druid.java.util.common.IAE;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
 
 import java.io.IOException;
 
 /**
  */
-public class ArrayBasedIndexedInts implements IndexedInts
+public final class ArrayBasedIndexedInts implements IndexedInts
 {
-  private final int[] expansion;
+  private static final ArrayBasedIndexedInts EMPTY = new ArrayBasedIndexedInts(IntArrays.EMPTY_ARRAY, 0);
 
-  public ArrayBasedIndexedInts(int[] expansion) {this.expansion = expansion;}
+  public static ArrayBasedIndexedInts of(int[] expansion)
+  {
+    if (expansion.length == 0) {
+      return EMPTY;
+    }
+    return new ArrayBasedIndexedInts(expansion, expansion.length);
+  }
+
+  public static ArrayBasedIndexedInts of(int[] expansion, int size)
+  {
+    if (size == 0) {
+      return EMPTY;
+    }
+    if (size < 0 || size > expansion.length) {
+      throw new IAE("Size[%s] should be between 0 and %s", size, expansion.length);
+    }
+    return new ArrayBasedIndexedInts(expansion, size);
+  }
+
+  private final int[] expansion;
+  private final int size;
+
+  private ArrayBasedIndexedInts(int[] expansion, int size)
+  {
+    this.expansion = expansion;
+    this.size = size;
+  }
 
   @Override
   public int size()
   {
-    return expansion.length;
+    return size;
   }
 
   @Override
   public int get(int index)
   {
+    if (index >= size) {
+      throw new IndexOutOfBoundsException("index: " + index + ", size: " + size);
+    }
     return expansion[index];
   }
 
   @Override
   public IntIterator iterator()
   {
-    return new IndexedIntsIterator(this);
+    return IntIterators.wrap(expansion, 0, size);
   }
 
   @Override

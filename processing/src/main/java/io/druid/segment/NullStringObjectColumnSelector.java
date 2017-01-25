@@ -17,20 +17,30 @@
  * under the License.
  */
 
-package io.druid.segment.filter;
+package io.druid.segment;
 
-import io.druid.query.filter.ValueMatcher;
-
-/**
-*/
-public final class BooleanValueMatcher
+public final class NullStringObjectColumnSelector implements ObjectColumnSelector<String>
 {
-  public static ValueMatcher of(boolean matches)
+  private static final NullStringObjectColumnSelector INSTANCE = new NullStringObjectColumnSelector();
+
+  public static NullStringObjectColumnSelector instance()
   {
-    return matches ? TrueValueMatcher.instance() : FalseValueMatcher.instance();
+    return INSTANCE;
   }
 
-  private BooleanValueMatcher()
+  private NullStringObjectColumnSelector()
   {
+  }
+
+  @Override
+  public Class<String> classOfObject()
+  {
+    return String.class;
+  }
+
+  @Override
+  public String get()
+  {
+    return null;
   }
 }

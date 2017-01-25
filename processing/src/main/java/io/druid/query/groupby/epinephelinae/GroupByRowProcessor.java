@@ -97,7 +97,7 @@ public class GroupByRowProcessor
         rowSignature
     );
     final ValueMatcher filterMatcher = filter == null
-                                       ? new BooleanValueMatcher(true)
+                                       ? BooleanValueMatcher.of(true)
                                        : filter.makeMatcher(columnSelectorFactory);
 
     final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(

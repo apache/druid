@@ -53,8 +53,8 @@ public class NullDimensionSelectorTest {
 
   @Test
   public void testLookupId() throws Exception {
-    Assert.assertEquals(0, selector.lookupId(null));
-    Assert.assertEquals(0, selector.lookupId(""));
-    Assert.assertEquals(-1, selector.lookupId("billy"));
+    Assert.assertEquals(0, selector.idLookup().lookupId(null));
+    Assert.assertEquals(0, selector.idLookup().lookupId(""));
+    Assert.assertEquals(-1, selector.idLookup().lookupId("billy"));
   }
 }
