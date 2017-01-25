@@ -238,7 +238,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       if (previousStop != null) {
         if (idLookup == null) {
-          throw new IAE("Only DimensionSelectors which support idLookup() are supported yet");
+          throw new UnsupportedOperationException("Only DimensionSelectors which support idLookup() are supported yet");
         }
         int lookupId = idLookup.lookupId(previousStop) + 1;
         if (lookupId < 0) {
