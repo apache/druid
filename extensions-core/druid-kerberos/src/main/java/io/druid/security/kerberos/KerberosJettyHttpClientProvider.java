@@ -53,6 +53,9 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
   @Override
   public void configure(Injector injector)
   {
+    if (delegateProvider instanceof AbstractHttpClientProvider) {
+      ((AbstractHttpClientProvider) delegateProvider).configure(injector);
+    }
     config = injector.getInstance(DruidKerberosConfig.class);
   }
 

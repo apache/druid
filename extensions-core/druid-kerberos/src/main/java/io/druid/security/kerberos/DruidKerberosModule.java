@@ -20,10 +20,8 @@
 package io.druid.security.kerberos;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.multibindings.Multibinder;
 import com.metamx.http.client.HttpClient;
 import io.druid.guice.JsonConfigProvider;
@@ -37,17 +35,11 @@ import io.druid.server.initialization.jetty.ServletFilterHolder;
 import io.druid.server.router.Router;
 
 import java.util.List;
-import java.util.Properties;
 
 /**
  */
 public class DruidKerberosModule implements DruidModule
 {
-
-  private static final String KERBEROS_ENABLED = "druid.authentication.kerberos.enabled";
-
-  @Inject
-  private Properties props;
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -59,7 +51,6 @@ public class DruidKerberosModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (isKerberosSecurityEnabled()) {
       JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", DruidKerberosConfig.class);
       JsonConfigProvider.bind(binder, "druid.hadoop.security.spnego", SpnegoFilterConfig.class);
 
@@ -81,14 +72,5 @@ public class DruidKerberosModule implements DruidModule
             .annotatedWith(Router.class)
             .toProvider(new KerberosJettyHttpClientProvider(new JettyHttpClientModule.HttpClientProvider(Router.class)))
             .in(LazySingleton.class);
-    }
   }
-
-  private boolean isKerberosSecurityEnabled()
-  {
-    Preconditions.checkNotNull(props, "props");
-    return Boolean.getBoolean(props.getProperty(KERBEROS_ENABLED, "false"));
-  }
-
-
 }

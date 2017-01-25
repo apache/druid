@@ -13,7 +13,6 @@ Make sure to [include](../../operations/including-extensions.html) `druid-kerber
 
 |Property|Possible Values|Description|Default|required|
 |--------|---------------|-----------|-------|--------|
-|`druid.authentication.kerberos.enabled`|true/false||Must be set to 'true' to enable kerberos authetication.|false|Yes|
 |`druid.hadoop.security.kerberos.principal`|`druid@EXAMPLE.COM`| Principal user name, used for internal node communication|empty|Yes|
 |`druid.hadoop.security.kerberos.keytab`|`/etc/security/keytabs/druid.headlessUser.keytab`|Path to keytab file used for internal node communication|empty|Yes|
 |`druid.hadoop.security.spnego.principal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid nodes|empty|Yes|
