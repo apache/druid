@@ -29,6 +29,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
@@ -154,17 +155,20 @@ public class LikeDimFilter implements DimFilter
     }
 
     /**
-     * Checks if the suffix of "s" matches the suffix of this matcher. The first prefix.length characters
-     * of s are ignored. This method is useful if you've already independently verified the prefix.
+     * Checks if the suffix of strings.get(i) matches the suffix of this matcher. The first prefix.length characters
+     * of s are ignored. This method is useful if you've already independently verified the prefix. This method
+     * evalutes strings.get(i) lazily to save time when it isn't necessary to actually look at the string.
      */
-    public boolean matchesSuffixOnly(@Nullable final String s)
+    public boolean matchesSuffixOnly(final Indexed<String> strings, final int i)
     {
       if (suffixMatch == SuffixMatch.MATCH_ANY) {
         return true;
       } else if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
+        final String s = strings.get(i);
         return (s == null ? 0 : s.length()) == prefix.length();
       } else {
         // suffixMatch is MATCH_PATTERN
+        final String s = strings.get(i);
         return matches(s);
       }
     }

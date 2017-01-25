@@ -99,7 +99,7 @@ public class LikeFilter implements Filter
                 @Override
                 public ImmutableBitmap next()
                 {
-                  while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
+                  while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues, currIndex)) {
                     currIndex++;
                   }
 
