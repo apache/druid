@@ -22,73 +22,18 @@ package io.druid.query.filter;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
-
-import java.util.BitSet;
-import java.util.Objects;
 
 public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DimensionSelector>
 {
   @Override
-  public ValueMatcher makeValueMatcher(final DimensionSelector selector, final String value)
+  public ValueMatcher makeValueMatcher(final DimensionSelector selector, String value)
   {
-    final String valueStr = Strings.emptyToNull(value);
-
-    // if matching against null, rows with size 0 should also match
-    final boolean matchNull = Strings.isNullOrEmpty(valueStr);
-
-    final int cardinality = selector.getValueCardinality();
-
-    if (cardinality == 0 || (cardinality == 1 && selector.lookupName(0) == null)) {
-      // All values are null or empty rows (which match nulls anyway). No need to check each row.
-      return new BooleanValueMatcher(matchNull);
-    } else if (cardinality >= 0) {
-      // Dictionary-encoded dimension. Compare by id instead of by value to save time.
-      final int valueId = selector.lookupId(valueStr);
-
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return matchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (row.get(i) == valueId) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      };
+    value = Strings.emptyToNull(value);
+    if (selector.getValueCardinality() == 0) {
+      return BooleanValueMatcher.of(value == null);
     } else {
-      // Not dictionary-encoded. Skip the optimization.
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return matchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (Objects.equals(selector.lookupName(row.get(i)), valueStr)) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      };
+      return selector.makeValueMatcher(value);
     }
   }
 
@@ -99,63 +44,11 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   )
   {
     final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-    final int cardinality = selector.getValueCardinality();
-    final boolean matchNull = predicate.apply(null);
-
-    if (cardinality == 0 || (cardinality == 1 && selector.lookupName(0) == null)) {
-      // All values are null or empty rows (which match nulls anyway). No need to check each row.
-      return new BooleanValueMatcher(matchNull);
-    } else if (cardinality >= 0) {
-      // Dictionary-encoded dimension. Check every value; build a bitset of matching ids.
-      final BitSet valueIds = new BitSet(cardinality);
-      for (int i = 0; i < cardinality; i++) {
-        if (predicate.apply(selector.lookupName(i))) {
-          valueIds.set(i);
-        }
-      }
-
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return matchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (valueIds.get(row.get(i))) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      };
+    if (selector.getValueCardinality() == 0) {
+      return BooleanValueMatcher.of(predicate.apply(null));
     } else {
-      // Not dictionary-encoded. Skip the optimization.
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return matchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (predicate.apply(selector.lookupName(row.get(i)))) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      };
+      return selector.makeValueMatcher(predicate);
     }
   }
+
 }

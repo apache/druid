@@ -17,7 +17,13 @@
  * under the License.
  */
 
-package io.druid.segment;import io.druid.segment.data.IndexedInts;
+package io.druid.segment;
+
+import com.google.common.base.Predicate;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.data.IndexedInts;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -33,6 +39,13 @@ public interface DimensionSelector extends ColumnValueSelector
    * @return all values for the row as an IntBuffer
    */
   public IndexedInts getRow();
+
+  /**
+   * @param value nullable dimension value
+   */
+  ValueMatcher makeValueMatcher(String value);
+
+  ValueMatcher makeValueMatcher(Predicate<String> predicate);
 
   /**
    * Value cardinality is the cardinality of the different occurring values.  If there were 4 rows:
@@ -80,10 +93,24 @@ public interface DimensionSelector extends ColumnValueSelector
   public String lookupName(int id);
 
   /**
-   * The ID is the int id value of the field.
+   * Returns true if it is possible to {@link #lookupName(int)} by ids from 0 to {@link #getValueCardinality()}
+   * before the rows with those ids are returned.
    *
-   * @param name field name to look up the id for
-   * @return the id for the given field name
+   * <p>Returns false if {@link #lookupName(int)} could be called with ids, returned from the most recent call of {@link
+   * #getRow()} on this DimensionSelector, but not earlier. If {@link #getValueCardinality()} of this DimensionSelector
+   * additionally returns {@link #CARDINALITY_UNKNOWN}, {@code lookupName()} couldn't be called with ids, returned by
+   * not the most recent call of {@link #getRow()}, i. e. names for ids couldn't be looked up "later". If {@link
+   * #getValueCardinality()} returns a non-negative number, {@code lookupName()} could be called with any ids, returned
+   * from {@code #getRow()} since the creation of this DimensionSelector.
+   *
+   * <p>If {@link #lookupName(int)} is called with an ineligible id, result is undefined: exception could be thrown, or
+   * null returned, or some other random value.
    */
-  public int lookupId(String name);
+  boolean nameLookupPossibleInAdvance();
+
+  /**
+   * Returns {@link IdLookup} if available for this DimensionSelector, or null.
+   */
+  @Nullable
+  IdLookup idLookup();
 }

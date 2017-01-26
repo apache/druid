@@ -549,7 +549,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor)
   {
     return filter == null
-           ? new BooleanValueMatcher(true)
+           ? BooleanValueMatcher.of(true)
            : filter.makeMatcher(cursor);
   }
 
