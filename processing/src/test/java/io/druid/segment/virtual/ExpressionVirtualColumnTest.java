@@ -19,12 +19,15 @@
 
 package io.druid.segment.virtual;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.BucketExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -35,65 +38,132 @@ import org.junit.Test;
 
 public class ExpressionVirtualColumnTest
 {
+  private static final InputRow ROW0 = new MapBasedInputRow(
+      0,
+      ImmutableList.<String>of(),
+      ImmutableMap.<String, Object>of()
+  );
+
+  private static final InputRow ROW1 = new MapBasedInputRow(
+      0,
+      ImmutableList.<String>of(),
+      ImmutableMap.<String, Object>of("x", 4)
+  );
+
+  private static final InputRow ROW2 = new MapBasedInputRow(
+      0,
+      ImmutableList.<String>of(),
+      ImmutableMap.<String, Object>of("x", 2.1, "y", 3L)
+  );
+
+  private static final ExpressionVirtualColumn XPLUSY = new ExpressionVirtualColumn("expr", "x + y");
+  private static final TestColumnSelectorFactory COLUMN_SELECTOR_FACTORY = new TestColumnSelectorFactory();
+
   @Test
-  public void testMakeSelectors()
+  public void testObjectSelector()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = new TestColumnSelectorFactory();
-    final ExpressionVirtualColumn virtualColumn = new ExpressionVirtualColumn("expr", "x + y");
+    final ObjectColumnSelector selector = XPLUSY.makeObjectColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
-    final ObjectColumnSelector objectSelector = virtualColumn.makeObjectColumnSelector("expr", columnSelectorFactory);
-    final DimensionSelector dimensionSelector = virtualColumn.makeDimensionSelector(
+    COLUMN_SELECTOR_FACTORY.setRow(ROW0);
+    Assert.assertEquals(null, selector.get());
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW1);
+    Assert.assertEquals(null, selector.get());
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW2);
+    Assert.assertEquals(5.1d, selector.get());
+  }
+
+  @Test
+  public void testLongSelector()
+  {
+    final LongColumnSelector selector = XPLUSY.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW0);
+    Assert.assertEquals(0L, selector.get());
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW1);
+    Assert.assertEquals(0L, selector.get());
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW2);
+    Assert.assertEquals(5L, selector.get());
+  }
+
+  @Test
+  public void testFloatSelector()
+  {
+    final FloatColumnSelector selector = XPLUSY.makeFloatColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW0);
+    Assert.assertEquals(0.0f, selector.get(), 0.0f);
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW1);
+    Assert.assertEquals(0.0f, selector.get(), 0.0f);
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW2);
+    Assert.assertEquals(5.1f, selector.get(), 0.0f);
+  }
+
+  @Test
+  public void testDimensionSelector()
+  {
+    final DimensionSelector selector = XPLUSY.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "x"),
-        columnSelectorFactory
+        COLUMN_SELECTOR_FACTORY
     );
-    final DimensionSelector extractionDimensionSelector = virtualColumn.makeDimensionSelector(
+
+    final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
+    final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.<String>notNull());
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW0);
+    Assert.assertEquals(true, nullMatcher.matches());
+    Assert.assertEquals(false, fiveMatcher.matches());
+    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW1);
+    Assert.assertEquals(true, nullMatcher.matches());
+    Assert.assertEquals(false, fiveMatcher.matches());
+    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
+
+    COLUMN_SELECTOR_FACTORY.setRow(ROW2);
+    Assert.assertEquals(false, nullMatcher.matches());
+    Assert.assertEquals(false, fiveMatcher.matches());
+    Assert.assertEquals(true, nonNullMatcher.matches());
+    Assert.assertEquals("5.1", selector.lookupName(selector.getRow().get(0)));
+  }
+
+  @Test
+  public void testDimensionSelectorWithExtraction()
+  {
+    final DimensionSelector selector = XPLUSY.makeDimensionSelector(
         new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.0)),
-        columnSelectorFactory
-    );
-    final FloatColumnSelector floatSelector = virtualColumn.makeFloatColumnSelector("expr", columnSelectorFactory);
-    final LongColumnSelector longSelector = virtualColumn.makeLongColumnSelector("expr", columnSelectorFactory);
-
-    columnSelectorFactory.setRow(
-        new MapBasedInputRow(
-            0,
-            ImmutableList.<String>of(),
-            ImmutableMap.<String, Object>of()
-        )
+        COLUMN_SELECTOR_FACTORY
     );
 
-    Assert.assertEquals(null, objectSelector.get());
-    Assert.assertEquals(null, dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals(null, extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
-    Assert.assertEquals(0.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(0L, longSelector.get());
+    final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
+    final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.<String>notNull());
 
-    columnSelectorFactory.setRow(
-        new MapBasedInputRow(
-            0,
-            ImmutableList.<String>of(),
-            ImmutableMap.<String, Object>of("x", 4)
-        )
-    );
+    COLUMN_SELECTOR_FACTORY.setRow(ROW0);
+    Assert.assertEquals(true, nullMatcher.matches());
+    Assert.assertEquals(false, fiveMatcher.matches());
+    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
-    Assert.assertEquals(null, objectSelector.get());
-    Assert.assertEquals(null, dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals(null, extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
-    Assert.assertEquals(0.0f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(0L, longSelector.get());
+    COLUMN_SELECTOR_FACTORY.setRow(ROW1);
+    Assert.assertEquals(true, nullMatcher.matches());
+    Assert.assertEquals(false, fiveMatcher.matches());
+    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
-    columnSelectorFactory.setRow(
-        new MapBasedInputRow(
-            0,
-            ImmutableList.<String>of(),
-            ImmutableMap.<String, Object>of("x", 2.1, "y", 3L)
-        )
-    );
-
-    Assert.assertEquals(5.1d, objectSelector.get());
-    Assert.assertEquals("5.1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("5", extractionDimensionSelector.lookupName(extractionDimensionSelector.getRow().get(0)));
-    Assert.assertEquals(5.1f, floatSelector.get(), 0.0f);
-    Assert.assertEquals(5L, longSelector.get());
+    COLUMN_SELECTOR_FACTORY.setRow(ROW2);
+    Assert.assertEquals(false, nullMatcher.matches());
+    Assert.assertEquals(true, fiveMatcher.matches());
+    Assert.assertEquals(true, nonNullMatcher.matches());
+    Assert.assertEquals("5", selector.lookupName(selector.getRow().get(0)));
   }
 
   @Test

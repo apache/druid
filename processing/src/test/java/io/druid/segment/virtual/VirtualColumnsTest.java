@@ -20,6 +20,7 @@
 package io.druid.segment.virtual;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import io.druid.jackson.DefaultObjectMapper;
@@ -28,9 +29,12 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.VirtualColumn;
@@ -46,6 +50,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -320,9 +325,35 @@ public class VirtualColumnsTest
         }
 
         @Override
-        public int lookupId(String name)
+        public ValueMatcher makeValueMatcher(final String value)
         {
-          return 0;
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        {
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        }
+
+        @Override
+        public boolean nameLookupPossibleInAdvance()
+        {
+          return false;
+        }
+
+        @Nullable
+        @Override
+        public IdLookup idLookup()
+        {
+          return new IdLookup()
+          {
+            @Override
+            public int lookupId(final String name)
+            {
+              return 0;
+            }
+          };
         }
       };
 

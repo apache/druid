@@ -133,7 +133,6 @@ public class MapVirtualColumn implements VirtualColumn
         }
       };
     } else {
-      final String key = dimension.substring(index + 1);
       return new ObjectColumnSelector<String>()
       {
         @Override
@@ -152,7 +151,7 @@ public class MapVirtualColumn implements VirtualColumn
           }
           final int limit = Math.min(keyIndices.size(), valueIndices.size());
           for (int i = 0; i < limit; i++) {
-            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), key)) {
+            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), subColumnName)) {
               return valueSelector.lookupName(valueIndices.get(i));
             }
           }
