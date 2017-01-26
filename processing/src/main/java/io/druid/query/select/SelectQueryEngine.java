@@ -69,7 +69,7 @@ public class SelectQueryEngine
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities
+        ColumnCapabilities capabilities, ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();

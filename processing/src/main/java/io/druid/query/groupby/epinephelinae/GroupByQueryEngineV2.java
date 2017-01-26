@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
@@ -52,8 +53,11 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -178,13 +182,18 @@ public class GroupByQueryEngineV2
   {
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities
+        ColumnCapabilities capabilities, ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
       switch(type) {
         case STRING:
-          return new StringGroupByColumnSelectorStrategy();
+          DimensionSelector dimSelector = (DimensionSelector) selector;
+          if (dimSelector.nameLookupPossibleInAdvance()) {
+            return new StringGroupByColumnSelectorStrategy();
+          } else {
+            return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
+          }
         case LONG:
           return new LongGroupByColumnSelectorStrategy();
         case FLOAT:
@@ -349,8 +358,60 @@ public class GroupByQueryEngineV2
     }
   }
 
+  // builds internal String<->Integer dictionary for DimensionSelectors that return false for nameLookupPossibleInAdvance()
+  private static class DictionaryBuildingStringGroupByColumnSelectorStrategy extends StringGroupByColumnSelectorStrategy
+  {
+    private static final int GROUP_BY_MISSING_VALUE = -1;
+
+    private int nextId = 0;
+    private final List<String> dictionary = Lists.newArrayList();
+    private final Object2IntOpenHashMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
+    {
+      reverseDictionary.defaultReturnValue(-1);
+    }
+
+    @Override
+    public void processValueFromGroupingKey(GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap)
+    {
+      final int id = key.getInt(selectorPlus.getKeyBufferPosition());
+      final String value = dictionary.get(id);
+
+      // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
+      if (id != GROUP_BY_MISSING_VALUE) {
+        resultMap.put(
+            selectorPlus.getOutputName(),
+            value
+        );
+      } else {
+        resultMap.put(selectorPlus.getOutputName(), "");
+      }
+    }
+
+    @Override
+    public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+    {
+      final DimensionSelector dimSelector = (DimensionSelector) selector;
+      final IndexedInts row = dimSelector.getRow();
+      final IntArrayList newIds = new IntArrayList(row.size());
+      for (int id : row) {
+        final String value = dimSelector.lookupName(id);
+        final int dictId = reverseDictionary.getInt(value);
+        if (dictId < 0) {
+          dictionary.add(value);
+          reverseDictionary.put(value, nextId);
+          newIds.add(nextId);
+          nextId++;
+        } else {
+          newIds.add(dictId);
+        }
+      }
+      valuess[columnIndex] = ArrayBasedIndexedInts.of(newIds.toIntArray(), newIds.size());
+    }
+  }
+
   private static class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
   {
+
     @Override
     public int getGroupingKeySize()
     {
@@ -395,6 +456,7 @@ public class GroupByQueryEngineV2
 
   private static class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
   {
+
     @Override
     public int getGroupingKeySize()
     {

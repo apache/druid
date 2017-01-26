@@ -21,6 +21,7 @@ package io.druid.query.aggregation.cardinality.types;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -29,7 +30,7 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
 {
   @Override
   public CardinalityAggregatorColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities
+      ColumnCapabilities capabilities, ColumnValueSelector selector
   )
   {
     ValueType type = capabilities.getType();

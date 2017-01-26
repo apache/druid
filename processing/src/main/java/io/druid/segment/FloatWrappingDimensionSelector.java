@@ -19,75 +19,54 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
+import io.druid.segment.data.ZeroIndexedInts;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class FloatWrappingDimensionSelector implements DimensionSelector
 {
   private final FloatColumnSelector delegate;
   private final ExtractionFn exFn;
-  private final Map<String, Integer> valueToId = Maps.newHashMap();
-  private final List<String> idToValue = Lists.newArrayList();
-  private int curId;
 
   public FloatWrappingDimensionSelector(FloatColumnSelector selector, ExtractionFn extractionFn)
   {
     this.delegate = selector;
     this.exFn = extractionFn;
-    this.curId = 0;
   }
 
   @Override
   public IndexedInts getRow()
   {
-    float rowValFloat = delegate.get();
-    String rowVal = exFn != null ? exFn.apply(rowValFloat) : String.valueOf(rowValFloat) ;
-    Integer id = valueToId.get(rowVal);
-    if (id == null) {
-      idToValue.add(rowVal);
-      valueToId.put(rowVal, curId);
-      id = curId;
-      curId++;
-    }
-    final int finalId = id;
-    return new IndexedInts()
+    return ZeroIndexedInts.instance();
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(final String value)
+  {
+    return new ValueMatcher()
     {
       @Override
-      public int size()
+      public boolean matches()
       {
-        return 1;
+        return Objects.equals(value, exFn.apply(delegate.get()));
       }
+    };
+  }
 
+  @Override
+  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+  {
+    return new ValueMatcher()
+    {
       @Override
-      public int get(int index)
+      public boolean matches()
       {
-        return finalId;
-      }
-
-      @Override
-      public void fill(int index, int[] toFill)
-      {
-        throw new UnsupportedOperationException("wrapped float does not support fill");
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-
-      }
-
-      @Override
-      public IntIterator iterator()
-      {
-        return IntIterators.singleton(finalId);
+        return predicate.apply(exFn.apply(delegate.get()));
       }
     };
   }
@@ -101,12 +80,19 @@ public class FloatWrappingDimensionSelector implements DimensionSelector
   @Override
   public String lookupName(int id)
   {
-    return idToValue.get(id);
+    return exFn.apply(delegate.get());
   }
 
   @Override
-  public int lookupId(String name)
+  public boolean nameLookupPossibleInAdvance()
   {
-    throw new UnsupportedOperationException("wrapped float column does not support lookups");
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public IdLookup idLookup()
+  {
+    return null;
   }
 }

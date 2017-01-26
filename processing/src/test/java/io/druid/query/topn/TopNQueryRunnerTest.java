@@ -3899,7 +3899,6 @@ public class TopNQueryRunnerTest
     assertExpectedResults(expectedResults, query);
   }
 
-
   @Test
   public void testFullOnTopNLongColumnWithExFn()
   {

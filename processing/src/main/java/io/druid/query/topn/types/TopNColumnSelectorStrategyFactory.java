@@ -21,6 +21,7 @@ package io.druid.query.topn.types;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -28,7 +29,7 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
 {
   @Override
   public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities
+      ColumnCapabilities capabilities, ColumnValueSelector selector
   )
   {
     ValueType type = capabilities.getType();

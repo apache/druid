@@ -125,15 +125,16 @@ public final class DimensionHandlerUtils
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = dimensionSpecs.get(i);
       final String dimName = dimSpec.getDimension();
+      final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
+          dimSpec,
+          cursor
+      );
       ColumnSelectorStrategyClass strategy = makeStrategy(
           strategyFactory,
           dimName,
           cursor.getColumnCapabilities(dimSpec.getDimension()),
-          dimSpec.getExtractionFn() != null
-      );
-      final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
-          dimSpec,
-          cursor
+          dimSpec.getExtractionFn() != null,
+          selector
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
           dimName,
@@ -197,11 +198,12 @@ public final class DimensionHandlerUtils
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       String dimName,
       ColumnCapabilities capabilities,
-      boolean hasExFn
+      boolean hasExFn,
+      ColumnValueSelector selector
   )
   {
     capabilities = getEffectiveCapabilities(dimName, capabilities, hasExFn);
-    return strategyFactory.makeColumnSelectorStrategy(capabilities);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
   private static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");

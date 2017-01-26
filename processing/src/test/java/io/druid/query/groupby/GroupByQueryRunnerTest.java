@@ -6982,6 +6982,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByFloatColumn()
   {
+    // Only GroupBy V2 supports grouping on non-Strings.
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      return;
+    }
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -7050,6 +7055,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByFloatColumnWithExFn()
   {
+    // Only GroupBy V2 supports grouping on non-Strings.
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      return;
+    }
+
     String jsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
 

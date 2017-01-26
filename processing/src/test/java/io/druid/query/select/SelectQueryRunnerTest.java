@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -37,6 +38,8 @@ import io.druid.query.TableDataSource;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -45,6 +48,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -602,8 +606,8 @@ public class SelectQueryRunnerTest
   public void testFullOnSelectWithLongAndFloat()
   {
     List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
-        new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex"),
-        new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime")
+        new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", ValueType.FLOAT),
+        new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
     );
 
     SelectQuery query = newTestQuery()
@@ -701,6 +705,124 @@ public class SelectQueryRunnerTest
                             .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1689.0128f)
+                            .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(descending ? expectedResultsDsc : expectedResultsAsc, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
+  }
+
+  @Test
+  public void testFullOnSelectWithLongAndFloatWithExFn()
+  {
+    String jsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+
+    List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
+        new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", jsExtractionFn),
+        new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
+    );
+
+    SelectQuery query = newTestQuery()
+        .dimensionSpecs(dimSpecs)
+        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .intervals(I_0112_0114)
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        0,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", "super-1294790400000")
+                            .put("floatIndex", "super-100")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", "super-1294790400000")
+                            .put("floatIndex", "super-100")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("longTime", "super-1294790400000")
+                            .put("floatIndex", "super-100")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Sets.newHashSet("null_column", "floatIndex", "longTime"),
+                Sets.newHashSet("__time", "index"),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", "super-1294876800000")
+                            .put("floatIndex", "super-1564.61767578125")
+                            .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", "super-1294876800000")
+                            .put("floatIndex", "super-826.0601806640625")
+                            .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
+                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -3,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
+                            .put("longTime", "super-1294876800000")
+                            .put("floatIndex", "super-1689.0128173828125")
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
                             .put(Column.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
