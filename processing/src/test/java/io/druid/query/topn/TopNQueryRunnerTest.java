@@ -3973,4 +3973,57 @@ public class TopNQueryRunnerTest
     );
     assertExpectedResults(expectedResults, query);
   }
+
+  @Test
+  public void testFullOnTopNDimExtractionAllNulls()
+  {
+    String jsFn = "function(str) { return null; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension,
+            jsExtractionFn
+        ))
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    Map<String, Object> expectedMap = new HashMap<>();
+    expectedMap.put(QueryRunnerTestHelper.marketDimension, null);
+    expectedMap.put("rows", 1209L);
+    expectedMap.put("index", 503332.5071372986D);
+    expectedMap.put("addRowsIndexConstant", 504542.5071372986D);
+    expectedMap.put("uniques", 9.019833517963864);
+    expectedMap.put("maxIndex", 1870.06103515625D);
+    expectedMap.put("minIndex", 59.02102279663086D);
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    expectedMap
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
 }

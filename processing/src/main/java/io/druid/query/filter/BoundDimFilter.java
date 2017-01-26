@@ -318,6 +318,23 @@ public class BoundDimFilter implements DimFilter
     return builder.toString();
   }
 
+  private static boolean boundsCheck(
+      final boolean lowerStrict,
+      final boolean upperStrict,
+      int lowerComparing,
+      int upperComparing
+  )
+  {
+    if (lowerStrict && upperStrict) {
+      return ((lowerComparing > 0)) && (upperComparing > 0);
+    } else if (lowerStrict) {
+      return (lowerComparing > 0) && (upperComparing >= 0);
+    } else if (upperStrict) {
+      return (lowerComparing >= 0) && (upperComparing > 0);
+    }
+    return (lowerComparing >= 0) && (upperComparing >= 0);
+  }
+
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
   {
     class BoundLongPredicateSupplier implements Supplier<DruidLongPredicate>
@@ -397,15 +414,7 @@ public class BoundDimFilter implements DimFilter
                 if (hasUpperLongBound) {
                   upperComparing = Long.compare(upperLongBound, input);
                 }
-                if (lowerStrict && upperStrict) {
-                  return ((lowerComparing > 0)) && (upperComparing > 0);
-                } else if (lowerStrict) {
-                  return (lowerComparing > 0) && (upperComparing >= 0);
-                } else if (upperStrict) {
-                  return (lowerComparing >= 0) && (upperComparing > 0);
-                }
-                return (lowerComparing >= 0) && (upperComparing >= 0);
-
+                return boundsCheck(lowerStrict, upperStrict, lowerComparing, upperComparing);
               }
             };
           }
@@ -494,15 +503,7 @@ public class BoundDimFilter implements DimFilter
                 if (hasUpperFloatBound) {
                   upperComparing = Float.compare(upperFloatBound, input);
                 }
-                if (lowerStrict && upperStrict) {
-                  return ((lowerComparing > 0)) && (upperComparing > 0);
-                } else if (lowerStrict) {
-                  return (lowerComparing > 0) && (upperComparing >= 0);
-                } else if (upperStrict) {
-                  return (lowerComparing >= 0) && (upperComparing > 0);
-                }
-                return (lowerComparing >= 0) && (upperComparing >= 0);
-
+                return boundsCheck(lowerStrict, upperStrict, lowerComparing, upperComparing);
               }
             };
           }

@@ -447,10 +447,9 @@ public class GroupByQueryEngineV2
         int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
     )
     {
-      keyBuffer.putLong(keyBufferPosition, (Long) rowObj);
-
       // rows from a long column always have a single value, multi-value is not currently supported
-      return rowValIdx < LongColumnSelector.ROW_SIZE;
+      // this method handles row values after the first in a multivalued row, so just return false
+      return false;
     }
   }
 
@@ -492,10 +491,9 @@ public class GroupByQueryEngineV2
         int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
     )
     {
-      keyBuffer.putFloat(keyBufferPosition, (Float) rowObj);
-
       // rows from a float column always have a single value, multi-value is not currently supported
-      return rowValIdx < FloatColumnSelector.ROW_SIZE;
+      // this method handles row values after the first in a multivalued row, so just return false
+      return false;
     }
   }
 
