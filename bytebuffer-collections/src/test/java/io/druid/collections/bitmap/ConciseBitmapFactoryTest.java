@@ -29,8 +29,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.extendedset.intset.ConciseSet;
+import io.druid.extendedset.intset.ImmutableConciseSet;
 import junit.framework.Assert;
 
 public class ConciseBitmapFactoryTest

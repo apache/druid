@@ -50,17 +50,20 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
+  private final String fullyQualifiedStorageDirectory;
 
   @Inject
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       Configuration hadoopConfig,
       ObjectMapper jsonMapper
-  )
+  ) throws IOException
   {
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
+    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(hadoopConfig).makeQualified(new Path(config.getStorageDirectory()))
+                                                    .toUri().toString();
 
     log.info("Configured HDFS as deep storage");
   }
@@ -75,7 +78,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return new Path(config.getStorageDirectory()).toUri().toString();
+    return fullyQualifiedStorageDirectory;
   }
 
   @Override
@@ -86,13 +89,13 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getIdentifier(),
-        config.getStorageDirectory(),
+        fullyQualifiedStorageDirectory,
         storageDir
     );
 
     Path tmpFile = new Path(String.format(
         "%s/%s/index.zip",
-        config.getStorageDirectory(),
+        fullyQualifiedStorageDirectory,
         UUIDUtils.generateUuid()
     ));
     FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
@@ -104,7 +107,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
-      final Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
+      final Path outFile = new Path(String.format(
+          "%s/%s/index.zip",
+          fullyQualifiedStorageDirectory,
+          storageDir
+      ));
       final Path outDir = outFile.getParent();
       dataSegment = createDescriptorFile(
           segment.withLoadSpec(makeLoadSpec(outFile))
@@ -131,12 +138,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           ));
         }
       }
-    } finally {
+    }
+    finally {
       try {
         if (fs.exists(tmpFile.getParent()) && !fs.delete(tmpFile.getParent(), true)) {
           log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
         }
-      } catch(IOException ex) {
+      }
+      catch (IOException ex) {
         log.error(ex, "Failed to delete temp directory[%s]", tmpFile.getParent());
       }
     }

@@ -104,6 +104,8 @@
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions.contrib:scan-query</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>

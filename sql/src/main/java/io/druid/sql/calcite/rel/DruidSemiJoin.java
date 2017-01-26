@@ -19,45 +19,37 @@
 
 package io.druid.sql.calcite.rel;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.QueryDataSource;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.OrDimFilter;
-import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.expression.RowExtraction;
-import io.druid.sql.calcite.table.DruidTable;
-import io.druid.sql.calcite.table.DruidTables;
-import org.apache.calcite.DataContext;
+import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
-import org.apache.calcite.interpreter.Row;
-import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.core.SemiJoin;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 import java.util.Set;
 
 public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
-  private final SemiJoin semiJoin;
-  private final DruidRel left;
-  private final DruidRel right;
-  private final RexNode condition;
+  private final DruidRel<?> left;
+  private final DruidRel<?> right;
   private final List<RowExtraction> leftRowExtractions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
@@ -65,38 +57,31 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   private DruidSemiJoin(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
-      final SemiJoin semiJoin,
       final DruidRel left,
       final DruidRel right,
-      final RexNode condition,
       final List<RowExtraction> leftRowExtractions,
       final List<Integer> rightKeys,
       final int maxSemiJoinRowsInMemory
   )
   {
-    super(cluster, traitSet);
-    this.semiJoin = semiJoin;
+    super(cluster, traitSet, left.getQueryMaker());
     this.left = left;
     this.right = right;
-    this.condition = condition;
     this.leftRowExtractions = ImmutableList.copyOf(leftRowExtractions);
     this.rightKeys = ImmutableList.copyOf(rightKeys);
     this.maxSemiJoinRowsInMemory = maxSemiJoinRowsInMemory;
   }
 
   public static DruidSemiJoin from(
-      final SemiJoin semiJoin,
-      final RelTraitSet traitSet,
       final DruidRel left,
-      final DruidRel right
+      final DruidRel right,
+      final List<Integer> leftKeys,
+      final List<Integer> rightKeys,
+      final PlannerConfig plannerConfig
   )
   {
-    if (semiJoin.getLeftKeys().size() != semiJoin.getRightKeys().size()) {
-      throw new ISE("WTF?! SemiJoin with different left/right key count?");
-    }
-
     final ImmutableList.Builder<RowExtraction> listBuilder = ImmutableList.builder();
-    for (Integer key : semiJoin.getLeftKeys()) {
+    for (Integer key : leftKeys) {
       final RowExtraction rex = RowExtraction.fromQueryBuilder(left.getQueryBuilder(), key);
       if (rex == null) {
         // Can't figure out what to filter the left-hand side on...
@@ -106,28 +91,20 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
     }
 
     return new DruidSemiJoin(
-        semiJoin.getCluster(),
-        traitSet,
-        semiJoin,
+        left.getCluster(),
+        left.getTraitSet(),
         left,
         right,
-        semiJoin.getCondition(),
         listBuilder.build(),
-        semiJoin.getRightKeys(),
-        right.getDruidTable().getPlannerConfig().getMaxSemiJoinRowsInMemory()
+        rightKeys,
+        plannerConfig.getMaxSemiJoinRowsInMemory()
     );
   }
 
   @Override
-  public Class<Object[]> getElementType()
+  public RowSignature getSourceRowSignature()
   {
-    return Object[].class;
-  }
-
-  @Override
-  public DruidTable getDruidTable()
-  {
-    return left.getDruidTable();
+    return left.getSourceRowSignature();
   }
 
   @Override
@@ -142,14 +119,19 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
     return new DruidSemiJoin(
         getCluster(),
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
-        semiJoin,
         left.withQueryBuilder(newQueryBuilder),
         right,
-        condition,
         leftRowExtractions,
         rightKeys,
         maxSemiJoinRowsInMemory
     );
+  }
+
+  @Override
+  public QueryDataSource asDataSource()
+  {
+    final DruidRel rel = getLeftRelWithFilter();
+    return rel != null ? rel.asDataSource() : null;
   }
 
   @Override
@@ -157,11 +139,9 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   {
     return new DruidSemiJoin(
         getCluster(),
-        getTraitSet().plus(BindableConvention.INSTANCE),
-        semiJoin,
+        getTraitSet().replace(BindableConvention.INSTANCE),
         left,
         right,
-        condition,
         leftRowExtractions,
         rightKeys,
         maxSemiJoinRowsInMemory
@@ -169,26 +149,78 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
-  public void accumulate(final Function<Row, Void> sink)
+  public DruidSemiJoin asDruidConvention()
   {
-    final Pair<DruidQueryBuilder, List<Integer>> pair = getRightQueryBuilderWithGrouping();
-    final DruidQueryBuilder rightQueryBuilderAdjusted = pair.lhs;
-    final List<Integer> rightKeysAdjusted = pair.rhs;
+    return new DruidSemiJoin(
+        getCluster(),
+        getTraitSet().replace(DruidConvention.instance()),
+        left,
+        right,
+        leftRowExtractions,
+        rightKeys,
+        maxSemiJoinRowsInMemory
+    );
+  }
 
+  @Override
+  public int getQueryCount()
+  {
+    return left.getQueryCount() + right.getQueryCount();
+  }
+
+  @Override
+  public Sequence<Object[]> runQuery()
+  {
+    final DruidRel<?> rel = getLeftRelWithFilter();
+    if (rel != null) {
+      return rel.runQuery();
+    } else {
+      return Sequences.empty();
+    }
+  }
+
+  @Override
+  protected RelDataType deriveRowType()
+  {
+    return left.getRowType();
+  }
+
+  @Override
+  public RelWriter explainTerms(RelWriter pw)
+  {
+    return pw
+        .item("leftRowExtractions", leftRowExtractions)
+        .item("leftQuery", left.getQueryBuilder())
+        .item("rightKeys", rightKeys)
+        .item("rightQuery", right.getQueryBuilder());
+  }
+
+  @Override
+  public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
+  {
+    return right.computeSelfCost(planner, mq).plus(left.computeSelfCost(planner, mq).multiplyBy(50));
+  }
+
+  /**
+   * Returns a copy of the left rel with the filter applied from the right-hand side. This is an expensive operation
+   * since it actually executes the right-hand side query.
+   */
+  private DruidRel<?> getLeftRelWithFilter()
+  {
     // Build list of acceptable values from right side.
     final Set<List<String>> valuess = Sets.newHashSet();
     final List<DimFilter> filters = Lists.newArrayList();
-    rightQueryBuilderAdjusted.accumulate(
-        right.getDruidTable(),
-        new Function<Row, Void>()
+    right.runQuery().accumulate(
+        null,
+        new Accumulator<Object, Object[]>()
         {
           @Override
-          public Void apply(final Row row)
+          public Object accumulate(final Object dummyValue, final Object[] row)
           {
-            final List<String> values = Lists.newArrayListWithCapacity(rightKeysAdjusted.size());
+            final List<String> values = Lists.newArrayListWithCapacity(rightKeys.size());
 
-            for (int i : rightKeysAdjusted) {
-              final Object value = row.getObject(i);
+            for (int i : rightKeys) {
+              final Object value = row[i];
               final String stringValue = value != null ? String.valueOf(value) : "";
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
@@ -210,7 +242,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
                         false,
                         null,
                         leftRowExtractions.get(i).getExtractionFn(),
-                        DruidTables.naturalStringComparator(getDruidTable(), leftRowExtractions.get(i))
+                        getSourceRowSignature().naturalStringComparator(leftRowExtractions.get(i))
                     )
                 );
               }
@@ -235,83 +267,9 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
                                       )
                                   );
 
-      left.getQueryBuilder().withFilter(newFilter).accumulate(
-          left.getDruidTable(),
-          sink
-      );
-    }
-  }
-
-  @Override
-  public Enumerable<Object[]> bind(final DataContext dataContext)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected RelDataType deriveRowType()
-  {
-    return left.getRowType();
-  }
-
-  @Override
-  public RelWriter explainTerms(RelWriter pw)
-  {
-    final Pair<DruidQueryBuilder, List<Integer>> rightQueryBuilderWithGrouping = getRightQueryBuilderWithGrouping();
-    return pw
-        .item("leftDataSource", left.getDruidTable().getDataSource())
-        .item("leftRowExtractions", leftRowExtractions)
-        .item("leftQuery", left.getQueryBuilder())
-        .item("rightDataSource", right.getDruidTable().getDataSource())
-        .item("rightKeysAdjusted", rightQueryBuilderWithGrouping.rhs)
-        .item("rightQuery", rightQueryBuilderWithGrouping.lhs);
-  }
-
-  @Override
-  public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
-  {
-    return semiJoin.computeSelfCost(planner, mq).multiplyBy(0.1);
-  }
-
-  private Pair<DruidQueryBuilder, List<Integer>> getRightQueryBuilderWithGrouping()
-  {
-    if (right.getQueryBuilder().getGrouping() != null) {
-      return Pair.of(right.getQueryBuilder(), rightKeys);
+      return left.withQueryBuilder(left.getQueryBuilder().withFilter(newFilter));
     } else {
-      // Add grouping on the join key to limit resultset from data nodes.
-      final List<DimensionSpec> dimensionSpecs = Lists.newArrayList();
-      final List<RelDataType> rowTypes = Lists.newArrayList();
-      final List<String> rowOrder = Lists.newArrayList();
-      final List<Integer> rightKeysAdjusted = Lists.newArrayList();
-
-      int counter = 0;
-      for (final int key : rightKeys) {
-        final String keyDimensionOutputName = "v" + key;
-        final RowExtraction rex = RowExtraction.fromQueryBuilder(right.getQueryBuilder(), key);
-        if (rex == null) {
-          throw new ISE("WTF?! Can't find dimensionSpec to group on!");
-        }
-
-        final DimensionSpec dimensionSpec = rex.toDimensionSpec(left.getDruidTable(), keyDimensionOutputName);
-        if (dimensionSpec == null) {
-          throw new ISE("WTF?! Can't translate row expression to dimensionSpec: %s", rex);
-        }
-
-        dimensionSpecs.add(dimensionSpec);
-        rowTypes.add(right.getQueryBuilder().getRowType().getFieldList().get(key).getType());
-        rowOrder.add(dimensionSpec.getOutputName());
-        rightKeysAdjusted.add(counter++);
-      }
-
-      final DruidQueryBuilder newQueryBuilder = right
-          .getQueryBuilder()
-          .withGrouping(
-              Grouping.create(dimensionSpecs, ImmutableList.<Aggregation>of()),
-              getCluster().getTypeFactory().createStructType(rowTypes, rowOrder),
-              rowOrder
-          );
-
-      return Pair.of(newQueryBuilder, rightKeysAdjusted);
+      return null;
     }
   }
 }

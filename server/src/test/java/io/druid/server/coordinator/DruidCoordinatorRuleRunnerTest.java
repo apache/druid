@@ -1268,7 +1268,8 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
-    Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
+    // There is no throttling on drop
+    Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 25);
     EasyMock.verify(mockPeon);
     exec.shutdown();
   }

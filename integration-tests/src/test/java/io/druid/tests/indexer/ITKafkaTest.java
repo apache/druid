@@ -21,7 +21,6 @@ package io.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
@@ -48,7 +47,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 /*
  * This is a test for the kafka firehose.
@@ -126,32 +124,6 @@ public class ITKafkaTest extends AbstractIndexerTest
       throw new ISE(e, "could not create kafka topic");
     }
 
-    String indexerSpec;
-
-    // replace temp strings in indexer file
-    try {
-      LOG.info("indexerFile name: [%s]", INDEXER_FILE);
-      indexerSpec = getTaskAsString(INDEXER_FILE)
-          .replaceAll("%%DATASOURCE%%", DATASOURCE)
-          .replaceAll("%%TOPIC%%", TOPIC_NAME)
-          .replaceAll("%%ZOOKEEPER_SERVER%%", config.getZookeeperHosts())
-          .replaceAll("%%GROUP_ID%%", Long.toString(System.currentTimeMillis()))
-          .replaceAll(
-              "%%SHUTOFFTIME%%",
-              new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2 * MINUTES_TO_SEND)).toString()
-          );
-      LOG.info("indexerFile: [%s]\n", indexerSpec);
-    }
-    catch (Exception e) {
-      // log here so the message will appear in the console output
-      LOG.error("could not read indexer file [%s]", INDEXER_FILE);
-      throw new ISE(e, "could not read indexer file [%s]", INDEXER_FILE);
-    }
-
-    // start indexing task
-    taskID = indexer.submitTask(indexerSpec);
-    LOG.info("-------------SUBMITTED TASK");
-
     // set up kafka producer
     Properties properties = new Properties();
     properties.put("metadata.broker.list", config.getKafkaHost());
@@ -169,21 +141,18 @@ public class ITKafkaTest extends AbstractIndexerTest
     DateTime dt = new DateTime(zone); // timestamp to put on events
     dtFirst = dt;            // timestamp of 1st event
     dtLast = dt;             // timestamp of last event
-    // stop sending events when time passes this
-    DateTime dtStop = dtFirst.plusMinutes(MINUTES_TO_SEND).plusSeconds(30);
 
     // these are used to compute the expected aggregations
     int added = 0;
-    int num_events = 0;
+    int num_events = 10;
 
     // send data to kafka
-    while (dt.compareTo(dtStop) < 0) {  // as long as we're within the time span
-      num_events++;
-      added += num_events;
+    for (int i = 0; i < num_events; i++) {
+      added += i;
       // construct the event to send
       String event = String.format(
           event_template,
-          event_fmt.print(dt), num_events, 0, num_events
+          event_fmt.print(dt), i, 0, i
       );
       LOG.info("sending event: [%s]", event);
       try {
@@ -195,15 +164,60 @@ public class ITKafkaTest extends AbstractIndexerTest
         throw Throwables.propagate(ioe);
       }
 
-      try {
-        Thread.sleep(DELAY_BETWEEN_EVENTS_SECS * 1000);
-      }
-      catch (InterruptedException ex) { /* nothing */ }
       dtLast = dt;
       dt = new DateTime(zone);
     }
 
     producer.close();
+
+    String indexerSpec;
+
+    // replace temp strings in indexer file
+    try {
+      LOG.info("indexerFile name: [%s]", INDEXER_FILE);
+      indexerSpec = getTaskAsString(INDEXER_FILE)
+          .replaceAll("%%DATASOURCE%%", DATASOURCE)
+          .replaceAll("%%TOPIC%%", TOPIC_NAME)
+          .replaceAll("%%ZOOKEEPER_SERVER%%", config.getZookeeperHosts())
+          .replaceAll("%%GROUP_ID%%", Long.toString(System.currentTimeMillis()))
+          .replaceAll("%%COUNT%%", Integer.toString(num_events));
+      LOG.info("indexerFile: [%s]\n", indexerSpec);
+    }
+    catch (Exception e) {
+      // log here so the message will appear in the console output
+      LOG.error("could not read indexer file [%s]", INDEXER_FILE);
+      throw new ISE(e, "could not read indexer file [%s]", INDEXER_FILE);
+    }
+
+    // start indexing task
+    taskID = indexer.submitTask(indexerSpec);
+    LOG.info("-------------SUBMITTED TASK");
+
+    // wait for the task to finish
+    indexer.waitUntilTaskCompletes (taskID, 20000, 30);
+
+    // wait for segments to be handed off
+    try {
+      RetryUtil.retryUntil(
+          new Callable<Boolean>()
+          {
+            @Override
+            public Boolean call() throws Exception
+            {
+              return coordinator.areSegmentsLoaded(DATASOURCE);
+            }
+          },
+          true,
+          30000,
+          10,
+          "Real-time generated segments loaded"
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    LOG.info("segments are present");
+    segmentsExist = true;
 
     // put the timestamps into the query structure
     String query_response_template = null;
@@ -239,46 +253,12 @@ public class ITKafkaTest extends AbstractIndexerTest
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-
-    // wait for segments to be handed off
-    try {
-      RetryUtil.retryUntil(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call() throws Exception
-            {
-              return coordinator.areSegmentsLoaded(DATASOURCE);
-            }
-          },
-          true,
-          30000,
-          10,
-          "Real-time generated segments loaded"
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    LOG.info("segments are present");
-    segmentsExist = true;
-
-    // this query will be answered by historical
-    try {
-      this.queryHelper.testQueriesFromString(queryStr, 2);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   @AfterClass
   public void afterClass() throws Exception
   {
     LOG.info("teardown");
-
-    // wait for the task to complete
-    indexer.waitUntilTaskCompletes(taskID);
 
     // delete kafka topic
     AdminUtils.deleteTopic(zkClient, TOPIC_NAME);

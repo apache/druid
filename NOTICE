@@ -50,3 +50,22 @@ This product contains SQL query planning code adapted from Apache Calcite
     * https://github.com/apache/calcite/blob/master/LICENSE (Apache License, Version 2.0)
   * HOMEPAGE:
     * https://calcite.apache.org/
+
+This product contains a modified version of Metamarkets extendedset library
+  * LICENSE:
+    * https://github.com/metamx/extendedset/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/metamx/extendedset
+  * COMMIT TAG:
+    * https://github.com/metamx/extendedset/commit/c9d647d
+
+This product contains a modified version of Alessandro Colantonio's CONCISE
+(COmpressed 'N' Composable Integer SEt) library, extending the functionality of
+ConciseSet to use IntBuffers.
+  * (c) 2010 Alessandro Colantonio
+  * <mailto:colanton@mat.uniroma3.it>
+  * <http://ricerca.mat.uniroma3.it/users/colanton>
+  * LICENSE:
+    * Apache License, Version 2.0
+  * HOMEPAGE:
+    * https://sourceforge.net/projects/concise/

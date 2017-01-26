@@ -189,4 +189,9 @@ public class UniformGranularitySpec implements GranularitySpec
     result = 31 * result + (wrappedSpec != null ? wrappedSpec.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+    return new UniformGranularitySpec(segmentGranularity, queryGranularity, rollup, inputIntervals, timezone);
+  }
 }

@@ -553,7 +553,6 @@ public class DruidCoordinator
         leader = true;
         metadataSegmentManager.start();
         metadataRuleManager.start();
-        serverInventoryView.start();
         serviceAnnouncer.announce(self);
         final int startingLeaderCounter = leaderCounter;
 
@@ -635,7 +634,6 @@ public class DruidCoordinator
         loadManagementPeons.clear();
 
         serviceAnnouncer.unannounce(self);
-        serverInventoryView.stop();
         metadataRuleManager.stop();
         metadataSegmentManager.stop();
         leader = false;
@@ -778,6 +776,7 @@ public class DruidCoordinator
                     if (!loadManagementPeons.containsKey(server.getName())) {
                       String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
                       LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
+                      loadQueuePeon.start();
                       log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
 
                       loadManagementPeons.put(server.getName(), loadQueuePeon);

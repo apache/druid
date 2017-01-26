@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -27,9 +28,12 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
+import io.druid.query.search.search.AutoStrategy;
+import io.druid.query.search.search.CursorOnlyStrategy;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
+import io.druid.query.search.search.UseIndexesStrategy;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
@@ -68,13 +72,13 @@ public class SearchQueryRunnerWithCaseTest
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    SearchQueryRunnerFactory factory = new SearchQueryRunnerFactory(
-        new SearchQueryQueryToolChest(
-            new SearchQueryConfig(),
-            NoopIntervalChunkingQueryRunnerDecorator()
-        ),
-        NOOP_QUERYWATCHER
-    );
+    final SearchQueryConfig[] configs = new SearchQueryConfig[3];
+    configs[0] = new SearchQueryConfig();
+    configs[0].setSearchStrategy(UseIndexesStrategy.NAME);
+    configs[1] = new SearchQueryConfig();
+    configs[1].setSearchStrategy(CursorOnlyStrategy.NAME);
+    configs[2] = new SearchQueryConfig();
+    configs[2].setSearchStrategy(AutoStrategy.NAME);
 
     CharSource input = CharSource.wrap(
         "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\tPREFERRED\ta\u0001preferred\t100.000000\n" +
@@ -89,13 +93,48 @@ public class SearchQueryRunnerWithCaseTest
     QueryableIndex index3 = TestIndex.persistRealtimeAndLoadMMapped(index1);
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
 
-    return transformToConstructionFeeder(
-        Arrays.asList(
-            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1"), "index1"),
-            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2"), "index2"),
-            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3), "index3"),
-            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4), "index4")
-        )
+    final List<QueryRunner<Result<SearchResultValue>>> runners = Lists.newArrayList();
+    for (int i = 0; i < configs.length; i++) {
+      runners.addAll(Arrays.asList(
+          makeQueryRunner(
+              makeRunnerFactory(configs[i]),
+              "index1",
+              new IncrementalIndexSegment(index1, "index1"),
+              "index1"
+          ),
+          makeQueryRunner(
+              makeRunnerFactory(configs[i]),
+              "index2",
+              new IncrementalIndexSegment(index2, "index2"),
+              "index2"
+          ),
+          makeQueryRunner(
+              makeRunnerFactory(configs[i]),
+              "index3",
+              new QueryableIndexSegment("index3", index3),
+              "index3"
+          ),
+          makeQueryRunner(
+              makeRunnerFactory(configs[i]),
+              "index4",
+              new QueryableIndexSegment("index4", index4),
+              "index4"
+          )
+      ));
+    }
+
+    return transformToConstructionFeeder(runners);
+  }
+
+  static SearchQueryRunnerFactory makeRunnerFactory(final SearchQueryConfig config)
+  {
+    return new SearchQueryRunnerFactory(
+        new SearchStrategySelector(Suppliers.ofInstance(config)),
+        new SearchQueryQueryToolChest(
+            config,
+            NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        NOOP_QUERYWATCHER
     );
   }
 

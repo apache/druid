@@ -22,12 +22,9 @@ package io.druid.sql.avatica;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
-import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.server.AvaticaJsonHandler;
-import org.apache.calcite.jdbc.CalciteConnection;
-import org.apache.calcite.jdbc.CalciteMetaImpl;
 import org.eclipse.jetty.server.Request;
 
 import javax.servlet.ServletException;
@@ -40,22 +37,14 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
 {
   static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
 
-  private final ServerConfig config;
-
   @Inject
   public DruidAvaticaHandler(
-      final CalciteConnection connection,
+      final DruidMeta druidMeta,
       @Self final DruidNode druidNode,
-      final AvaticaMonitor avaticaMonitor,
-      final ServerConfig config
+      final AvaticaMonitor avaticaMonitor
   ) throws InstantiationException, IllegalAccessException, InvocationTargetException
   {
-    super(
-        new LocalService((Meta) CalciteMetaImpl.class.getConstructors()[0].newInstance(connection), avaticaMonitor),
-        avaticaMonitor
-    );
-
-    this.config = config;
+    super(new LocalService(druidMeta), avaticaMonitor);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPort()));
   }
 
@@ -70,7 +59,7 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
     // This is not integrated with the experimental authorization framework.
     // (Non-trivial since we don't know the dataSources up-front)
 
-    if (config.isEnableAvatica() && request.getRequestURI().equals(AVATICA_PATH)) {
+    if (request.getRequestURI().equals(AVATICA_PATH)) {
       super.handle(target, baseRequest, request, response);
     }
   }

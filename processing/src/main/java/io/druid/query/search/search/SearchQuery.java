@@ -64,14 +64,14 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   )
   {
     super(dataSource, querySegmentSpec, false, context);
+    Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
+
     this.dimFilter = dimFilter;
     this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
     this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
-
-    Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
   }
 
   @Override
@@ -210,14 +210,14 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   public String toString()
   {
     return "SearchQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
-        ", dimensions=" + dimensions +
-        ", querySpec=" + querySpec +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", limit=" + limit +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", dimFilter=" + dimFilter +
+           ", granularity='" + granularity + '\'' +
+           ", dimensions=" + dimensions +
+           ", querySpec=" + querySpec +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", limit=" + limit +
+           '}';
   }
 
   @Override
