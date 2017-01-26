@@ -51,7 +51,7 @@ public class RowSignature
   private final Map<String, ValueType> columnTypes;
   private final List<String> columnNames;
 
-  public RowSignature(final List<Pair<String, ValueType>> columnTypeList)
+  private RowSignature(final List<Pair<String, ValueType>> columnTypeList)
   {
     final Map<String, ValueType> columnTypes0 = Maps.newHashMap();
     final ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();

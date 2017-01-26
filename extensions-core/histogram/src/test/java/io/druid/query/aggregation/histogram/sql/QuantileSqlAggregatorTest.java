@@ -26,10 +26,22 @@ import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
+import io.druid.query.aggregation.histogram.ApproximateHistogramDruidModule;
+import io.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import io.druid.query.aggregation.histogram.QuantilePostAggregator;
+import io.druid.query.filter.NotDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.segment.IndexBuilder;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.TestHelper;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.sql.calcite.CalciteQueryTest;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
@@ -40,6 +52,8 @@ import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.Planner;
 import org.junit.After;
@@ -52,10 +66,10 @@ import org.junit.rules.TemporaryFolder;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.druid.sql.calcite.CalciteQueryTest.TIMESERIES_CONTEXT;
-
 public class QuantileSqlAggregatorTest
 {
+  private static final String DATA_SOURCE = "foo";
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -69,7 +83,45 @@ public class QuantileSqlAggregatorTest
   public void setUp() throws Exception
   {
     Calcites.setSystemProperties();
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+
+    // Note: this is needed in order to properly register the serde for Histogram.
+    new ApproximateHistogramDruidModule().configure(null);
+
+    final QueryableIndex index = IndexBuilder.create()
+                                             .tmpDir(temporaryFolder.newFolder())
+                                             .indexMerger(TestHelper.getTestIndexMergerV9())
+                                             .schema(
+                                                 new IncrementalIndexSchema.Builder()
+                                                     .withMetrics(
+                                                         new AggregatorFactory[]{
+                                                             new CountAggregatorFactory("cnt"),
+                                                             new DoubleSumAggregatorFactory("m1", "m1"),
+                                                             new ApproximateHistogramAggregatorFactory(
+                                                                 "hist_m1",
+                                                                 "m1",
+                                                                 null,
+                                                                 null,
+                                                                 null,
+                                                                 null
+                                                             )
+                                                         }
+                                                     )
+                                                     .withRollup(false)
+                                                     .build()
+                                             )
+                                             .rows(CalciteTests.ROWS1)
+                                             .buildMMappedIndex();
+
+    walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index
+    );
+
     final PlannerConfig plannerConfig = new PlannerConfig();
     final SchemaPlus rootSchema = Calcites.createRootSchema(
         CalciteTests.createMockSchema(
@@ -96,13 +148,23 @@ public class QuantileSqlAggregatorTest
   public void testQuantileOnFloatAndLongs() throws Exception
   {
     try (final Planner planner = plannerFactory.createPlanner()) {
-      final String sql = "SELECT QUANTILE(m1, 0.01), QUANTILE(m1, 0.5), QUANTILE(m1, 0.99), QUANTILE(cnt, 0.5) FROM foo";
+      final String sql = "SELECT\n"
+                         + "APPROX_QUANTILE(m1, 0.01),\n"
+                         + "APPROX_QUANTILE(m1, 0.5, 50),\n"
+                         + "APPROX_QUANTILE(m1, 0.98, 200),\n"
+                         + "APPROX_QUANTILE(m1, 0.99),\n"
+                         + "APPROX_QUANTILE(m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
+                         + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
+                         + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 = 'abc'),\n"
+                         + "APPROX_QUANTILE(cnt, 0.5)\n"
+                         + "FROM foo";
+
       final PlannerResult plannerResult = Calcites.plan(planner, sql);
 
       // Verify results
       final List<Object[]> results = Sequences.toList(plannerResult.run(), new ArrayList<Object[]>());
       final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{1.0, 3.0, 5.940000057220459, 1.0}
+          new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0, 1.0}
       );
       Assert.assertEquals(expectedResults.size(), results.size());
       for (int i = 0; i < expectedResults.size(); i++) {
@@ -115,17 +177,90 @@ public class QuantileSqlAggregatorTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                 .granularity(QueryGranularities.ALL)
-                .aggregators(ImmutableList.<AggregatorFactory>of(
+                .aggregators(ImmutableList.of(
                     new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
-                    new ApproximateHistogramAggregatorFactory("a3:agg", "cnt", null, null, null, null)
+                    new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
+                    new FilteredAggregatorFactory(
+                        new ApproximateHistogramAggregatorFactory("a4:agg", "m1", null, null, null, null),
+                        new SelectorDimFilter("dim1", "abc", null)
+                    ),
+                    new FilteredAggregatorFactory(
+                        new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null),
+                        new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                    ),
+                    new ApproximateHistogramAggregatorFactory("a7:agg", "cnt", null, null, null, null)
                 ))
                 .postAggregators(ImmutableList.<PostAggregator>of(
                     new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                     new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                    new QuantilePostAggregator("a2", "a0:agg", 0.99f),
-                    new QuantilePostAggregator("a3", "a3:agg", 0.50f)
+                    new QuantilePostAggregator("a2", "a2:agg", 0.98f),
+                    new QuantilePostAggregator("a3", "a0:agg", 0.99f),
+                    new QuantilePostAggregator("a4", "a4:agg", 0.99f),
+                    new QuantilePostAggregator("a5", "a5:agg", 0.999f),
+                    new QuantilePostAggregator("a6", "a4:agg", 0.999f),
+                    new QuantilePostAggregator("a7", "a7:agg", 0.50f)
                 ))
-                .context(TIMESERIES_CONTEXT)
+                .context(CalciteQueryTest.TIMESERIES_CONTEXT)
+                .build(),
+          Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+      );
+    }
+  }
+
+  @Test
+  public void testQuantileOnComplexColumn() throws Exception
+  {
+    try (final Planner planner = plannerFactory.createPlanner()) {
+      final String sql = "SELECT\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.01),\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.5, 50),\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.98, 200),\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.99),\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
+                         + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
+                         + "FROM foo";
+
+      final PlannerResult plannerResult = Calcites.plan(planner, sql);
+
+      // Verify results
+      final List<Object[]> results = Sequences.toList(plannerResult.run(), new ArrayList<Object[]>());
+      final List<Object[]> expectedResults = ImmutableList.of(
+          new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
+      );
+      Assert.assertEquals(expectedResults.size(), results.size());
+      for (int i = 0; i < expectedResults.size(); i++) {
+        Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+      }
+
+      // Verify query
+      Assert.assertEquals(
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                .granularity(QueryGranularities.ALL)
+                .aggregators(ImmutableList.of(
+                    new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null),
+                    new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null),
+                    new FilteredAggregatorFactory(
+                        new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null),
+                        new SelectorDimFilter("dim1", "abc", null)
+                    ),
+                    new FilteredAggregatorFactory(
+                        new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null),
+                        new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                    )
+                ))
+                .postAggregators(ImmutableList.<PostAggregator>of(
+                    new QuantilePostAggregator("a0", "a0:agg", 0.01f),
+                    new QuantilePostAggregator("a1", "a0:agg", 0.50f),
+                    new QuantilePostAggregator("a2", "a2:agg", 0.98f),
+                    new QuantilePostAggregator("a3", "a0:agg", 0.99f),
+                    new QuantilePostAggregator("a4", "a4:agg", 0.99f),
+                    new QuantilePostAggregator("a5", "a5:agg", 0.999f),
+                    new QuantilePostAggregator("a6", "a4:agg", 0.999f)
+                ))
+                .context(CalciteQueryTest.TIMESERIES_CONTEXT)
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

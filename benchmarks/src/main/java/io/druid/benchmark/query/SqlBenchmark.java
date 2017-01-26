@@ -53,6 +53,7 @@ import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
@@ -158,12 +159,12 @@ public class SqlBenchmark
         new DruidTable(
             new QueryMaker(walker, plannerConfig),
             new TableDataSource("foo"),
-            ImmutableMap.of(
-                "__time", ValueType.LONG,
-                "dimSequential", ValueType.STRING,
-                "dimZipf", ValueType.STRING,
-                "dimUniform", ValueType.STRING
-            )
+            RowSignature.builder()
+                        .add("__time", ValueType.LONG)
+                        .add("dimSequential", ValueType.STRING)
+                        .add("dimZipf", ValueType.STRING)
+                        .add("dimUniform", ValueType.STRING)
+                        .build()
         )
     );
     final Schema druidSchema = new AbstractSchema()

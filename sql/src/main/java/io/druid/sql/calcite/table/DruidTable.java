@@ -20,9 +20,7 @@
 package io.druid.sql.calcite.table;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSortedMap;
 import io.druid.query.DataSource;
-import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.rel.DruidQueryRel;
 import io.druid.sql.calcite.rel.QueryMaker;
 import org.apache.calcite.plan.RelOptCluster;
@@ -35,8 +33,6 @@ import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.TranslatableTable;
 
-import java.util.Map;
-
 public class DruidTable implements TranslatableTable
 {
   private final QueryMaker queryMaker;
@@ -46,17 +42,12 @@ public class DruidTable implements TranslatableTable
   public DruidTable(
       final QueryMaker queryMaker,
       final DataSource dataSource,
-      final Map<String, ValueType> columns
+      final RowSignature rowSignature
   )
   {
     this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-
-    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    for (Map.Entry<String, ValueType> entry : ImmutableSortedMap.copyOf(columns).entrySet()) {
-      rowSignatureBuilder.add(entry.getKey(), entry.getValue());
-    }
-    this.rowSignature = rowSignatureBuilder.build();
+    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
   }
 
   public QueryMaker getQueryMaker()
