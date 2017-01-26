@@ -19,41 +19,35 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.AbstractIntList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.junit.Test;
 
-public class IntListUtils
+import static org.junit.Assert.assertEquals;
+
+public class IntListUtilsTest
 {
-  private IntListUtils() {}
-
-  public static IntList fromTo(int from, int to)
+  @Test(expected = IndexOutOfBoundsException.class)
+  public void testEmptyRangeIntList()
   {
-    return new RangeIntList(from, to);
+    final IntList list = IntListUtils.fromTo(10, 10);
+    assertEquals(0, list.size());
+    list.get(0);
   }
 
-  private static final class RangeIntList extends AbstractIntList
+  @Test(expected = IndexOutOfBoundsException.class)
+  public void testRangeIntListWithSmallEndIndex()
   {
-    private final int start;
-    private final int size;
+    final IntList list = IntListUtils.fromTo(10, 5);
+    assertEquals(0, list.size());
+    list.get(0);
+  }
 
-    public RangeIntList(int start, int end)
-    {
-      this.start = start;
-      this.size = Math.max(end - start, 0);
-    }
-
-    @Override
-    public int getInt(int index)
-    {
-      Preconditions.checkElementIndex(index, size);
-      return start + index;
-    }
-
-    @Override
-    public int size()
-    {
-      return size;
+  @Test
+  public void testRangeIntList()
+  {
+    final IntList list = IntListUtils.fromTo(20, 120);
+    for (int i = 0; i < 100; i++) {
+      assertEquals(i + 20, list.getInt(i));
     }
   }
 }
