@@ -552,12 +552,12 @@ public class Filters
   )
   {
     if (Strings.isNullOrEmpty(value)) {
-      return new BooleanValueMatcher(false);
+      return BooleanValueMatcher.of(false);
     }
 
     final Long longValue = GuavaUtils.tryParseLong(value);
     if (longValue == null) {
-      return new BooleanValueMatcher(false);
+      return BooleanValueMatcher.of(false);
     }
 
     return new ValueMatcher()

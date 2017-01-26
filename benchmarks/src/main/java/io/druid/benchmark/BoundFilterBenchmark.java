@@ -55,7 +55,7 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.filter.BoundFilter;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
-import it.uniroma3.mat.extendedset.intset.ConciseSetUtils;
+import io.druid.extendedset.intset.ConciseSetUtils;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)

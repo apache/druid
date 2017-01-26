@@ -27,10 +27,16 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.Pair;
 import io.druid.server.DruidNode;
 import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.util.CalciteTests;
-import org.apache.calcite.jdbc.CalciteConnection;
+import io.druid.sql.calcite.util.QueryLogHook;
+import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.schema.SchemaPlus;
 import org.eclipse.jetty.server.Server;
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,6 +52,8 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -53,29 +61,49 @@ import java.util.Set;
 
 public class DruidAvaticaHandlerTest
 {
+  private static final AvaticaServerConfig AVATICA_CONFIG = new AvaticaServerConfig()
+  {
+    @Override
+    public int getMaxConnections()
+    {
+      return 2;
+    }
+
+    @Override
+    public int getMaxStatementsPerConnection()
+    {
+      return 2;
+    }
+  };
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private CalciteConnection serverConnection;
+  @Rule
+  public QueryLogHook queryLogHook = QueryLogHook.create();
+
+  private SpecificSegmentsQuerySegmentWalker walker;
   private Server server;
   private Connection client;
 
   @Before
   public void setUp() throws Exception
   {
+    Calcites.setSystemProperties();
+    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    serverConnection = Calcites.jdbc(
+    final SchemaPlus rootSchema = Calcites.createRootSchema(
         CalciteTests.createMockSchema(
-            CalciteTests.createWalker(temporaryFolder.newFolder()),
+            walker,
             plannerConfig
-        ),
-        plannerConfig
+        )
     );
+    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
-        serverConnection,
+        new DruidMeta(new PlannerFactory(rootSchema, operatorTable, plannerConfig), AVATICA_CONFIG),
         new DruidNode("dummy", "dummy", 1),
         new AvaticaMonitor()
     );
@@ -96,10 +124,10 @@ public class DruidAvaticaHandlerTest
   {
     client.close();
     server.stop();
-    serverConnection.close();
+    walker.close();
+    walker = null;
     client = null;
     server = null;
-    serverConnection = null;
   }
 
   @Test
@@ -116,17 +144,45 @@ public class DruidAvaticaHandlerTest
   }
 
   @Test
+  public void testSelectCountAlternateStyle() throws Exception
+  {
+    final ResultSet resultSet = client.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo").executeQuery();
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6L)
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testTimestampsInResponse() throws Exception
+  {
+    final ResultSet resultSet = client.createStatement().executeQuery(
+        "SELECT __time FROM druid.foo LIMIT 1"
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("__time", new DateTime("2000-01-01T00:00:00.000Z").toDate())
+        ),
+        getRows(resultSet)
+    );
+  }
+
+  @Test
   public void testFieldAliasingSelect() throws Exception
   {
     final ResultSet resultSet = client.createStatement().executeQuery(
         "SELECT dim2 AS \"x\", dim2 AS \"y\" FROM druid.foo LIMIT 1"
     );
-    final List<Map<String, Object>> rows = getRows(resultSet);
+
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of("x", "a", "y", "a")
         ),
-        rows
+        getRows(resultSet)
     );
   }
 
@@ -136,16 +192,27 @@ public class DruidAvaticaHandlerTest
     final ResultSet resultSet = client.createStatement().executeQuery(
         "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo"
     );
-    final List<Map<String, Object>> rows = getRows(resultSet);
+
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "EnumerableInterpreter\n"
-                + "  DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
             )
         ),
-        rows
+        getRows(resultSet)
+    );
+  }
+
+  @Test
+  public void testDatabaseMetaDataCatalogs() throws Exception
+  {
+    final DatabaseMetaData metaData = client.getMetaData();
+    Assert.assertEquals(
+        ImmutableList.of(
+            ROW(Pair.of("TABLE_CAT", ""))
+        ),
+        getRows(metaData.getCatalogs())
     );
   }
 
@@ -155,7 +222,7 @@ public class DruidAvaticaHandlerTest
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(Pair.of("TABLE_CATALOG", null), Pair.of("TABLE_SCHEM", "druid"))
+            ROW(Pair.of("TABLE_CATALOG", ""), Pair.of("TABLE_SCHEM", "druid"))
         ),
         getRows(metaData.getSchemas(null, "druid"))
     );
@@ -172,6 +239,12 @@ public class DruidAvaticaHandlerTest
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            ROW(
+                Pair.of("TABLE_CAT", null),
+                Pair.of("TABLE_NAME", "foo2"),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
         ),
         getRows(
@@ -185,55 +258,85 @@ public class DruidAvaticaHandlerTest
   public void testDatabaseMetaDataColumns() throws Exception
   {
     final DatabaseMetaData metaData = client.getMetaData();
-    final String varcharDescription = "VARCHAR(1) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\" NOT NULL";
     Assert.assertEquals(
         ImmutableList.of(
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "__time"),
-                Pair.of("DATA_TYPE", 93),
-                Pair.of("TYPE_NAME", "TIMESTAMP(0) NOT NULL"),
+                Pair.of("DATA_TYPE", Types.TIMESTAMP),
+                Pair.of("TYPE_NAME", "TIMESTAMP"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "cnt"),
-                Pair.of("DATA_TYPE", -5),
-                Pair.of("TYPE_NAME", "BIGINT NOT NULL"),
+                Pair.of("DATA_TYPE", Types.BIGINT),
+                Pair.of("TYPE_NAME", "BIGINT"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim1"),
-                Pair.of("DATA_TYPE", 12),
-                Pair.of("TYPE_NAME", varcharDescription),
+                Pair.of("DATA_TYPE", Types.VARCHAR),
+                Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim2"),
-                Pair.of("DATA_TYPE", 12),
-                Pair.of("TYPE_NAME", varcharDescription),
+                Pair.of("DATA_TYPE", Types.VARCHAR),
+                Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
-                Pair.of("DATA_TYPE", 6),
-                Pair.of("TYPE_NAME", "FLOAT NOT NULL"),
+                Pair.of("DATA_TYPE", Types.FLOAT),
+                Pair.of("TYPE_NAME", "FLOAT"),
+                Pair.of("IS_NULLABLE", "NO")
+            ),
+            ROW(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "unique_dim1"),
+                Pair.of("DATA_TYPE", Types.OTHER),
+                Pair.of("TYPE_NAME", "OTHER"),
                 Pair.of("IS_NULLABLE", "NO")
             )
         ),
         getRows(
-            metaData.getColumns(null, "druid", "foo", "%"),
+            metaData.getColumns(null, "dr_id", "foo", null),
             ImmutableSet.of("IS_NULLABLE", "TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME")
         )
     );
+  }
+
+  @Test
+  public void testTooManyStatements() throws Exception
+  {
+    final Statement statement1 = client.createStatement();
+    final Statement statement2 = client.createStatement();
+
+    expectedException.expect(AvaticaClientRuntimeException.class);
+    expectedException.expectMessage("Too many open statements, limit is[2]");
+    final Statement statement3 = client.createStatement();
+  }
+
+  @Test
+  public void testNotTooManyStatementsWhenYouCloseThem() throws Exception
+  {
+    client.createStatement().close();
+    client.createStatement().close();
+    client.createStatement().close();
+    client.createStatement().close();
+    client.createStatement().close();
+
+    Assert.assertTrue(true);
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException

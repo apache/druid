@@ -202,7 +202,7 @@ public class LikeFilter implements Filter
 
           private int findNext()
           {
-            while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
+            while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues, currIndex)) {
               currIndex++;
             }
 

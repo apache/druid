@@ -313,7 +313,7 @@ public class KafkaSupervisor implements Supervisor
                     try {
                       notice.handle();
                     }
-                    catch (Exception e) {
+                    catch (Throwable e) {
                       log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
                          .addData("noticeClass", notice.getClass().getSimpleName())
                          .emit();
