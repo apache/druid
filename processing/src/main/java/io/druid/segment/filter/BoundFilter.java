@@ -33,11 +33,8 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.IntIteratorUtils;
+import io.druid.segment.IntListUtils;
 import io.druid.segment.column.BitmapIndex;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.util.Comparator;
@@ -68,8 +65,7 @@ public class BoundFilter implements Filter
         return doesMatch(null) ? Filters.allTrue(selector) : Filters.allFalse(selector);
       }
 
-      return selector.getBitmapFactory().union(getBitmapIterator(boundDimFilter, bitmapIndex)
-      );
+      return selector.getBitmapFactory().union(getBitmapIterator(boundDimFilter, bitmapIndex));
     } else {
       return Filters.matchPredicate(
           boundDimFilter.getDimension(),
@@ -162,18 +158,10 @@ public class BoundFilter implements Filter
       final BitmapIndex bitmapIndex
   )
   {
-    return Filters.bitmapsFromIndexes(getBitmapIndexIterator(boundDimFilter, bitmapIndex), bitmapIndex);
+    return Filters.bitmapsFromIndexes(getBitmapIndexList(boundDimFilter, bitmapIndex), bitmapIndex);
   }
 
   private static IntList getBitmapIndexList(
-      final BoundDimFilter boundDimFilter,
-      final BitmapIndex bitmapIndex
-  )
-  {
-    return IntIteratorUtils.toIntList(getBitmapIndexIterator(boundDimFilter, bitmapIndex).iterator());
-  }
-
-  private static IntIterable getBitmapIndexIterator(
       final BoundDimFilter boundDimFilter,
       final BitmapIndex bitmapIndex
   )
@@ -183,14 +171,7 @@ public class BoundFilter implements Filter
     final int startIndex = indexes.lhs;
     final int endIndex = indexes.rhs;
 
-    return new IntIterable()
-    {
-      @Override
-      public IntIterator iterator()
-      {
-        return IntIterators.fromTo(startIndex, endIndex);
-      }
-    };
+    return IntListUtils.fromTo(startIndex, endIndex);
   }
 
   private DruidPredicateFactory getPredicateFactory()

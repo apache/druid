@@ -19,6 +19,7 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -327,6 +328,7 @@ public class Filters
     );
   }
 
+  @VisibleForTesting
   static double estimateSelectivityOfBitmapList(
       BitmapIndex bitmapIndex,
       IntList bitmapIndexes,
@@ -335,16 +337,19 @@ public class Filters
   )
   {
     double numMatchedRows = bitmapIndexes.size() > 0 ? bitmapIndex.getBitmap(bitmapIndexes.get(0)).size() : 0;
-    final double nonOverlapRatio = isMultiValueDimension && bitmapIndexes.size() > 1
-                                   ? bitmapIndexes.size() > SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION * 5
-                                     ? computeNonOverlapRatioFromRandomBitmapSamples(bitmapIndex, bitmapIndexes)
-                                     : computeNonOverlapRatioFromFirstNBitmapSamples(
-                                         bitmapsFromIndexes(
-                                             bitmapIndexes,
-                                             bitmapIndex
-                                         )
-                                     )
-                                   : 1.;
+    final double nonOverlapRatio;
+    if (isMultiValueDimension && bitmapIndexes.size() > 1) {
+      nonOverlapRatio = bitmapIndexes.size() > SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION * 5
+                        ? computeNonOverlapRatioFromRandomBitmapSamples(bitmapIndex, bitmapIndexes)
+                        : computeNonOverlapRatioFromFirstNBitmapSamples(
+                            bitmapsFromIndexes(
+                                bitmapIndexes,
+                                bitmapIndex
+                            )
+                        );
+    } else {
+      nonOverlapRatio = 1.;
+    }
 
     for (int i = 1; i < bitmapIndexes.size(); i++) {
       final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmapIndexes.get(i));
@@ -403,6 +408,7 @@ public class Filters
    *
    * @see #estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
    */
+  @VisibleForTesting
   static double computeNonOverlapRatioFromRandomBitmapSamples(
       BitmapIndex bitmapIndex,
       IntList bitmapIndexes
@@ -456,6 +462,7 @@ public class Filters
    *
    * @see #estimatePredicateSelectivity(ColumnSelector, String, BitmapIndexSelector, Predicate)
    */
+  @VisibleForTesting
   static double computeNonOverlapRatioFromFirstNBitmapSamples(Iterable<ImmutableBitmap> bitmaps)
   {
     final Iterator<ImmutableBitmap> iterator = bitmaps.iterator();
