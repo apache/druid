@@ -17,14 +17,25 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
 
-/**
-*/
-public enum ValueType
+public final class ZeroFloatColumnSelector implements FloatColumnSelector
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX
+  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
+
+  private ZeroFloatColumnSelector()
+  {
+    // No instantiation.
+  }
+
+  public static ZeroFloatColumnSelector instance()
+  {
+    return INSTANCE;
+  }
+
+  @Override
+  public float get()
+  {
+    return 0.0f;
+  }
 }

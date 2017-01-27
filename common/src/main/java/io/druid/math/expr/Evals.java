@@ -20,7 +20,6 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Strings;
-import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
@@ -31,27 +30,6 @@ import java.util.List;
 public class Evals
 {
   private static final Logger log = new Logger(Evals.class);
-
-  public static Number toNumber(Object value)
-  {
-    if (value == null) {
-      return 0L;
-    }
-    if (value instanceof Number) {
-      return (Number) value;
-    }
-    String stringValue = String.valueOf(value);
-    Long longValue = GuavaUtils.tryParseLong(stringValue);
-    if (longValue == null) {
-      return Double.valueOf(stringValue);
-    }
-    return longValue;
-  }
-
-  public static boolean isConstant(Expr expr)
-  {
-    return expr instanceof ConstantExpr;
-  }
 
   public static boolean isAllConstants(Expr... exprs)
   {
