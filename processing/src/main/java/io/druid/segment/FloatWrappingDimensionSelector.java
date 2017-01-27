@@ -19,16 +19,10 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.ValueMatcher;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.ZeroIndexedInts;
+import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
-import javax.annotation.Nullable;
-import java.util.Objects;
-
-public class FloatWrappingDimensionSelector implements DimensionSelector
+public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
   private final FloatColumnSelector delegate;
   private final ExtractionFn exFn;
@@ -40,59 +34,8 @@ public class FloatWrappingDimensionSelector implements DimensionSelector
   }
 
   @Override
-  public IndexedInts getRow()
-  {
-    return ZeroIndexedInts.instance();
-  }
-
-  @Override
-  public ValueMatcher makeValueMatcher(final String value)
-  {
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        return Objects.equals(value, exFn.apply(delegate.get()));
-      }
-    };
-  }
-
-  @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
-  {
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        return predicate.apply(exFn.apply(delegate.get()));
-      }
-    };
-  }
-
-  @Override
-  public int getValueCardinality()
-  {
-    return DimensionSelector.CARDINALITY_UNKNOWN;
-  }
-
-  @Override
-  public String lookupName(int id)
+  protected String getValue()
   {
     return exFn.apply(delegate.get());
-  }
-
-  @Override
-  public boolean nameLookupPossibleInAdvance()
-  {
-    return false;
-  }
-
-  @Nullable
-  @Override
-  public IdLookup idLookup()
-  {
-    return null;
   }
 }
