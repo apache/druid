@@ -31,7 +31,7 @@ import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
@@ -46,7 +46,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   private final QueryGranularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<String> metrics;
-  private final List<VirtualColumn> virtualColumns;
+  private final VirtualColumns virtualColumns;
   private final PagingSpec pagingSpec;
 
   @JsonCreator
@@ -58,7 +58,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("metrics") List<String> metrics,
-      @JsonProperty("virtualColumns") List<VirtualColumn> virtualColumns,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("pagingSpec") PagingSpec pagingSpec,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -67,7 +67,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions;
-    this.virtualColumns = virtualColumns;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.metrics = metrics;
     this.pagingSpec = pagingSpec;
 
@@ -134,7 +134,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   }
 
   @JsonProperty
-  public List<VirtualColumn> getVirtualColumns()
+  public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
   }

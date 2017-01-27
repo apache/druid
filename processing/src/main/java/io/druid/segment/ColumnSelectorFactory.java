@@ -22,14 +22,29 @@ package io.druid.segment;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 
+import javax.annotation.Nullable;
+
 /**
  * Factory class for MetricSelectors
  */
 public interface ColumnSelectorFactory
 {
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
-  public ColumnCapabilities getColumnCapabilities(String columnName);
+  DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
+  FloatColumnSelector makeFloatColumnSelector(String columnName);
+  LongColumnSelector makeLongColumnSelector(String columnName);
+
+  @Nullable
+  ObjectColumnSelector makeObjectColumnSelector(String columnName);
+
+  /**
+   * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
+   * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
+   * columns.
+   *
+   * @param column column name
+   *
+   * @return capabilities, or null
+   */
+  @Nullable
+  ColumnCapabilities getColumnCapabilities(String column);
 }

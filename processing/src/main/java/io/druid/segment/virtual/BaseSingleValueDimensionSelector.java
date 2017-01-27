@@ -17,30 +17,21 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.virtual;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
-import io.druid.segment.filter.BooleanValueMatcher;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
-public class NullDimensionSelector implements DimensionSelector, IdLookup
+public abstract class BaseSingleValueDimensionSelector implements DimensionSelector
 {
-  private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
-
-  private NullDimensionSelector()
-  {
-    // Singleton.
-  }
-
-  public static NullDimensionSelector instance()
-  {
-    return INSTANCE;
-  }
+  protected abstract String getValue();
 
   @Override
   public IndexedInts getRow()
@@ -49,46 +40,53 @@ public class NullDimensionSelector implements DimensionSelector, IdLookup
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(String value)
-  {
-    return BooleanValueMatcher.of(value == null);
-  }
-
-  @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
-  {
-    return BooleanValueMatcher.of(predicate.apply(null));
-  }
-
-  @Override
   public int getValueCardinality()
   {
-    return 1;
+    return DimensionSelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
   public String lookupName(int id)
   {
-    assert id == 0 : "id = " + id;
-    return null;
+    return getValue();
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(final String value)
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return Objects.equals(getValue(), value);
+      }
+    };
+  }
+
+  @Override
+  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return predicate.apply(getValue());
+      }
+    };
   }
 
   @Override
   public boolean nameLookupPossibleInAdvance()
   {
-    return true;
+    return false;
   }
 
   @Nullable
   @Override
   public IdLookup idLookup()
   {
-    return this;
-  }
-
-  @Override
-  public int lookupId(String name)
-  {
-    return Strings.isNullOrEmpty(name) ? 0 : -1;
+    return null;
   }
 }

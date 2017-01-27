@@ -17,14 +17,25 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
 
-/**
-*/
-public enum ValueType
+public final class ZeroLongColumnSelector implements LongColumnSelector
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX
+  private static final ZeroLongColumnSelector INSTANCE = new ZeroLongColumnSelector();
+
+  private ZeroLongColumnSelector()
+  {
+    // No instantiation.
+  }
+
+  public static ZeroLongColumnSelector instance()
+  {
+    return INSTANCE;
+  }
+
+  @Override
+  public long get()
+  {
+    return 0;
+  }
 }

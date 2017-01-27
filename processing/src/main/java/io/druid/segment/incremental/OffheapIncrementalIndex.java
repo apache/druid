@@ -94,31 +94,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   public OffheapIncrementalIndex(
       long minTimestamp,
       QueryGranularity gran,
-      final AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
-      boolean sortFacts,
-      int maxRowCount,
-      StupidPool<ByteBuffer> bufferPool
-  )
-  {
-    this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
-                                            .build(),
-        deserializeComplexMetrics,
-        reportParseExceptions,
-        sortFacts,
-        maxRowCount,
-        bufferPool
-    );
-  }
-
-  public OffheapIncrementalIndex(
-      long minTimestamp,
-      QueryGranularity gran,
       boolean rollup,
       final AggregatorFactory[] metrics,
       int maxRowCount,
