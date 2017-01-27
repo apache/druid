@@ -22,6 +22,7 @@ package io.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
@@ -31,6 +32,7 @@ import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
@@ -83,32 +85,43 @@ public class OverlordResourceTestClient
     }
   }
 
-  public String submitTask(String task)
+  public String submitTask(final String task)
   {
     try {
-      StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
-              .setContent(
-                  "application/json",
-                  task.getBytes()
-              ),
-          responseHandler
-      ).get();
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while submitting task to indexer response [%s %s]",
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      Map<String, String> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, String>>()
+      return RetryUtils.retry(
+          new Callable<String>()
           {
-          }
+            @Override
+            public String call() throws Exception
+            {
+              StatusResponseHolder response = httpClient.go(
+                  new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
+                      .setContent(
+                          "application/json",
+                          task.getBytes()
+                      ),
+                  responseHandler
+              ).get();
+              if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+                throw new ISE(
+                    "Error while submitting task to indexer response [%s %s]",
+                    response.getStatus(),
+                    response.getContent()
+                );
+              }
+              Map<String, String> responseData = jsonMapper.readValue(
+                  response.getContent(), new TypeReference<Map<String, String>>()
+                  {
+                  }
+              );
+              String taskID = responseData.get("task");
+              LOG.info("Submitted task with TaskID[%s]", taskID);
+              return taskID;
+            }
+          },
+          Predicates.<Throwable>alwaysTrue(),
+          5
       );
-      String taskID = responseData.get("task");
-      LOG.info("Submitted task with TaskID[%s]", taskID);
-      return taskID;
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
