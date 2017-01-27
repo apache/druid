@@ -29,12 +29,12 @@ import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.TestQueryHelper;
 import kafka.admin.AdminUtils;
 import kafka.common.TopicExistsException;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.io.IOUtils;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -126,13 +126,16 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // set up kafka producer
     Properties properties = new Properties();
-    properties.put("metadata.broker.list", config.getKafkaHost());
-    LOG.info("kafka host: [%s]", config.getKafkaHost());
-    properties.put("serializer.class", "kafka.serializer.StringEncoder");
-    properties.put("request.required.acks", "1");
-    properties.put("producer.type", "sync"); // use sync producer for deterministic test
-    ProducerConfig producerConfig = new ProducerConfig(properties);
-    Producer<String, String> producer = new Producer<String, String>(producerConfig);
+    properties.put("bootstrap.servers", config.getKafkaHost());
+    LOG.info("Kafka bootstrap.servers: [%s]", config.getKafkaHost());
+    properties.put("acks", "all");
+    properties.put("retries", "3");
+
+    KafkaProducer<String, String> producer = new KafkaProducer<>(
+        properties,
+        new StringSerializer(),
+        new StringSerializer()
+    );
 
     DateTimeZone zone = DateTimeZone.forID("UTC");
     // format for putting into events
@@ -157,8 +160,7 @@ public class ITKafkaTest extends AbstractIndexerTest
       LOG.info("sending event: [%s]", event);
       try {
         // Send event to kafka
-        KeyedMessage<String, String> message = new KeyedMessage<String, String>(TOPIC_NAME, event);
-        producer.send(message);
+        producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();
       }
       catch (Exception ioe) {
         throw Throwables.propagate(ioe);

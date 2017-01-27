@@ -27,6 +27,7 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
@@ -60,7 +61,8 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       final RowSignature rowSignature,
       final List<Aggregation> existingAggregations,
       final Project project,
-      final AggregateCall aggregateCall
+      final AggregateCall aggregateCall,
+      final DimFilter filter
   )
   {
     final RowExtraction rex = Expressions.toRowExtraction(
@@ -99,7 +101,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
             return new HyperUniqueFinalizingPostAggregator(outputName, name);
           }
         }
-    );
+    ).filter(filter);
   }
 
   private static class ApproxCountDistinctSqlAggFunction extends SqlAggFunction

@@ -62,7 +62,7 @@ public class SelectQuerySpecTest
         + "[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
         + "{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
         + "\"metrics\":[\"index\"],"
-        + "\"virtualColumns\":null,"
+        + "\"virtualColumns\":[],"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":false},"
         + "\"context\":null}";
 

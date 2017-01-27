@@ -17,26 +17,18 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment.virtual;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.common.IAE;
-
-/**
-*/
-public enum ValueType
+public class VirtualColumnCacheHelper
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX;
+  public static final byte CACHE_TYPE_ID_MAP = 0x00;
+  public static final byte CACHE_TYPE_ID_EXPRESSION = 0x01;
 
-  @JsonCreator
-  public static ValueType fromString(String name)
+  // Starting byte 0xFF is reserved for site-specific virtual columns.
+  public static final byte CACHE_TYPE_ID_USER_DEFINED = (byte) 0xFF;
+
+  private VirtualColumnCacheHelper()
   {
-    if (name == null) {
-      return ValueType.STRING;
-    }
-    return valueOf(name.toUpperCase());
+    // No instantiation.
   }
 }

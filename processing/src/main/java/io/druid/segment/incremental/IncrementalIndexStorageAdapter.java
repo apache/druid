@@ -46,12 +46,11 @@ import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.ZeroFloatColumnSelector;
+import io.druid.segment.ZeroLongColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -66,8 +65,6 @@ import java.util.Map;
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
-  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
-
   private final IncrementalIndex<?> index;
 
   public IncrementalIndexStorageAdapter(
@@ -342,6 +339,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   DimensionSpec dimensionSpec
               )
               {
+                if (virtualColumns.exists(dimensionSpec.getDimension())) {
+                  return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+                }
+
                 final String dimension = dimensionSpec.getDimension();
                 final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
@@ -366,7 +367,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
                 if (dimensionDesc == null) {
-                  return dimensionSpec.decorate(NULL_DIMENSION_SELECTOR);
+                  return dimensionSpec.decorate(NullDimensionSelector.instance());
                 }
 
                 final DimensionIndexer indexer = dimensionDesc.getIndexer();
@@ -376,6 +377,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public FloatColumnSelector makeFloatColumnSelector(String columnName)
               {
+                if (virtualColumns.exists(columnName)) {
+                  return virtualColumns.makeFloatColumnSelector(columnName, this);
+                }
+
                 final Integer dimIndex = index.getDimensionIndex(columnName);
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
@@ -389,14 +394,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 final Integer metricIndexInt = index.getMetricIndex(columnName);
                 if (metricIndexInt == null) {
-                  return new FloatColumnSelector()
-                  {
-                    @Override
-                    public float get()
-                    {
-                      return 0.0f;
-                    }
-                  };
+                  return ZeroFloatColumnSelector.instance();
                 }
 
                 final int metricIndex = metricIndexInt;
@@ -413,6 +411,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public LongColumnSelector makeLongColumnSelector(String columnName)
               {
+                if (virtualColumns.exists(columnName)) {
+                  return virtualColumns.makeLongColumnSelector(columnName, this);
+                }
+
                 if (columnName.equals(Column.TIME_COLUMN_NAME)) {
                   return new LongColumnSelector()
                   {
@@ -437,14 +439,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 final Integer metricIndexInt = index.getMetricIndex(columnName);
                 if (metricIndexInt == null) {
-                  return new LongColumnSelector()
-                  {
-                    @Override
-                    public long get()
-                    {
-                      return 0L;
-                    }
-                  };
+                  return ZeroLongColumnSelector.instance();
                 }
 
                 final int metricIndex = metricIndexInt;
@@ -465,6 +460,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public ObjectColumnSelector makeObjectColumnSelector(String column)
               {
+                if (virtualColumns.exists(column)) {
+                  return virtualColumns.makeObjectColumnSelector(column, this);
+                }
+
                 if (column.equals(Column.TIME_COLUMN_NAME)) {
                   return new ObjectColumnSelector<Long>()
                   {
@@ -508,10 +507,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(column);
 
                 if (dimensionDesc == null) {
-                  VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(column);
-                  if (virtualColumn != null) {
-                    return virtualColumn.init(column, this);
-                  }
                   return null;
                 } else {
 
@@ -551,15 +546,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public ColumnCapabilities getColumnCapabilities(String columnName)
               {
-                ColumnCapabilities capabilities = index.getCapabilities(columnName);
-                if (capabilities == null && !virtualColumns.isEmpty()) {
-                  VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
-                  if (virtualColumn != null) {
-                    Class clazz = virtualColumn.init(columnName, this).classOfObject();
-                    capabilities = new ColumnCapabilitiesImpl().setType(ValueType.typeFor(clazz));
-                  }
+                if (virtualColumns.exists(columnName)) {
+                  return virtualColumns.getColumnCapabilities(columnName);
                 }
-                return capabilities;
+
+                return index.getCapabilities(columnName);
               }
             };
           }

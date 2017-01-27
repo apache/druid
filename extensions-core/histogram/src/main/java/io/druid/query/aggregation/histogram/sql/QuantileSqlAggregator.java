@@ -19,14 +19,17 @@
 
 package io.druid.query.aggregation.histogram.sql;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogram;
 import io.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
 import io.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import io.druid.query.aggregation.histogram.QuantilePostAggregator;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.aggregation.Aggregation;
+import io.druid.sql.calcite.aggregation.Aggregations;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
@@ -48,7 +51,7 @@ import java.util.List;
 public class QuantileSqlAggregator implements SqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new QuantileSqlAggFunction();
-  private static final String NAME = "QUANTILE";
+  private static final String NAME = "APPROX_QUANTILE";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -62,7 +65,8 @@ public class QuantileSqlAggregator implements SqlAggregator
       final RowSignature rowSignature,
       final List<Aggregation> existingAggregations,
       final Project project,
-      final AggregateCall aggregateCall
+      final AggregateCall aggregateCall,
+      final DimFilter filter
   )
   {
     final RowExtraction rex = Expressions.toRowExtraction(
@@ -77,6 +81,8 @@ public class QuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
+    final AggregatorFactory aggregatorFactory;
+    final String histogramName = String.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
         rowSignature,
         project,
@@ -84,10 +90,18 @@ public class QuantileSqlAggregator implements SqlAggregator
     );
     final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
 
-    final AggregatorFactory aggregatorFactory;
-    final String histogramName = String.format("%s:agg", name);
+    final int resolution;
+    if (aggregateCall.getArgList().size() >= 3) {
+      final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rowSignature,
+          project,
+          aggregateCall.getArgList().get(2)
+      );
+      resolution = ((Number) RexLiteral.value(resolutionArg)).intValue();
+    } else {
+      resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;
+    }
 
-    final int resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;
     final int numBuckets = ApproximateHistogram.DEFAULT_BUCKET_SIZE;
     final float lowerLimit = Float.NEGATIVE_INFINITY;
     final float upperLimit = Float.POSITIVE_INFINITY;
@@ -95,19 +109,30 @@ public class QuantileSqlAggregator implements SqlAggregator
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {
       for (AggregatorFactory factory : existing.getAggregatorFactories()) {
-        if (factory instanceof ApproximateHistogramAggregatorFactory) {
-          final ApproximateHistogramAggregatorFactory theFactory = (ApproximateHistogramAggregatorFactory) factory;
-          if (theFactory.getFieldName().equals(rex.getColumn())
-              && theFactory.getResolution() == resolution
-              && theFactory.getNumBuckets() == numBuckets
-              && theFactory.getLowerLimit() == lowerLimit
-              && theFactory.getUpperLimit() == upperLimit) {
-            // Found existing one. Use this.
-            return Aggregation.create(
-                ImmutableList.<AggregatorFactory>of(),
-                new QuantilePostAggregator(name, theFactory.getName(), probability)
-            );
-          }
+        final boolean matches = Aggregations.aggregatorMatches(
+            factory,
+            filter,
+            ApproximateHistogramAggregatorFactory.class,
+            new Predicate<ApproximateHistogramAggregatorFactory>()
+            {
+              @Override
+              public boolean apply(final ApproximateHistogramAggregatorFactory theFactory)
+              {
+                return theFactory.getFieldName().equals(rex.getColumn())
+                       && theFactory.getResolution() == resolution
+                       && theFactory.getNumBuckets() == numBuckets
+                       && theFactory.getLowerLimit() == lowerLimit
+                       && theFactory.getUpperLimit() == upperLimit;
+              }
+            }
+        );
+
+        if (matches) {
+          // Found existing one. Use this.
+          return Aggregation.create(
+              ImmutableList.<AggregatorFactory>of(),
+              new QuantilePostAggregator(name, factory.getName(), probability)
+          );
         }
       }
     }
@@ -135,12 +160,13 @@ public class QuantileSqlAggregator implements SqlAggregator
     return Aggregation.create(
         ImmutableList.of(aggregatorFactory),
         new QuantilePostAggregator(name, histogramName, probability)
-    );
+    ).filter(filter);
   }
 
   private static class QuantileSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, probability)'";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, resolution)'\n";
 
     QuantileSqlAggFunction()
     {
@@ -150,9 +176,15 @@ public class QuantileSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.DOUBLE),
           null,
-          OperandTypes.and(
-              OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL),
-              OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+          OperandTypes.or(
+              OperandTypes.and(
+                  OperandTypes.sequence(SIGNATURE1, OperandTypes.ANY, OperandTypes.LITERAL),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              ),
+              OperandTypes.and(
+                  OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.LITERAL, OperandTypes.LITERAL),
+                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
+              )
           ),
           SqlFunctionCategory.NUMERIC,
           false,

@@ -22,13 +22,20 @@ package io.druid.segment;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.metamx.common.StringUtils;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilterUtils;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.virtual.VirtualColumnCacheHelper;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -36,8 +43,6 @@ import java.util.Objects;
  */
 public class MapVirtualColumn implements VirtualColumn
 {
-  private static final byte VC_TYPE_ID = 0x00;
-
   private final String outputName;
   private final String keyDimension;
   private final String valueDimension;
@@ -59,13 +64,14 @@ public class MapVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public ObjectColumnSelector init(String dimension, ColumnSelectorFactory factory)
+  public ObjectColumnSelector makeObjectColumnSelector(String dimension, ColumnSelectorFactory factory)
   {
     final DimensionSelector keySelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(keyDimension));
     final DimensionSelector valueSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(valueDimension));
 
-    int index = dimension.indexOf('.');
-    if (index < 0) {
+    final String subColumnName = VirtualColumns.splitColumnName(dimension).rhs;
+
+    if (subColumnName == null) {
       return new ObjectColumnSelector<Map>()
       {
         @Override
@@ -97,7 +103,7 @@ public class MapVirtualColumn implements VirtualColumn
 
     IdLookup keyIdLookup = keySelector.idLookup();
     if (keyIdLookup != null) {
-      final int keyId = keyIdLookup.lookupId(dimension.substring(index + 1));
+      final int keyId = keyIdLookup.lookupId(subColumnName);
       if (keyId < 0) {
         return NullStringObjectColumnSelector.instance();
       }
@@ -127,7 +133,6 @@ public class MapVirtualColumn implements VirtualColumn
         }
       };
     } else {
-      final String key = dimension.substring(index + 1);
       return new ObjectColumnSelector<String>()
       {
         @Override
@@ -146,7 +151,7 @@ public class MapVirtualColumn implements VirtualColumn
           }
           final int limit = Math.min(keyIndices.size(), valueIndices.size());
           for (int i = 0; i < limit; i++) {
-            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), key)) {
+            if (Objects.equals(keySelector.lookupName(keyIndices.get(i)), subColumnName)) {
               return valueSelector.lookupName(valueIndices.get(i));
             }
           }
@@ -154,6 +159,38 @@ public class MapVirtualColumn implements VirtualColumn
         }
       };
     }
+  }
+
+  @Override
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
+  {
+    // Could probably do something useful here if the column name is dot-style. But for now just return nothing.
+    return null;
+  }
+
+  @Override
+  public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
+  {
+    return null;
+  }
+
+  @Override
+  public LongColumnSelector makeLongColumnSelector(String columnName, ColumnSelectorFactory factory)
+  {
+    return null;
+  }
+
+  @Override
+  public ColumnCapabilities capabilities(String columnName)
+  {
+    final ValueType valueType = columnName.indexOf('.') < 0 ? ValueType.COMPLEX : ValueType.STRING;
+    return new ColumnCapabilitiesImpl().setType(valueType);
+  }
+
+  @Override
+  public List<String> requiredColumns()
+  {
+    return ImmutableList.of(keyDimension, valueDimension);
   }
 
   @Override
@@ -170,7 +207,7 @@ public class MapVirtualColumn implements VirtualColumn
     byte[] output = StringUtils.toUtf8(outputName);
 
     return ByteBuffer.allocate(3 + key.length + value.length + output.length)
-                     .put(VC_TYPE_ID)
+                     .put(VirtualColumnCacheHelper.CACHE_TYPE_ID_MAP)
                      .put(key).put(DimFilterUtils.STRING_SEPARATOR)
                      .put(value).put(DimFilterUtils.STRING_SEPARATOR)
                      .put(output)

@@ -44,7 +44,6 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -197,7 +196,7 @@ public class SelectQueryEngine
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
         filter,
-        VirtualColumns.valueOf(query.getVirtualColumns()),
+        query.getVirtualColumns(),
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()

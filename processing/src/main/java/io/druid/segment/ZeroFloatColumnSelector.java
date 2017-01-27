@@ -17,26 +17,25 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.common.IAE;
-
-/**
-*/
-public enum ValueType
+public final class ZeroFloatColumnSelector implements FloatColumnSelector
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX;
+  private static final ZeroFloatColumnSelector INSTANCE = new ZeroFloatColumnSelector();
 
-  @JsonCreator
-  public static ValueType fromString(String name)
+  private ZeroFloatColumnSelector()
   {
-    if (name == null) {
-      return ValueType.STRING;
-    }
-    return valueOf(name.toUpperCase());
+    // No instantiation.
+  }
+
+  public static ZeroFloatColumnSelector instance()
+  {
+    return INSTANCE;
+  }
+
+  @Override
+  public float get()
+  {
+    return 0.0f;
   }
 }
