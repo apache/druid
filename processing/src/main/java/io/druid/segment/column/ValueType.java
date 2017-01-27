@@ -20,7 +20,6 @@
 package io.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.common.IAE;
 
 /**
 */
