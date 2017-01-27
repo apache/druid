@@ -62,7 +62,7 @@ public class AutoStrategy extends SearchStrategy
       // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
       // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
       // from the non-bitmap-support filters, and then use it to compute the filtered result by intersecting bitmaps.
-      if (filter == null || filter.supportsBitmapIndex(selector)) {
+      if (filter == null || filter.supportsSelectivityEstimation(index, selector)) {
         final List<DimensionSpec> dimsToSearch = getDimsToSearch(
             index.getAvailableDimensions(),
             query.getDimensions()
@@ -77,12 +77,14 @@ public class AutoStrategy extends SearchStrategy
         //            * (search predicate processing cost)
         final SearchQueryDecisionHelper helper = getDecisionHelper(index);
         final double useIndexStrategyCost = helper.getBitmapIntersectCost() * computeTotalCard(index, dimsToSearch);
-        final double cursorOnlyStrategyCost = (filter == null ? 1. : filter.estimateSelectivity(index, selector))
+        final double cursorOnlyStrategyCost = (filter == null ? 1. : filter.estimateSelectivity(selector))
                                               * selector.getNumRows()
                                               * dimsToSearch.size();
 
-        log.debug("Use-index strategy cost: %f, cursor-only strategy cost: %f",
-                  useIndexStrategyCost, cursorOnlyStrategyCost
+        log.debug(
+            "Use-index strategy cost: %f, cursor-only strategy cost: %f",
+            useIndexStrategyCost,
+            cursorOnlyStrategyCost
         );
 
         if (useIndexStrategyCost < cursorOnlyStrategyCost) {

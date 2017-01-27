@@ -36,92 +36,18 @@ import static org.junit.Assert.assertEquals;
 public class FiltersTest
 {
   @Test
-  public void testComputeNonOverlapRatioFromRandomBitmapSamplesWithFullyOverlappedBitmaps()
-  {
-    final int bitmapNum = 10;
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
-    final BitmapIndex bitmapIndex = makeFullyOverlappedBitmapIndexes(bitmapNum, bitmaps);
-
-    final double estimated = Filters.computeNonOverlapRatioFromRandomBitmapSamples(
-        bitmapIndex,
-        IntIteratorUtils.toIntList(IntIterators.fromTo(0, bitmapNum))
-    );
-    final double expected = 0.0;
-    assertEquals(expected, estimated, 0.00001);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testComputeNonOverlapRatioFromRandomBitmapSamplesWithEmptyBitmaps()
-  {
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-    final BitmapIndex bitmapIndex = getBitmapIndex(bitmaps);
-    Filters.computeNonOverlapRatioFromRandomBitmapSamples(
-        bitmapIndex,
-        IntIteratorUtils.toIntList(IntIterators.EMPTY_ITERATOR)
-    );
-  }
-
-  @Test
-  public void testComputeNonOverlapRatioFromFirstNBitmapSamplesWithNonOverlapBitmaps() throws Exception
-  {
-    final int bitmapNum = 10;
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
-    makeNonOverlappedBitmapIndexes(bitmapNum, bitmaps);
-
-    final double estimated = Filters.computeNonOverlapRatioFromFirstNBitmapSamples(bitmaps);
-    final double expected = 1.0;
-    assertEquals(expected, estimated, 0.00001);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testComputeNonOverlapRatioFromFirstNBitmapSamplesWithEmptyBitmaps()
-  {
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-    Filters.computeNonOverlapRatioFromFirstNBitmapSamples(bitmaps);
-  }
-
-  @Test
-  public void testComputeNonOverlapRatioFromFirstNBitmapSamples() throws Exception
-  {
-    final int bitmapNum = Filters.SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION;
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
-    makePartiallyOverlappedBitmapIndexes(bitmapNum, bitmaps);
-
-    final double estimated = Filters.computeNonOverlapRatioFromFirstNBitmapSamples(bitmaps);
-    final double expected = 0.2;
-    assertEquals(expected, estimated, 0.00001);
-  }
-
-  @Test
   public void testEstimateSelectivityOfBitmapList()
   {
-    final int bitmapNum = Filters.SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION;
+    final int bitmapNum = 100;
     final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
-    final BitmapIndex bitmapIndex = makePartiallyOverlappedBitmapIndexes(bitmapNum, bitmaps);
+    final BitmapIndex bitmapIndex = makeNonOverlappedBitmapIndexes(bitmapNum, bitmaps);
 
-    final double estimated = Filters.estimateSelectivityOfBitmapList(
+    final double estimated = Filters.estimatePredicateSelectivity(
         bitmapIndex,
         IntIteratorUtils.toIntList(IntIterators.fromTo(0, bitmapNum)),
-        1000,
-        true
+        10000
     );
-    final double expected = 0.208; // total # of bits is 208 = 10 + 99 * 2
-    assertEquals(expected, estimated, 0.00001);
-  }
-
-  @Test
-  public void testEstimateSelectivityOfBitmapTree()
-  {
-    final int bitmapNum = Filters.SAMPLE_NUM_FOR_SELECTIVITY_ESTIMATION;
-    final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
-    makePartiallyOverlappedBitmapIndexes(bitmapNum, bitmaps);
-
-    final double estimated = Filters.estimateSelectivityOfBitmapTree(
-        bitmaps,
-        1000,
-        true
-    );
-    final double expected = 0.208; // total # of bits is 208 = 10 + 99 * 2
+    final double expected = 0.1;
     assertEquals(expected, estimated, 0.00001);
   }
 
@@ -167,46 +93,15 @@ public class FiltersTest
     };
   }
 
-  private static BitmapIndex makeFullyOverlappedBitmapIndexes(final int bitmapNum, final List<ImmutableBitmap> bitmaps)
-  {
-    final BitmapIndex bitmapIndex = getBitmapIndex(bitmaps);
-    final BitmapFactory factory = bitmapIndex.getBitmapFactory();
-    for (int i = 0; i < bitmapNum; i++) {
-      final MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
-      for (int j = 0; j < 10; j++) {
-        mutableBitmap.add(j * 10);
-      }
-      bitmaps.add(factory.makeImmutableBitmap(mutableBitmap));
-    }
-    return bitmapIndex;
-  }
-
   private static BitmapIndex makeNonOverlappedBitmapIndexes(final int bitmapNum, final List<ImmutableBitmap> bitmaps)
   {
     final BitmapIndex bitmapIndex = getBitmapIndex(bitmaps);
     final BitmapFactory factory = bitmapIndex.getBitmapFactory();
-    int index = 0;
     for (int i = 0; i < bitmapNum; i++) {
       final MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
       for (int j = 0; j < 10; j++) {
-        mutableBitmap.add(index++);
+        mutableBitmap.add(i * 10 + j);
       }
-      bitmaps.add(factory.makeImmutableBitmap(mutableBitmap));
-    }
-    return bitmapIndex;
-  }
-
-  private static BitmapIndex makePartiallyOverlappedBitmapIndexes(int bitmapNum, List<ImmutableBitmap> bitmaps)
-  {
-    final BitmapIndex bitmapIndex = getBitmapIndex(bitmaps);
-    final BitmapFactory factory = bitmapIndex.getBitmapFactory();
-    int startIndex = 0;
-    for (int i = 0; i < bitmapNum; i++) {
-      final MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
-      for (int j = 0; j < 10; j++) {
-        mutableBitmap.add(startIndex + j);
-      }
-      startIndex += 2; // 80% of bitmaps are overlapped
       bitmaps.add(factory.makeImmutableBitmap(mutableBitmap));
     }
     return bitmapIndex;

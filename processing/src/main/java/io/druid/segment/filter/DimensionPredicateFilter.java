@@ -106,10 +106,17 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     return Filters.estimatePredicateSelectivity(
-        columnSelector,
         dimension,
         indexSelector,
         predicateFactory.makeStringPredicate()

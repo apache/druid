@@ -78,20 +78,17 @@ public class InFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     if (extractionFn == null) {
       final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
       return Filters.estimatePredicateSelectivity(
           bitmapIndex,
-          columnSelector,
-          dimension,
           IntIteratorUtils.toIntList(getBitmapIndexIterable(bitmapIndex).iterator()),
           indexSelector.getNumRows()
       );
     } else {
       return Filters.estimatePredicateSelectivity(
-          columnSelector,
           dimension,
           indexSelector,
           getPredicateFactory().makeStringPredicate()
@@ -141,6 +138,14 @@ public class InFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   private DruidPredicateFactory getPredicateFactory()

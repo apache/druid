@@ -87,7 +87,7 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     if (emptyExtractFn() && emptySuffixMatch()) {
       // dimension equals prefix
@@ -108,15 +108,12 @@ public class LikeFilter implements Filter
       // Use lazy iterator to allow getting bitmap size one by one and avoid materializing all of them at once.
       return Filters.estimatePredicateSelectivity(
           bitmapIndex,
-          columnSelector,
-          dimension,
           getBitmapIndexList(bitmapIndex, likeMatcher, dimValues),
           indexSelector.getNumRows()
       );
     } else {
       // fallback
       return Filters.estimatePredicateSelectivity(
-          columnSelector,
           dimension,
           indexSelector,
           likeMatcher.predicateFactory(extractionFn).makeStringPredicate()
@@ -149,6 +146,14 @@ public class LikeFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   private static Iterable<ImmutableBitmap> getBitmapIterator(

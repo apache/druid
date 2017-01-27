@@ -76,7 +76,7 @@ public class BoundFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     if (supportShortCircuit()) {
       final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(boundDimFilter.getDimension());
@@ -87,14 +87,11 @@ public class BoundFilter implements Filter
 
       return Filters.estimatePredicateSelectivity(
           bitmapIndex,
-          columnSelector,
-          boundDimFilter.getDimension(),
           getBitmapIndexList(boundDimFilter, bitmapIndex),
           indexSelector.getNumRows()
       );
     } else {
       return Filters.estimatePredicateSelectivity(
-          columnSelector,
           boundDimFilter.getDimension(),
           indexSelector,
           getPredicateFactory().makeStringPredicate()
@@ -118,6 +115,14 @@ public class BoundFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, boundDimFilter.getDimension(), columnSelector, indexSelector);
   }
 
   private static Pair<Integer, Integer> getStartEndIndexes(

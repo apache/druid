@@ -70,9 +70,17 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
   {
-    return 1. - baseFilter.estimateSelectivity(columnSelector, indexSelector);
+    return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    return 1. - baseFilter.estimateSelectivity(indexSelector);
   }
 
   public Filter getBaseFilter()

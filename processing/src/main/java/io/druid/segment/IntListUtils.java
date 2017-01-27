@@ -29,6 +29,8 @@ public class IntListUtils
 
   public static IntList fromTo(int from, int to)
   {
+    // TODO: check `from` is always smaller than or equal to `to`.
+    // It's currently disabled because BoundFilter.getStartEndIndexes() sometimes violates this condition.
     return new RangeIntList(from, to);
   }
 
@@ -37,7 +39,7 @@ public class IntListUtils
     private final int start;
     private final int size;
 
-    public RangeIntList(int start, int end)
+    RangeIntList(int start, int end)
     {
       this.start = start;
       this.size = Math.max(end - start, 0);

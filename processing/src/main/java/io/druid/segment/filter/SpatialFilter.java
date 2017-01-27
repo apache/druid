@@ -103,13 +103,17 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
   {
-    // handle rtree overlap
-    return Filters.estimateSelectivityOfBitmapTree(
-        indexSelector.getSpatialIndex(dimension).search(bound),
-        indexSelector.getNumRows(),
-        true
-    );
+    return false;
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    // selectivity estimation for multi-value columns is not implemented yet.
+    throw new UnsupportedOperationException();
   }
 }

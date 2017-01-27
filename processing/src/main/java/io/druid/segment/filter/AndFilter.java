@@ -150,12 +150,25 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(
+      final ColumnSelector columnSelector, final BitmapIndexSelector indexSelector
+  )
+  {
+    for (Filter filter : filters) {
+      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     // Estimate selectivity with attribute value independence assumption
     double selectivity = 1.0;
     for (final Filter filter : filters) {
-      selectivity *= filter.estimateSelectivity(columnSelector, indexSelector);
+      selectivity *= filter.estimateSelectivity(indexSelector);
     }
     return selectivity;
   }

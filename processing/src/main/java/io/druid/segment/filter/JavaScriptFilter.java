@@ -56,11 +56,11 @@ public class JavaScriptFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     final Context cx = Context.enter();
     try {
-      return Filters.estimatePredicateSelectivity(columnSelector, dimension, indexSelector, makeStringPredicate(cx));
+      return Filters.estimatePredicateSelectivity(dimension, indexSelector, makeStringPredicate(cx));
     }
     finally {
       Context.exit();
@@ -90,5 +90,13 @@ public class JavaScriptFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 }

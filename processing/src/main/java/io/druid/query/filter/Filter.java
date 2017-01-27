@@ -34,7 +34,7 @@ public interface Filter
    *
    * @return A bitmap indicating rows that match this filter.
    *
-   * @see Filter#estimateSelectivity(ColumnSelector, BitmapIndexSelector)
+   * @see Filter#estimateSelectivity(BitmapIndexSelector)
    */
   ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
 
@@ -47,14 +47,13 @@ public interface Filter
    * with reasonable sacrifice of the accuracy.
    * As a result, the estimated selectivity might be different from the exact value.
    *
-   * @param columnSelector Column selector to retrieve column capabilities
-   * @param indexSelector  Object used to retrieve bitmap indexes
+   * @param indexSelector Object used to retrieve bitmap indexes
    *
    * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
    *
    * @see Filter#getBitmapIndex(BitmapIndexSelector)
    */
-  double estimateSelectivity(ColumnSelector columnSelector, BitmapIndexSelector indexSelector);
+  double estimateSelectivity(BitmapIndexSelector indexSelector);
 
 
   /**
@@ -73,7 +72,20 @@ public interface Filter
    *
    * @param selector Object used to retrieve bitmap indexes
    *
-   * @return true if this Filter can provide a bitmap index using the selector, false otherwise
+   * @return true if this Filter can provide a bitmap index using the selector, false otherwise.
    */
   boolean supportsBitmapIndex(BitmapIndexSelector selector);
+
+
+  /**
+   * Indicates whether this filter supports selectivity estimation.
+   * A filter supports selectivity estimation if it supports bitmap index and
+   * the dimension which the filter evaluates does not have multi values.
+   *
+   * @param columnSelector Object to check the dimension has multi values.
+   * @param indexSelector  Object used to retrieve bitmap indexes
+   *
+   * @return true if this Filter supports selectivity estimation, false otherwise.
+   */
+  boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector);
 }
