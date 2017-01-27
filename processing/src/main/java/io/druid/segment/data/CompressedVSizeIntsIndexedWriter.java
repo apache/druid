@@ -57,16 +57,22 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
       final CompressedObjectStrategy.CompressionStrategy compression
   )
   {
-    this(ioPeon, filenameBase, maxValue, chunkFactor, byteOrder, compression,
-         new GenericIndexedWriter<>(
-             ioPeon,
-             filenameBase,
-             CompressedByteBufferObjectStrategy.getBufferForOrder(
-                 byteOrder,
-                 compression,
-                 sizePer(maxValue, chunkFactor)
-             )
-         )
+    this(
+        ioPeon,
+        filenameBase,
+        maxValue,
+        chunkFactor,
+        byteOrder,
+        compression,
+        new GenericIndexedWriter<>(
+            ioPeon,
+            filenameBase,
+            CompressedByteBufferObjectStrategy.getBufferForOrder(
+                byteOrder,
+                compression,
+                sizePer(maxValue, chunkFactor)
+            )
+        )
     );
   }
 
@@ -100,7 +106,9 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   )
   {
     return new CompressedVSizeIntsIndexedWriter(
-        ioPeon, filenameBase, maxValue,
+        ioPeon,
+        filenameBase,
+        maxValue,
         CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
         IndexIO.BYTE_ORDER, compression
     );

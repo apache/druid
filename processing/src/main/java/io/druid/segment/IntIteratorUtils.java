@@ -54,7 +54,8 @@ public final class IntIteratorUtils
    * It isn't checked if the given source iterators are actually ascending, if they are not, the order of values in the
    * returned iterator is undefined.
    * <p>
-   * This is similar to what {@link io.druid.java.util.common.guava.MergeIterator} does with simple {@link java.util.Iterator}s.
+   * This is similar to what {@link io.druid.java.util.common.guava.MergeIterator} does with simple
+   * {@link java.util.Iterator}s.
    *
    * @param iterators iterators to merge, must return ascending values
    */
@@ -70,7 +71,8 @@ public final class IntIteratorUtils
   }
 
   /**
-   * This class is designed mostly after {@link io.druid.java.util.common.guava.MergeIterator}. {@code MergeIterator} uses a priority queue of wrapper
+   * This class is designed mostly after {@link io.druid.java.util.common.guava.MergeIterator}.
+   * {@code MergeIterator} uses a priority queue of wrapper
    * "peeking" iterators. Peeking wrappers are not available in fastutil for specialized iterators like IntIterator, so
    * they should be implemented manually in the druid codebase. Instead, another approach is taken: a priority queue
    * of primitive long values is used, in long values the high 32-bits is the last value from some iterator, and the low

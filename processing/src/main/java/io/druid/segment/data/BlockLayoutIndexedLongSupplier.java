@@ -37,15 +37,24 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
   private final CompressionFactory.LongEncodingReader baseReader;
 
   public BlockLayoutIndexedLongSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
       CompressionFactory.LongEncodingReader reader,
       CompressedObjectStrategy.CompressionStrategy strategy,
       SmooshedFileMapper fileMapper
   )
   {
-    baseLongBuffers = GenericIndexed.read(fromBuffer, VSizeCompressedObjectStrategy.getBufferForOrder(
-        order, strategy, reader.getNumBytes(sizePer)
-    ), fileMapper);
+    baseLongBuffers = GenericIndexed.read(
+        fromBuffer,
+        VSizeCompressedObjectStrategy.getBufferForOrder(
+            order,
+            strategy,
+            reader.getNumBytes(sizePer)
+        ),
+        fileMapper
+    );
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;

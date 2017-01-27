@@ -60,7 +60,8 @@ public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<Indexe
   }
 
   public static CompressedVSizeIndexedV3Supplier fromByteBuffer(
-      ByteBuffer buffer, ByteOrder order,
+      ByteBuffer buffer,
+      ByteOrder order,
       SmooshedFileMapper fileMapper
   )
   {

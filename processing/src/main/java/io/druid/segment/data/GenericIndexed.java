@@ -26,8 +26,10 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -45,9 +47,9 @@ import java.util.List;
  * V1 Storage Format:
  * <p>
  * byte 1: version (0x1)
- * byte 2 == 0x1 =&gt; allowReverseLookup
- * bytes 3-6 =&gt; numBytesUsed
- * bytes 7-10 =&gt; numElements
+ * byte 2 == 0x1 =>; allowReverseLookup
+ * bytes 3-6 =>; numBytesUsed
+ * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
  * <p>
@@ -55,13 +57,13 @@ import java.util.List;
  * Meta, header and value files are separate.
  * Meta File:
  * byte 1: version (0x2)
- * byte 2 == 0x1 =&gt; allowReverseLookup
+ * byte 2 == 0x1 =>; allowReverseLookup
  * bytes 3-6: numberOfElementsPerValueFile expressed as power of 2. That means all the value files contains same number of items
  * except last value file and may have fewer elements.
- * bytes 7-10 =&gt; numBytesUsed
- * bytes 11-14 =&gt; numElements
- * bytes 15-18 =&gt; columnNameLength.
- * bytes 19-columnNameLength =&gt; columnName
+ * bytes 7-10 =>; numBytesUsed
+ * bytes 11-14 =>; numElements
+ * bytes 15-18 =>; columnNameLength.
+ * bytes 19-columnNameLength =>; columnName
  * <p>
  * Header file name is identified as:  String.format("%s_header", columnName)
  * value files are identified as: String.format("%s_value_%d", columnName, fileNumber)
@@ -69,10 +71,12 @@ import java.util.List;
  */
 public class GenericIndexed<T> implements Indexed<T>
 {
+  private static final byte VERSION_ONE = 0x1;
+  private static final byte VERSION_TWO = 0x2;
+  private final static Ordering ORDERING = Ordering.natural().nullsFirst();
+
   public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
   {
-    private final Ordering ordering = Ordering.natural().nullsFirst();
-
     @Override
     public Class<? extends String> getClazz()
     {
@@ -82,26 +86,24 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      return io.druid.java.util.common.StringUtils.fromUtf8(buffer, numBytes);
+      return StringUtils.fromUtf8(buffer, numBytes);
     }
 
     @Override
     public byte[] toBytes(String val)
     {
       if (val == null) {
-        return new byte[]{};
+        return ByteArrays.EMPTY_ARRAY;
       }
-      return io.druid.java.util.common.StringUtils.toUtf8(val);
+      return StringUtils.toUtf8(val);
     }
 
     @Override
     public int compare(String o1, String o2)
     {
-      return ordering.compare(o1, o2);
+      return ORDERING.compare(o1, o2);
     }
   };
-  private static final byte version_one = 0x1;
-  private static final byte version_two = 0X2;
 
   private final ObjectStrategy<T> strategy;
   private final boolean allowReverseLookup;
@@ -273,9 +275,9 @@ public class GenericIndexed<T> implements Indexed<T>
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version_one == versionFromBuffer) {
+    if (VERSION_ONE == versionFromBuffer) {
       return createVersionOneGenericIndexed(buffer, strategy);
-    } else if (version_two == versionFromBuffer) {
+    } else if (VERSION_TWO == versionFromBuffer) {
       throw new IAE(
           "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper) to read version 2 indexed.",
           versionFromBuffer
@@ -303,10 +305,10 @@ public class GenericIndexed<T> implements Indexed<T>
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version_one == versionFromBuffer) {
+    if (VERSION_ONE == versionFromBuffer) {
       return createVersionOneGenericIndexed(buffer, strategy);
     } else {
-      if (version_two == versionFromBuffer) {
+      if (VERSION_TWO == versionFromBuffer) {
 
         if (fileMapper == null) {
           throw new IAE("SmooshedFileMapper can not be null for version 2.");
@@ -397,7 +399,7 @@ public class GenericIndexed<T> implements Indexed<T>
   {
     //version 2 will always have more than one buffer in valueBuffers.
     if (valueBuffers.size() == 1) {
-      channel.write(ByteBuffer.wrap(new byte[]{version_one, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
+      channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
       channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
       channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
       channel.write(theBuffer.asReadOnlyBuffer());

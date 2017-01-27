@@ -83,7 +83,6 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
     this.endBuffer = IntBuffer.allocate(chunkFactor);
     this.numInserted = 0;
     this.flattener = flattner;
-
   }
 
   @Override

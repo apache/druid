@@ -142,7 +142,8 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
-          buffer.get());
+          buffer.get()
+      );
       return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,

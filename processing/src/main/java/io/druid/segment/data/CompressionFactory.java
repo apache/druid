@@ -264,7 +264,10 @@ public class CompressionFactory
   }
 
   public static Supplier<IndexedLongs> getLongSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
       LongEncodingFormat encodingFormat,
       CompressedObjectStrategy.CompressionStrategy strategy,
       SmooshedFileMapper fileMapper
@@ -273,8 +276,14 @@ public class CompressionFactory
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
     } else {
-      return new BlockLayoutIndexedLongSupplier(totalSize, sizePer, fromBuffer, order,
-                                                encodingFormat.getReader(fromBuffer, order), strategy, fileMapper
+      return new BlockLayoutIndexedLongSupplier(
+          totalSize,
+          sizePer,
+          fromBuffer,
+          order,
+          encodingFormat.getReader(fromBuffer, order),
+          strategy,
+          fileMapper
       );
     }
   }
@@ -305,7 +314,10 @@ public class CompressionFactory
   // Float currently does not support any encoding types, and stores values as 4 byte float
 
   public static Supplier<IndexedFloats> getFloatSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
       CompressedObjectStrategy.CompressionStrategy strategy,
       SmooshedFileMapper fileMapper
   )

@@ -36,14 +36,23 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
   private final int sizePer;
 
   public BlockLayoutIndexedFloatSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
       CompressedObjectStrategy.CompressionStrategy strategy,
       SmooshedFileMapper mapper
   )
   {
-    baseFloatBuffers = GenericIndexed.read(fromBuffer, VSizeCompressedObjectStrategy.getBufferForOrder(
-        order, strategy, sizePer * Floats.BYTES
-    ), mapper);
+    baseFloatBuffers = GenericIndexed.read(
+        fromBuffer,
+        VSizeCompressedObjectStrategy.getBufferForOrder(
+            order,
+            strategy,
+            sizePer * Floats.BYTES
+        ),
+        mapper
+    );
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }
