@@ -34,12 +34,10 @@ public class IntListUtilsTest
     list.get(0);
   }
 
-  @Test(expected = IndexOutOfBoundsException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testRangeIntListWithSmallEndIndex()
   {
-    final IntList list = IntListUtils.fromTo(10, 5);
-    assertEquals(0, list.size());
-    list.get(0);
+    IntListUtils.fromTo(10, 5);
   }
 
   @Test

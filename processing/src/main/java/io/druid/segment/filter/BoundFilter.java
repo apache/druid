@@ -131,7 +131,7 @@ public class BoundFilter implements Filter
   )
   {
     final int startIndex; // inclusive
-    final int endIndex; // exclusive
+    int endIndex; // exclusive
 
     if (!boundDimFilter.hasLowerBound()) {
       startIndex = 0;
@@ -154,6 +154,8 @@ public class BoundFilter implements Filter
         endIndex = -(found + 1);
       }
     }
+
+    endIndex = startIndex > endIndex ? startIndex : endIndex;
 
     return new Pair<>(startIndex, endIndex);
   }
