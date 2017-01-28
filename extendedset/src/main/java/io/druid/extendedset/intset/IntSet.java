@@ -609,7 +609,7 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
    * An {@link Iterator}-like interface that allows to "skip" some elements of
    * the set
    */
-  public interface IntIterator
+  public interface IntIterator extends org.roaringbitmap.IntIterator
   {
     /**
      * @return <tt>true</tt> if the iterator has more elements.

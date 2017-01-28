@@ -19,14 +19,18 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+
 /**
  * The "mutable" version of a ReadableOffset.  Introduces "increment()" and "withinBounds()" methods, which are
  * very similar to "next()" and "hasNext()" on the Iterator interface except increment() does not return a value.
  */
 public interface Offset extends ReadableOffset
 {
+  @CalledFromHotLoop
   void increment();
 
+  @CalledFromHotLoop
   boolean withinBounds();
 
   Offset clone();

@@ -19,6 +19,9 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -29,7 +32,7 @@ import java.nio.ByteBuffer;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
  */
-public interface BufferAggregator
+public interface BufferAggregator extends HotLoopCallee
 {
   /**
    * Initializes the buffer location
@@ -57,6 +60,7 @@ public interface BufferAggregator
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the current aggregate value is stored
    */
+  @CalledFromHotLoop
   void aggregate(ByteBuffer buf, int position);
 
   /**

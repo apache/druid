@@ -31,13 +31,14 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.QueryInterruptedException;
+import io.druid.query.BaseQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -273,10 +274,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         offset = new NoFilterOffset(0, index.getNumRows(), descending);
       } else {
         // Use AndFilter.getBitmapIndex to intersect the preFilters to get its short-circuiting behavior.
-        offset = new BitmapOffset(
-            selector.getBitmapFactory(),
+        offset = BitmapOffset.of(
             AndFilter.getBitmapIndex(selector, preFilters),
-            descending
+            descending,
+            (long) getNumRows()
         );
       }
     }
@@ -463,10 +464,20 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       final DictionaryEncodedColumn<String> column = cachedColumn;
 
+                      abstract class QueryableDimensionSelector implements DimensionSelector, IdLookup
+                      {
+                        @Override
+                        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                        {
+                          inspector.visit("column", column);
+                          inspector.visit("cursorOffset", cursorOffset);
+                          inspector.visit("extractionFn", extractionFn);
+                        }
+                      }
                       if (column == null) {
                         return NullDimensionSelector.instance();
                       } else if (columnDesc.getCapabilities().hasMultipleValues()) {
-                        class MultiValueDimensionSelector implements DimensionSelector, IdLookup
+                        class MultiValueDimensionSelector extends QueryableDimensionSelector
                         {
                           @Override
                           public IndexedInts getRow()
@@ -527,7 +538,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
                         return new MultiValueDimensionSelector();
                       } else {
-                        class SingleValueDimensionSelector implements DimensionSelector, IdLookup
+                        class SingleValueDimensionSelector extends QueryableDimensionSelector
                         {
                           @Override
                           public IndexedInts getRow()
@@ -681,6 +692,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         {
                           return metricVals.getFloatSingleValueRow(cursorOffset.getOffset());
                         }
+
+                        @Override
+                        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                        {
+                          inspector.visit("metricVals", metricVals);
+                          inspector.visit("cursorOffset", cursorOffset);
+                        }
                       };
                     }
 
@@ -714,6 +732,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         public long get()
                         {
                           return metricVals.getLongSingleValueRow(cursorOffset.getOffset());
+                        }
+
+                        @Override
+                        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                        {
+                          inspector.visit("metricVals", metricVals);
+                          inspector.visit("cursorOffset", cursorOffset);
                         }
                       };
                     }
@@ -903,9 +928,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       @Override
                       public void advance()
                       {
-                        if (Thread.interrupted()) {
-                          throw new QueryInterruptedException(new InterruptedException());
-                        }
+                        BaseQuery.checkInterrupted();
+                        cursorOffset.increment();
+                      }
+
+                      @Override
+                      public void advanceUninterruptibly()
+                      {
                         cursorOffset.increment();
                       }
 
@@ -923,6 +952,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       public boolean isDone()
                       {
                         return !cursorOffset.withinBounds();
+                      }
+
+                      @Override
+                      public boolean isDoneOrInterrupted()
+                      {
+                        return isDone() || Thread.currentThread().isInterrupted();
                       }
 
                       @Override
@@ -972,15 +1007,28 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       @Override
                       public void advance()
                       {
-                        if (Thread.interrupted()) {
-                          throw new QueryInterruptedException(new InterruptedException());
-                        }
+                        BaseQuery.checkInterrupted();
                         cursorOffset.increment();
 
                         while (!isDone()) {
-                          if (Thread.interrupted()) {
-                            throw new QueryInterruptedException(new InterruptedException());
+                          BaseQuery.checkInterrupted();
+                          if (filterMatcher.matches()) {
+                            return;
+                          } else {
+                            cursorOffset.increment();
                           }
+                        }
+                      }
+
+                      @Override
+                      public void advanceUninterruptibly()
+                      {
+                        if (Thread.currentThread().isInterrupted()) {
+                          return;
+                        }
+                        cursorOffset.increment();
+
+                        while (!isDoneOrInterrupted()) {
                           if (filterMatcher.matches()) {
                             return;
                           } else {
@@ -1003,6 +1051,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       public boolean isDone()
                       {
                         return !cursorOffset.withinBounds();
+                      }
+
+                      @Override
+                      public boolean isDoneOrInterrupted()
+                      {
+                        return isDone() || Thread.currentThread().isInterrupted();
                       }
 
                       @Override
@@ -1157,6 +1211,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       throw new IllegalStateException("clone");
     }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("baseOffset", baseOffset);
+      inspector.visit("timestamps", timestamps);
+      inspector.visit("allWithinThreshold", allWithinThreshold);
+    }
   }
 
   private static class AscendingTimestampCheckingOffset extends TimestampCheckingOffset
@@ -1265,6 +1327,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public String toString()
     {
       return currentOffset + "/" + rowCount + (descending ? "(DSC)" : "");
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("descending", descending);
     }
   }
 

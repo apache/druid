@@ -30,8 +30,9 @@ import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
-import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NoopAggregator;
+import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategyFactory;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
@@ -145,7 +146,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
         ));
 
     if (selectorPlusList.isEmpty()) {
-      return Aggregators.noopAggregator();
+      return NoopAggregator.instance();
     }
 
     return new CardinalityAggregator(name, selectorPlusList, byRow);
@@ -163,7 +164,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
         ));
 
     if (selectorPlusList.isEmpty()) {
-      return Aggregators.noopBufferAggregator();
+      return NoopBufferAggregator.instance();
     }
 
     return new CardinalityBufferAggregator(selectorPlusList, byRow);

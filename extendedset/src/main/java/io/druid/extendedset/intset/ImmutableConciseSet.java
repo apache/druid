@@ -935,23 +935,7 @@ public class ImmutableConciseSet
   public IntSet.IntIterator iterator()
   {
     if (isEmpty()) {
-      return new IntSet.IntIterator()
-      {
-        @Override
-        public void skipAllBefore(int element) {/*empty*/}
-
-        @Override
-        public boolean hasNext() {return false;}
-
-        @Override
-        public int next() {throw new NoSuchElementException();}
-
-        @Override
-        public void remove() {throw new UnsupportedOperationException();}
-
-        @Override
-        public IntSet.IntIterator clone() {throw new UnsupportedOperationException();}
-      };
+      return EmptyIntIterator.instance();
     }
     return new BitIterator();
   }

@@ -23,23 +23,25 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
-  private final List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList;
+  private final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses;
   private final boolean byRow;
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
-  public CardinalityBufferAggregator(
+  @SuppressWarnings("unchecked")
+  CardinalityBufferAggregator(
       List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
       boolean byRow
   )
   {
-    this.selectorPlusList = selectorPlusList;
+    this.selectorPluses = selectorPlusList.toArray(new ColumnSelectorPlus[] {});
     this.byRow = byRow;
   }
 
@@ -63,9 +65,9 @@ public class CardinalityBufferAggregator implements BufferAggregator
     try {
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
       if (byRow) {
-        CardinalityAggregator.hashRow(selectorPlusList, collector);
+        CardinalityAggregator.hashRow(selectorPluses, collector);
       } else {
-        CardinalityAggregator.hashValues(selectorPlusList, collector);
+        CardinalityAggregator.hashValues(selectorPluses, collector);
       }
     }
     finally {
@@ -101,5 +103,11 @@ public class CardinalityBufferAggregator implements BufferAggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selectorPluses", selectorPluses);
   }
 }

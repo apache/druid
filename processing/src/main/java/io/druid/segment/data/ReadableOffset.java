@@ -19,6 +19,9 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+
 /**
  * A ReadableOffset is an object that provides an integer offset, ostensibly as an index into an array.
  *
@@ -26,8 +29,9 @@ package io.druid.segment.data;
  * given to classes (e.g. FloatColumnSelector objects) by something which keeps a reference to the base Offset object
  * and increments it.
  */
-public interface ReadableOffset
+public interface ReadableOffset extends HotLoopCallee
 {
+    @CalledFromHotLoop
     int getOffset();
 }
 
