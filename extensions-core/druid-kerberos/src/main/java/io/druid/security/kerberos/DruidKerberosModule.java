@@ -51,26 +51,26 @@ public class DruidKerberosModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-      JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", DruidKerberosConfig.class);
-      JsonConfigProvider.bind(binder, "druid.hadoop.security.spnego", SpnegoFilterConfig.class);
+    JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", DruidKerberosConfig.class);
+    JsonConfigProvider.bind(binder, "druid.hadoop.security.spnego", SpnegoFilterConfig.class);
 
-      Multibinder.newSetBinder(binder, ServletFilterHolder.class)
-                 .addBinding()
-                 .to(SpnegoFilterHolder.class);
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
+               .addBinding()
+               .to(SpnegoFilterHolder.class);
 
-      binder.bind(HttpClient.class)
-            .annotatedWith(Global.class)
-            .toProvider(new KerberosHttpClientProvider(new HttpClientModule.HttpClientProvider(Global.class)))
-            .in(LazySingleton.class);
+    binder.bind(HttpClient.class)
+          .annotatedWith(Global.class)
+          .toProvider(new KerberosHttpClientProvider(new HttpClientModule.HttpClientProvider(Global.class)))
+          .in(LazySingleton.class);
 
-      binder.bind(HttpClient.class)
-            .annotatedWith(Client.class)
-            .toProvider(new KerberosHttpClientProvider(new HttpClientModule.HttpClientProvider(Client.class)))
-            .in(LazySingleton.class);
+    binder.bind(HttpClient.class)
+          .annotatedWith(Client.class)
+          .toProvider(new KerberosHttpClientProvider(new HttpClientModule.HttpClientProvider(Client.class)))
+          .in(LazySingleton.class);
 
-      binder.bind(org.eclipse.jetty.client.HttpClient.class)
-            .annotatedWith(Router.class)
-            .toProvider(new KerberosJettyHttpClientProvider(new JettyHttpClientModule.HttpClientProvider(Router.class)))
-            .in(LazySingleton.class);
+    binder.bind(org.eclipse.jetty.client.HttpClient.class)
+          .annotatedWith(Router.class)
+          .toProvider(new KerberosJettyHttpClientProvider(new JettyHttpClientModule.HttpClientProvider(Router.class)))
+          .in(LazySingleton.class);
   }
 }

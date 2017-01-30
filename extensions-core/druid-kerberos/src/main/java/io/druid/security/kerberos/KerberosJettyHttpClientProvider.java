@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
 import io.druid.guice.http.AbstractHttpClientProvider;
+import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Authentication;
@@ -38,6 +39,8 @@ import java.security.PrivilegedExceptionAction;
 
 public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<HttpClient>
 {
+  private static final Logger log = new Logger(KerberosJettyHttpClientProvider.class);
+
   private final Provider<HttpClient> delegateProvider;
   private DruidKerberosConfig config;
 
@@ -63,7 +66,7 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
   @Override
   public HttpClient get()
   {
-    HttpClient httpClient = delegateProvider.get();
+    final HttpClient httpClient = delegateProvider.get();
     httpClient.getAuthenticationStore().addAuthentication(new Authentication()
     {
       @Override
@@ -74,7 +77,7 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
 
       @Override
       public Result authenticate(
-        final Request request, ContentResponse response, HeaderInfo headerInfo, Attributes context
+        final Request request, ContentResponse response, Authentication.HeaderInfo headerInfo, Attributes context
       )
       {
         return new Result()
@@ -89,18 +92,29 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
           public void apply(Request request)
           {
             try {
-              final String host = request.getHost();
-              DruidKerberosUtil.authenticateIfRequired(config);
-              UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-              String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
-              {
-                @Override
-                public String run() throws Exception
+              // No need to set cookies as they are handled by Jetty Http Client itself.
+              URI uri = request.getURI();
+              if (DruidKerberosUtil.needToSendCredentials(httpClient.getCookieStore(), uri)) {
+                log.debug(
+                  "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
+                  uri,
+                  httpClient.getCookieStore().getCookies()
+                );
+                final String host = request.getHost();
+                DruidKerberosUtil.authenticateIfRequired(config);
+                UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+                String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
                 {
-                  return DruidKerberosUtil.kerberosChallenge(host);
-                }
-              });
-              request.getHeaders().add(HttpHeaders.Names.AUTHORIZATION, "Negotiate " + challenge);
+                  @Override
+                  public String run() throws Exception
+                  {
+                    return DruidKerberosUtil.kerberosChallenge(host);
+                  }
+                });
+                request.getHeaders().add(HttpHeaders.Names.AUTHORIZATION, "Negotiate " + challenge);
+              } else {
+                log.debug("Found Auth Cookie found for URI[%s].", uri);
+              }
             }
             catch (Throwable e) {
               Throwables.propagate(e);

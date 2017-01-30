@@ -26,6 +26,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
@@ -35,6 +36,10 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 
 import java.io.IOException;
+import java.net.CookieStore;
+import java.net.HttpCookie;
+import java.net.URI;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class DruidKerberosUtil
@@ -79,7 +84,8 @@ public class DruidKerberosUtil
     }
     catch (GSSException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
       throw new AuthenticationException(e);
-    } finally {
+    }
+    finally {
       kerberosLock.unlock();
     }
   }
@@ -103,6 +109,40 @@ public class DruidKerberosUtil
       catch (IOException e) {
         throw new ISE(e, "Failed to authenticate user principal [%s] with keytab [%s]", principal, keytab);
       }
+    }
+  }
+
+  public static boolean needToSendCredentials(CookieStore cookieStore, URI uri){
+    return getAuthCookie(cookieStore, uri) == null;
+  }
+
+  public static HttpCookie getAuthCookie(CookieStore cookieStore, URI uri)
+  {
+    if (cookieStore == null) {
+      return null;
+    }
+    boolean isSSL = uri.getScheme().equals("https");
+    List<HttpCookie> cookies = cookieStore.getCookies();
+
+    for (HttpCookie c : cookies) {
+      // If this is a secured cookie and the current connection is non-secured,
+      // then, skip this cookie. We need to skip this cookie because, the cookie
+      // replay will not be transmitted to the server.
+      if (c.getSecure() && !isSSL) {
+        continue;
+      }
+      if (c.getName().equals(AuthenticatedURL.AUTH_COOKIE)) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  public static void removeAuthCookie(CookieStore cookieStore, URI uri)
+  {
+    HttpCookie authCookie = getAuthCookie(cookieStore, uri);
+    if (authCookie != null) {
+      cookieStore.remove(uri, authCookie);
     }
   }
 }

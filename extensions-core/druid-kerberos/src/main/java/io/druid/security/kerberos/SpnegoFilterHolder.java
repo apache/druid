@@ -115,6 +115,9 @@ public class SpnegoFilterHolder implements ServletFilterHolder
       params.put("kerberos.keytab", config.getKeytab());
       params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
       params.put("kerberos.name.rules", config.getAuthToLocal());
+      if (config.getCookieSignatureSecret() != null) {
+        params.put("signature.secret", config.getCookieSignatureSecret());
+      }
     }
     catch (IOException e) {
       Throwables.propagate(e);

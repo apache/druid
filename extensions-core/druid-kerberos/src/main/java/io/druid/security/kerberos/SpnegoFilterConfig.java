@@ -42,18 +42,23 @@ public class SpnegoFilterConfig
   @JsonProperty
   private final List<String> excludedPaths;
 
+  @JsonProperty
+  private final String cookieSignatureSecret;
+
   @JsonCreator
   public SpnegoFilterConfig(
     @JsonProperty("principal") String principal,
     @JsonProperty("keytab") String keytab,
     @JsonProperty("authToLocal") String authToLocal,
-    @JsonProperty("excludedPaths") List<String> excludedPaths
+    @JsonProperty("excludedPaths") List<String> excludedPaths,
+    @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret
   )
   {
     this.principal = principal;
     this.keytab = keytab;
     this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
     this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
+    this.cookieSignatureSecret = cookieSignatureSecret;
   }
 
   @JsonProperty
@@ -80,6 +85,12 @@ public class SpnegoFilterConfig
     return excludedPaths;
   }
 
+  @JsonProperty
+  public String getCookieSignatureSecret()
+  {
+    return cookieSignatureSecret;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -98,7 +109,15 @@ public class SpnegoFilterConfig
     if (keytab != null ? !keytab.equals(that.keytab) : that.keytab != null) {
       return false;
     }
-    return authToLocal != null ? authToLocal.equals(that.authToLocal) : that.authToLocal == null;
+    if (authToLocal != null ? !authToLocal.equals(that.authToLocal) : that.authToLocal != null) {
+      return false;
+    }
+    if (excludedPaths != null ? !excludedPaths.equals(that.excludedPaths) : that.excludedPaths != null) {
+      return false;
+    }
+    return cookieSignatureSecret != null
+           ? cookieSignatureSecret.equals(that.cookieSignatureSecret)
+           : that.cookieSignatureSecret == null;
 
   }
 
@@ -108,17 +127,8 @@ public class SpnegoFilterConfig
     int result = principal != null ? principal.hashCode() : 0;
     result = 31 * result + (keytab != null ? keytab.hashCode() : 0);
     result = 31 * result + (authToLocal != null ? authToLocal.hashCode() : 0);
+    result = 31 * result + (excludedPaths != null ? excludedPaths.hashCode() : 0);
+    result = 31 * result + (cookieSignatureSecret != null ? cookieSignatureSecret.hashCode() : 0);
     return result;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "SpnegoFilterConfig{" +
-           "principal='" + principal + '\'' +
-           ", keytab='" + keytab + '\'' +
-           ", authToLocal='" + authToLocal + '\'' +
-           ", excludedPaths=" + excludedPaths +
-           '}';
   }
 }
