@@ -20,11 +20,11 @@
 package io.druid.storage.hdfs;
 
 import com.google.inject.Inject;
-
-import io.druid.java.util.common.logger.Logger;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,7 +33,7 @@ import java.io.IOException;
 
 public class HdfsDataSegmentKiller implements DataSegmentKiller
 {
-  private static final Logger log = new Logger(HdfsDataSegmentKiller.class);
+  private static final EmittingLogger log = new EmittingLogger(HdfsDataSegmentKiller.class);
 
   private static final String PATH_KEY = "path";
 
@@ -55,35 +55,54 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), path);
 
     try {
-      if (path.getName().endsWith(".zip")) {
-
-        final FileSystem fs = path.getFileSystem(config);
+      String segmentLocation = path.getName();
+      final FileSystem fs = path.getFileSystem(config);
+      if (!segmentLocation.endsWith(".zip")) {
+        throw new SegmentLoadingException("Unknown file type[%s]", path);
+      } else {
 
         if (!fs.exists(path)) {
           log.warn("Segment Path [%s] does not exist. It appears to have been deleted already.", path);
-          return ;
+          return;
         }
 
-        // path format -- > .../dataSource/interval/version/partitionNum/xxx.zip
-        Path partitionNumDir = path.getParent();
-        if (!fs.delete(partitionNumDir, true)) {
-          throw new SegmentLoadingException(
-              "Unable to kill segment, failed to delete dir [%s]",
-              partitionNumDir.toString()
-          );
-        }
-
-        //try to delete other directories if possible
-        Path versionDir = partitionNumDir.getParent();
-        if (safeNonRecursiveDelete(fs, versionDir)) {
-          Path intervalDir = versionDir.getParent();
-          if (safeNonRecursiveDelete(fs, intervalDir)) {
-            Path dataSourceDir = intervalDir.getParent();
-            safeNonRecursiveDelete(fs, dataSourceDir);
+        String[] zipParts = segmentLocation.split("_");
+        // for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
+        if (zipParts.length == 2
+            && zipParts[1].equals("index.zip")
+            && StringUtils.isNumeric(zipParts[0])) {
+          if (!fs.delete(path, false)) {
+            throw new SegmentLoadingException(
+                "Unable to kill segment, failed to delete [%s]",
+                path.toString()
+            );
           }
+          Path descriptorPath = new Path(path.getParent(), String.format("%s_descriptor.json", zipParts[0]));
+          //delete partitionNumber_descriptor.json
+          if (!fs.delete(descriptorPath, false)) {
+            throw new SegmentLoadingException(
+                "Unable to kill segment, failed to delete [%s]",
+                descriptorPath.toString()
+            );
+          }
+        } else { //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
+          if (!fs.delete(path, false)) {
+            throw new SegmentLoadingException(
+                "Unable to kill segment, failed to delete [%s]",
+                path.toString()
+            );
+          }
+          Path descriptorPath = new Path(path.getParent(), "descriptor.json");
+          if (!fs.delete(descriptorPath, false)) {
+            throw new SegmentLoadingException(
+                "Unable to kill segment, failed to delete [%s]",
+                descriptorPath.toString()
+            );
+          }
+
         }
-      } else {
-        throw new SegmentLoadingException("Unknown file type[%s]", path);
+
+        deleteEmptyParents(fs, path.getParent());
       }
     }
     catch (IOException e) {
@@ -99,13 +118,20 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     fs.delete(storageDirectory, true);
   }
 
-  private boolean safeNonRecursiveDelete(FileSystem fs, Path path)
+  private void deleteEmptyParents(FileSystem fs, Path path)
   {
-    try {
-      return fs.delete(path, false);
+    if(path.equals(storageDirectory)) {
+      return;
     }
-    catch (Exception ex) {
-      return false;
+    try {
+      if(fs.listStatus(path).length == 0)
+      {
+        fs.delete(path, false);
+        deleteEmptyParents(fs, path.getParent());
+      }
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "uncaught exception during segment killer").emit();
     }
   }
 
