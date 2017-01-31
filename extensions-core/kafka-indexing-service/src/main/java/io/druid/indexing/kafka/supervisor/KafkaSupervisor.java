@@ -63,6 +63,7 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.collect.JavaCompatUtils;
 import io.druid.metadata.EntryExistsException;
@@ -530,14 +531,22 @@ public class KafkaSupervisor implements Supervisor
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
       killTaskGroupForPartitions(JavaCompatUtils.keySet(taskGroups));
+    } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
+      throw new IAE("Excepted KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
     } else {
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       final KafkaDataSourceMetadata resetKafkaMetadata = (KafkaDataSourceMetadata) dataSourceMetadata;
 
       if (resetKafkaMetadata.getKafkaPartitions().getTopic().equals(ioConfig.getTopic())) {
-        // currentMetadata can be null
-        final KafkaDataSourceMetadata currentMetadata = (KafkaDataSourceMetadata) indexerMetadataStorageCoordinator.getDataSourceMetadata(
-            dataSource);
+        // metadata can be null
+        final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+        if (metadata != null && !(metadata instanceof KafkaDataSourceMetadata)) {
+          throw new IAE(
+              "Excepted KafkaDataSourceMetadata from metadata store but found instance of [%s]",
+              metadata.getClass()
+          );
+        }
+        final KafkaDataSourceMetadata currentMetadata = (KafkaDataSourceMetadata) metadata;
 
         // defend against consecutive reset requests from replicas
         // as well as the case where the metadata store do not have an entry for the reset partitions
@@ -577,7 +586,8 @@ public class KafkaSupervisor implements Supervisor
           }
         }
         if (metadataUpdateSuccess) {
-          killTaskGroupForPartitions(JavaCompatUtils.keySet(resetKafkaMetadata.getKafkaPartitions().getPartitionOffsetMap()));
+          killTaskGroupForPartitions(JavaCompatUtils.keySet(resetKafkaMetadata.getKafkaPartitions()
+                                                                              .getPartitionOffsetMap()));
         } else {
           throw new ISE("Unable to reset metadata");
         }
@@ -597,8 +607,7 @@ public class KafkaSupervisor implements Supervisor
       TaskGroup taskGroup = taskGroups.get(getTaskGroupIdForPartition(partition));
       if (taskGroup != null) {
         // kill all tasks in this task group
-        for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
-          String taskId = entry.getKey();
+        for (String taskId : JavaCompatUtils.keySet(taskGroup.tasks)) {
           log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
           killTask(taskId);
         }
