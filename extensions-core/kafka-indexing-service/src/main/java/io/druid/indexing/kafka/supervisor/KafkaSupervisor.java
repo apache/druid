@@ -532,7 +532,7 @@ public class KafkaSupervisor implements Supervisor
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
       killTaskGroupForPartitions(JavaCompatUtils.keySet(taskGroups));
     } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
-      throw new IAE("Excepted KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
+      throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
     } else {
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       final KafkaDataSourceMetadata resetKafkaMetadata = (KafkaDataSourceMetadata) dataSourceMetadata;
@@ -542,7 +542,7 @@ public class KafkaSupervisor implements Supervisor
         final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
         if (metadata != null && !(metadata instanceof KafkaDataSourceMetadata)) {
           throw new IAE(
-              "Excepted KafkaDataSourceMetadata from metadata store but found instance of [%s]",
+              "Expected KafkaDataSourceMetadata from metadata store but found instance of [%s]",
               metadata.getClass()
           );
         }
