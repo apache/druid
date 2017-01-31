@@ -134,7 +134,7 @@ public class JSONPathParser implements Parser<String, Object>
       if (map.get(fieldName) != null) {
         throw new IllegalArgumentException("Cannot have duplicate field definition: " + fieldName);
       }
-      JsonPath path = JsonPath.compile(fieldSpec.getExpr());
+      JsonPath path = fieldSpec.getType() == FieldType.PATH ? JsonPath.compile(fieldSpec.getExpr()) : null;
       Pair<FieldType, JsonPath> pair = new Pair<>(fieldSpec.getType(), path);
       map.put(fieldName, pair);
     }

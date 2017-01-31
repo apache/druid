@@ -19,7 +19,7 @@ Defining the JSON Flatten Spec allows nested JSON fields to be flattened during 
 |-------|------|-------------|----------|
 | type | String | Type of the field, "root" or "path". | yes |
 | name | String | This string will be used as the column name when the data has been ingested.  | yes |
-| expr | String | Defines an expression for accessing the field within the JSON object, using [JsonPath](https://github.com/jayway/JsonPath) notation. | yes |
+| expr | String | Defines an expression for accessing the field within the JSON object, using [JsonPath](https://github.com/jayway/JsonPath) notation. Only used for type "path", otherwise ignored. | only for type "path" |
 
 Suppose the event JSON has the following form:
 
@@ -53,8 +53,7 @@ To flatten this JSON, the parseSpec could be defined as follows:
     "fields": [
       {
         "type": "root",
-        "name": "dim1",
-        "expr": "dim1"
+        "name": "dim1"
       },
       "dim2",
       {
@@ -64,8 +63,7 @@ To flatten this JSON, the parseSpec could be defined as follows:
       },
       {
         "type": "root",
-        "name": "root-foo.bar",
-        "expr": "foo.bar"
+        "name": "foo.bar"
       },
       {
         "type": "path",

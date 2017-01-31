@@ -71,6 +71,6 @@ public class JSONPathFieldSpec
 
   public static JSONPathFieldSpec createRootField(String name)
   {
-    return new JSONPathFieldSpec(JSONPathFieldType.ROOT, name, name);
+    return new JSONPathFieldSpec(JSONPathFieldType.ROOT, name, null);
   }
 }
