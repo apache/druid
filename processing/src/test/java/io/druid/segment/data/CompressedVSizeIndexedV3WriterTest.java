@@ -144,6 +144,7 @@ public class CompressedVSizeIndexedV3WriterTest
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
     writer.writeToChannel(outputChannel, smoosher);
     outputChannel.close();
+    smoosher.close();
 
     assertEquals(writtenLength, supplierFromIterable.getSerializedSize());
 
@@ -298,6 +299,7 @@ public class CompressedVSizeIndexedV3WriterTest
       }
     }
     CloseQuietly.close(indexedMultivalue);
+    mapper.close();
   }
 
   @Test

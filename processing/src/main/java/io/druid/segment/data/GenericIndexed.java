@@ -19,8 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
@@ -36,6 +34,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -51,19 +50,19 @@ import java.util.List;
  * bytes 3-6 =>; numBytesUsed
  * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
- * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
+ * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes
+ * for value
  * <p>
  * V2 Storage Format
  * Meta, header and value files are separate.
  * Meta File:
  * byte 1: version (0x2)
  * byte 2 == 0x1 =>; allowReverseLookup
- * bytes 3-6: numberOfElementsPerValueFile expressed as power of 2. That means all the value files contains same number of items
- * except last value file and may have fewer elements.
- * bytes 7-10 =>; numBytesUsed
- * bytes 11-14 =>; numElements
- * bytes 15-18 =>; columnNameLength.
- * bytes 19-columnNameLength =>; columnName
+ * bytes 3-6: numberOfElementsPerValueFile expressed as power of 2. That means all the value files contains same
+ * number of items except last value file and may have fewer elements.
+ * bytes 7-10 =>; numElements
+ * bytes 11-14 =>; columnNameLength
+ * bytes 15-columnNameLength =>; columnName
  * <p>
  * Header file name is identified as:  String.format("%s_header", columnName)
  * value files are identified as: String.format("%s_value_%d", columnName, fileNumber)
@@ -111,7 +110,7 @@ public class GenericIndexed<T> implements Indexed<T>
   private final BufferIndexed bufferIndexed;
   private final List<ByteBuffer> valueBuffers;
   private final ByteBuffer headerBuffer;
-  private final int numElementsPerValueFile;
+  private int logBaseTwoOfElementsPerValueFile;
 
   private volatile ByteBuffer theBuffer;
 
@@ -125,7 +124,6 @@ public class GenericIndexed<T> implements Indexed<T>
     this.strategy = strategy;
     this.allowReverseLookup = allowReverseLookup;
     size = theBuffer.getInt();
-    numElementsPerValueFile = size;
 
     int indexOffset = theBuffer.position();
     int valuesOffset = theBuffer.position() + (size << 2);
@@ -179,13 +177,13 @@ public class GenericIndexed<T> implements Indexed<T>
     this.valueBuffers = valueBuffs;
     this.headerBuffer = headerBuff;
     this.size = numWritten;
-    this.numElementsPerValueFile = numElementsPer;
+    this.logBaseTwoOfElementsPerValueFile = numElementsPer;
     bufferIndexed = new BufferIndexed()
     {
       @Override
       public T get(int index)
       {
-        int fileNum = index / numElementsPerValueFile;
+        int fileNum = index >> logBaseTwoOfElementsPerValueFile;
         final ByteBuffer copyBuffer = valueBuffers.get(fileNum).asReadOnlyBuffer();
         final ByteBuffer copyHeaderBuffer = headerBuffer.asReadOnlyBuffer();
 
@@ -199,7 +197,7 @@ public class GenericIndexed<T> implements Indexed<T>
         final int startOffset;
         final int endOffset;
 
-        if (index % numElementsPerValueFile == 0) {
+        if ((index & ((1 << logBaseTwoOfElementsPerValueFile)-1)) == 0) {
           copyHeaderBuffer.position(index * Ints.BYTES);
           startOffset = 4;
           endOffset = copyHeaderBuffer.getInt();
@@ -324,7 +322,7 @@ public class GenericIndexed<T> implements Indexed<T>
           columnName = new SerializerUtils().readString(buffer);
           valueBuffersToUse = Lists.newArrayList();
 
-          for (int i = 0; i <= numWritten / (1 << logBaseTwoOfElementsPerValueFile); i++) {
+          for (int i = 0; i <= numWritten >> logBaseTwoOfElementsPerValueFile; i++) {
             valueBuffersToUse.add(fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i))
                                             .asReadOnlyBuffer());
           }
@@ -339,7 +337,7 @@ public class GenericIndexed<T> implements Indexed<T>
             headerBuffer,
             strategy,
             allowReverseLookup,
-            1 << logBaseTwoOfElementsPerValueFile,
+            logBaseTwoOfElementsPerValueFile,
             numWritten
         );
       }
@@ -392,7 +390,8 @@ public class GenericIndexed<T> implements Indexed<T>
     if (valueBuffers.size() != 1) {
       throw new UnsupportedOperationException("Method not supported for version 2 GenericIndexed.");
     }
-    return theBuffer.remaining() + 2 + 4 + 4;
+    return theBuffer.remaining() + 2 + 4 + 4; //2 Bytes for version and sorted flag. 4 bytes to store numbers
+                                              // of bytes and next 4 bytes to store number of elements.
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -400,7 +399,7 @@ public class GenericIndexed<T> implements Indexed<T>
     //version 2 will always have more than one buffer in valueBuffers.
     if (valueBuffers.size() == 1) {
       channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
-      channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
+      channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4))); // 4 Bytes to store size.
       channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
       channel.write(theBuffer.asReadOnlyBuffer());
     } else {
@@ -448,25 +447,18 @@ public class GenericIndexed<T> implements Indexed<T>
         }
       };
     } else {
-      final List<ByteBuffer> copyValueBuffers = Lists.newArrayList(
-          Iterables.transform(
-              valueBuffers,
-              new Function<ByteBuffer, ByteBuffer>()
-              {
-                @Override
-                public ByteBuffer apply(final ByteBuffer buffer)
-                {
-                  return buffer.asReadOnlyBuffer();
-                }
-              }
-          )
-      );
+
+      final List<ByteBuffer> copyValueBuffers = new ArrayList<>();
+      for (ByteBuffer buffer : valueBuffers) {
+        copyValueBuffers.add(buffer.asReadOnlyBuffer());
+      }
+
       return new BufferIndexed()
       {
         @Override
         public T get(final int index)
         {
-          int fileNum = index / numElementsPerValueFile;
+          int fileNum = index >> logBaseTwoOfElementsPerValueFile;
           final ByteBuffer copyBuffer = copyValueBuffers.get(fileNum);
 
           if (index < 0) {
@@ -478,7 +470,7 @@ public class GenericIndexed<T> implements Indexed<T>
           final int startOffset;
           final int endOffset;
 
-          if (index % numElementsPerValueFile == 0) {
+          if ((index & ((1 << logBaseTwoOfElementsPerValueFile)-1)) == 0) {
             copyHeaderBuffer.position(index * Ints.BYTES);
             startOffset = 4;
             endOffset = copyHeaderBuffer.getInt();

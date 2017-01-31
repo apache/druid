@@ -106,9 +106,13 @@ public class GenericIndexedWriter<T> implements Closeable
       throws IOException
   {
     while (numBytesToPutInFile > 0) {
-      int bytesRead = is.read(buffer, 0, Math.min(buffer.length, (int) numBytesToPutInFile));
-      smooshChannel.write((ByteBuffer) ByteBuffer.wrap(buffer).limit(bytesRead));
-      numBytesToPutInFile -= bytesRead;
+      int bytesRead = is.read(buffer, 0, Math.min(buffer.length, Ints.saturatedCast(numBytesToPutInFile)));
+      if(bytesRead != -1) {
+        smooshChannel.write((ByteBuffer) ByteBuffer.wrap(buffer).limit(bytesRead));
+        numBytesToPutInFile -= bytesRead;
+      } else {
+        break;
+      }
     }
   }
 

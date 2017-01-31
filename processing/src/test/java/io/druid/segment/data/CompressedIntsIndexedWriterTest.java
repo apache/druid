@@ -129,6 +129,7 @@ public class CompressedIntsIndexedWriterTest
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
     writer.writeToChannel(outputChannel, smoosher);
     outputChannel.close();
+    smoosher.close();
 
     assertEquals(writtenLength, supplierFromList.getSerializedSize());
 
@@ -220,6 +221,7 @@ public class CompressedIntsIndexedWriterTest
       assertEquals(vals[i], indexedInts.get(i));
     }
     CloseQuietly.close(indexedInts);
+    mapper.close();
   }
 
   @Test
