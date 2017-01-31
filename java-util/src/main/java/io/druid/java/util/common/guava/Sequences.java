@@ -131,17 +131,17 @@ public class Sequences
     return new YieldingSequenceBase<T>()
     {
       @Override
-      public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
+      public <OutType> Yielder<OutType> toYielder(OutType initValSupplier, YieldingAccumulator<OutType, T> accumulator)
       {
-        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValue, accumulator), effect, exec);
+        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValSupplier, accumulator), effect, exec);
       }
 
       @Override
       public <OutType> Yielder<OutType> toYielder(
-          Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+          Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValue, accumulator), effect, exec);
+        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValSupplier, accumulator), effect, exec);
       }
     };
   }
@@ -169,10 +169,10 @@ public class Sequences
 
     @Override
     public <OutType> OutType accumulate(
-        Supplier<OutType> initValue, Accumulator<OutType, Object> accumulator
+        Supplier<OutType> initValSupplier, Accumulator<OutType, Object> accumulator
     )
     {
-      return initValue.get();
+      return initValSupplier.get();
     }
 
     @Override
@@ -183,10 +183,10 @@ public class Sequences
 
     @Override
     public <OutType> Yielder<OutType> toYielder(
-        Supplier<OutType> initValue, YieldingAccumulator<OutType, Object> accumulator
+        Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, Object> accumulator
     )
     {
-      return Yielders.done(initValue.get(), null);
+      return Yielders.done(initValSupplier.get(), null);
     }
   }
 }

@@ -47,12 +47,12 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
   }
 
   @Override
-  public <OutType> OutType accumulate(Supplier<OutType> initValue, final Accumulator<OutType, T> fn)
+  public <OutType> OutType accumulate(Supplier<OutType> initValSupplier, final Accumulator<OutType, T> fn)
   {
     final IterType iterator = maker.make();
     // initValue.get() is called here to guarantee some kind of initialization for initValue is executed
     // after making the iterator
-    final OutType retVal = initValue.get();
+    final OutType retVal = initValSupplier.get();
     return accumulate(iterator, retVal, fn);
   }
 
@@ -97,7 +97,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final IterType iterator = maker.make();
@@ -105,7 +105,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
     try {
       // initValue.get() is called here to guarantee some kind of initialization for initValue is executed
       // after making the iterator
-      return makeYielder(initValue.get(), accumulator, iterator);
+      return makeYielder(initValSupplier.get(), accumulator, iterator);
     }
     catch (Throwable t) {
       try {

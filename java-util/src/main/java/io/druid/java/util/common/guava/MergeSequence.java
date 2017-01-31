@@ -54,12 +54,12 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
 
-    return makeYielder(pQueue, initValue.get(), accumulator);
+    return makeYielder(pQueue, initValSupplier.get(), accumulator);
   }
 
   private PriorityQueue<Yielder<T>> makePriorityQueue()

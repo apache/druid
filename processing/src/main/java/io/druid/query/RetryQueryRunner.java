@@ -79,10 +79,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
       @Override
       public <OutType> Yielder<OutType> toYielder(
-          Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+          Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        return makeSequence().toYielder(initValue, accumulator);
+        return makeSequence().toYielder(initValSupplier, accumulator);
       }
 
       private Sequence<T> makeSequence()

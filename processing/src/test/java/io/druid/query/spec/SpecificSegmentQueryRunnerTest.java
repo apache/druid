@@ -75,7 +75,7 @@ public class SpecificSegmentQueryRunnerTest
             {
               @Override
               public Object accumulate(
-                  Supplier initValue, Accumulator accumulator
+                  Supplier initValSupplier, Accumulator accumulator
               )
               {
                 throw new SegmentMissingException("FAILSAUCE");
@@ -96,7 +96,7 @@ public class SpecificSegmentQueryRunnerTest
               }
 
               @Override
-              public Yielder toYielder(Supplier initValue, YieldingAccumulator accumulator)
+              public Yielder toYielder(Supplier initValSupplier, YieldingAccumulator accumulator)
               {
                 throw new SegmentMissingException("FAILSAUCE");
               }

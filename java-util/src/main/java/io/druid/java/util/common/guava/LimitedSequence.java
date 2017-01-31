@@ -57,13 +57,13 @@ final class LimitedSequence<T> extends YieldingSequenceBase<T>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final LimitedYieldingAccumulator<OutType, T> limitedAccumulator = new LimitedYieldingAccumulator<>(
         accumulator
     );
-    final Yielder<OutType> subYielder = baseSequence.toYielder(initValue, limitedAccumulator);
+    final Yielder<OutType> subYielder = baseSequence.toYielder(initValSupplier, limitedAccumulator);
     return new LimitedYielder<>(subYielder, limitedAccumulator);
   }
 

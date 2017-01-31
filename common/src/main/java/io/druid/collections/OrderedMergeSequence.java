@@ -71,12 +71,12 @@ public class OrderedMergeSequence<T> implements Sequence<T>
 
   @Override
   public <OutType> OutType accumulate(
-      Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, Accumulator<OutType, T> accumulator
   )
   {
     Yielder<OutType> yielder = null;
     try {
-      yielder = toYielder(initValue, YieldingAccumulators.fromAccumulator(accumulator));
+      yielder = toYielder(initValSupplier, YieldingAccumulators.fromAccumulator(accumulator));
       return yielder.get();
     }
     finally {
@@ -92,13 +92,13 @@ public class OrderedMergeSequence<T> implements Sequence<T>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
     final Yielder<Yielder<T>> oldDudeAtCrosswalk = makeOldDudeAtCrosswalk();
 
-    return makeYielder(pQueue, oldDudeAtCrosswalk, initValue.get(), accumulator);
+    return makeYielder(pQueue, oldDudeAtCrosswalk, initValSupplier.get(), accumulator);
   }
 
   private PriorityQueue<Yielder<T>> makePriorityQueue()

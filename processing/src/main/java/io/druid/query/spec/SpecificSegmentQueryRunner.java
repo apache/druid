@@ -85,15 +85,15 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
       @Override
       public <OutType> OutType accumulate(
-          final Supplier<OutType> initValue, final Accumulator<OutType, T> accumulator
+          final Supplier<OutType> initValSupplier, final Accumulator<OutType, T> accumulator
       )
       {
         try {
-          return baseSequence.accumulate(initValue, accumulator);
+          return baseSequence.accumulate(initValSupplier, accumulator);
         }
         catch (SegmentMissingException e) {
           appendMissingSegment(responseContext);
-          return initValue.get();
+          return initValSupplier.get();
         }
       }
 
@@ -108,15 +108,15 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
       @Override
       public <OutType> Yielder<OutType> toYielder(
-          final Supplier<OutType> initValue, final YieldingAccumulator<OutType, T> accumulator
+          final Supplier<OutType> initValSupplier, final YieldingAccumulator<OutType, T> accumulator
       )
       {
         try {
-          return makeYielder(baseSequence.toYielder(initValue, accumulator));
+          return makeYielder(baseSequence.toYielder(initValSupplier, accumulator));
         }
         catch (SegmentMissingException e) {
           appendMissingSegment(responseContext);
-          return Yielders.done(initValue.get(), null);
+          return Yielders.done(initValSupplier.get(), null);
         }
       }
 

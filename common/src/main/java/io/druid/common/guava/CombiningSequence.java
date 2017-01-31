@@ -67,15 +67,15 @@ public class CombiningSequence<T> implements Sequence<T>
 
   @Override
   public <OutType> OutType accumulate(
-      Supplier<OutType> initValue, Accumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, Accumulator<OutType, T> accumulator
   )
   {
-    final CombiningAccumulator<OutType> combiningAccumulator = new CombiningAccumulator<>(initValue, accumulator);
+    final CombiningAccumulator<OutType> combiningAccumulator = new CombiningAccumulator<>(initValSupplier, accumulator);
     T lastValue = baseSequence.accumulate((T) null, combiningAccumulator);
     if (combiningAccumulator.accumulatedSomething()) {
       return accumulator.accumulate(combiningAccumulator.retVal, lastValue);
     } else {
-      return initValue.get();
+      return initValSupplier.get();
     }
   }
 
@@ -87,14 +87,14 @@ public class CombiningSequence<T> implements Sequence<T>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValue, YieldingAccumulator<OutType, T> accumulator
+      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
   )
   {
     final CombiningYieldingAccumulator<OutType, T> combiningAccumulator = new CombiningYieldingAccumulator<>(
         ordering, mergeFn, accumulator
     );
 
-    combiningAccumulator.setInitValSupplier(initValue);
+    combiningAccumulator.setInitValSupplier(initValSupplier);
     Yielder<T> baseYielder = baseSequence.toYielder((T) null, combiningAccumulator);
 
     return makeYielder(baseYielder, combiningAccumulator, false);

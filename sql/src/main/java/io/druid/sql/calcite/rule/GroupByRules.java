@@ -476,15 +476,13 @@ public class GroupByRules
 
     if (isNestedQuery) {
       // Nested groupBy.
-      final DruidNestedGroupBy retVal = DruidNestedGroupBy.from(
+      return DruidNestedGroupBy.from(
           druidRel,
           filter,
           Grouping.create(dimensions, aggregations),
           aggregate.getRowType(),
           rowOrder
       );
-
-      return retVal;
     } else {
       // groupBy on a base dataSource.
       return druidRel.withQueryBuilder(
