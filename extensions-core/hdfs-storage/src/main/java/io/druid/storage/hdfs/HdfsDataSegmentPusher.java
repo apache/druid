@@ -84,7 +84,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File inDir, DataSegment segment) throws IOException
   {
-    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
+    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDirUptoVersion(segment);
 
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
@@ -109,13 +109,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
       Path outFile = new Path(String.format(
-          "%s/%s/index.zip",
+          "%s/%s/%d_index.zip",
           fullyQualifiedStorageDirectory,
-          storageDir
+          storageDir,
+          segment.getShardSpec().getPartitionNum()
       ));
-      StringBuilder outFileUriStringBuilder= new StringBuilder(outFile.toUri().toString());
-      outFileUriStringBuilder.setCharAt(outFileUriStringBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
-      outFile = new Path(outFileUriStringBuilder.toString());
 
       final Path outDir = outFile.getParent();
       dataSegment = createDescriptorFile(

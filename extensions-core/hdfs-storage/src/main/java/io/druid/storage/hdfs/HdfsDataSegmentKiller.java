@@ -120,13 +120,12 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
   private void deleteEmptyParents(FileSystem fs, Path path)
   {
-    if(path.equals(storageDirectory)) {
+    if(fs.makeQualified(path).equals(fs.makeQualified(storageDirectory))) {
       return;
     }
     try {
-      if(fs.listStatus(path).length == 0)
+      if(fs.listStatus(path).length == 0 && fs.delete(path, false))
       {
-        fs.delete(path, false);
         deleteEmptyParents(fs, path.getParent());
       }
     }

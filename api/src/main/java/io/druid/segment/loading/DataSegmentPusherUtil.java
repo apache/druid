@@ -64,4 +64,21 @@ public class DataSegmentPusherUtil
         segment.getShardSpec().getPartitionNum()
     );
   }
+
+  /**
+   * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in
+   * path names. So we format paths differently for HDFS.
+   */
+  public static String getHdfsStorageDirUptoVersion(DataSegment segment)
+  {
+    return JOINER.join(
+        segment.getDataSource(),
+        String.format(
+            "%s_%s",
+            segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
+            segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
+        ),
+        segment.getVersion().replaceAll(":", "_")
+    );
+  }
 }

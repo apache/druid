@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
-
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
@@ -384,7 +383,12 @@ public class JobHelper
       throws IOException
   {
     final FileSystem outputFS = FileSystem.get(segmentBasePath.toUri(), configuration);
-    final Path tmpPath = new Path(segmentBasePath, String.format("index.zip.%d", taskAttemptID.getId()));
+
+    final Path tmpPath = outputFS.getScheme().equals("hdfs") || outputFS.getScheme().equals("viewfs") ? new Path(
+        segmentBasePath,
+        String.format("%d_index.zip.%d", segmentTemplate.getShardSpec().getPartitionNum(), taskAttemptID.getId())
+    ) : new Path(segmentBasePath, String.format("index.zip.%d", taskAttemptID.getId()));
+
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
         DataPusher.class, new DataPusher()
@@ -420,9 +424,10 @@ public class JobHelper
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
-        StringBuilder indexUriStringBuilder= new StringBuilder(indexOutURI.toString());
-        indexUriStringBuilder.setCharAt(indexUriStringBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
-        finalIndexZipFilePath = new Path(indexUriStringBuilder.toString());
+        finalIndexZipFilePath = new Path(
+            segmentBasePath,
+            String.format("%d_index.zip", segmentTemplate.getShardSpec().getPartitionNum())
+        );
         indexOutURI = finalIndexZipFilePath.toUri();
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
@@ -469,11 +474,14 @@ public class JobHelper
     }
     Path finalDescriptorPath = new Path(segmentBasePath, "descriptor.json");
 
-    if("hdfs".equals(outputFS.getScheme()) || "viewfs".equals(outputFS.getScheme()))
-    {
-      StringBuilder descriptorUriStringBuilder= new StringBuilder(finalDescriptorPath.toUri().toString());
-      descriptorUriStringBuilder.setCharAt(descriptorUriStringBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
-      finalDescriptorPath = new Path(descriptorUriStringBuilder.toString());
+    if ("hdfs".equals(outputFS.getScheme()) || "viewfs".equals(outputFS.getScheme())) {
+      finalDescriptorPath = new Path(
+          segmentBasePath,
+          String.format(
+              "%d_descriptor.json",
+              segmentTemplate.getShardSpec().getPartitionNum()
+          )
+      );
     }
     writeSegmentDescriptor(
         outputFS,
@@ -595,7 +603,7 @@ public class JobHelper
   )
   {
     String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
-                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
+                        ? DataSegmentPusherUtil.getHdfsStorageDirUptoVersion(segment)
                         : DataSegmentPusherUtil.getStorageDir(segment);
     return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
   }
