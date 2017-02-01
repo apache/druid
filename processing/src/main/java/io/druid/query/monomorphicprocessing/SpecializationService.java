@@ -21,7 +21,7 @@ package io.druid.query.monomorphicprocessing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.druid.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -95,9 +94,7 @@ public final class SpecializationService
   private static final long triggerSpecializationIterationsThreshold =
       Integer.getInteger("triggerSpecializationIterationsThreshold", 10_000);
 
-  private static final ExecutorService classSpecializationExecutor = Executors.newSingleThreadExecutor(
-      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("class-specialization-%d").build()
-  );
+  private static final ExecutorService classSpecializationExecutor = Execs.singleThreaded("class-specialization-%d");
 
   private static final AtomicLong specializedClassCounter = new AtomicLong();
 
