@@ -37,7 +37,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Properties;
 
-public class DruidKerberosConfigTest
+public class AuthenticationKerberosConfigTest
 {
   @Test
   public void testserde()
@@ -51,7 +51,7 @@ public class DruidKerberosConfigTest
           binder.install(new PropertiesModule(Arrays.asList("test.runtime.properties")));
           binder.install(new ConfigModule());
           binder.install(new DruidGuiceExtensions());
-          JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", DruidKerberosConfig.class);
+          JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", AuthenticationKerberosConfig.class);
         }
 
         @Provides
@@ -64,7 +64,7 @@ public class DruidKerberosConfigTest
     );
 
     Properties props = injector.getInstance(Properties.class);
-    DruidKerberosConfig config = injector.getInstance(DruidKerberosConfig.class);
+    AuthenticationKerberosConfig config = injector.getInstance(AuthenticationKerberosConfig.class);
 
     Assert.assertEquals(props.getProperty("druid.hadoop.security.kerberos.principal"), config.getPrincipal());
     Assert.assertEquals(props.getProperty("druid.hadoop.security.kerberos.keytab"), config.getKeytab());

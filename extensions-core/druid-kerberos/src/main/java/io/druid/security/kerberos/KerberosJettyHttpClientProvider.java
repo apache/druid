@@ -42,7 +42,7 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
   private static final Logger log = new Logger(KerberosJettyHttpClientProvider.class);
 
   private final Provider<HttpClient> delegateProvider;
-  private DruidKerberosConfig config;
+  private AuthenticationKerberosConfig config;
 
 
   public KerberosJettyHttpClientProvider(
@@ -59,7 +59,7 @@ public class KerberosJettyHttpClientProvider extends AbstractHttpClientProvider<
     if (delegateProvider instanceof AbstractHttpClientProvider) {
       ((AbstractHttpClientProvider) delegateProvider).configure(injector);
     }
-    config = injector.getInstance(DruidKerberosConfig.class);
+    config = injector.getInstance(AuthenticationKerberosConfig.class);
   }
 
 

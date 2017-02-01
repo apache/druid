@@ -28,7 +28,7 @@ import io.druid.guice.http.AbstractHttpClientProvider;
 public class KerberosHttpClientProvider extends AbstractHttpClientProvider<HttpClient>
 {
   private final Provider<HttpClient> delegateProvider;
-  private DruidKerberosConfig config;
+  private AuthenticationKerberosConfig config;
 
   public KerberosHttpClientProvider(
     Provider<HttpClient> delegateProvider
@@ -44,7 +44,7 @@ public class KerberosHttpClientProvider extends AbstractHttpClientProvider<HttpC
     if (delegateProvider instanceof AbstractHttpClientProvider) {
       ((AbstractHttpClientProvider) delegateProvider).configure(injector);
     }
-    config = injector.getInstance(DruidKerberosConfig.class);
+    config = injector.getInstance(AuthenticationKerberosConfig.class);
   }
 
   @Override

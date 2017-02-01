@@ -23,7 +23,7 @@ package io.druid.security.kerberos;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class DruidKerberosConfig
+public class AuthenticationKerberosConfig
 {
   @JsonProperty
   private final String principal;
@@ -31,7 +31,7 @@ public class DruidKerberosConfig
   private final String keytab;
 
   @JsonCreator
-  public DruidKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab)
+  public AuthenticationKerberosConfig(@JsonProperty("principal") String principal, @JsonProperty("keytab") String keytab)
   {
     this.principal = principal;
     this.keytab = keytab;
@@ -55,11 +55,11 @@ public class DruidKerberosConfig
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DruidKerberosConfig)) {
+    if (!(o instanceof AuthenticationKerberosConfig)) {
       return false;
     }
 
-    DruidKerberosConfig that = (DruidKerberosConfig) o;
+    AuthenticationKerberosConfig that = (AuthenticationKerberosConfig) o;
 
     if (getPrincipal() != null ? !getPrincipal().equals(that.getPrincipal()) : that.getPrincipal() != null) {
       return false;

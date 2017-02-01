@@ -51,7 +51,7 @@ public class DruidKerberosModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", DruidKerberosConfig.class);
+    JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", AuthenticationKerberosConfig.class);
     JsonConfigProvider.bind(binder, "druid.hadoop.security.spnego", SpnegoFilterConfig.class);
 
     Multibinder.newSetBinder(binder, ServletFilterHolder.class)

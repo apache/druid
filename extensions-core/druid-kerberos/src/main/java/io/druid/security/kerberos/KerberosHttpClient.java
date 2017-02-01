@@ -47,11 +47,11 @@ public class KerberosHttpClient extends AbstractHttpClient
   private static final Logger log = new Logger(KerberosHttpClient.class);
 
   private final HttpClient delegate;
-  private final DruidKerberosConfig config;
+  private final AuthenticationKerberosConfig config;
   private final CookieManager cookieManager;
   private final Executor exec = Execs.singleThreaded("test-%s");
 
-  public KerberosHttpClient(HttpClient delegate, DruidKerberosConfig config)
+  public KerberosHttpClient(HttpClient delegate, AuthenticationKerberosConfig config)
   {
     this.delegate = delegate;
     this.config = config;

@@ -90,7 +90,7 @@ public class DruidKerberosUtil
     }
   }
 
-  public static void authenticateIfRequired(DruidKerberosConfig config)
+  public static void authenticateIfRequired(AuthenticationKerberosConfig config)
     throws IOException
   {
     String principal = config.getPrincipal();
