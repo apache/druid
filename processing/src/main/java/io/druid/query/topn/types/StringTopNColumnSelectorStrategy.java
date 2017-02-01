@@ -19,10 +19,13 @@
 
 package io.druid.query.topn.types;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -31,7 +34,8 @@ import io.druid.segment.data.IndexedInts;
 
 import java.util.Map;
 
-public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrategy<DimensionSelector>
+public class StringTopNColumnSelectorStrategy
+    implements TopNColumnSelectorStrategy<DimensionSelector, Map<String, Aggregator[]>>
 {
   @Override
   public int getCardinality(DimensionSelector selector)
@@ -63,27 +67,62 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
   }
 
   @Override
+  public Map<String, Aggregator[]> makeDimExtractionAggregateStore()
+  {
+    return Maps.newHashMap();
+  }
+
+  @Override
   public void dimExtractionScanAndAggregate(
       TopNQuery query,
       DimensionSelector selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Map<String, Aggregator[]> aggregatesStore
   )
   {
     if (selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN) {
-      dimExtractionScanAndAggregateWithCardinality(selector, rowSelector, aggregatesStore, cursor, query);
+      dimExtractionScanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector, aggregatesStore);
     } else {
-      dimExtractionScanAndAggregateNoCardinality(selector, aggregatesStore, cursor, query);
+      dimExtractionScanAndAggregateWithCardinalityUnknown(query, cursor, selector, aggregatesStore);
     }
   }
 
-  private void dimExtractionScanAndAggregateWithCardinality(
+  @Override
+  public void updateDimExtractionResults(
+      final Map<String, Aggregator[]> aggregatesStore,
+      final Function<Object, Object> valueTransformer,
+      final TopNResultBuilder resultBuilder
+  )
+  {
+    for (Map.Entry<String, Aggregator[]> entry : aggregatesStore.entrySet()) {
+      Aggregator[] aggs = entry.getValue();
+      if (aggs != null && aggs.length > 0) {
+        Object[] vals = new Object[aggs.length];
+        for (int i = 0; i < aggs.length; i++) {
+          vals[i] = aggs[i].get();
+        }
+
+        Comparable key = entry.getKey();
+        if (valueTransformer != null) {
+          key = (Comparable) valueTransformer.apply(key);
+        }
+
+        resultBuilder.addEntry(
+            key,
+            key,
+            vals
+        );
+      }
+    }
+  }
+
+  private void dimExtractionScanAndAggregateWithCardinalityKnown(
+      TopNQuery query,
+      Cursor cursor,
       DimensionSelector selector,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore,
-      Cursor cursor,
-      TopNQuery query
+      Map<String, Aggregator[]> aggregatesStore
   )
   {
     final IndexedInts dimValues = selector.getRow();
@@ -106,11 +145,11 @@ public class StringTopNColumnSelectorStrategy implements TopNColumnSelectorStrat
     }
   }
 
-  private void dimExtractionScanAndAggregateNoCardinality(
-      DimensionSelector selector,
-      Map<Comparable, Aggregator[]> aggregatesStore,
+  private void dimExtractionScanAndAggregateWithCardinalityUnknown(
+      TopNQuery query,
       Cursor cursor,
-      TopNQuery query
+      DimensionSelector selector,
+      Map<String, Aggregator[]> aggregatesStore
   )
   {
     final IndexedInts dimValues = selector.getRow();

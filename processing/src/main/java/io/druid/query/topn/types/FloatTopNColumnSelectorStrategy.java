@@ -19,18 +19,21 @@
 
 package io.druid.query.topn.types;
 
+import com.google.common.base.Function;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.column.ValueType;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-import java.util.Map;
-
-public class FloatTopNColumnSelectorStrategy implements TopNColumnSelectorStrategy<FloatColumnSelector>
+public class FloatTopNColumnSelectorStrategy
+    implements TopNColumnSelectorStrategy<FloatColumnSelector, Int2ObjectMap<Aggregator[]>>
 {
   @Override
   public int getCardinality(FloatColumnSelector selector)
@@ -53,15 +56,21 @@ public class FloatTopNColumnSelectorStrategy implements TopNColumnSelectorStrate
   }
 
   @Override
+  public Int2ObjectMap<Aggregator[]> makeDimExtractionAggregateStore()
+  {
+    return new Int2ObjectOpenHashMap<>();
+  }
+
+  @Override
   public void dimExtractionScanAndAggregate(
       TopNQuery query,
       FloatColumnSelector selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Int2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
-    float key = selector.get();
+    int key = Float.floatToIntBits(selector.get());
     Aggregator[] theAggregators = aggregatesStore.get(key);
     if (theAggregators == null) {
       theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -69,6 +78,35 @@ public class FloatTopNColumnSelectorStrategy implements TopNColumnSelectorStrate
     }
     for (Aggregator aggregator : theAggregators) {
       aggregator.aggregate();
+    }
+  }
+
+  @Override
+  public void updateDimExtractionResults(
+      final Int2ObjectMap<Aggregator[]> aggregatesStore,
+      final Function<Object, Object> valueTransformer,
+      final TopNResultBuilder resultBuilder
+  )
+  {
+    for (Int2ObjectMap.Entry<Aggregator[]> entry : aggregatesStore.int2ObjectEntrySet()) {
+      Aggregator[] aggs = entry.getValue();
+      if (aggs != null && aggs.length > 0) {
+        Object[] vals = new Object[aggs.length];
+        for (int i = 0; i < aggs.length; i++) {
+          vals[i] = aggs[i].get();
+        }
+
+        Comparable key = Float.intBitsToFloat(entry.getIntKey());
+        if (valueTransformer != null) {
+          key = (Comparable) valueTransformer.apply(key);
+        }
+
+        resultBuilder.addEntry(
+            key,
+            key,
+            vals
+        );
+      }
     }
   }
 }

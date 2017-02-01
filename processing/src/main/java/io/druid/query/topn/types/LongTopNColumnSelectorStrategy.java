@@ -19,18 +19,21 @@
 
 package io.druid.query.topn.types;
 
+import com.google.common.base.Function;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ValueType;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import java.util.Map;
-
-public class LongTopNColumnSelectorStrategy implements TopNColumnSelectorStrategy<LongColumnSelector>
+public class LongTopNColumnSelectorStrategy
+    implements TopNColumnSelectorStrategy<LongColumnSelector, Long2ObjectMap<Aggregator[]>>
 {
   @Override
   public int getCardinality(LongColumnSelector selector)
@@ -53,12 +56,18 @@ public class LongTopNColumnSelectorStrategy implements TopNColumnSelectorStrateg
   }
 
   @Override
+  public Long2ObjectMap<Aggregator[]> makeDimExtractionAggregateStore()
+  {
+    return new Long2ObjectOpenHashMap<>();
+  }
+
+  @Override
   public void dimExtractionScanAndAggregate(
       TopNQuery query,
       LongColumnSelector selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Long2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
     long key = selector.get();
@@ -69,6 +78,35 @@ public class LongTopNColumnSelectorStrategy implements TopNColumnSelectorStrateg
     }
     for (Aggregator aggregator : theAggregators) {
       aggregator.aggregate();
+    }
+  }
+
+  @Override
+  public void updateDimExtractionResults(
+      final Long2ObjectMap<Aggregator[]> aggregatesStore,
+      final Function<Object, Object> valueTransformer,
+      final TopNResultBuilder resultBuilder
+  )
+  {
+    for (Long2ObjectMap.Entry<Aggregator[]> entry : aggregatesStore.long2ObjectEntrySet()) {
+      Aggregator[] aggs = entry.getValue();
+      if (aggs != null && aggs.length > 0) {
+        Object[] vals = new Object[aggs.length];
+        for (int i = 0; i < aggs.length; i++) {
+          vals[i] = aggs[i].get();
+        }
+
+        Comparable key = entry.getLongKey();
+        if (valueTransformer != null) {
+          key = (Comparable) valueTransformer.apply(key);
+        }
+
+        resultBuilder.addEntry(
+            key,
+            key,
+            vals
+        );
+      }
     }
   }
 }

@@ -17,30 +17,30 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.query.groupby.epinephelinae.column;
 
-/**
- * LongPredicate is only supported in Java 8+, so use this to avoid boxing when a long predicate is needed.
- */
-public interface DruidLongPredicate
+import io.druid.query.ColumnSelectorPlus;
+
+public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnSelectorStrategy>
 {
-  DruidLongPredicate ALWAYS_FALSE = new DruidLongPredicate()
-  {
-    @Override
-    public boolean applyLong(long input)
-    {
-      return false;
-    }
-  };
+  /**
+   * Indicates the offset of this dimension's value within the grouping key.
+   */
+  private int keyBufferPosition;
 
-  DruidLongPredicate ALWAYS_TRUE = new DruidLongPredicate()
+  public GroupByColumnSelectorPlus(ColumnSelectorPlus<GroupByColumnSelectorStrategy> baseInfo, int keyBufferPosition)
   {
-    @Override
-    public boolean applyLong(long input)
-    {
-      return true;
-    }
-  };
+    super(
+        baseInfo.getName(),
+        baseInfo.getOutputName(),
+        baseInfo.getColumnSelectorStrategy(),
+        baseInfo.getSelector()
+    );
+    this.keyBufferPosition = keyBufferPosition;
+  }
 
-  boolean applyLong(long input);
+  public int getKeyBufferPosition()
+  {
+    return keyBufferPosition;
+  }
 }

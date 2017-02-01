@@ -20,7 +20,6 @@
 package io.druid.query.topn;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Maps;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
@@ -75,7 +74,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
-    return Maps.newHashMap();
+    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    return selectorPlus.getColumnSelectorStrategy().makeDimExtractionAggregateStore();
   }
 
   @Override
@@ -109,44 +109,17 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       TopNResultBuilder resultBuilder
   )
   {
-    if (needsResultTypeConversion(params)) {
-      final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(
-          query.getDimensionSpec().getOutputType()
-      );
+    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    final boolean needsResultTypeConversion = needsResultTypeConversion(params);
+    final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(
+        query.getDimensionSpec().getOutputType()
+    );
 
-      for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
-        Aggregator[] aggs = entry.getValue();
-        if (aggs != null && aggs.length > 0) {
-          Object[] vals = new Object[aggs.length];
-          for (int i = 0; i < aggs.length; i++) {
-            vals[i] = aggs[i].get();
-          }
-
-          Comparable convertedKey = (Comparable) valueTransformer.apply(entry.getKey());
-          resultBuilder.addEntry(
-              convertedKey,
-              convertedKey,
-              vals
-          );
-        }
-      }
-    } else {
-      for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
-        Aggregator[] aggs = entry.getValue();
-        if (aggs != null && aggs.length > 0) {
-          Object[] vals = new Object[aggs.length];
-          for (int i = 0; i < aggs.length; i++) {
-            vals[i] = aggs[i].get();
-          }
-
-          resultBuilder.addEntry(
-              entry.getKey(),
-              entry.getKey(),
-              vals
-          );
-        }
-      }
-    }
+    selectorPlus.getColumnSelectorStrategy().updateDimExtractionResults(
+        aggregatesStore,
+        needsResultTypeConversion ? valueTransformer : null,
+        resultBuilder
+    );
   }
 
   @Override

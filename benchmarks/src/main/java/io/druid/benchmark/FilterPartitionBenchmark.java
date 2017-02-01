@@ -627,13 +627,13 @@ public class FilterPartitionBenchmark
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return DruidLongPredicate.FALSE_PREDICATE;
+            return DruidLongPredicate.ALWAYS_FALSE;
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return DruidFloatPredicate.FALSE_PREDICATE;
+            return DruidFloatPredicate.ALWAYS_FALSE;
           }
         };
 

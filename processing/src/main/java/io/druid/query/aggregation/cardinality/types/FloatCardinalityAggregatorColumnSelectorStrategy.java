@@ -24,7 +24,8 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.FloatColumnSelector;
 
-public class FloatCardinalityAggregatorColumnSelectorStrategy implements CardinalityAggregatorColumnSelectorStrategy<FloatColumnSelector>
+public class FloatCardinalityAggregatorColumnSelectorStrategy
+    implements CardinalityAggregatorColumnSelectorStrategy<FloatColumnSelector>
 {
   @Override
   public void hashRow(FloatColumnSelector dimSelector, Hasher hasher)

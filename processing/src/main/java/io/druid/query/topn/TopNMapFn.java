@@ -49,11 +49,7 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     @Override
     public Object apply(Object input)
     {
-      if (input == null) {
-        return null;
-      }
-
-      return input.toString();
+      return DimensionHandlerUtils.convertObjectToString(input);
     }
   };
 

@@ -19,12 +19,14 @@
 
 package io.druid.query.extraction;
 
+import io.druid.segment.DimensionHandlerUtils;
+
 public abstract class DimExtractionFn implements ExtractionFn
 {
   @Override
   public String apply(Object value)
   {
-    return apply(value == null ? null : value.toString());
+    return apply(DimensionHandlerUtils.convertObjectToString(value));
   }
 
   @Override

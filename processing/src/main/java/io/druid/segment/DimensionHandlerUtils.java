@@ -20,6 +20,8 @@
 package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Floats;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.parsers.ParseException;
@@ -33,7 +35,6 @@ import io.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 public final class DimensionHandlerUtils
 {
@@ -206,7 +207,10 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  private static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
+  public static String convertObjectToString(Object valObj)
+  {
+    return valObj == null ? null : valObj.toString();
+  }
 
   public static Long convertObjectToLong(Object valObj)
   {
@@ -220,8 +224,7 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
       try {
-        String s = ((String) valObj).replace(",", "");
-        return LONG_PAT.matcher(s).matches() ? Long.valueOf(s) : Double.valueOf(s).longValue();
+        return GuavaUtils.tryParseLong((String) valObj);
       }
       catch (Exception e) {
         throw new ParseException(e, "Unable to parse value[%s] as long", valObj);
@@ -243,7 +246,7 @@ public final class DimensionHandlerUtils
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
       try {
-        return Float.valueOf(((String) valObj).replace(",", ""));
+        return Floats.tryParse((String) valObj);
       }
       catch (Exception e) {
         throw new ParseException(e, "Unable to parse value[%s] as float", valObj);

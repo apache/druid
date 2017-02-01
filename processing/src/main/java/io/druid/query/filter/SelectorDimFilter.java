@@ -204,7 +204,7 @@ public class SelectorDimFilter implements DimFilter
       }
       final Long valueAsLong = GuavaUtils.tryParseLong(value);
       if (valueAsLong == null) {
-        longPredicate = DruidLongPredicate.FALSE_PREDICATE;
+        longPredicate = DruidLongPredicate.ALWAYS_FALSE;
       } else {
         // store the primitive, so we don't unbox for every comparison
         final long unboxedLong = valueAsLong.longValue();
@@ -232,7 +232,7 @@ public class SelectorDimFilter implements DimFilter
       final Float valueAsFloat = Floats.tryParse(value);
 
       if (valueAsFloat == null) {
-        floatPredicate = DruidFloatPredicate.FALSE_PREDICATE;
+        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
       } else {
         final int floatInts = Float.floatToIntBits(valueAsFloat);
         floatPredicate = new DruidFloatPredicate()

@@ -82,7 +82,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     }
   }
 
-  public void runWithCardinalityKnown(
+  private void runWithCardinalityKnown(
       Parameters params,
       TopNResultBuilder resultBuilder,
       DimValSelector dimValSelector
@@ -119,10 +119,14 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     }
   }
 
-  // This function currently handles TopNs on long and float columns, which do not provide cardinality or an ID lookup.
-  // When cardinality is unknown, process everything in one pass.
-  // Existing implementations of makeDimValSelector() require cardinality as well, so the DimValSelector is not used.
-  public void runWithCardinalityUnknown(
+  /**
+   * This function currently handles TopNs on long and float columns, which do not provide cardinality or an ID lookup.
+   * When cardinality is unknown, process everything in one pass.
+   * Existing implementations of makeDimValSelector() require cardinality as well, so the DimValSelector is not used.
+   * @param params TopN parameters from run()
+   * @param resultBuilder Result builder from run()
+   */
+  private void runWithCardinalityUnknown(
       Parameters params,
       TopNResultBuilder resultBuilder
   )

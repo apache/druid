@@ -340,27 +340,27 @@ public class InDimFilter implements DimFilter
             return;
           }
 
-          IntArrayList floatInts = new IntArrayList(values.size());
+          IntArrayList floatBits = new IntArrayList(values.size());
           for (String value : values) {
             Float floatValue = Floats.tryParse(value);
             if (floatValue != null) {
-              floatInts.add(Float.floatToIntBits(floatValue));
+              floatBits.add(Float.floatToIntBits(floatValue));
             }
           }
 
-          if (floatInts.size() > NUMERIC_HASHING_THRESHOLD) {
-            final IntOpenHashSet floatIntsHashSet = new IntOpenHashSet(floatInts);
+          if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
+            final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
 
             predicate = new DruidFloatPredicate()
             {
               @Override
               public boolean applyFloat(float input)
               {
-                return floatIntsHashSet.contains(Float.floatToIntBits(input));
+                return floatBitsHashSet.contains(Float.floatToIntBits(input));
               }
             };
           } else {
-            final int[] floatIntsArray = floatInts.toIntArray();
+            final int[] floatIntsArray = floatBits.toIntArray();
             Arrays.sort(floatIntsArray);
 
             predicate = new DruidFloatPredicate()
