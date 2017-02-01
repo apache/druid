@@ -113,7 +113,7 @@ public class KerberosHttpClient extends AbstractHttpClient
 
       ListenableFuture<RetryResponseHolder<Final>> internalFuture = delegate.go(
         request,
-        new RetryIfUnauthorizedResponseHandler<>(new ResponseCookieHandler(
+        new RetryIfUnauthorizedResponseHandler<Intermediate, Final>(new ResponseCookieHandler(
           request.getUrl().toURI(),
           cookieManager,
           httpResponseHandler
