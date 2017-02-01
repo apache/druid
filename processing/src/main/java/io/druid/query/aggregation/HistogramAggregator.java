@@ -81,12 +81,6 @@ public class HistogramAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    throw new UnsupportedOperationException("getName is deprecated");
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

@@ -167,12 +167,6 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object getAggregatorStartValue()
-  {
-    return initValue;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

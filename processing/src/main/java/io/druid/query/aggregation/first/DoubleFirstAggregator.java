@@ -77,12 +77,6 @@ public class DoubleFirstAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
   public void close()
   {
 

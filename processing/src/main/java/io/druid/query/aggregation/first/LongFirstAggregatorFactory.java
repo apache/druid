@@ -216,12 +216,6 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object getAggregatorStartValue()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

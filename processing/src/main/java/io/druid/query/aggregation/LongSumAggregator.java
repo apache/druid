@@ -84,12 +84,6 @@ public class LongSumAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    throw new UnsupportedOperationException("getName is deprecated");
-  }
-
-  @Override
   public Aggregator clone()
   {
     return new LongSumAggregator(selector);

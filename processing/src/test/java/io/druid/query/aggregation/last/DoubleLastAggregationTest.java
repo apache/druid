@@ -73,8 +73,6 @@ public class DoubleLastAggregationTest
   {
     DoubleLastAggregator agg = (DoubleLastAggregator) doubleLastAggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
@@ -125,8 +123,6 @@ public class DoubleLastAggregationTest
   public void testDoubleLastCombiningAggregator()
   {
     DoubleLastAggregator agg = (DoubleLastAggregator) combiningAggFactory.factorize(colSelectorFactory);
-
-    Assert.assertEquals("billy", agg.getName());
 
     aggregate(agg);
     aggregate(agg);
