@@ -114,7 +114,7 @@ A type of inputSpec where a static path to the data files is provided.
 For example, using the static input paths:
 
 ```
-"paths" : "s3n://billy-bucket/the/data/is/here/data.gz, s3n://billy-bucket/the/data/is/here/moredata.gz, s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
+"paths" : "s3n://billy-bucket/the/data/is/here/data.gz,s3n://billy-bucket/the/data/is/here/moredata.gz,s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
 ```
 
 ##### `granularity`
@@ -268,7 +268,7 @@ The configuration options are:
 
 ### Remote Hadoop Cluster
 
-If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in your Druid `_common` configuration folder.  
+If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in your Druid `_common` configuration folder.
 
 If you are having dependency problems with your version of Hadoop and the version compiled with Druid, please see [these docs](../operations/other-hadoop.html).
 
@@ -292,10 +292,10 @@ loads](../tutorials/cluster.html#configure-cluster-for-hadoop-data-loads)" using
 ### Secured Hadoop Cluster
 
 By default druid can use the exisiting TGT kerberos ticket available in local kerberos key cache.
-Although TGT ticket has a limited life cycle, 
+Although TGT ticket has a limited life cycle,
 therefore you need to call `kinit` command periodically to ensure validity of TGT ticket.
 To avoid this extra external cron job script calling `kinit` periodically,
- you can provide the principal name and keytab location and druid will do the authentication transparently at startup and job launching time.   
+ you can provide the principal name and keytab location and druid will do the authentication transparently at startup and job launching time.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -333,7 +333,7 @@ user), or reading the Druid [Different Hadoop Versions](../operations/other-hado
 
 ## Command Line Hadoop Indexer
 
-If you don't want to use a full indexing service to use Hadoop to get data into Druid, you can also use the standalone command line Hadoop indexer. 
+If you don't want to use a full indexing service to use Hadoop to get data into Druid, you can also use the standalone command line Hadoop indexer.
 See [here](../ingestion/command-line-hadoop-indexer.html) for more info.
 
 ## IndexTask-based Batch Ingestion
