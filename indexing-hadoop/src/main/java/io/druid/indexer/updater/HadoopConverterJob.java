@@ -555,7 +555,7 @@ public class HadoopConverterJob
           context,
           context.getTaskAttemptID(),
           outDir,
-          JobHelper.makeSegmentOutputPath(
+          JobHelper.makeSegmentOutputPathUptoVersionForHdfs(
               baseOutputPath,
               outputFS,
               finalSegmentTemplate

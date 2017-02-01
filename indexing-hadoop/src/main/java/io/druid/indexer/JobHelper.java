@@ -603,6 +603,20 @@ public class JobHelper
   )
   {
     String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
+                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
+                        : DataSegmentPusherUtil.getStorageDir(segment);
+    return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
+  }
+
+  //This method is very similar to makeSegmentOutputPath() method except it returns output path upto version
+  //directory.
+  public static Path makeSegmentOutputPathUptoVersionForHdfs(
+      Path basePath,
+      FileSystem fileSystem,
+      DataSegment segment
+  )
+  {
+    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
                         ? DataSegmentPusherUtil.getHdfsStorageDirUptoVersion(segment)
                         : DataSegmentPusherUtil.getStorageDir(segment);
     return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));

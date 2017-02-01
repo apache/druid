@@ -106,7 +106,7 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeSegmentOutputPath(
+    Path path = JobHelper.makeSegmentOutputPathUptoVersionForHdfs(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new DistributedFileSystem(),
         new DataSegment(
@@ -122,7 +122,7 @@ public class HadoopDruidIndexerConfigTest
         )
     );
     Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712",
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version",
         path.toString()
     );
   }
