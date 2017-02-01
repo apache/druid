@@ -19,14 +19,14 @@
 
 package io.druid.query.extraction;
 
-import io.druid.segment.DimensionHandlerUtils;
+import java.util.Objects;
 
 public abstract class DimExtractionFn implements ExtractionFn
 {
   @Override
   public String apply(Object value)
   {
-    return apply(DimensionHandlerUtils.convertObjectToString(value));
+    return apply(Objects.toString(value, null));
   }
 
   @Override

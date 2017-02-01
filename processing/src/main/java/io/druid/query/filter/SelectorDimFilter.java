@@ -234,13 +234,13 @@ public class SelectorDimFilter implements DimFilter
       if (valueAsFloat == null) {
         floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
       } else {
-        final int floatInts = Float.floatToIntBits(valueAsFloat);
+        final int floatBits = Float.floatToIntBits(valueAsFloat);
         floatPredicate = new DruidFloatPredicate()
         {
           @Override
           public boolean applyFloat(float input)
           {
-            return Float.floatToIntBits(input) == floatInts;
+            return Float.floatToIntBits(input) == floatBits;
           }
         };
       }

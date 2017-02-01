@@ -28,6 +28,8 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.ValueType;
 
+import java.util.Objects;
+
 public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
 {
   public static Function<Object, Object> getValueTransformer(ValueType outputType)
@@ -49,7 +51,7 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     @Override
     public Object apply(Object input)
     {
-      return DimensionHandlerUtils.convertObjectToString(input);
+      return Objects.toString(input, null);
     }
   };
 

@@ -25,7 +25,6 @@ import com.google.common.collect.Maps;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
@@ -33,6 +32,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.PriorityQueue;
 
 /**
@@ -87,7 +87,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       Object[] metricVals
   )
   {
-    final String dimName = DimensionHandlerUtils.convertObjectToString(dimNameObj);
+    final String dimName = Objects.toString(dimNameObj, null);
     final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + 1);
 
     if (shouldAdd(dimName)) {
@@ -133,7 +133,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
   {
     Object dimensionValueObj = dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName());
-    String dimensionValue = DimensionHandlerUtils.convertObjectToString(dimensionValueObj);
+    String dimensionValue = Objects.toString(dimensionValueObj, null);
 
     if (shouldAdd(dimensionValue)) {
       pQueue.add(

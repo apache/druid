@@ -81,6 +81,6 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
         newIds[i] = dictId;
       }
     }
-    valuess[columnIndex] = ArrayBasedIndexedInts.of(newIds, newIds.length);
+    valuess[columnIndex] = ArrayBasedIndexedInts.of(newIds);
   }
 }

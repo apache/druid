@@ -30,6 +30,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public interface TopNColumnSelectorStrategy
@@ -110,7 +111,7 @@ public interface TopNColumnSelectorStrategy
    */
   void updateDimExtractionResults(
       DimExtractionAggregateStoreType aggregatesStore,
-      Function<Object, Object> valueTransformer,
+      @Nullable Function<Object, Object> valueTransformer,
       TopNResultBuilder resultBuilder
   );
 }

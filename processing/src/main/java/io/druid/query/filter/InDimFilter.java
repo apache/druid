@@ -360,15 +360,15 @@ public class InDimFilter implements DimFilter
               }
             };
           } else {
-            final int[] floatIntsArray = floatBits.toIntArray();
-            Arrays.sort(floatIntsArray);
+            final int[] floatBitsArray = floatBits.toIntArray();
+            Arrays.sort(floatBitsArray);
 
             predicate = new DruidFloatPredicate()
             {
               @Override
               public boolean applyFloat(float input)
               {
-                return Arrays.binarySearch(floatIntsArray, Float.floatToIntBits(input)) >= 0;
+                return Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
               }
             };
           }

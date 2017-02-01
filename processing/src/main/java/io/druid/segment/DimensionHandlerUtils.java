@@ -207,11 +207,6 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  public static String convertObjectToString(Object valObj)
-  {
-    return valObj == null ? null : valObj.toString();
-  }
-
   public static Long convertObjectToLong(Object valObj)
   {
     if (valObj == null) {
