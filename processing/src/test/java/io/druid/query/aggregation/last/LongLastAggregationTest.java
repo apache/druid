@@ -72,8 +72,6 @@ public class LongLastAggregationTest
   {
     LongLastAggregator agg = (LongLastAggregator) longLastAggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
@@ -124,8 +122,6 @@ public class LongLastAggregationTest
   public void testLongLastCombiningAggregator()
   {
     LongLastAggregator agg = (LongLastAggregator) combiningAggFactory.factorize(colSelectorFactory);
-
-    Assert.assertEquals("billy", agg.getName());
 
     aggregate(agg);
     aggregate(agg);

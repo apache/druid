@@ -73,8 +73,6 @@ public class DoubleFirstAggregationTest
   {
     DoubleFirstAggregator agg = (DoubleFirstAggregator) doubleFirstAggFactory.factorize(colSelectorFactory);
 
-    Assert.assertEquals("billy", agg.getName());
-
     aggregate(agg);
     aggregate(agg);
     aggregate(agg);
@@ -125,8 +123,6 @@ public class DoubleFirstAggregationTest
   public void testDoubleFirstCombiningAggregator()
   {
     DoubleFirstAggregator agg = (DoubleFirstAggregator) combiningAggFactory.factorize(colSelectorFactory);
-
-    Assert.assertEquals("billy", agg.getName());
 
     aggregate(agg);
     aggregate(agg);
