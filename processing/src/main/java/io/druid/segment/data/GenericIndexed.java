@@ -199,7 +199,7 @@ public class GenericIndexed<T> implements Indexed<T>
   }
 
   /**
-   * Checks  if {@code index}  a valid element in GenericIndexed.
+   * Checks  if {@code index} a valid `element index` in GenericIndexed.
    * Similar to Preconditions.checkElementIndex() except this method throws {@link IAE} with custom error message.
    *
    * Used here to get existing behavior(same error message and exception) of V1 GenericIndexed.
@@ -207,7 +207,7 @@ public class GenericIndexed<T> implements Indexed<T>
    * @param index index identifying an element of an GenericIndexed.
    * @param size number of elements.
    */
-  private void checkIndex(int index, int size)
+  private static void checkIndex(int index, int size)
   {
     if (index < 0) {
       throw new IAE("Index[%s] < 0", index);
