@@ -101,6 +101,15 @@ public abstract class ComplexMetricSerde
     return getObjectStrategy().fromByteBuffer(bb, numBytes);
   }
 
+  /**
+   * This method provides the ability for a ComplexMetricSerde to control its own serialization.
+   * For large column (i.e columns greater than Integer.MAX) use
+   * (@link LargeColumnSupportedComplexColumnSerializer)
+   *
+   * @param peon IOPeon
+   * @param column name of the column
+   * @return an instance of GenericColumnSerializer used for serialization.
+   */
   public GenericColumnSerializer getSerializer(IOPeon peon, String column)
   {
     return ComplexColumnSerializer.create(peon, column, this.getObjectStrategy());

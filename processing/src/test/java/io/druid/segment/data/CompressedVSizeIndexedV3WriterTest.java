@@ -244,7 +244,7 @@ public class CompressedVSizeIndexedV3WriterTest
                 compressionStrategy,
                 offsetChunkFactor
             ),
-            Longs.BYTES * 10000
+            Longs.BYTES * 250000
         )
     );
 
@@ -257,7 +257,7 @@ public class CompressedVSizeIndexedV3WriterTest
             valueChunkFactor * VSizeIndexedInts.getNumBytesForMax(maxValue)
             + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue))
         ),
-        Longs.BYTES * 10000
+        Longs.BYTES * 250000
     );
     CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
         ioPeon,

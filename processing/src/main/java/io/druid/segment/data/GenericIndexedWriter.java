@@ -135,7 +135,7 @@ public class GenericIndexedWriter<T> implements Closeable
     valuesOut.write(bytesToWrite);
 
     if(!requireMultipleFiles) {
-      headerOut.write(Ints.toByteArray((int) valuesOut.getCount()));
+      headerOut.write(Ints.toByteArray(Ints.saturatedCast(valuesOut.getCount())));
     } else {
       headerOutLong.write(Longs.toByteArray(valuesOut.getCount()));
     }
@@ -183,8 +183,8 @@ public class GenericIndexedWriter<T> implements Closeable
     try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"))) {
       metaOut.write(0x1);
       metaOut.write(objectsSorted ? 0x1 : 0x0);
-      metaOut.write(Ints.toByteArray((int) numBytesWritten + 4));
-      metaOut.write(Ints.toByteArray((int) numWritten));
+      metaOut.write(Ints.toByteArray(Ints.saturatedCast(numBytesWritten + 4)));
+      metaOut.write(Ints.toByteArray(Ints.saturatedCast(numWritten)));
     }
   }
 
@@ -214,7 +214,7 @@ public class GenericIndexedWriter<T> implements Closeable
    */
   private int bagSizePower() throws IOException
   {
-    int avgObjectSize = (int) (valuesOut.getCount() / numWritten);
+    int avgObjectSize = Ints.saturatedCast((valuesOut.getCount() / numWritten));
 
     File f = ioPeon.getFile(makeFilename("headerLong"));
     Preconditions.checkNotNull(f, "header file missing.");
@@ -344,26 +344,27 @@ public class GenericIndexedWriter<T> implements Closeable
     metaOut.write(0x2);
     metaOut.write(objectsSorted ? 0x1 : 0x0);
     metaOut.write(Ints.toByteArray(bagSizePower));
-    metaOut.write(Ints.toByteArray((int) numWritten));
+    metaOut.write(Ints.toByteArray(Ints.saturatedCast(numWritten)));
     metaOut.write(Ints.toByteArray(fileNameByteArray.length));
     metaOut.write(fileNameByteArray);
 
     try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
       long previousValuePosition = 0;
       int bagSize = 1 << bagSizePower;
-      int filesRequired = (int) (numWritten / bagSize);
+      int filesRequired = (int) Math.ceil((float) numWritten / bagSize);
 
       try (InputStream is = new FileInputStream(ioPeon.getFile(makeFilename("values")))) {
         int counter = -1;
         byte[] buffer = new byte[1 << 16];
 
-        for (int i = 0; i <= filesRequired; i++) {
-          if (i != filesRequired) {
+        for (int i = 0; i < filesRequired; i++) {
+          if (i != filesRequired - 1) {
             headerFile.seek((bagSize + counter) * Longs.BYTES); // 8 for long bytes.
             counter = counter + bagSize;
           } else {
             headerFile.seek((numWritten - 1) * Longs.BYTES); // for remaining items.
           }
+
           long valuePosition = headerFile.readLong();
           long numBytesToPutInFile = valuePosition - previousValuePosition;
 
@@ -399,7 +400,6 @@ public class GenericIndexedWriter<T> implements Closeable
         }
       }
 
-
       long numBytesToPutInFile = finalHeaderOut.getCount();
       finalHeaderOut.close();
       byte[] buffer = new byte[1 << 16];
@@ -421,8 +421,8 @@ public class GenericIndexedWriter<T> implements Closeable
 
     try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
 
-      for(int i = 0; i < numWritten; i++) {
-        headerFile.seek(i*Ints.BYTES);
+      for (int i = 0; i < numWritten; i++) {
+        headerFile.seek(i * Ints.BYTES);
         int count = headerFile.readInt();
         headerOutLong.write(Longs.toByteArray(count));
       }

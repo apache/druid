@@ -126,7 +126,7 @@ public class GenericIndexed<T> implements Indexed<T>
     size = theBuffer.getInt();
 
     int indexOffset = theBuffer.position();
-    int valuesOffset = theBuffer.position() + (size << 2);
+    int valuesOffset = theBuffer.position() + size*Ints.BYTES;
 
     buffer.position(valuesOffset);
     valueBuffers = Lists.newArrayList(buffer.slice());
@@ -138,25 +138,18 @@ public class GenericIndexed<T> implements Indexed<T>
       @Override
       public T get(int index)
       {
-        if (index < 0) {
-          throw new IAE("Index[%s] < 0", index);
-        }
-        if (index >= size) {
-          throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
-        }
+        checkIndex(index, size);
 
-        ByteBuffer copyHeaderBuffer = headerBuffer.asReadOnlyBuffer();
         final int startOffset;
         final int endOffset;
 
         if (index == 0) {
-          copyHeaderBuffer.position(0);
           startOffset = 4;
-          endOffset = copyHeaderBuffer.getInt();
+          endOffset = headerBuffer.getInt(0);
         } else {
-          copyHeaderBuffer.position((index - 1) * Ints.BYTES);
-          startOffset = copyHeaderBuffer.getInt() + 4;
-          endOffset = copyHeaderBuffer.getInt();
+          int headerPosition = (index - 1) * Ints.BYTES;
+          startOffset = headerBuffer.getInt(headerPosition) + 4;
+          endOffset = headerBuffer.getInt(headerPosition + 4);
         }
         return _get(valueBuffer.asReadOnlyBuffer(), startOffset, endOffset);
       }
@@ -185,30 +178,43 @@ public class GenericIndexed<T> implements Indexed<T>
       {
         int fileNum = index >> logBaseTwoOfElementsPerValueFile;
         final ByteBuffer copyBuffer = valueBuffers.get(fileNum).asReadOnlyBuffer();
-        final ByteBuffer copyHeaderBuffer = headerBuffer.asReadOnlyBuffer();
 
-        if (index < 0) {
-          throw new IAE("Index[%s] < 0", index);
-        }
-        if (index >= size) {
-          throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
-        }
+        checkIndex(index, size);
 
         final int startOffset;
         final int endOffset;
 
         if ((index & ((1 << logBaseTwoOfElementsPerValueFile)-1)) == 0) {
-          copyHeaderBuffer.position(index * Ints.BYTES);
+          int headerPosition = index * Ints.BYTES;
           startOffset = 4;
-          endOffset = copyHeaderBuffer.getInt();
+          endOffset = headerBuffer.getInt(headerPosition);
         } else {
-          copyHeaderBuffer.position((index - 1) * Ints.BYTES);
-          startOffset = copyHeaderBuffer.getInt() + 4;
-          endOffset = copyHeaderBuffer.getInt();
+          int headerPosition = (index - 1) * Ints.BYTES;
+          startOffset = headerBuffer.getInt(headerPosition) + 4;
+          endOffset = headerBuffer.getInt(headerPosition + 4);
         }
         return _get(copyBuffer, startOffset, endOffset);
       }
     };
+  }
+
+  /**
+   * Checks  if {@code index}  a valid element in GenericIndexed.
+   * Similar to Preconditions.checkElementIndex() except this method throws {@link IAE} with custom error message.
+   *
+   * Used here to get existing behavior(same error message and exception) of V1 GenericIndexed.
+   *
+   * @param index index identifying an element of an GenericIndexed.
+   * @param size number of elements.
+   */
+  private void checkIndex(int index, int size)
+  {
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
+    }
+    if (index >= size) {
+      throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
+    }
   }
 
   public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy)
@@ -321,10 +327,12 @@ public class GenericIndexed<T> implements Indexed<T>
         try {
           columnName = new SerializerUtils().readString(buffer);
           valueBuffersToUse = Lists.newArrayList();
-
-          for (int i = 0; i <= numWritten >> logBaseTwoOfElementsPerValueFile; i++) {
-            valueBuffersToUse.add(fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i))
-                                            .asReadOnlyBuffer());
+          int numberOfFilesRequired = (int) Math.ceil((float) numWritten / (1 << logBaseTwoOfElementsPerValueFile));
+          for (int i = 0; i < numberOfFilesRequired; i++) {
+            valueBuffersToUse.add(
+                fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i))
+                          .asReadOnlyBuffer()
+            );
           }
           headerBuffer = fileMapper.mapFile(GenericIndexedWriter.generateHeaderFileName(columnName));
         }
@@ -415,8 +423,6 @@ public class GenericIndexed<T> implements Indexed<T>
    */
   public GenericIndexed<T>.BufferIndexed singleThreaded()
   {
-    final ByteBuffer copyHeaderBuffer = headerBuffer.asReadOnlyBuffer();
-
     if (valueBuffers.size() == 1) {
       final ByteBuffer copyBuffer = valueBuffers.get(0).asReadOnlyBuffer();
       return new BufferIndexed()
@@ -424,24 +430,18 @@ public class GenericIndexed<T> implements Indexed<T>
         @Override
         public T get(final int index)
         {
-          if (index < 0) {
-            throw new IAE("Index[%s] < 0", index);
-          }
-          if (index >= size) {
-            throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
-          }
+          checkIndex(index, size);
 
           final int startOffset;
           final int endOffset;
 
           if (index == 0) {
-            copyHeaderBuffer.position(0);
             startOffset = 4;
-            endOffset = copyHeaderBuffer.getInt();
+            endOffset = headerBuffer.getInt(0);
           } else {
-            copyHeaderBuffer.position((index - 1) * Ints.BYTES);
-            startOffset = copyHeaderBuffer.getInt() + 4;
-            endOffset = copyHeaderBuffer.getInt();
+            int headerPosition = (index - 1) * Ints.BYTES;
+            startOffset = headerBuffer.getInt(headerPosition) + 4;
+            endOffset = headerBuffer.getInt(headerPosition + 4);
           }
           return _get(copyBuffer, startOffset, endOffset);
         }
@@ -461,23 +461,18 @@ public class GenericIndexed<T> implements Indexed<T>
           int fileNum = index >> logBaseTwoOfElementsPerValueFile;
           final ByteBuffer copyBuffer = copyValueBuffers.get(fileNum);
 
-          if (index < 0) {
-            throw new IAE("Index[%s] < 0", index);
-          }
-          if (index >= size) {
-            throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
-          }
+          checkIndex(index, size);
           final int startOffset;
           final int endOffset;
 
           if ((index & ((1 << logBaseTwoOfElementsPerValueFile)-1)) == 0) {
-            copyHeaderBuffer.position(index * Ints.BYTES);
+            int headerPosition = index * Ints.BYTES;
             startOffset = 4;
-            endOffset = copyHeaderBuffer.getInt();
+            endOffset = headerBuffer.getInt(headerPosition);
           } else {
-            copyHeaderBuffer.position((index - 1) * Ints.BYTES);
-            startOffset = copyHeaderBuffer.getInt() + 4;
-            endOffset = copyHeaderBuffer.getInt();
+            int headerPosition = (index - 1) * Ints.BYTES;
+            startOffset = headerBuffer.getInt(headerPosition) + 4;
+            endOffset = headerBuffer.getInt(headerPosition + 4);
           }
 
           return _get(copyBuffer, startOffset, endOffset);
