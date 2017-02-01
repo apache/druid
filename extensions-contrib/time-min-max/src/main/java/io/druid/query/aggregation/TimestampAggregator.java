@@ -86,12 +86,6 @@ public class TimestampAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
   public void close()
   {
     // no resource to cleanup

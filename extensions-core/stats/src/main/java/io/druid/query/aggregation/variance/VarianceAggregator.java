@@ -47,12 +47,6 @@ public abstract class VarianceAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    throw new UnsupportedOperationException("getName is deprecated");
-  }
-
-  @Override
   public void close()
   {
   }

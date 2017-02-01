@@ -81,12 +81,6 @@ public class SketchAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    throw new UnsupportedOperationException("getName is deprecated");
-  }
-
-  @Override
   public void close()
   {
     union = null;
