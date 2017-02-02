@@ -23,6 +23,7 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import io.druid.common.aws.AWSCredentialsConfig;
+import io.druid.guice.AWSModule;
 import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,32 +36,34 @@ import java.io.PrintWriter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TestAWSCredentialsProvider {
-  @Test
-  public void testWithFixedAWSKeys() {
-    S3StorageDruidModule module = new S3StorageDruidModule();
+public class TestAWSCredentialsProvider
+{
+  private final AWSModule awsModule = new AWSModule();
+  private final S3StorageDruidModule s3Module = new S3StorageDruidModule();
 
+  @Test
+  public void testWithFixedAWSKeys()
+  {
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
     EasyMock.expect(config.getAccessKey()).andReturn("accessKeySample").atLeastOnce();
     EasyMock.expect(config.getSecretKey()).andReturn("secretKeySample").atLeastOnce();
     EasyMock.replay(config);
 
-    AWSCredentialsProvider provider = module.getAWSCredentialsProvider(config);
+    AWSCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
     AWSCredentials credentials = provider.getCredentials();
     assertEquals(credentials.getAWSAccessKeyId(), "accessKeySample");
     assertEquals(credentials.getAWSSecretKey(), "secretKeySample");
 
     // try to create
-    module.getRestS3Service(provider);
+    s3Module.getRestS3Service(provider);
   }
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
-  public void testWithFileSessionCredentials() throws IOException {
-    S3StorageDruidModule module = new S3StorageDruidModule();
-
+  public void testWithFileSessionCredentials() throws IOException
+  {
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
     EasyMock.expect(config.getAccessKey()).andReturn("");
     EasyMock.expect(config.getSecretKey()).andReturn("");
@@ -71,7 +74,7 @@ public class TestAWSCredentialsProvider {
     EasyMock.expect(config.getFileSessionCredentials()).andReturn(file.getAbsolutePath()).atLeastOnce();
     EasyMock.replay(config);
 
-    AWSCredentialsProvider provider = module.getAWSCredentialsProvider(config);
+    AWSCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
     AWSCredentials credentials = provider.getCredentials();
     assertTrue(credentials instanceof AWSSessionCredentials);
     AWSSessionCredentials sessionCredentials = (AWSSessionCredentials) credentials;
@@ -80,6 +83,6 @@ public class TestAWSCredentialsProvider {
     assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
 
     // try to create
-    module.getRestS3Service(provider);
+    s3Module.getRestS3Service(provider);
   }
 }
