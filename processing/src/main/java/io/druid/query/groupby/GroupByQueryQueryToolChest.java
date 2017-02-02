@@ -46,7 +46,6 @@ import io.druid.query.DataSource;
 import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -54,10 +53,10 @@ import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.joda.time.DateTime;
 
@@ -356,45 +355,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
-        final DimFilter dimFilter = query.getDimFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
-        final byte[][] dimensionsBytes = new byte[query.getDimensions().size()][];
-        int dimensionsBytesSize = 0;
-        int index = 0;
-        for (DimensionSpec dimension : query.getDimensions()) {
-          dimensionsBytes[index] = dimension.getCacheKey();
-          dimensionsBytesSize += dimensionsBytes[index].length;
-          ++index;
-        }
-        final byte[] havingBytes = query.getHavingSpec() == null ? new byte[]{} : query.getHavingSpec().getCacheKey();
-        final byte[] limitBytes = query.getLimitSpec().getCacheKey();
-
-        ByteBuffer buffer = ByteBuffer
-            .allocate(
-                2
-                + granularityBytes.length
-                + filterBytes.length
-                + aggregatorBytes.length
-                + dimensionsBytesSize
-                + havingBytes.length
-                + limitBytes.length
-            )
-            .put(GROUPBY_QUERY)
-            .put(CACHE_STRATEGY_VERSION)
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(aggregatorBytes);
-
-        for (byte[] dimensionsByte : dimensionsBytes) {
-          buffer.put(dimensionsByte);
-        }
-
-        return buffer
-            .put(havingBytes)
-            .put(limitBytes)
-            .array();
+        return new CacheKeyBuilder(GROUPBY_QUERY, CacheKeyBuilder.EMPTY_BYTES)
+            .appendByte(CACHE_STRATEGY_VERSION)
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimFilter())
+            .appendCacheableList(query.getAggregatorSpecs())
+            .appendCacheableList(query.getDimensions())
+            .build();
       }
 
       @Override

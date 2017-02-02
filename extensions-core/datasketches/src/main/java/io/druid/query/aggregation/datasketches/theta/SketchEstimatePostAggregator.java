@@ -26,6 +26,8 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -146,5 +148,13 @@ public class SketchEstimatePostAggregator implements PostAggregator
     result = 31 * result + field.hashCode();
     result = 31 * result + (errorBoundsStdDev != null ? errorBoundsStdDev.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.SKETCH_ESTIMATE)
+        .appendCacheable(field);
+    return errorBoundsStdDev == null ? builder.build() : builder.appendInt(errorBoundsStdDev).build();
   }
 }

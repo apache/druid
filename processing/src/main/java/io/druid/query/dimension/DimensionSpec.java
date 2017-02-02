@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.cache.Cacheable;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 
@@ -34,7 +35,7 @@ import io.druid.segment.DimensionSelector;
     @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupDimensionSpec.class)
 })
-public interface DimensionSpec
+public interface DimensionSpec extends Cacheable
 {
   String getDimension();
 
@@ -45,8 +46,6 @@ public interface DimensionSpec
   ExtractionFn getExtractionFn();
 
   DimensionSelector decorate(DimensionSelector selector);
-
-  byte[] getCacheKey();
 
   boolean preservesOrdering();
 }

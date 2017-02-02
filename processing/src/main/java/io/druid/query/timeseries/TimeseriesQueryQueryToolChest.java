@@ -33,7 +33,6 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -42,11 +41,10 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.filter.DimFilter;
+import io.druid.query.cache.CacheKeyBuilder;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -132,22 +130,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
       {
-        final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
-        final byte descending = query.isDescending() ? (byte) 1 : 0;
-        final byte skipEmptyBuckets = query.isSkipEmptyBuckets() ? (byte) 1 : 0;
-
-        return ByteBuffer
-            .allocate(3 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
-            .put(TIMESERIES_QUERY)
-            .put(descending)
-            .put(skipEmptyBuckets)
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(aggregatorBytes)
-            .array();
+        return new CacheKeyBuilder(TIMESERIES_QUERY, CacheKeyBuilder.EMPTY_BYTES)
+            .appendBoolean(query.isDescending())
+            .appendBoolean(query.isSkipEmptyBuckets())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheableList(query.getAggregatorSpecs())
+            .build();
       }
 
       @Override

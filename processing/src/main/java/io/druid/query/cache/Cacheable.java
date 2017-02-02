@@ -17,34 +17,14 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.query.cache;
 
-import com.google.common.collect.Lists;
-import io.druid.query.aggregation.AggregatorFactory;
-
-import java.nio.ByteBuffer;
-import java.util.List;
-
-/**
- */
-public class QueryCacheHelper
+public interface Cacheable
 {
-  public static byte[] computeAggregatorBytes(List<AggregatorFactory> aggregatorSpecs)
-  {
-    List<byte[]> cacheKeySet = Lists.newArrayListWithCapacity(aggregatorSpecs.size());
-
-    int totalSize = 0;
-    for (AggregatorFactory spec : aggregatorSpecs) {
-      final byte[] cacheKey = spec.getCacheKey();
-      cacheKeySet.add(cacheKey);
-      totalSize += cacheKey.length;
-    }
-
-    ByteBuffer retVal = ByteBuffer.allocate(totalSize);
-    for (byte[] bytes : cacheKeySet) {
-      retVal.put(bytes);
-    }
-    return retVal.array();
-  }
-
+  /**
+   * Get a byte array used as a cache key.
+   *
+   * @return a cache key
+   */
+  byte[] getCacheKey();
 }

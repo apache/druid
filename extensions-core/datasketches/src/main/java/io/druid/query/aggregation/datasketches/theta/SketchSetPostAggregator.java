@@ -24,8 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 import com.yahoo.sketches.Util;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.List;
@@ -34,9 +35,6 @@ import java.util.Set;
 
 public class SketchSetPostAggregator implements PostAggregator
 {
-
-  private static final Logger LOG = new Logger(SketchSetPostAggregator.class);
-
   private final String name;
   private final List<PostAggregator> fields;
   private final SketchHolder.Func func;
@@ -162,5 +160,15 @@ public class SketchSetPostAggregator implements PostAggregator
     result = 31 * result + func.hashCode();
     result = 31 * result + maxSketchSize;
     return result;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.SKETCH_SET)
+        .appendString(getFunc())
+        .appendCacheableList(fields)
+        .appendInt(maxSketchSize)
+        .build();
   }
 }

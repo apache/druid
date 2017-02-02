@@ -58,19 +58,14 @@ public class JavaScriptPostAggregatorTest
   @Test
   public void testComputeJavaScriptNotAllowed()
   {
-    JavaScriptPostAggregator javaScriptPostAggregator;
-
     String absPercentFunction = "function(delta, total) { return 100 * Math.abs(delta) / total; }";
-    javaScriptPostAggregator = new JavaScriptPostAggregator(
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
+    new JavaScriptPostAggregator(
         "absPercent",
         Lists.newArrayList("delta", "total"),
         absPercentFunction,
         new JavaScriptConfig(true)
     );
-
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("JavaScript is disabled");
-    javaScriptPostAggregator.compute(Maps.<String, Object>newHashMap());
-    Assert.assertTrue(false);
   }
 }

@@ -23,8 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -35,7 +36,6 @@ import java.util.Set;
 public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
 {
   private final float[] probabilities;
-  private String fieldName;
 
   @JsonCreator
   public QuantilesPostAggregator(
@@ -46,7 +46,6 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
   {
     super(name, fieldName);
     this.probabilities = probabilities;
-    this.fieldName = fieldName;
 
     for (float p : probabilities) {
       if (p < 0 | p > 1) {
@@ -70,9 +69,9 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
 
-    return new Quantiles(this.getProbabilities(), ah.getQuantiles(this.getProbabilities()), ah.getMin(), ah.getMax());
+    return new Quantiles(probabilities, ah.getQuantiles(probabilities), ah.getMin(), ah.getMax());
   }
 
   @JsonProperty
@@ -85,9 +84,18 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
   public String toString()
   {
     return "EqualBucketsPostAggregator{" +
-           "name='" + this.getName() + '\'' +
-           ", fieldName='" + this.getFieldName() + '\'' +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
            ", probabilities=" + Arrays.toString(this.getProbabilities()) +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.QUANTILES)
+        .appendString(fieldName)
+        .appendFloatArray(probabilities)
+        .build();
   }
 }

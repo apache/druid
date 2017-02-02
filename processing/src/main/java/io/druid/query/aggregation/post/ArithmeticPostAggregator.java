@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -121,6 +122,16 @@ public class ArithmeticPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.ARITHMETIC)
+        .appendString(fnName)
+        .appendCacheableList(fields)
+        .appendString(ordering)
+        .build();
   }
 
   @JsonProperty("fn")
