@@ -283,7 +283,7 @@ public class GroupByTypeInterfaceBenchmark
   @Setup(Level.Trial)
   public void setup() throws IOException
   {
-    log.info("SETUP CALLED AT " + +System.currentTimeMillis());
+    log.info("SETUP CALLED AT %d", System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));

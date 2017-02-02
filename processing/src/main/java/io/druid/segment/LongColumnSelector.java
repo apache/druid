@@ -23,8 +23,5 @@ package io.druid.segment;
  */
 public interface LongColumnSelector extends ColumnValueSelector
 {
-  // Long columns do not currently support multi-value rows
-  public static int ROW_SIZE = 1;
-
   public long get();
 }
