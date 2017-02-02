@@ -30,19 +30,15 @@ import com.metamx.emitter.core.LoggingEmitterConfig;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.CredentialedHttpClient;
 import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
 import com.metamx.http.client.auth.BasicCredentials;
 import io.druid.curator.CuratorConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.guice.annotations.Client;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.IntegrationTestingConfigProvider;
 import io.druid.testing.IntegrationTestingCuratorConfig;
-
-import javax.net.ssl.SSLContext;
 
 /**
  */
@@ -63,24 +59,16 @@ public class DruidTestModule implements Module
   @TestClient
   public HttpClient getHttpClient(
     IntegrationTestingConfig config,
-    DruidHttpClientConfig httpClientConfig,
-    Lifecycle lifecycle
+    Lifecycle lifecycle,
+    @Client HttpClient delegate
   )
     throws Exception
   {
-
-    final HttpClientConfig.Builder builder = HttpClientConfig
-      .builder()
-      .withNumConnections(httpClientConfig.getNumConnections())
-      .withReadTimeout(httpClientConfig.getReadTimeout())
-      .withWorkerCount(httpClientConfig.getNumMaxThreads());
-
-    builder.withSslContext(SSLContext.getDefault());
-    HttpClient delegate = HttpClientInit.createClient(builder.build(), lifecycle);
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);
+    } else {
+      return delegate;
     }
-    return delegate;
   }
 
   @Provides
