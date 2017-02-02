@@ -217,7 +217,7 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            if (manager.resetSupervisor(id)) {
+            if (manager.resetSupervisor(id, null)) {
               return Response.ok(ImmutableMap.of("id", id)).build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
