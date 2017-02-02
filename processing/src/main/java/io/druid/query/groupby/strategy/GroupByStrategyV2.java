@@ -211,7 +211,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         GroupByQueryHelper.rowSignatureFor(subquery),
         configSupplier.get(),
         mergeBufferPool,
-        spillMapper
+        spillMapper,
+        processingConfig.getTmpDir()
     );
     return mergeResults(new QueryRunner<Row>()
     {
@@ -236,7 +237,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryRunners,
         processingConfig.getNumThreads(),
         mergeBufferPool,
-        spillMapper
+        spillMapper,
+        processingConfig.getTmpDir()
     );
   }
 

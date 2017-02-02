@@ -49,6 +49,7 @@ public class DruidProcessingConfigTest
     }
     Assert.assertEquals(0, config.columnCacheSizeBytes());
     Assert.assertFalse(config.isFifo());
+    Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
 
     //with non-defaults
     Properties props = new Properties();
@@ -57,6 +58,7 @@ public class DruidProcessingConfigTest
     props.setProperty("druid.processing.numThreads", "5");
     props.setProperty("druid.processing.columnCache.sizeBytes", "1");
     props.setProperty("druid.processing.fifo", "true");
+    props.setProperty("druid.processing.tmpDir", "/test/path");
 
     factory = Config.createFactory(props);
     config = factory.buildWithReplacements(DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
@@ -66,5 +68,6 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(5, config.getNumThreads());
     Assert.assertEquals(1, config.columnCacheSizeBytes());
     Assert.assertTrue(config.isFifo());
+    Assert.assertEquals("/test/path", config.getTmpDir());
   }
 }
