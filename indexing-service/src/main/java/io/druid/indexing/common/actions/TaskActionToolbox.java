@@ -27,6 +27,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.ISE;
 import io.druid.timeline.DataSegment;
 
@@ -38,17 +39,20 @@ public class TaskActionToolbox
   private final TaskLockbox taskLockbox;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
+  private final SupervisorManager supervisorManager;
 
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      SupervisorManager supervisorManager
   )
   {
     this.taskLockbox = taskLockbox;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
+    this.supervisorManager = supervisorManager;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -64,6 +68,11 @@ public class TaskActionToolbox
   public ServiceEmitter getEmitter()
   {
     return emitter;
+  }
+
+  public SupervisorManager getSupervisorManager()
+  {
+    return supervisorManager;
   }
 
   public void verifyTaskLocks(

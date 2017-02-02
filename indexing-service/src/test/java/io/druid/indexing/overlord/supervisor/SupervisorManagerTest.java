@@ -21,6 +21,7 @@ package io.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.metadata.MetadataSupervisorManager;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -258,12 +259,12 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    supervisor1.reset();
+    supervisor1.reset(EasyMock.anyObject(DataSourceMetadata.class));
     replayAll();
 
     manager.start();
-    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1"));
-    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home"));
+    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
+    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
 
     verifyAll();
   }

@@ -58,6 +58,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public boolean resetDataSourceMetadata(
+      String dataSource, DataSourceMetadata dataSourceMetadata
+  ) throws IOException
+  {
+    return false;
+  }
+
+  @Override
   public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
   {
     return ImmutableList.of();

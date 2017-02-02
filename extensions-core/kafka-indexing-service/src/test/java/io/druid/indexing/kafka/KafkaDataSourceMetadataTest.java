@@ -94,6 +94,35 @@ public class KafkaDataSourceMetadataTest
     );
   }
 
+  @Test
+  public void testMinus()
+  {
+    Assert.assertEquals(
+        KM("foo", ImmutableMap.of(1, 3L)),
+        KM1.minus(KM3)
+    );
+
+    Assert.assertEquals(
+        KM("foo", ImmutableMap.<Integer, Long>of()),
+        KM0.minus(KM2)
+    );
+
+    Assert.assertEquals(
+        KM("foo", ImmutableMap.<Integer, Long>of()),
+        KM1.minus(KM2)
+    );
+
+    Assert.assertEquals(
+        KM("foo", ImmutableMap.of(2, 5L)),
+        KM2.minus(KM1)
+    );
+
+    Assert.assertEquals(
+        KM("foo", ImmutableMap.<Integer, Long>of()),
+        KM2.minus(KM2)
+    );
+  }
+
   private static KafkaDataSourceMetadata KM(String topic, Map<Integer, Long> offsets)
   {
     return new KafkaDataSourceMetadata(new KafkaPartitions(topic, offsets));

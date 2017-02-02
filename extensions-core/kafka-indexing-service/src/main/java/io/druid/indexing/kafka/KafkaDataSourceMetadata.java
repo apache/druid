@@ -96,6 +96,36 @@ public class KafkaDataSourceMetadata implements DataSourceMetadata
   }
 
   @Override
+  public DataSourceMetadata minus(DataSourceMetadata other)
+  {
+    if (!(other instanceof KafkaDataSourceMetadata)) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          KafkaDataSourceMetadata.class.getCanonicalName(),
+          other.getClass().getCanonicalName()
+      );
+    }
+
+    final KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) other;
+
+    if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
+      // Same topic, remove partitions present in "that" from "this"
+      final Map<Integer, Long> newMap = Maps.newHashMap();
+
+      for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
+        if(!that.getKafkaPartitions().getPartitionOffsetMap().containsKey(entry.getKey())) {
+          newMap.put(entry.getKey(), entry.getValue());
+        }
+      }
+
+      return new KafkaDataSourceMetadata(new KafkaPartitions(kafkaPartitions.getTopic(), newMap));
+    } else {
+      // Different topic, prefer "this".
+      return this;
+    }
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

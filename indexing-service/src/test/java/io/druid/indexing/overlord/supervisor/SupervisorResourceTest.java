@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.TaskMaster;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -270,9 +272,11 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testReset() throws Exception
   {
+    Capture<String> id1 = Capture.newInstance();
+    Capture<String> id2 = Capture.newInstance();
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
-    EasyMock.expect(supervisorManager.resetSupervisor("my-id")).andReturn(true);
-    EasyMock.expect(supervisorManager.resetSupervisor("my-id-2")).andReturn(false);
+    EasyMock.expect(supervisorManager.resetSupervisor(EasyMock.capture(id1), EasyMock.anyObject(DataSourceMetadata.class))).andReturn(true);
+    EasyMock.expect(supervisorManager.resetSupervisor(EasyMock.capture(id2), EasyMock.anyObject(DataSourceMetadata.class))).andReturn(false);
     replayAll();
 
     Response response = supervisorResource.reset("my-id");
@@ -283,6 +287,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.reset("my-id-2");
 
     Assert.assertEquals(404, response.getStatus());
+    Assert.assertEquals("my-id", id1.getValue());
+    Assert.assertEquals("my-id-2", id2.getValue());
     verifyAll();
 
     resetAll();
