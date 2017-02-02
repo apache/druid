@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
@@ -46,7 +47,8 @@ public class CacheKeyBuilderTest
     return ImmutableList.of(
         new Object[]{CacheKeyBuilder.DEFAULT_SEPARATOR},
         new Object[]{CacheKeyBuilder.EMPTY_BYTES},
-        new Object[]{new byte[] {'\001'}}
+        new Object[]{new byte[] {'\001'}},
+        new Object[]{StringUtils.toUtf8("string")}
     );
   }
 
@@ -117,5 +119,47 @@ public class CacheKeyBuilderTest
                                       .array();
 
     assertTrue(Arrays.equals(expected, actual));
+  }
+
+  @Test
+  public void testStrings()
+  {
+    final byte[] actual = new CacheKeyBuilder((byte) 10, separator)
+        .appendString("test")
+        .appendString("test")
+        .appendStringList(Lists.newArrayList("test", "test"))
+        .build();
+
+    final byte[] expected = ByteBuffer.allocate(actual.length)
+                                      .put((byte) 10)
+                                      .put(StringUtils.toUtf8("test"))
+                                      .put(separator)
+                                      .put(StringUtils.toUtf8("test"))
+                                      .put(separator)
+                                      .put(StringUtils.toUtf8("test"))
+                                      .put(separator)
+                                      .put(StringUtils.toUtf8("test"))
+                                      .array();
+
+    assertTrue(Arrays.equals(expected, actual));
+  }
+
+  @Test
+  public void testNotEqualStrings()
+  {
+    final byte[] key1 = new CacheKeyBuilder((byte) 10, separator)
+        .appendString("test")
+        .appendString("test")
+        .build();
+
+    final byte[] key2 = new CacheKeyBuilder((byte) 10, separator)
+        .appendString("testtest")
+        .build();
+
+    if (Arrays.equals(separator, CacheKeyBuilder.EMPTY_BYTES)) {
+      assertTrue(Arrays.equals(key1, key2));
+    } else {
+      assertFalse(Arrays.equals(key1, key2));
+    }
   }
 }
