@@ -56,7 +56,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           {
             final PreparedBatch batch = handle.prepareBatch(
                 String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                    "INSERT INTO %s (id, dataSource, created_date, start, `end`, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                     tableName
                 )

@@ -181,7 +181,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
             String.format(
-                "SELECT payload FROM %s WHERE dataSource = :dataSource AND start <= :end and \"end\" >= :start",
+                "SELECT payload FROM %s WHERE dataSource = :dataSource AND start <= :end and `end` >= :start",
                 dbTables.getPendingSegmentsTable()
             )
         )
@@ -219,7 +219,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
-          "(start <= ? AND \"end\" >= ?)"
+          "(start <= ? AND `end` >= ?)"
       );
       if (i == intervals.size() - 1) {
         sb.append(")");
@@ -560,7 +560,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
             handle.createStatement(
                 String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
+                    "INSERT INTO %s (id, dataSource, created_date, start, `end`, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
                     dbTables.getPendingSegmentsTable()
                 )
@@ -614,7 +614,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
       handle.createStatement(
           String.format(
-              "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+              "INSERT INTO %s (id, dataSource, created_date, start, `end`, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
               dbTables.getSegmentsTable()
           )
@@ -891,7 +891,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             return handle
                 .createQuery(
                     String.format(
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
+                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and `end` <= :end and used = false",
                         dbTables.getSegmentsTable()
                     )
                 )

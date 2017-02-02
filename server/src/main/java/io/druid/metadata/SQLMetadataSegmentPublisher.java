@@ -55,7 +55,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.config = config;
     this.connector = connector;
     this.statement = String.format(
-        "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+        "INSERT INTO %s (id, dataSource, created_date, start, `end`, partitioned, version, used, payload) "
         + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
         config.getSegmentsTable()
     );
