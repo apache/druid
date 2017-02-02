@@ -28,10 +28,12 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -48,12 +50,10 @@ public class KafkaEmitter implements Emitter {
   private final Producer<String, String> producer;
   private final ObjectMapper jsonMapper;
 
-
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper) {
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.producer = getKafkaProducer(config);
-
   }
 
   private Producer<String, String> getKafkaProducer(KafkaEmitterConfig config) {
@@ -72,7 +72,7 @@ public class KafkaEmitter implements Emitter {
   }
 
   @Override
-  public void emit(Event event) {
+  public void emit(final Event event) {
     if(event instanceof ServiceMetricEvent) {
       if(event == null) {
         return;
@@ -82,7 +82,16 @@ public class KafkaEmitter implements Emitter {
       TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {};
       HashMap<String, Object> result = jsonMapper.readValue(jsonMapper.writeValueAsString(event), typeRef);
       result.put("clusterName", config.getClusterName());
-      producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)));
+      producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)),
+                    new Callback() {
+        @Override
+        public void onCompletion(RecordMetadata metadata, Exception exception) {
+          if(exception != null) {
+            log.warn(exception, "Exception is occured! Retry.");
+            emit(event);
+          }
+        }
+      });
     } catch (Exception e) {
       log.warn(e, "Failed to generate json");
     }
