@@ -133,8 +133,6 @@ public class TimestampMinMaxAggregatorTest
   {
     TimestampAggregator aggregator = (TimestampAggregator) aggregatorFactory.factorize(selectorFactory);
 
-    Assert.assertEquals(aggType, aggregator.getName());
-
     for (Timestamp value: values) {
       aggregate(selector, aggregator);
     }
