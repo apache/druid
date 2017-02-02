@@ -301,7 +301,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       );
 
       @Override
-      public byte[] computeCacheKey(TopNQuery query) // always called
+      public byte[] computeCacheKey(TopNQuery query)
       {
         return new CacheKeyBuilder(TOPN_QUERY, CacheKeyBuilder.EMPTY_BYTES)
             .appendCacheable(query.getDimensionSpec())
@@ -321,7 +321,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public Function<Result<TopNResultValue>, Object> prepareForCache() // prepare for cache population. called on cache misses
+      public Function<Result<TopNResultValue>, Object> prepareForCache()
       {
         return new Function<Result<TopNResultValue>, Object>()
         {
@@ -349,7 +349,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public Function<Object, Result<TopNResultValue>> pullFromCache() // called on cache hits
+      public Function<Object, Result<TopNResultValue>> pullFromCache()
       {
         return new Function<Object, Result<TopNResultValue>>()
         {
