@@ -91,7 +91,7 @@ public class FileRequestLogger implements RequestLogger
                   currentDay = currentDay.plusDays(1);
                   CloseQuietly.close(fileWriter);
                   fileWriter = new OutputStreamWriter(
-                      new FileOutputStream(new File(baseDir, currentDay.toString()), true),
+                      new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
                       Charsets.UTF_8
                   );
                 }
