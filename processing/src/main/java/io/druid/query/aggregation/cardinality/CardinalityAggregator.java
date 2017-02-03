@@ -22,10 +22,10 @@ package io.druid.query.aggregation.cardinality;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.util.List;
 

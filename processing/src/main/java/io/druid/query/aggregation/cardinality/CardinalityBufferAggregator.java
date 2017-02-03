@@ -19,10 +19,10 @@
 
 package io.druid.query.aggregation.cardinality;
 
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.nio.ByteBuffer;
 import java.util.List;

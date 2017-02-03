@@ -92,6 +92,7 @@
         <module>java-util</module>
         <module>bytebuffer-collections</module>
         <module>extendedset</module>
+        <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>

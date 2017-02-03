@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.hyperloglog;
+package io.druid.hll;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.primitives.UnsignedBytes;
@@ -110,6 +110,16 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   {
     int remaining = buffer.remaining();
     return (remaining % 3 == 0 || remaining == 1027) ? new HLLCV0(buffer) : new HLLCV1(buffer);
+  }
+
+  /**
+   * Creates new collector which shares others collector buffer (by using {@link ByteBuffer#duplicate()})
+   *
+   * @param otherCollector collector which buffer will be shared
+   * @return collector
+   */
+  public static HyperLogLogCollector makeCollectorSharingStorage(HyperLogLogCollector otherCollector) {
+    return makeCollector(otherCollector.getStorageBuffer().duplicate());
   }
 
   public static int getLatestNumBytesForDenseStorage()

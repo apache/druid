@@ -20,8 +20,8 @@
 package io.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
