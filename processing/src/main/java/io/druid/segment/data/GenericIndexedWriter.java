@@ -40,6 +40,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -60,9 +61,11 @@ public class GenericIndexedWriter<T> implements Closeable
   private T prevObject = null;
   private CountingOutputStream headerOut = null;
   private CountingOutputStream valuesOut = null;
-  private CountingOutputStream headerOutLong = null; // to hold header values as long and useful for version 2 GenericIndexed.
+  private CountingOutputStream headerOutLong = null;
   private long numWritten = 0;
   private boolean requireMultipleFiles = false;
+  private ByteBuffer buf;
+
 
   public GenericIndexedWriter(
       IOPeon ioPeon,
@@ -107,13 +110,20 @@ public class GenericIndexedWriter<T> implements Closeable
   {
     while (numBytesToPutInFile > 0) {
       int bytesRead = is.read(buffer, 0, Math.min(buffer.length, Ints.saturatedCast(numBytesToPutInFile)));
-      if(bytesRead != -1) {
+      if (bytesRead != -1) {
         smooshChannel.write((ByteBuffer) ByteBuffer.wrap(buffer).limit(bytesRead));
         numBytesToPutInFile -= bytesRead;
       } else {
-        break;
+        throw new ISE("Could not write [%d] bytes into smooshChannel.", numBytesToPutInFile);
       }
     }
+  }
+
+  private static void writeLongValueToByteBuffer(ByteBuffer buf, long value, CountingOutputStream outLong)
+      throws IOException
+  {
+    buf.asLongBuffer().put(0, value);
+    outLong.write(buf.array());
   }
 
   public void open() throws IOException
@@ -134,15 +144,16 @@ public class GenericIndexedWriter<T> implements Closeable
     valuesOut.write(Ints.toByteArray(bytesToWrite.length));
     valuesOut.write(bytesToWrite);
 
-    if(!requireMultipleFiles) {
-      headerOut.write(Ints.toByteArray(Ints.saturatedCast(valuesOut.getCount())));
+    if (!requireMultipleFiles) {
+      headerOut.write(Ints.toByteArray(Ints.checkedCast(valuesOut.getCount())));
     } else {
-      headerOutLong.write(Longs.toByteArray(valuesOut.getCount()));
+      writeLongValueToByteBuffer(buf, valuesOut.getCount(), headerOutLong);
     }
 
     if (!requireMultipleFiles && getSerializedSize() > fileSizeLimit) {
       requireMultipleFiles = true;
       initializeHeaderOutLong();
+      buf = ByteBuffer.wrap(new byte[Longs.BYTES]).order(ByteOrder.nativeOrder());
     }
 
     prevObject = objectToWrite;
@@ -181,10 +192,10 @@ public class GenericIndexedWriter<T> implements Closeable
     );
 
     try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"))) {
-      metaOut.write(0x1);
+      metaOut.write(GenericIndexed.VERSION_ONE);
       metaOut.write(objectsSorted ? 0x1 : 0x0);
-      metaOut.write(Ints.toByteArray(Ints.saturatedCast(numBytesWritten + 4)));
-      metaOut.write(Ints.toByteArray(Ints.saturatedCast(numWritten)));
+      metaOut.write(Ints.toByteArray(Ints.checkedCast(numBytesWritten + 4)));
+      metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
     }
   }
 
@@ -192,14 +203,14 @@ public class GenericIndexedWriter<T> implements Closeable
   {
     headerOutLong.close();
     Preconditions.checkState(
-        headerOutLong.getCount() == (numWritten * 8),
+        headerOutLong.getCount() == (numWritten * Longs.BYTES),
         "numWritten[%s] number of rows should have [%s] bytes written to headerOutLong, had[%s]",
         numWritten,
-        numWritten * 8,
+        numWritten * Longs.BYTES,
         headerOutLong.getCount()
     );
     Preconditions.checkState(
-        headerOutLong.getCount() < Integer.MAX_VALUE,
+        headerOutLong.getCount() < (Integer.MAX_VALUE & ~4096),
         "Wrote[%s] bytes in header file, which is too many.",
         headerOutLong.getCount()
     );
@@ -214,7 +225,7 @@ public class GenericIndexedWriter<T> implements Closeable
    */
   private int bagSizePower() throws IOException
   {
-    int avgObjectSize = Ints.saturatedCast((valuesOut.getCount() / numWritten));
+    Long avgObjectSize = (valuesOut.getCount() + numWritten - 1) / numWritten;
 
     File f = ioPeon.getFile(makeFilename("headerLong"));
     Preconditions.checkNotNull(f, "header file missing.");
@@ -256,10 +267,12 @@ public class GenericIndexedWriter<T> implements Closeable
 
     while (lastValueOffset < valueBytesWritten) {
 
-      if (headerIndex + bagSize <= numWritten) {
+      if (headerIndex >= numWritten) {
+        return true;
+      } else if (headerIndex + bagSize <= numWritten) {
         headerFile.seek((headerIndex + bagSize - 1) * Longs.BYTES);
         currentValueOffset = headerFile.readLong();
-      } else if (headerIndex < numWritten && numWritten < (headerIndex + bagSize)) {
+      } else if (numWritten < headerIndex + bagSize) {
         headerFile.seek((numWritten - 1) * Longs.BYTES);
         currentValueOffset = headerFile.readLong();
       }
@@ -323,16 +336,17 @@ public class GenericIndexedWriter<T> implements Closeable
     );
   }
 
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  private void writeToChannelVersionOne(WritableByteChannel channel) throws IOException
   {
-
-    if (!requireMultipleFiles) {
-      try (ReadableByteChannel from = Channels.newChannel(combineStreams().getInput())) {
-        ByteStreams.copy(from, channel);
-        return;
-      }
+    try (ReadableByteChannel from = Channels.newChannel(combineStreams().getInput())) {
+      ByteStreams.copy(from, channel);
+      return;
     }
 
+  }
+
+  private void writeToChannelVersionTwo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
     if (smoosher == null) {
       throw new IAE("version 2 GenericIndexedWriter requires FileSmoosher.");
     }
@@ -341,31 +355,35 @@ public class GenericIndexedWriter<T> implements Closeable
 
     int bagSizePower = bagSizePower();
     OutputStream metaOut = Channels.newOutputStream(channel);
-    metaOut.write(0x2);
+    metaOut.write(GenericIndexed.VERSION_TWO);
     metaOut.write(objectsSorted ? 0x1 : 0x0);
     metaOut.write(Ints.toByteArray(bagSizePower));
-    metaOut.write(Ints.toByteArray(Ints.saturatedCast(numWritten)));
+    metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
     metaOut.write(Ints.toByteArray(fileNameByteArray.length));
     metaOut.write(fileNameByteArray);
 
     try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
       long previousValuePosition = 0;
       int bagSize = 1 << bagSizePower;
-      int filesRequired = (int) Math.ceil((float) numWritten / bagSize);
+
+      int numberOfFilesRequired = (int) numWritten / bagSize;
+      if ((numWritten % bagSize) != 0) {
+        numberOfFilesRequired += 1;
+      }
 
       try (InputStream is = new FileInputStream(ioPeon.getFile(makeFilename("values")))) {
         int counter = -1;
         byte[] buffer = new byte[1 << 16];
 
-        for (int i = 0; i < filesRequired; i++) {
-          if (i != filesRequired - 1) {
+        for (int i = 0; i < numberOfFilesRequired; i++) {
+          if (i != numberOfFilesRequired - 1) {
             headerFile.seek((bagSize + counter) * Longs.BYTES); // 8 for long bytes.
             counter = counter + bagSize;
           } else {
             headerFile.seek((numWritten - 1) * Longs.BYTES); // for remaining items.
           }
 
-          long valuePosition = headerFile.readLong();
+          long valuePosition = Long.reverseBytes(headerFile.readLong());
           long numBytesToPutInFile = valuePosition - previousValuePosition;
 
           try (SmooshedWriter smooshChannel = smoosher
@@ -377,27 +395,42 @@ public class GenericIndexedWriter<T> implements Closeable
       }
       writeHeader(smoosher, headerFile, bagSizePower);
     }
+
+  }
+
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
+    if (!requireMultipleFiles) {
+      writeToChannelVersionOne(channel);
+    } else {
+      writeToChannelVersionTwo(channel, smoosher);
+    }
   }
 
   private void writeHeader(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower) throws IOException
   {
+    ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[Ints.BYTES]).order(ByteOrder.nativeOrder());
+
     try (CountingOutputStream finalHeaderOut = new CountingOutputStream(
         ioPeon.makeOutputStream(makeFilename("header_final")))) {
-      int bagSize = 1 << bagSizePower;
+      int numberOfElementsPerValueFile = 1 << bagSizePower;
       long currentNumBytes = 0;
       long relativeRefBytes = 0;
       long relativeNumBytes;
+      headerFile.seek(0);
 
-      for (int pos = 0; pos < numWritten; pos++) {
-        headerFile.seek(pos * Longs.BYTES);
-        currentNumBytes = headerFile.readLong();
-        relativeNumBytes = currentNumBytes - relativeRefBytes;
-        finalHeaderOut.write(Ints.toByteArray((int) (relativeNumBytes)));
-
-        if (--bagSize == 0) {
+      // following block converts long header indexes into int header indexes.
+      for (int pos = 0; pos < numWritten; pos++, --numberOfElementsPerValueFile) {
+        //conversion of header offset from long to int completed for one value file done, change relativeRefBytes
+        // to current offset.
+        if (numberOfElementsPerValueFile == 0) {
           relativeRefBytes = currentNumBytes;
-          bagSize = 1 << bagSizePower;
+          numberOfElementsPerValueFile = 1 << bagSizePower;
         }
+        currentNumBytes = Long.reverseBytes(headerFile.readLong());
+        relativeNumBytes = currentNumBytes - relativeRefBytes;
+        byteBuffer.asIntBuffer().put(0, Ints.checkedCast(relativeNumBytes));
+        finalHeaderOut.write(byteBuffer.array());
       }
 
       long numBytesToPutInFile = finalHeaderOut.getCount();
@@ -420,13 +453,11 @@ public class GenericIndexedWriter<T> implements Closeable
     File f = ioPeon.getFile(makeFilename("header"));
 
     try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
-
+      ByteBuffer buf = ByteBuffer.wrap(new byte[Longs.BYTES]).order(ByteOrder.nativeOrder());
       for (int i = 0; i < numWritten; i++) {
-        headerFile.seek(i * Ints.BYTES);
         int count = headerFile.readInt();
-        headerOutLong.write(Longs.toByteArray(count));
+        writeLongValueToByteBuffer(buf, count, headerOutLong);
       }
-
     }
   }
 
