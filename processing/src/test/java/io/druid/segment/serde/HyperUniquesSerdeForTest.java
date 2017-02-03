@@ -23,7 +23,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
 import com.metamx.common.StringUtils;
 import io.druid.data.input.InputRow;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
