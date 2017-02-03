@@ -286,7 +286,8 @@ public class GenericIndexed<T> implements Indexed<T>
       return createVersionOneGenericIndexed(buffer, strategy);
     } else if (VERSION_TWO == versionFromBuffer) {
       throw new IAE(
-          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper) to read version 2 indexed.",
+          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)"
+          + " to read version 2 indexed.",
           versionFromBuffer
       );
     }
