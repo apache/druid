@@ -76,7 +76,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   )
   {
     this.dimension = dimension;
-    this.outputType = outputType;
+    this.outputType = outputType == null ? ValueType.STRING : outputType;
 
     // Do null check for legacy backwards compatibility, callers should be setting the value.
     this.outputName = outputName == null ? dimension : outputName;
@@ -146,6 +146,7 @@ public class DefaultDimensionSpec implements DimensionSpec
     return "DefaultDimensionSpec{" +
            "dimension='" + dimension + '\'' +
            ", outputName='" + outputName + '\'' +
+           ", outputType='" + outputType + '\'' +
            '}';
   }
 
@@ -168,6 +169,9 @@ public class DefaultDimensionSpec implements DimensionSpec
     if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) {
       return false;
     }
+    if (outputType != null ? !outputType.equals(that.outputType) : that.outputType != null) {
+      return false;
+    }
 
     return true;
   }
@@ -177,6 +181,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   {
     int result = dimension != null ? dimension.hashCode() : 0;
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
+    result = 31 * result + (outputType != null ? outputType.hashCode() : 0);
     return result;
   }
 }

@@ -23,7 +23,7 @@ Returns dimension values as is and optionally renames the dimension.
 }
 ```
 
-When specifying a DimensionSpec on a numeric column, the user should include the type of the column in the `outputType` field. This is necessary as it is possible for a column with given name to have different value types in different segments. Result merging may fail unless results of different type are converted to the type specified by `outputType`.
+When specifying a DimensionSpec on a numeric column, the user should include the type of the column in the `outputType` field. This is necessary as it is possible for a column with given name to have different value types in different segments; results will be converted to the type specified by `outputType` before merging.
 
 If left unspecified, the `outputType` defaults to STRING.
 

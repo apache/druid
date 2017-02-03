@@ -125,23 +125,26 @@ public class StringTopNColumnSelectorStrategy
       Map<String, Aggregator[]> aggregatesStore
   )
   {
-    final IndexedInts dimValues = selector.getRow();
-    for (int i = 0; i < dimValues.size(); ++i) {
-      final int dimIndex = dimValues.get(i);
-      Aggregator[] theAggregators = rowSelector[dimIndex];
-      if (theAggregators == null) {
-        final String key = selector.lookupName(dimIndex);
-        theAggregators = aggregatesStore.get(key);
+    while (!cursor.isDone()) {
+      final IndexedInts dimValues = selector.getRow();
+      for (int i = 0; i < dimValues.size(); ++i) {
+        final int dimIndex = dimValues.get(i);
+        Aggregator[] theAggregators = rowSelector[dimIndex];
         if (theAggregators == null) {
-          theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-          aggregatesStore.put(key, theAggregators);
+          final String key = selector.lookupName(dimIndex);
+          theAggregators = aggregatesStore.get(key);
+          if (theAggregators == null) {
+            theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+            aggregatesStore.put(key, theAggregators);
+          }
+          rowSelector[dimIndex] = theAggregators;
         }
-        rowSelector[dimIndex] = theAggregators;
-      }
 
-      for (Aggregator aggregator : theAggregators) {
-        aggregator.aggregate();
+        for (Aggregator aggregator : theAggregators) {
+          aggregator.aggregate();
+        }
       }
+      cursor.advance();
     }
   }
 
@@ -152,19 +155,22 @@ public class StringTopNColumnSelectorStrategy
       Map<String, Aggregator[]> aggregatesStore
   )
   {
-    final IndexedInts dimValues = selector.getRow();
-    for (int i = 0; i < dimValues.size(); ++i) {
-      final int dimIndex = dimValues.get(i);
-      final String key = selector.lookupName(dimIndex);
+    while (!cursor.isDone()) {
+      final IndexedInts dimValues = selector.getRow();
+      for (int i = 0; i < dimValues.size(); ++i) {
+        final int dimIndex = dimValues.get(i);
+        final String key = selector.lookupName(dimIndex);
 
-      Aggregator[] theAggregators = aggregatesStore.get(key);
-      if (theAggregators == null) {
-        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-        aggregatesStore.put(key, theAggregators);
+        Aggregator[] theAggregators = aggregatesStore.get(key);
+        if (theAggregators == null) {
+          theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+          aggregatesStore.put(key, theAggregators);
+        }
+        for (Aggregator aggregator : theAggregators) {
+          aggregator.aggregate();
+        }
       }
-      for (Aggregator aggregator : theAggregators) {
-        aggregator.aggregate();
-      }
+      cursor.advance();
     }
   }
 }

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
@@ -39,14 +40,17 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
@@ -65,6 +69,7 @@ public class RowBasedGrouperHelper
   public static Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
       final boolean isInputRaw,
+      final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
       final ByteBuffer buffer,
       final int concurrencyHint,
@@ -90,7 +95,7 @@ public class RowBasedGrouperHelper
     final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
     final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
         columnSelectorRow,
-        GroupByQueryHelper.rowSignatureFor(query)
+        rawInputRowSignature
     );
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
@@ -121,14 +126,15 @@ public class RowBasedGrouperHelper
       );
     }
 
-    final DimensionSelector[] dimensionSelectors;
+    final Supplier[] inputRawSuppliers;
     if (isInputRaw) {
-      dimensionSelectors = new DimensionSelector[query.getDimensions().size()];
-      for (int i = 0; i < dimensionSelectors.length; i++) {
-        dimensionSelectors[i] = columnSelectorFactory.makeDimensionSelector(query.getDimensions().get(i));
-      }
+      inputRawSuppliers = getValueSuppliersForDimensions(
+          columnSelectorFactory,
+          query.getDimensions(),
+          rawInputRowSignature
+      );
     } else {
-      dimensionSelectors = null;
+      inputRawSuppliers = null;
     }
 
     final Accumulator<Grouper<RowBasedKey>, Row> accumulator = new Accumulator<Grouper<RowBasedKey>, Row>()
@@ -175,31 +181,34 @@ public class RowBasedGrouperHelper
         }
 
         for (int i = dimStart; i < key.length; i++) {
-          final String value;
+          final ValueType type = valueTypes.get(i - dimStart);
+          Object valObj;
           if (isInputRaw) {
-            IndexedInts index = dimensionSelectors[i - dimStart].getRow();
-            value = index.size() == 0 ? "" : dimensionSelectors[i - dimStart].lookupName(index.get(0));
-            key[i] = Strings.nullToEmpty(value);
+            valObj = inputRawSuppliers[i - dimStart].get();
           } else {
-            // only GroupByV2 (isInputRaw == false) supports non-String types
-            Object valObj = row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
-
-            // convert values to the output type specified by the DimensionSpec, for merging purposes
-            switch (valueTypes.get(i - dimStart)) {
-              case STRING:
-                valObj = valObj == null ? "" : valObj.toString();
-                break;
-              case LONG:
-                valObj = DimensionHandlerUtils.convertObjectToLong(valObj);
-                break;
-              case FLOAT:
-                valObj = DimensionHandlerUtils.convertObjectToFloat(valObj);
-                break;
-              default:
-                throw new IAE("invalid type");
-            }
-            key[i] = (Comparable) valObj;
+            valObj = row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
           }
+          // convert values to the output type specified by the DimensionSpec, for merging purposes
+          switch (type) {
+            case STRING:
+              valObj = valObj == null ? "" : valObj.toString();
+              break;
+            case LONG:
+              valObj = DimensionHandlerUtils.convertObjectToLong(valObj);
+              if (valObj == null) {
+                valObj = 0L;
+              }
+              break;
+            case FLOAT:
+              valObj = DimensionHandlerUtils.convertObjectToFloat(valObj);
+              if (valObj == null) {
+                valObj = 0.0f;
+              }
+              break;
+            default:
+              throw new IAE("invalid type: [%s]", type);
+          }
+          key[i] = (Comparable) valObj;
         }
 
         final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
@@ -324,6 +333,65 @@ public class RowBasedGrouperHelper
     {
       return Arrays.toString(key);
     }
+  }
+
+  private static Supplier[] getValueSuppliersForDimensions(
+      final ColumnSelectorFactory columnSelectorFactory,
+      final List<DimensionSpec> dimensions,
+      final Map<String, ValueType> rawInputRowSignature
+  )
+  {
+    final Supplier[] inputRawSuppliers = new Supplier[dimensions.size()];
+    for (int i = 0; i < dimensions.size(); i++) {
+      final ColumnValueSelector selector = DimensionHandlerUtils.getColumnValueSelectorFromDimensionSpec(
+          dimensions.get(i),
+          columnSelectorFactory
+      );
+      ValueType type = rawInputRowSignature.get(dimensions.get(i).getDimension());
+      if (type == null) {
+        type = ValueType.STRING;
+      }
+      switch (type) {
+        case STRING:
+          inputRawSuppliers[i] = new Supplier()
+          {
+            @Override
+            public Object get()
+            {
+              final String value;
+              IndexedInts index = ((DimensionSelector) selector).getRow();
+              value = index.size() == 0
+                      ? ""
+                      : ((DimensionSelector) selector).lookupName(index.get(0));
+              return Strings.nullToEmpty(value);
+            }
+          };
+          break;
+        case LONG:
+          inputRawSuppliers[i] = new Supplier()
+          {
+            @Override
+            public Object get()
+            {
+              return ((LongColumnSelector) selector).get();
+            }
+          };
+          break;
+        case FLOAT:
+          inputRawSuppliers[i] = new Supplier()
+          {
+            @Override
+            public Object get()
+            {
+              return ((FloatColumnSelector) selector).get();
+            }
+          };
+          break;
+        default:
+          throw new IAE("invalid type: [%s]", type);
+      }
+    }
+    return inputRawSuppliers;
   }
 
   private static class RowBasedKeySerdeFactory implements Grouper.KeySerdeFactory<RowBasedKey>

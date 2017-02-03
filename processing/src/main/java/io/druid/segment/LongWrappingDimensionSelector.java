@@ -24,18 +24,22 @@ import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
 public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
-  private final LongColumnSelector delegate;
-  private final ExtractionFn exFn;
+  private final LongColumnSelector selector;
+  private final ExtractionFn extractionFn;
 
   public LongWrappingDimensionSelector(LongColumnSelector selector, ExtractionFn extractionFn)
   {
-    this.delegate = selector;
-    this.exFn = extractionFn;
+    this.selector = selector;
+    this.extractionFn = extractionFn;
   }
 
   @Override
   protected String getValue()
   {
-    return exFn.apply(delegate.get());
+    if (extractionFn == null) {
+      return String.valueOf(selector.get());
+    } else {
+      return extractionFn.apply(selector.get());
+    }
   }
 }

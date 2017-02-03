@@ -21,19 +21,24 @@ package io.druid.query.filter;
 
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.filter.BooleanValueMatcher;
 
 public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<LongColumnSelector>
 {
   @Override
   public ValueMatcher makeValueMatcher(final LongColumnSelector selector, final String value)
   {
-    final long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
+    final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
+    if (matchVal == null) {
+      return BooleanValueMatcher.of(false);
+    }
+    final long matchValLong = matchVal;
     return new ValueMatcher()
     {
       @Override
       public boolean matches()
       {
-        return selector.get() == matchVal;
+        return selector.get() == matchValLong;
       }
     };
   }

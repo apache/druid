@@ -77,6 +77,7 @@ import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -544,6 +545,110 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testGroupByLong() throws Exception
+  {
+    testQuery(
+        "SELECT cnt, COUNT(*) FROM druid.foo GROUP BY cnt",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("cnt", "d0", ValueType.LONG)))
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByFloat() throws Exception
+  {
+    testQuery(
+        "SELECT m1, COUNT(*) FROM druid.foo GROUP BY m1",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("m1", "d0", ValueType.FLOAT)))
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0d, 1L},
+            new Object[]{2.0d, 1L},
+            new Object[]{3.0d, 1L},
+            new Object[]{4.0d, 1L},
+            new Object[]{5.0d, 1L},
+            new Object[]{6.0d, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterOnFloat() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE m1 = 1.0",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(QueryGranularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(SELECTOR("m1", "1.0", null))
+                  .context(TIMESERIES_CONTEXT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testHavingOnFloat() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, SUM(m1) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING SUM(m1) > 1",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
+                        .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
+                        .setHavingSpec(
+                            new DimFilterHavingSpec(
+                                new BoundDimFilter(
+                                    "a0",
+                                    "1",
+                                    null,
+                                    true,
+                                    false,
+                                    false,
+                                    null,
+                                    StringComparators.NUMERIC
+                                )
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1", 4.0d},
+            new Object[]{"10.1", 2.0d},
+            new Object[]{"2", 3.0d},
+            new Object[]{"abc", 6.0d},
+            new Object[]{"def", 5.0d}
+        )
+    );
+  }
+
+  @Test
   public void testUnplannableQueries() throws Exception
   {
     // All of these queries are unplannable because they rely on features Druid doesn't support.
@@ -554,9 +659,6 @@ public class CalciteQueryTest
         "SELECT (dim1 || ' ' || dim2) AS cc, COUNT(*) FROM druid.foo GROUP BY dim1 || ' ' || dim2", // Concat two dims
         "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by
         "SELECT TRIM(dim1) FROM druid.foo", // TRIM function
-        "SELECT cnt, COUNT(*) FROM druid.foo GROUP BY cnt", // GROUP BY long
-        "SELECT m1, COUNT(*) FROM druid.foo GROUP BY m1", // GROUP BY float
-        "SELECT COUNT(*) FROM druid.foo WHERE m1 = 1.0", // Filter on float
         "SELECT COUNT(*) FROM druid.foo WHERE dim1 = dim2", // Filter on two columns equaling each other
         "SELECT COUNT(*) FROM druid.foo WHERE CHARACTER_LENGTH(dim1) = CHARACTER_LENGTH(dim2)", // Similar to above
         "SELECT CHARACTER_LENGTH(dim1) + 1 FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1) + 1", // Group by math
@@ -566,7 +668,6 @@ public class CalciteQueryTest
         + "  SUM(cnt) AS cnt\n"
         + "FROM druid.foo\n"
         + "GROUP BY (CAST(__time AS DATE) + EXTRACT(HOUR FROM __time) * INTERVAL '1' HOUR)", // Time arithmetic
-        "SELECT dim1, SUM(m1) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING SUM(m1) > 1", // HAVING on float
         "SELECT SUBSTRING(dim1, 2) FROM druid.foo GROUP BY dim1", // Project a dimension from GROUP BY
         "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY SUBSTRING(dim1, 2)" // ORDER BY projection
     );

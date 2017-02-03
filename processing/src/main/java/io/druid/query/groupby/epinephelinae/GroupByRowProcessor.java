@@ -154,6 +154,7 @@ public class GroupByRowProcessor
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   true,
+                  rowSignature,
                   querySpecificConfig,
                   mergeBufferHolder.get(),
                   -1,

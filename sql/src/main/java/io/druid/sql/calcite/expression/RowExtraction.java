@@ -135,8 +135,14 @@ public class RowExtraction
       return extractionFn == null
              ? new DefaultDimensionSpec(column, outputName)
              : new ExtractionDimensionSpec(column, outputName, extractionFn);
+    } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+      if (extractionFn == null) {
+        return new DefaultDimensionSpec(column, outputName, columnType);
+      } else {
+        return new ExtractionDimensionSpec(column, outputName, extractionFn);
+      }
     } else {
-      // Can't create dimensionSpecs for non-string, non-time.
+      // Can't create dimensionSpecs for non-string, non-numeric columns
       return null;
     }
   }

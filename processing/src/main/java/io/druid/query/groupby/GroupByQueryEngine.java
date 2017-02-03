@@ -328,6 +328,11 @@ public class GroupByQueryEngine
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
         final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
         if (selector != null) {
+          if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+            throw new UnsupportedOperationException(
+                "GroupBy v1 does not support dimension selectors with unknown cardinality.");
+          }
+
           dimensions.add(selector);
           dimNames.add(dimSpec.getOutputName());
         }

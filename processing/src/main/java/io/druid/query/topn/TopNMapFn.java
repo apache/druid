@@ -60,7 +60,8 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     @Override
     public Object apply(Object input)
     {
-      return DimensionHandlerUtils.convertObjectToLong(input);
+      final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
+      return longVal == null ? 0L : longVal;
     }
   };
 
@@ -69,7 +70,8 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     @Override
     public Object apply(Object input)
     {
-      return DimensionHandlerUtils.convertObjectToFloat(input);
+      final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
+      return floatVal == null ? 0.0f : floatVal;
     }
   };
 

@@ -34,7 +34,7 @@ public enum ValueType
   public static ValueType fromString(String name)
   {
     if (name == null) {
-      return ValueType.STRING;
+      return null;
     }
     return valueOf(name.toUpperCase());
   }

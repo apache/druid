@@ -70,14 +70,17 @@ public class LongTopNColumnSelectorStrategy
       Long2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
-    long key = selector.get();
-    Aggregator[] theAggregators = aggregatesStore.get(key);
-    if (theAggregators == null) {
-      theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-      aggregatesStore.put(key, theAggregators);
-    }
-    for (Aggregator aggregator : theAggregators) {
-      aggregator.aggregate();
+    while (!cursor.isDone()) {
+      long key = selector.get();
+      Aggregator[] theAggregators = aggregatesStore.get(key);
+      if (theAggregators == null) {
+        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+        aggregatesStore.put(key, theAggregators);
+      }
+      for (Aggregator aggregator : theAggregators) {
+        aggregator.aggregate();
+      }
+      cursor.advance();
     }
   }
 

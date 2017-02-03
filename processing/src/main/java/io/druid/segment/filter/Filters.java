@@ -57,7 +57,11 @@ import java.util.NoSuchElementException;
  */
 public class Filters
 {
-  public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(ValueType.STRING, ValueType.LONG);
+  public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(
+      ValueType.STRING,
+      ValueType.LONG,
+      ValueType.FLOAT
+  );
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
   /**
@@ -114,16 +118,6 @@ public class Filters
       final String value
   )
   {
-    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-
-    // This should be folded into the ValueMatcherColumnSelectorStrategy once that can handle LONG typed columns.
-    if (capabilities != null && capabilities.getType() == ValueType.LONG) {
-      return getLongValueMatcher(
-          columnSelectorFactory.makeLongColumnSelector(columnName),
-          value
-      );
-    }
-
     final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
         DimensionHandlerUtils.createColumnSelectorPlus(
             ValueMatcherColumnSelectorStrategyFactory.instance(),

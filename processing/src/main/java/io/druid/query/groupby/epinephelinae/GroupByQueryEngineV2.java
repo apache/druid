@@ -184,7 +184,7 @@ public class GroupByQueryEngineV2
       switch(type) {
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
-          if (dimSelector.nameLookupPossibleInAdvance()) {
+          if (dimSelector.getValueCardinality() >= 0) {
             return new StringGroupByColumnSelectorStrategy();
           } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();

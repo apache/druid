@@ -148,6 +148,26 @@ public final class DimensionHandlerUtils
     return dims;
   }
 
+  public static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+      DimensionSpec dimSpec,
+      ColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    String dimName = dimSpec.getDimension();
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
+    capabilities = getEffectiveCapabilities(dimName, capabilities, dimSpec.getExtractionFn() != null);
+    switch (capabilities.getType()) {
+      case STRING:
+        return columnSelectorFactory.makeDimensionSelector(dimSpec);
+      case LONG:
+        return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
+      case FLOAT:
+        return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
+      default:
+        return null;
+    }
+  }
+
   // When determining the capabilites of a column during query processing, this function
   // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
   // (e.g., treating missing columns as empty String columns)
@@ -173,26 +193,6 @@ public final class DimensionHandlerUtils
     }
 
     return capabilities;
-  }
-
-  private static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
-      DimensionSpec dimSpec,
-      ColumnSelectorFactory columnSelectorFactory
-  )
-  {
-    String dimName = dimSpec.getDimension();
-    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimName, capabilities, dimSpec.getExtractionFn() != null);
-    switch (capabilities.getType()) {
-      case STRING:
-        return columnSelectorFactory.makeDimensionSelector(dimSpec);
-      case LONG:
-        return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
-      case FLOAT:
-        return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
-      default:
-        return null;
-    }
   }
 
   private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(

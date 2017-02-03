@@ -70,14 +70,17 @@ public class FloatTopNColumnSelectorStrategy
       Int2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
-    int key = Float.floatToIntBits(selector.get());
-    Aggregator[] theAggregators = aggregatesStore.get(key);
-    if (theAggregators == null) {
-      theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
-      aggregatesStore.put(key, theAggregators);
-    }
-    for (Aggregator aggregator : theAggregators) {
-      aggregator.aggregate();
+    while (!cursor.isDone()) {
+      int key = Float.floatToIntBits(selector.get());
+      Aggregator[] theAggregators = aggregatesStore.get(key);
+      if (theAggregators == null) {
+        theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+        aggregatesStore.put(key, theAggregators);
+      }
+      for (Aggregator aggregator : theAggregators) {
+        aggregator.aggregate();
+      }
+      cursor.advance();
     }
   }
 

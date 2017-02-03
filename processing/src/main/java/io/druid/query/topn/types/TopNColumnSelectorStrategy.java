@@ -73,7 +73,7 @@ public interface TopNColumnSelectorStrategy
   /**
    * Used by DimExtractionTopNAlgorithm.
    *
-   * Read the current row from a dimension value selector, and for each row value:
+   * Iterate through the cursor, reading the current row from a dimension value selector, and for each row value:
    * 1. Retrieve the Aggregator[] for the row value from rowSelector (fast integer lookup) or from
    *    aggregatesStore (slower map).
    *

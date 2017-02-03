@@ -60,6 +60,7 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
+import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
@@ -6872,8 +6873,6 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    // CardinalityAggregator currently treats non-String columns as having all nulls, so cardinality is 1 for
-    // the 'index' column
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "spot", "rows", 9L, "numVals", 9.019833517963864d),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "total_market", "rows", 2L, "numVals", 2.000977198748901d),
@@ -6890,6 +6889,108 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByLongColumn()
   {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG)))
+        .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql_alias",
+            1200L,
+            "rows",
+            1L,
+            "idx",
+            158L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "ql_alias",
+            1200L,
+            "rows",
+            1L,
+            "idx",
+            166L
+        )
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByLongColumnWithExFn()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    String jsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new ExtractionDimensionSpec("qualityLong", "ql_alias", jsExtractionFn)))
+        .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql_alias",
+            "super-1200",
+            "rows",
+            1L,
+            "idx",
+            158L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "ql_alias",
+            "super-1200",
+            "rows",
+            1L,
+            "idx",
+            166L
+        )
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByLongTimeColumn()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("time dimension must provide an extraction function");
+    }
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -6904,11 +7005,6 @@ public class GroupByQueryRunnerTest
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
-
-    // Only GroupBy V2 supports grouping on non-Strings.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(UnsupportedOperationException.class);
-    }
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -6935,7 +7031,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByLongColumnWithExFn()
+  public void testGroupByLongTimeColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
@@ -6982,9 +7078,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByFloatColumn()
   {
-    // Only GroupBy V2 supports grouping on non-Strings.
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      return;
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -7055,9 +7151,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByFloatColumnWithExFn()
   {
-    // Only GroupBy V2 supports grouping on non-Strings.
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      return;
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
     }
 
     String jsFn = "function(str) { return 'super-' + str; }";
@@ -7102,6 +7198,377 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithHavingSpecOnLongAndFloat()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("market", "alias"),
+                new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
+                new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
+                new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .setHavingSpec(
+            new DimFilterHavingSpec(
+                new AndDimFilter(
+                    Lists.<DimFilter>newArrayList(
+                        new SelectorDimFilter("ql_alias", "1400", null),
+                        new SelectorDimFilter("time_alias", "1301616000000", null),
+                        new BoundDimFilter(
+                            "index_alias",
+                            "1310.0",
+                            "1320.0",
+                            true,
+                            true,
+                            null,
+                            null,
+                            StringComparators.NUMERIC
+                        )
+                    )
+                )
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias", "total_market",
+            "time_alias", 1301616000000L,
+            "index_alias", 1314.8397,
+            "ql_alias", 1400L,
+            "rows", 1L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByLongAndFloatOutputAsString()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("qualityLong", "ql_alias"),
+                new DefaultDimensionSpec("qualityFloat", "qf_alias")
+            )
+        )
+        .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql_alias",
+            "1200",
+            "qf_alias",
+            "12000.0",
+            "rows",
+            1L,
+            "idx",
+            158L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "ql_alias",
+            "1200",
+            "qf_alias",
+            "12000.0",
+            "rows",
+            1L,
+            "idx",
+            166L
+        )
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByNumericStringsAsNumeric()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("qualityLong", "ql_alias"),
+                new DefaultDimensionSpec("qualityFloat", "qf_alias"),
+                new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias")
+            )
+        )
+        .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery outerQuery = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG),
+                new DefaultDimensionSpec("ql_alias", "ql_alias_long", ValueType.LONG),
+                new DefaultDimensionSpec("qf_alias", "qf_alias_float", ValueType.FLOAT),
+                new DefaultDimensionSpec("ql_alias", "ql_alias_float", ValueType.FLOAT)
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new CountAggregatorFactory("count")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "time_alias2", 1301616000000L,
+            "ql_alias_long", 1200L,
+            "qf_alias_float", 12000.0,
+            "ql_alias_float", 1200.0,
+            "count", 1L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "time_alias2", 1301702400000L,
+            "ql_alias_long", 1200L,
+            "qf_alias_float", 12000.0,
+            "ql_alias_float", 1200.0,
+            "count", 1L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByNestedWithInnerQueryNumerics()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("quality", "alias"),
+                new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
+                new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT)
+            )
+        )
+        .setDimFilter(
+            new InDimFilter(
+                "quality",
+                Lists.newArrayList("entertainment"),
+                null
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery outerQuery = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
+                new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT)
+            )
+        )
+        .setDimFilter(
+            new AndDimFilter(
+                Lists.<DimFilter>newArrayList(
+                    new SelectorDimFilter("ql_alias", "1200", null),
+                    new BoundDimFilter(
+                        "qf_alias",
+                        "11095.0",
+                        "12005.0",
+                        true,
+                        true,
+                        null,
+                        null,
+                        StringComparators.NUMERIC
+                    )
+                )
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongSumAggregatorFactory("ql_alias_sum", "ql_alias"),
+                new DoubleSumAggregatorFactory("qf_alias_sum", "qf_alias")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "quallong", 1200L,
+            "qualfloat", 12000.0,
+            "ql_alias_sum", 2400L,
+            "qf_alias_sum", 24000.0
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByNestedWithInnerQueryNumericsWithLongTime()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("time dimension must provide an extraction function");
+    }
+
+    GroupByQuery subQuery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("market", "alias"),
+                new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
+                new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    GroupByQuery outerQuery = GroupByQuery
+        .builder()
+        .setDataSource(subQuery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("alias", "market"),
+                new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG)
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongMaxAggregatorFactory("time_alias_max", "time_alias"),
+                new DoubleMaxAggregatorFactory("index_alias_max", "index_alias")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "market", "spot",
+            "time_alias2", 1301616000000L,
+            "time_alias_max", 1301616000000L,
+            "index_alias_max", 158.74722290039062
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "market", "spot",
+            "time_alias2", 1301702400000L,
+            "time_alias_max", 1301702400000L,
+            "index_alias_max", 166.01605224609375
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "market", "total_market",
+            "time_alias2", 1301616000000L,
+            "time_alias_max", 1301616000000L,
+            "index_alias_max", 1522.043701171875
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "market", "total_market",
+            "time_alias2", 1301702400000L,
+            "time_alias_max", 1301702400000L,
+            "index_alias_max", 1321.375
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "market", "upfront",
+            "time_alias2", 1301616000000L,
+            "time_alias_max", 1301616000000L,
+            "index_alias_max", 1447.3411865234375
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "market", "upfront",
+            "time_alias2", 1301702400000L,
+            "time_alias_max", 1301702400000L,
+            "index_alias_max", 1144.3424072265625
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 }

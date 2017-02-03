@@ -21,13 +21,18 @@ package io.druid.query.filter;
 
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.filter.BooleanValueMatcher;
 
 public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<FloatColumnSelector>
 {
   @Override
   public ValueMatcher makeValueMatcher(final FloatColumnSelector selector, final String value)
   {
-    final float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
+    final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
+    if (matchVal == null) {
+      return BooleanValueMatcher.of(false);
+    }
+
     final int matchValIntBits = Float.floatToIntBits(matchVal);
     return new ValueMatcher()
     {
