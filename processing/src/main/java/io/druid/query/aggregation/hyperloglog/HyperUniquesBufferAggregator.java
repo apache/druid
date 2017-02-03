@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.hyperloglog;
 
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ObjectColumnSelector;
 

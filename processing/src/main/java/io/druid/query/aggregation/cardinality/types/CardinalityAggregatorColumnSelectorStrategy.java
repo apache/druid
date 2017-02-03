@@ -20,7 +20,7 @@
 package io.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.segment.ColumnValueSelector;
 

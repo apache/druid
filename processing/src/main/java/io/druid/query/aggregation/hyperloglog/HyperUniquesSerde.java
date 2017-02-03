@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
 import io.druid.data.input.InputRow;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
