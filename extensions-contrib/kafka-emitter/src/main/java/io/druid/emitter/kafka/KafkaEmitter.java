@@ -19,8 +19,8 @@
 
 package io.druid.emitter.kafka;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 
@@ -36,7 +36,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -60,7 +59,7 @@ public class KafkaEmitter implements Emitter {
       @Override
       public void onCompletion(RecordMetadata recordMetadata, Exception e) {
         if(e != null) {
-          log.warn(e, "Exception is occured! Retry.");
+          log.warn(e, "Exception occured!");
         }
       }
     };
@@ -85,18 +84,16 @@ public class KafkaEmitter implements Emitter {
   @Override
   public void emit(final Event event) {
     if(event instanceof ServiceMetricEvent) {
-      if(event == null) {
-        return;
+      try {
+        Map<String, Object> result = ImmutableMap.<String, Object>builder()
+                                                 .putAll(event.toMap())
+                                                 .put("clusterName", config.getClusterName())
+                                                 .build();
+        producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)),
+                      producerCallback);
+      } catch (Exception e) {
+        log.warn(e, "Failed to generate json");
       }
-    }
-    try {
-      TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {};
-      HashMap<String, Object> result = jsonMapper.readValue(jsonMapper.writeValueAsString(event), typeRef);
-      result.put("clusterName", config.getClusterName());
-      producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)),
-                    producerCallback);
-    } catch (Exception e) {
-      log.warn(e, "Failed to generate json");
     }
   }
 
