@@ -49,12 +49,21 @@ public class KafkaEmitter implements Emitter {
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
+  private final Callback producerCallback;
   private final ObjectMapper jsonMapper;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper) {
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.producer = getKafkaProducer(config);
+    this.producerCallback = new Callback() {
+      @Override
+      public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+        if(e != null) {
+          log.warn(e, "Exception is occured! Retry.");
+        }
+      }
+    };
   }
 
   private Producer<String, String> getKafkaProducer(KafkaEmitterConfig config) {
@@ -85,14 +94,7 @@ public class KafkaEmitter implements Emitter {
       HashMap<String, Object> result = jsonMapper.readValue(jsonMapper.writeValueAsString(event), typeRef);
       result.put("clusterName", config.getClusterName());
       producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)),
-                    new Callback() {
-        @Override
-        public void onCompletion(RecordMetadata metadata, Exception exception) {
-          if(exception != null) {
-            log.warn(exception, "Exception is occured! Retry.");
-          }
-        }
-      });
+                    producerCallback);
     } catch (Exception e) {
       log.warn(e, "Failed to generate json");
     }
