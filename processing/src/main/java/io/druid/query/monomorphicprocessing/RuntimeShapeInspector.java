@@ -19,14 +19,16 @@
 
 package io.druid.query.monomorphicprocessing;
 
+import javax.annotation.Nullable;
+
 /**
  * @see HotLoopCallee#inspectRuntimeShape(RuntimeShapeInspector)
  */
 public interface RuntimeShapeInspector
 {
-  void visit(String fieldName, HotLoopCallee value);
+  void visit(String fieldName, @Nullable HotLoopCallee value);
 
-  void visit(String fieldName, Object value);
+  void visit(String fieldName, @Nullable Object value);
 
   <T> void visit(String fieldName, T[] values);
 

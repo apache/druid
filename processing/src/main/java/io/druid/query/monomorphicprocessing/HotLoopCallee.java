@@ -30,12 +30,13 @@ public interface HotLoopCallee
    * conditions:
    *  1. They are used in methods of this class, annotated with {@link CalledFromHotLoop}
    *  2. They are either:
-   *     a. Instances of HotLoopCallee
-   *     b. Objects, which don't always have a specific class in runtime. For example, a field of type {@link
+   *     a. Nullable objects
+   *     b. Instances of HotLoopCallee
+   *     c. Objects, which don't always have a specific class in runtime. For example, a field of type {@link
    *        java.util.Set} could be {@link java.util.HashSet} or {@link java.util.TreeSet} in runtime, depending on how
    *        this instance (the instance on which inspectRuntimeShape() is called) is configured.
-   *     c. Arrays of objects, meeting conditions a. or b.
-   *     d. boolean flags, affecting branch taking
+   *     d. Arrays of objects, meeting conditions a, b or c.
+   *     e. boolean flags, affecting branch taking
    */
   void inspectRuntimeShape(RuntimeShapeInspector inspector);
 }

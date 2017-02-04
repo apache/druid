@@ -19,6 +19,8 @@
 
 package io.druid.query.monomorphicprocessing;
 
+import javax.annotation.Nullable;
+
 /**
  * Class to be used to obtain String representation of runtime shape of one or several {@link HotLoopCallee}s.
  * Example:
@@ -81,8 +83,12 @@ public final class StringRuntimeShape
       indent -= 2;
     }
 
-    private void visit(Object value)
+    private void visit(@Nullable Object value)
     {
+      if (value == null) {
+        sb.append("null");
+        return;
+      }
       sb.append(value.getClass().getName());
       if (value instanceof HotLoopCallee) {
         sb.append(" {\n");
@@ -109,13 +115,13 @@ public final class StringRuntimeShape
     }
 
     @Override
-    public void visit(String fieldName, HotLoopCallee value)
+    public void visit(String fieldName, @Nullable HotLoopCallee value)
     {
       visit(fieldName, (Object) value);
     }
 
     @Override
-    public void visit(String fieldName, Object value)
+    public void visit(String fieldName, @Nullable Object value)
     {
       indent();
       sb.append(fieldName);
