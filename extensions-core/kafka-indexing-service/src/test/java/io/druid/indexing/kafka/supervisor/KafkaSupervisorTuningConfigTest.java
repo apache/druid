@@ -57,7 +57,7 @@ public class KafkaSupervisorTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNotNull(config.getBasePersistDirectory());
+    Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(75000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
