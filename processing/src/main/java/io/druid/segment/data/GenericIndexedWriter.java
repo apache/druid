@@ -271,10 +271,10 @@ public class GenericIndexedWriter<T> implements Closeable
         return true;
       } else if (headerIndex + bagSize <= numWritten) {
         headerFile.seek((headerIndex + bagSize - 1) * Longs.BYTES);
-        currentValueOffset = headerFile.readLong();
+        currentValueOffset = Long.reverseBytes(headerFile.readLong());
       } else if (numWritten < headerIndex + bagSize) {
         headerFile.seek((numWritten - 1) * Longs.BYTES);
-        currentValueOffset = headerFile.readLong();
+        currentValueOffset = Long.reverseBytes(headerFile.readLong());
       }
 
       if (currentValueOffset - lastValueOffset <= fileSizeLimit) {
