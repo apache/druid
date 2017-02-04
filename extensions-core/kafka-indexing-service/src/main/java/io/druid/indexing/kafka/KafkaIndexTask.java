@@ -46,6 +46,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
@@ -386,7 +387,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
           catch (OffsetOutOfRangeException e) {
             log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
-            possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, assignment);
+            possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, toolbox);
             stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
           }
 
@@ -995,11 +996,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
       KafkaConsumer<byte[], byte[]> consumer,
-      Set<Integer> assignment
-  ) throws InterruptedException
+      TaskToolbox taskToolbox
+  ) throws InterruptedException, IOException
   {
-    boolean shouldRetry = false;
-    if(tuningConfig.isResetOffsetAutomatically()) {
+    final Map<TopicPartition, Long> resetPartitions = Maps.newHashMap();
+    boolean doReset = false;
+    if (tuningConfig.isResetOffsetAutomatically()) {
       for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
         final TopicPartition topicPartition = outOfRangePartition.getKey();
         final long nextOffset = outOfRangePartition.getValue();
@@ -1012,15 +1014,15 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         // and the current message offset in the kafka partition is more than the
         // next message offset that we are trying to fetch
         if (leastAvailableOffset > nextOffset) {
-          resetOffset(consumer, assignment, topicPartition);
-        } else {
-          shouldRetry = true;
+          doReset = true;
+          resetPartitions.put(topicPartition, nextOffset);
         }
       }
-    } else {
-      shouldRetry = true;
     }
-    if (shouldRetry) {
+
+    if (doReset) {
+      sendResetRequestAndWait(resetPartitions, taskToolbox);
+    } else {
       log.warn("Retrying in %dms", POLL_RETRY_MS);
       pollRetryLock.lockInterruptibly();
       try {
@@ -1035,34 +1037,33 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private void resetOffset(
-      KafkaConsumer<byte[], byte[]> consumer,
-      Set<Integer> assignment,
-      TopicPartition topicPartition
-  )
+  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox) throws IOException
   {
-    log.warn(
-        "Resetting consumer offset to [%s] for partition [%d]",
-        ioConfig.isUseEarliestOffset() ? "earliest" : "latest",
-        topicPartition.partition()
-    );
-    if (ioConfig.isUseEarliestOffset()) {
-      consumer.seekToBeginning(topicPartition);
+    Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
+    for (Map.Entry<TopicPartition, Long>  outOfRangePartition: outOfRangePartitions.entrySet()) {
+      partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
+    }
+    boolean result = taskToolbox.getTaskActionClient()
+                                .submit(new ResetDataSourceMetadataAction(
+                                    getDataSource(),
+                                    new KafkaDataSourceMetadata(new KafkaPartitions(
+                                        ioConfig.getStartPartitions()
+                                                .getTopic(),
+                                        partitionOffsetMap
+                                    ))
+                                ));
+
+    if (result) {
+      log.warn("Successfully sent the reset request for partitions [%s], waiting to be killed", partitionOffsetMap.keySet());
+      // wait for being killed by supervisor
+      try {
+        Thread.sleep(Long.MAX_VALUE);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException("Got interrupted while waiting to be killed");
+      }
     } else {
-      consumer.seekToEnd(topicPartition);
+      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
     }
-    nextOffsets.put(topicPartition.partition(), consumer.position(topicPartition));
-    log.warn("Consumer is now at offset [%d]", nextOffsets.get(topicPartition.partition()));
-    // check if we seeked passed the endOffset for this partition
-    if (nextOffsets.get(topicPartition.partition()) >= endOffsets.get(topicPartition.partition())
-        && assignment.remove(topicPartition.partition())) {
-      log.info(
-          "Finished reading topic[%s], partition[%,d].",
-          topicPartition.topic(),
-          topicPartition.partition()
-      );
-    }
-    // update assignments if something changed
-    assignPartitions(consumer, topicPartition.topic(), assignment);
   }
 }

@@ -32,7 +32,6 @@ public class KafkaIOConfig implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
   private static final boolean DEFAULT_PAUSE_AFTER_READ = false;
-  private static final boolean DEFAULT_USE_EARLIEST_OFFSET = false;
 
   private final String baseSequenceName;
   private final KafkaPartitions startPartitions;
@@ -41,7 +40,6 @@ public class KafkaIOConfig implements IOConfig
   private final boolean useTransaction;
   private final boolean pauseAfterRead;
   private final Optional<DateTime> minimumMessageTime;
-  private final boolean useEarliestOffset;
 
   @JsonCreator
   public KafkaIOConfig(
@@ -51,8 +49,7 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("pauseAfterRead") Boolean pauseAfterRead,
-      @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("useEarliestOffset") Boolean useEarliestOffset
+      @JsonProperty("minimumMessageTime") DateTime minimumMessageTime
   )
   {
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
@@ -62,7 +59,6 @@ public class KafkaIOConfig implements IOConfig
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
-    this.useEarliestOffset = useEarliestOffset != null ? useEarliestOffset : DEFAULT_USE_EARLIEST_OFFSET;
 
     Preconditions.checkArgument(
         startPartitions.getTopic().equals(endPartitions.getTopic()),
@@ -126,12 +122,6 @@ public class KafkaIOConfig implements IOConfig
     return minimumMessageTime;
   }
 
-  @JsonProperty
-  public boolean isUseEarliestOffset()
-  {
-    return useEarliestOffset;
-  }
-
   @Override
   public String toString()
   {
@@ -143,7 +133,6 @@ public class KafkaIOConfig implements IOConfig
            ", useTransaction=" + useTransaction +
            ", pauseAfterRead=" + pauseAfterRead +
            ", minimumMessageTime=" + minimumMessageTime +
-           ", useEarliestOffest=" + useEarliestOffset +
            '}';
   }
 }
