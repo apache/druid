@@ -45,6 +45,7 @@ public class KafkaEmitter implements Emitter {
 
   private final static String DEFAULT_KEY_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer";
   private final static String DEFAULT_VALUE_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer";
+  private final static int DEFAULT_RETRIES = 3;
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
@@ -61,6 +62,7 @@ public class KafkaEmitter implements Emitter {
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIALIZER);
+    props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
 
     return new KafkaProducer<>(props);
   }
@@ -88,7 +90,6 @@ public class KafkaEmitter implements Emitter {
         public void onCompletion(RecordMetadata metadata, Exception exception) {
           if(exception != null) {
             log.warn(exception, "Exception is occured! Retry.");
-            emit(event);
           }
         }
       });
