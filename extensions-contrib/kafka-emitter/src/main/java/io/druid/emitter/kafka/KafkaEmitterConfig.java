@@ -28,8 +28,10 @@ public class KafkaEmitterConfig {
 
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   final private String bootstrapServers;
-  @JsonProperty
-  final private String topic;
+  @JsonProperty("metric.topic")
+  final private String metricTopic;
+  @JsonProperty("alert.topic")
+  final private String alertTopic;
   @JsonProperty
   final private String clusterName;
 
@@ -45,7 +47,8 @@ public class KafkaEmitterConfig {
     KafkaEmitterConfig that = (KafkaEmitterConfig) o;
 
     if(!getBootstrapServers().equals(that.getBootstrapServers())
-        || !getTopic().equals(that.getTopic())
+        || !getMetricTopic().equals(that.getMetricTopic())
+        || !getAlertTopic().equals(that.getAlertTopic())
         || !getClusterName().equals(that.getClusterName())) {
       return false;
     } else {
@@ -54,9 +57,12 @@ public class KafkaEmitterConfig {
   }
   @JsonCreator
   public KafkaEmitterConfig(@JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
-                            @JsonProperty("topic") String topic, @JsonProperty("clusterName") String clusterName) {
+                            @JsonProperty("metric.topic") String metricTopic,
+                            @JsonProperty("alert.topic") String alertTopic,
+                            @JsonProperty("clusterName") String clusterName) {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
-    this.topic = Preconditions.checkNotNull(topic, "topic can not be null");
+    this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
+    this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
     this.clusterName = (clusterName == null || clusterName.isEmpty()) ? "NONAME" : clusterName;
   }
 
@@ -64,7 +70,10 @@ public class KafkaEmitterConfig {
   public String getBootstrapServers() { return bootstrapServers; }
 
   @JsonProperty
-  public String getTopic() { return topic; }
+  public String getMetricTopic() { return metricTopic; }
+
+  @JsonProperty
+  public String getAlertTopic() { return alertTopic; }
 
   @JsonProperty
   public String getClusterName() { return clusterName; }

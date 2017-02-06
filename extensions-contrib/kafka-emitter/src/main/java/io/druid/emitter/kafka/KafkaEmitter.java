@@ -19,11 +19,13 @@
 
 package io.druid.emitter.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 
+import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -83,15 +85,19 @@ public class KafkaEmitter implements Emitter {
 
   @Override
   public void emit(final Event event) {
-    if(event instanceof ServiceMetricEvent) {
+    if(event != null) {
+      Map<String, Object> result = ImmutableMap.<String, Object>builder()
+          .putAll(event.toMap())
+          .put("clusterName", config.getClusterName())
+          .build();
       try {
-        Map<String, Object> result = ImmutableMap.<String, Object>builder()
-                                                 .putAll(event.toMap())
-                                                 .put("clusterName", config.getClusterName())
-                                                 .build();
-        producer.send(new ProducerRecord<String, String>(config.getTopic(), jsonMapper.writeValueAsString(result)),
-                      producerCallback);
-      } catch (Exception e) {
+        String resultJson = jsonMapper.writeValueAsString(result);
+        if(event instanceof ServiceMetricEvent) {
+          producer.send(new ProducerRecord<String, String>(config.getMetricTopic(), resultJson), producerCallback);
+        } else if(event instanceof AlertEvent) {
+          producer.send(new ProducerRecord<String, String>(config.getAlertTopic(), resultJson), producerCallback);
+        }
+      } catch (JsonProcessingException e) {
         log.warn(e, "Failed to generate json");
       }
     }
