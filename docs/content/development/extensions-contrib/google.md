@@ -13,7 +13,7 @@ To use this extension, make sure to [include](../../operations/including-extensi
 |Property|Description|Default|Required?|
 |--------|-----------|-------|---------|
 |bucket|Name of the Google Cloud bucket|N/A|yes|
-|path|The path where data is located.|N/A|yes|
+|prefix|The path where data is located.|N/A|yes|
 
 ## Firehose
 
@@ -34,7 +34,7 @@ Sample spec:
           "path": "/path/to/your/file.json"
         },
         {
-          "container": "bar",
+          "bucket": "bar",
           "path": "/another/path.json"
         }
     ]
