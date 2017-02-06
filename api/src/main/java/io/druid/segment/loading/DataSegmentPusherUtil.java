@@ -54,13 +54,7 @@ public class DataSegmentPusherUtil
   public static String getHdfsStorageDir(DataSegment segment)
   {
     return JOINER.join(
-        segment.getDataSource(),
-        String.format(
-            "%s_%s",
-            segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
-            segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
-        ),
-        segment.getVersion().replaceAll(":", "_"),
+        getHdfsStorageDirUptoVersion(segment),
         segment.getShardSpec().getPartitionNum()
     );
   }
