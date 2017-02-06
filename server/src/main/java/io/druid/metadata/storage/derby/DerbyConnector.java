@@ -38,6 +38,7 @@ public class DerbyConnector extends SQLMetadataConnector
 {
   private static final Logger log = new Logger(DerbyConnector.class);
   private static final String SERIAL_TYPE = "BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)";
+  private static final String QUOTE_STRING = "\"";
   private final DBI dbi;
   private final MetadataStorage storage;
 
@@ -84,6 +85,11 @@ public class DerbyConnector extends SQLMetadataConnector
   protected String getSerialType()
   {
     return SERIAL_TYPE;
+  }
+
+  @Override
+  public String getQuoteString() {
+    return QUOTE_STRING;
   }
 
   @Override

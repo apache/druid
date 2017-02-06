@@ -554,8 +554,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             Iterator<Interval> iter = handle
                 .createQuery(
                     String.format(
-                        "SELECT start, `end` FROM %s WHERE dataSource = :dataSource and start >= :start and `end` <= :end and used = false ORDER BY start, `end`",
-                        getSegmentsTable()
+                        "SELECT start, %send%s FROM %s WHERE dataSource = :dataSource and start >= :start and %send%s <= :end and used = false ORDER BY start, %send%s",
+                        connector.getQuoteString(), connector.getQuoteString(), getSegmentsTable(), connector.getQuoteString(), connector.getQuoteString(), connector.getQuoteString(), connector.getQuoteString()
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())

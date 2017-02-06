@@ -38,11 +38,13 @@ import java.util.List;
 public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdaterJobHandler
 {
   private static final Logger log = new Logger(SQLMetadataStorageUpdaterJobHandler.class);
+  private final SQLMetadataConnector connector;
   private final IDBI dbi;
 
   @Inject
   public SQLMetadataStorageUpdaterJobHandler(SQLMetadataConnector connector)
   {
+    this.connector = connector;
     this.dbi = connector.getDBI();
   }
 
@@ -56,9 +58,9 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
           {
             final PreparedBatch batch = handle.prepareBatch(
                 String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, `end`, partitioned, version, used, payload) "
+                    "INSERT INTO %s (id, dataSource, created_date, start, %send%s, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    tableName
+                    tableName, connector.getQuoteString(), connector.getQuoteString()
                 )
             );
             for (final DataSegment segment : segments) {

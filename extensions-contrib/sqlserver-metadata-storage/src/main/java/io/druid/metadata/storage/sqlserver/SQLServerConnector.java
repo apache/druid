@@ -110,6 +110,7 @@ public class SQLServerConnector extends SQLMetadataConnector
    */
   private static final String SERIAL_TYPE = "[bigint] IDENTITY (1, 1)";
 
+  private static final String QUOTE_STRING = "\"";
   public static final int DEFAULT_STREAMING_RESULT_SIZE = 100;
 
   private final DBI dbi;
@@ -191,6 +192,11 @@ public class SQLServerConnector extends SQLMetadataConnector
   protected String getSerialType()
   {
     return SERIAL_TYPE;
+  }
+
+  @Override
+  public String getQuoteString() {
+    return QUOTE_STRING;
   }
 
   @Override
