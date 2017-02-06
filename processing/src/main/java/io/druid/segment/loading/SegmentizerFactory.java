@@ -19,13 +19,17 @@
 
 package io.druid.segment.loading;
 
-import io.druid.segment.QueryableIndex;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.segment.Segment;
+import io.druid.timeline.DataSegment;
 
 import java.io.File;
 
 /**
+ * Factory that loads segment files from the disk and creates {@link Segment} object
  */
-public interface QueryableIndexFactory
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MMappedQueryableSegmentizerFactory.class)
+public interface SegmentizerFactory
 {
-  public QueryableIndex factorize(File parentDir) throws SegmentLoadingException;
+  public Segment factorize(DataSegment segment, File parentDir) throws SegmentLoadingException;
 }
