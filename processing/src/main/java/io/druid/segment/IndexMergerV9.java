@@ -46,6 +46,7 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.TmpFileIOPeon;
+import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
@@ -59,6 +60,7 @@ import org.joda.time.Interval;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -157,6 +159,13 @@ public class IndexMergerV9 extends IndexMerger
       log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
 
       progress.progress();
+      startTime = System.currentTimeMillis();
+      try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"))) {
+        mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+      }
+      log.info("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
+
+      progress.progress();
       final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
       final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
       final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
@@ -206,7 +215,7 @@ public class IndexMergerV9 extends IndexMerger
       makeTimeColumn(v9Smoosher, progress, timeWriter);
       makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
 
-      for(int i = 0; i < mergedDimensions.size(); i++) {
+      for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
         merger.writeIndexes(rowNumConversions, closer);
         if (merger.canSkip()) {

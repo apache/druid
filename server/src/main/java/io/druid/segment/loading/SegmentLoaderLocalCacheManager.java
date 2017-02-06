@@ -26,8 +26,7 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.annotations.Json;
-import io.druid.segment.QueryableIndex;
-import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.IndexIO;
 import io.druid.segment.Segment;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -43,7 +42,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
 
-  private final QueryableIndexFactory factory;
+  private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
   private final ObjectMapper jsonMapper;
 
@@ -53,12 +52,12 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
   @Inject
   public SegmentLoaderLocalCacheManager(
-      QueryableIndexFactory factory,
+      IndexIO indexIO,
       SegmentLoaderConfig config,
       @Json ObjectMapper mapper
   )
   {
-    this.factory = factory;
+    this.indexIO = indexIO;
     this.config = config;
     this.jsonMapper = mapper;
 
@@ -78,7 +77,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
   public SegmentLoaderLocalCacheManager withConfig(SegmentLoaderConfig config)
   {
-    return new SegmentLoaderLocalCacheManager(factory, config, jsonMapper);
+    return new SegmentLoaderLocalCacheManager(indexIO, config, jsonMapper);
   }
 
   @Override
@@ -102,9 +101,21 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
     File segmentFiles = getSegmentFiles(segment);
-    final QueryableIndex index = factory.factorize(segmentFiles);
+    File factoryJson = new File(segmentFiles, "factory.json");
+    final SegmentizerFactory factory;
 
-    return new QueryableIndexSegment(segment.getIdentifier(), index);
+    if (factoryJson.exists()) {
+      try {
+        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "%s", e.getMessage());
+      }
+    } else {
+      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+    }
+
+    return factory.factorize(segment, segmentFiles);
   }
 
   @Override
@@ -142,7 +153,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         return loc;
       }
       catch (SegmentLoadingException e) {
-        log.makeAlert(e, "Failed to load segment in current location %s, try next location if any", loc.getPath().getAbsolutePath())
+        log.makeAlert(
+            e,
+            "Failed to load segment in current location %s, try next location if any",
+            loc.getPath().getAbsolutePath()
+        )
            .addData("location", loc.getPath().getAbsolutePath())
            .emit();
 

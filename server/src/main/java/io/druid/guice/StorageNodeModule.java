@@ -30,8 +30,6 @@ import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.column.ColumnConfig;
-import io.druid.segment.loading.MMappedQueryableIndexFactory;
-import io.druid.segment.loading.QueryableIndexFactory;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -49,7 +47,6 @@ public class StorageNodeModule implements Module
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
 
     binder.bind(NodeTypeConfig.class).toProvider(Providers.<NodeTypeConfig>of(null));
-    binder.bind(QueryableIndexFactory.class).to(MMappedQueryableIndexFactory.class).in(LazySingleton.class);
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
 
     binder.bind(QueryRunnerFactoryConglomerate.class)

@@ -49,6 +49,7 @@ public class DefaultObjectMapper extends ObjectMapper
     registerModule(new AggregatorsModule());
     registerModule(new SegmentsModule());
     registerModule(new StringComparatorModule());
+    registerModule(new SegmentizerModule());
 
     configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     configure(MapperFeature.AUTO_DETECT_GETTERS, false);
