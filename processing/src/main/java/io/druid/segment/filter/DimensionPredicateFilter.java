@@ -116,7 +116,7 @@ public class DimensionPredicateFilter implements Filter
   @Override
   public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
-    return Filters.estimatePredicateSelectivity(
+    return Filters.estimateSelectivity(
         dimension,
         indexSelector,
         predicateFactory.makeStringPredicate()

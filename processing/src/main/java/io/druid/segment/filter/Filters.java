@@ -19,13 +19,14 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
@@ -195,6 +196,28 @@ public class Filters
   }
 
   /**
+   * Union an iterable of bitmaps.
+   *
+   * @param bitmapFactory factory corresponding to the bitmaps
+   * @param bitmaps       the bitmaps
+   *
+   * @return unioned bitmap
+   */
+  public static ImmutableBitmap union(final BitmapFactory bitmapFactory, final Iterable<ImmutableBitmap> bitmaps)
+  {
+    if (bitmaps instanceof List) {
+      final List<ImmutableBitmap> bitmapList = (List<ImmutableBitmap>) bitmaps;
+      if (bitmapList.isEmpty()) {
+        return bitmapFactory.makeEmptyImmutableBitmap();
+      } else if (bitmapList.size() == 1) {
+        return Iterables.getOnlyElement(bitmaps);
+      }
+    }
+
+    return bitmapFactory.union(bitmaps);
+  }
+
+  /**
    * Transform an iterable of indexes of bitmaps to an iterable of bitmaps
    *
    * @param indexes     indexes of bitmaps
@@ -245,7 +268,7 @@ public class Filters
    *
    * @return bitmap of matching rows
    *
-   * @see #estimatePredicateSelectivity(String, BitmapIndexSelector, Predicate)
+   * @see #estimateSelectivity(String, BitmapIndexSelector, Predicate)
    */
   public static ImmutableBitmap matchPredicate(
       final String dimension,
@@ -272,15 +295,15 @@ public class Filters
   /**
    * Return an estimated selectivity for bitmaps of all values matching the given predicate.
    *
-   * @param dimension      dimension to look at
-   * @param indexSelector  bitmap selector
-   * @param predicate      predicate to use
+   * @param dimension     dimension to look at
+   * @param indexSelector bitmap selector
+   * @param predicate     predicate to use
    *
    * @return estimated selectivity
    *
    * @see #matchPredicate(String, BitmapIndexSelector, Predicate)
    */
-  static double estimatePredicateSelectivity(
+  public static double estimateSelectivity(
       final String dimension,
       final BitmapIndexSelector indexSelector,
       final Predicate<String> predicate
@@ -298,23 +321,53 @@ public class Filters
 
     // Apply predicate to all dimension values and union the matching bitmaps
     final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-    return estimatePredicateSelectivity(
+    return estimateSelectivity(
         bitmapIndex,
         IntIteratorUtils.toIntList(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()),
         indexSelector.getNumRows()
     );
   }
 
-  @VisibleForTesting
-  static double estimatePredicateSelectivity(
-      BitmapIndex bitmapIndex,
-      IntList bitmapIndexes,
-      long totalNumRows
+  /**
+   * Return an estimated selectivity for bitmaps for the dimension values given by dimValueIndexes.
+   *
+   * @param bitmapIndex  bitmap index
+   * @param bitmaps      bitmaps to extract, by index
+   * @param totalNumRows number of rows in the column associated with this bitmap index
+   *
+   * @return estimated selectivity
+   */
+  public static double estimateSelectivity(
+      final BitmapIndex bitmapIndex,
+      final IntList bitmaps,
+      final long totalNumRows
   )
   {
     long numMatchedRows = 0;
-    for (int i = 0; i < bitmapIndexes.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmapIndexes.get(i));
+    for (int i = 0; i < bitmaps.size(); i++) {
+      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.get(i));
+      numMatchedRows += bitmap.size();
+    }
+
+    return Math.min(1., (double) numMatchedRows / totalNumRows);
+  }
+
+  /**
+   * Return an estimated selectivity for bitmaps given by an iterator.
+   *
+   * @param bitmaps      iterator of bitmaps
+   * @param totalNumRows number of rows in the column associated with this bitmap index
+   *
+   * @return estimated selectivity
+   */
+  public static double estimateSelectivity(
+      final Iterator<ImmutableBitmap> bitmaps,
+      final long totalNumRows
+  )
+  {
+    long numMatchedRows = 0;
+    while (bitmaps.hasNext()) {
+      final ImmutableBitmap bitmap = bitmaps.next();
       numMatchedRows += bitmap.size();
     }
 
