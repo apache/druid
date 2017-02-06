@@ -160,9 +160,9 @@ public class IndexMergerV9 extends IndexMerger
 
       progress.progress();
       startTime = System.currentTimeMillis();
-      FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"));
-      mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
-      fos.close();
+      try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"))) {
+        mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+      }
       log.info("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
@@ -215,7 +215,7 @@ public class IndexMergerV9 extends IndexMerger
       makeTimeColumn(v9Smoosher, progress, timeWriter);
       makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
 
-      for(int i = 0; i < mergedDimensions.size(); i++) {
+      for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
         merger.writeIndexes(rowNumConversions, closer);
         if (merger.canSkip()) {
