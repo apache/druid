@@ -61,6 +61,12 @@ public final class ObjectMetadata implements DataSourceMetadata
   }
 
   @Override
+  public DataSourceMetadata minus(DataSourceMetadata other)
+  {
+    return this;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (o instanceof ObjectMetadata) {
