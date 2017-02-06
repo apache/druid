@@ -264,8 +264,15 @@ Determine the number of distinct starting characters of last names
 Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a "hyperUnique" metric at indexing time.
 
 ```json
-{ "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
+{ 
+  "type" : "hyperUnique",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "isInputHyperUnique" : false
+}
 ```
+
+isInputHyperUnique can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
 
 For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
 

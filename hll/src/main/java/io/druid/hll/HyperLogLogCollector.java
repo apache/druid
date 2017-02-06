@@ -20,9 +20,12 @@
 package io.druid.hll;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.google.common.primitives.UnsignedBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
@@ -51,6 +54,7 @@ import java.nio.ByteBuffer;
  */
 public abstract class HyperLogLogCollector implements Comparable<HyperLogLogCollector>
 {
+  public static final HashFunction HASHING_FUNCTION = Hashing.murmur3_128();
   public static final int DENSE_THRESHOLD = 128;
   public static final int BITS_FOR_BUCKETS = 11;
   public static final int NUM_BUCKETS = 1 << BITS_FOR_BUCKETS;
@@ -292,6 +296,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   protected ByteBuffer getStorageBuffer()
   {
     return storageBuffer;
+  }
+
+  public void add(String rawValue)
+  {
+    add(HASHING_FUNCTION.hashBytes(StringUtils.toUtf8(rawValue)).asBytes());
   }
 
   public void add(byte[] hashedValue)

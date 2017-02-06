@@ -20,8 +20,6 @@
 package io.druid.benchmark.indexing;
 
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
-
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -98,7 +96,7 @@ public class IncrementalIndexReadBenchmark
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
     }
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);

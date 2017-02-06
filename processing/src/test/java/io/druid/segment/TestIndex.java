@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
@@ -88,7 +87,7 @@ public class TestIndex
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
       new DoubleMinAggregatorFactory(METRICS[1], METRICS[0]),
       new DoubleMaxAggregatorFactory(METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
-      new HyperUniquesAggregatorFactory("quality_uniques", "quality")
+      new HyperUniquesAggregatorFactory("quality_uniques", "quality", false)
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
@@ -97,7 +96,7 @@ public class TestIndex
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
     }
   }
 

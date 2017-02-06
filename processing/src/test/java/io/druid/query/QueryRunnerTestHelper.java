@@ -161,7 +161,8 @@ public class QueryRunnerTestHelper
   );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
-      "quality_uniques"
+      "quality_uniques",
+      false
   );
   public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
       "cardinality",

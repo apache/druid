@@ -20,10 +20,8 @@
 package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Ordering;
-import com.google.common.hash.HashFunction;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.java.util.common.StringUtils;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -34,10 +32,10 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-/**
- */
 public class HyperUniquesSerde extends ComplexMetricSerde
 {
+  public static final String TYPE_NAME = "hyperUnique";
+
   private static Ordering<HyperLogLogCollector> comparator = new Ordering<HyperLogLogCollector>()
   {
     @Override
@@ -49,19 +47,10 @@ public class HyperUniquesSerde extends ComplexMetricSerde
     }
   }.nullsFirst();
 
-  private final HashFunction hashFn;
-
-  public HyperUniquesSerde(
-      HashFunction hashFn
-  )
-  {
-    this.hashFn = hashFn;
-  }
-
   @Override
   public String getTypeName()
   {
-    return "hyperUnique";
+    return TYPE_NAME;
   }
 
   @Override
@@ -91,9 +80,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
           }
 
           for (String dimensionValue : dimValues) {
-            collector.add(
-                hashFn.hashBytes(StringUtils.toUtf8(dimensionValue)).asBytes()
-            );
+            collector.add(dimensionValue);
           }
           return collector;
         }
