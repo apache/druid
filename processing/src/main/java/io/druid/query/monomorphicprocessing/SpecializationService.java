@@ -86,7 +86,7 @@ public final class SpecializationService
   private static final boolean fakeSpecialize = Boolean.getBoolean("fakeSpecialize");
 
   /**
-   * Number loop iterations, accounted via {@link SpecializationState#accountLoopIterations(long)} in
+   * Number of loop iterations, accounted via {@link SpecializationState#accountLoopIterations(long)} in
    * {@link WindowedLoopIterationCounter} during the last hour window, after which WindowedLoopIterationCounter decides
    * to specialize class for the specific runtimeShape. The default value is chosen to be so that the specialized
    * class will likely be compiled with C2 HotSpot compiler with the default values of *BackEdgeThreshold options.
@@ -228,8 +228,10 @@ public final class SpecializationService
     {
       if (prototypeClassBytecode == null) {
         ClassLoader cl = prototypeClass.getClassLoader();
-        InputStream prototypeClassBytecodeStream = cl.getResourceAsStream(prototypeClassBytecodeName + ".class");
-        prototypeClassBytecode = ByteStreams.toByteArray(prototypeClassBytecodeStream);
+        try (InputStream prototypeClassBytecodeStream =
+                 cl.getResourceAsStream(prototypeClassBytecodeName + ".class")) {
+          prototypeClassBytecode = ByteStreams.toByteArray(prototypeClassBytecodeStream);
+        }
       }
       return prototypeClassBytecode;
     }
