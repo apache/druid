@@ -24,9 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
@@ -196,28 +194,6 @@ public class Filters
   }
 
   /**
-   * Union an iterable of bitmaps.
-   *
-   * @param bitmapFactory factory corresponding to the bitmaps
-   * @param bitmaps       the bitmaps
-   *
-   * @return unioned bitmap
-   */
-  public static ImmutableBitmap union(final BitmapFactory bitmapFactory, final Iterable<ImmutableBitmap> bitmaps)
-  {
-    if (bitmaps instanceof List) {
-      final List<ImmutableBitmap> bitmapList = (List<ImmutableBitmap>) bitmaps;
-      if (bitmapList.isEmpty()) {
-        return bitmapFactory.makeEmptyImmutableBitmap();
-      } else if (bitmapList.size() == 1) {
-        return Iterables.getOnlyElement(bitmaps);
-      }
-    }
-
-    return bitmapFactory.union(bitmaps);
-  }
-
-  /**
    * Transform an iterable of indexes of bitmaps to an iterable of bitmaps
    *
    * @param indexes     indexes of bitmaps
@@ -276,6 +252,26 @@ public class Filters
       final Predicate<String> predicate
   )
   {
+    return selector.getBitmapFactory().union(matchPredicateNoUnion(dimension, selector, predicate));
+  }
+
+  /**
+   * Return an iterable of bitmaps for all values matching a particular predicate. Unioning these bitmaps
+   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, Predicate)} would have
+   * returned.
+   *
+   * @param dimension dimension to look at
+   * @param selector  bitmap selector
+   * @param predicate predicate to use
+   *
+   * @return iterable of bitmaps of matching rows
+   */
+  public static Iterable<ImmutableBitmap> matchPredicateNoUnion(
+      final String dimension,
+      final BitmapIndexSelector selector,
+      final Predicate<String> predicate
+  )
+  {
     Preconditions.checkNotNull(dimension, "dimension");
     Preconditions.checkNotNull(selector, "selector");
     Preconditions.checkNotNull(predicate, "predicate");
@@ -283,13 +279,12 @@ public class Filters
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
     final Indexed<String> dimValues = selector.getDimensionValues(dimension);
     if (dimValues == null || dimValues.size() == 0) {
-      return predicate.apply(null) ? allTrue(selector) : allFalse(selector);
+      return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
     }
 
     // Apply predicate to all dimension values and union the matching bitmaps
     final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-    return selector.getBitmapFactory()
-                   .union(makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues));
+    return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
   }
 
   /**

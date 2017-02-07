@@ -19,10 +19,13 @@
 
 package io.druid.collections.bitmap;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import io.druid.extendedset.intset.ImmutableConciseSet;
+
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-
-import io.druid.extendedset.intset.ImmutableConciseSet;
+import java.util.List;
 
 /**
  * As the name suggests, this class instantiates bitmaps of the types
@@ -109,6 +112,15 @@ public class ConciseBitmapFactory implements BitmapFactory
   public ImmutableBitmap union(Iterable<ImmutableBitmap> b)
       throws ClassCastException
   {
+    if (b instanceof List) {
+      final List<ImmutableBitmap> bitmapList = (List<ImmutableBitmap>) b;
+      if (bitmapList.isEmpty()) {
+        return makeEmptyImmutableBitmap();
+      } else if (bitmapList.size() == 1) {
+        return Iterables.getOnlyElement(b);
+      }
+    }
+
     return new WrappedImmutableConciseBitmap(ImmutableConciseSet.union(unwrap(b)));
   }
 

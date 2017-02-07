@@ -20,6 +20,7 @@
 package io.druid.collections.bitmap;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -28,6 +29,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * As the name suggests, this class instantiates bitmaps of the types
@@ -142,6 +144,15 @@ public class RoaringBitmapFactory implements BitmapFactory
   @Override
   public ImmutableBitmap union(Iterable<ImmutableBitmap> b)
   {
+    if (b instanceof List) {
+      final List<ImmutableBitmap> bitmapList = (List<ImmutableBitmap>) b;
+      if (bitmapList.isEmpty()) {
+        return makeEmptyImmutableBitmap();
+      } else if (bitmapList.size() == 1) {
+        return Iterables.getOnlyElement(b);
+      }
+    }
+
     return new WrappedImmutableRoaringBitmap(ImmutableRoaringBitmap.or(unwrap(b).iterator()));
   }
 

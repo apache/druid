@@ -57,7 +57,7 @@ public class LikeFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    return Filters.union(selector.getBitmapFactory(), getBitmapIterable(selector));
+    return selector.getBitmapFactory().union(getBitmapIterable(selector));
   }
 
   @Override
@@ -111,12 +111,10 @@ public class LikeFilter implements Filter
       );
     } else {
       // fallback
-      return ImmutableList.of(
-          Filters.matchPredicate(
-              dimension,
-              selector,
-              likeMatcher.predicateFactory(extractionFn).makeStringPredicate()
-          )
+      return Filters.matchPredicateNoUnion(
+          dimension,
+          selector,
+          likeMatcher.predicateFactory(extractionFn).makeStringPredicate()
       );
     }
   }
