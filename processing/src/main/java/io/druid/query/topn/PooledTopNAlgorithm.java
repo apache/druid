@@ -192,6 +192,10 @@ public class PooledTopNAlgorithm
       final int numProcessed
   )
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
     final ByteBuffer resultsBuf = params.getResultsBuf();
     final int numBytesPerRecord = params.getNumBytesPerRecord();
     final int[] aggregatorSizes = params.getAggregatorSizes();
@@ -459,6 +463,10 @@ public class PooledTopNAlgorithm
       TopNResultBuilder resultBuilder
   )
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
     final ByteBuffer resultsBuf = params.getResultsBuf();
     final int[] aggregatorSizes = params.getAggregatorSizes();
     final DimensionSelector dimSelector = params.getDimSelector();

@@ -52,6 +52,10 @@ public class StringTopNColumnSelectorStrategy
   @Override
   public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, Capabilities capabilities)
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
     // This method is used for the DimExtractionTopNAlgorithm only.
     // Unlike regular topN we cannot rely on ordering to optimize.
     // Optimization possibly requires a reverse lookup from value to ID, which is

@@ -61,6 +61,9 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
     ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
     return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, capabilities);
   }
