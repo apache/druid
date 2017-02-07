@@ -66,6 +66,11 @@ import java.util.Map;
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
 {
+  /**
+   * If isInputRaw is true, transformations such as timestamp truncation and extraction functions have not
+   * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
+   * applied in the outer query to a field of the inner query. This method must apply those transformations.
+   */
   public static Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
       final boolean isInputRaw,
