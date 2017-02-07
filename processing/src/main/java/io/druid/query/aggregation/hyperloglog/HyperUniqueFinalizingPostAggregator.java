@@ -130,7 +130,7 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.HYPER_UNIQUE_FINALIZING)
+    return new CacheKeyBuilder(PostAggregatorIds.HLL_HYPER_UNIQUE_FINALIZING)
         .appendString(fieldName)
         .build();
   }

@@ -81,7 +81,7 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.MIN)
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_MIN)
         .appendString(fieldName)
         .build();
   }

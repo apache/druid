@@ -153,7 +153,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.SKETCH_ESTIMATE)
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.DATA_SKETCHES_SKETCH_ESTIMATE)
         .appendCacheable(field);
     return errorBoundsStdDev == null ? builder.build() : builder.appendInt(errorBoundsStdDev).build();
   }

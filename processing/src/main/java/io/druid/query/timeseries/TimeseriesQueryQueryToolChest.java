@@ -130,7 +130,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
       {
-        return new CacheKeyBuilder(TIMESERIES_QUERY, CacheKeyBuilder.EMPTY_BYTES)
+        return new CacheKeyBuilder(TIMESERIES_QUERY)
             .appendBoolean(query.isDescending())
             .appendBoolean(query.isSkipEmptyBuckets())
             .appendCacheable(query.getGranularity())

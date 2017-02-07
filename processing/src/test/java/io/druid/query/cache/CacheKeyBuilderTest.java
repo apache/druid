@@ -26,9 +26,6 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.StringUtils;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -38,27 +35,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(Parameterized.class)
 public class CacheKeyBuilderTest
 {
-  @Parameters
-  public static List<Object[]> params()
-  {
-    return ImmutableList.of(
-        new Object[]{CacheKeyBuilder.DEFAULT_SEPARATOR},
-        new Object[]{CacheKeyBuilder.EMPTY_BYTES},
-        new Object[]{new byte[] {'\001'}},
-        new Object[]{StringUtils.toUtf8("string")}
-    );
-  }
-
-  private final byte[] separator;
-
-  public CacheKeyBuilderTest(byte[] separator)
-  {
-    this.separator = separator;
-  }
-
   @Test
   public void testCacheKeyBuilder()
   {
@@ -71,74 +49,61 @@ public class CacheKeyBuilderTest
       }
     };
 
-    final byte[] actual = new CacheKeyBuilder((byte) 10, separator)
+    final byte[] actual = new CacheKeyBuilder((byte) 10)
         .appendBoolean(false)
         .appendString("test")
         .appendInt(10)
         .appendFloat(0.1f)
         .appendDouble(2.3)
+        .appendByteArray(CacheKeyBuilder.STRING_SEPARATOR) // test when an item is same with the separator
         .appendFloatArray(new float[]{10.0f, 11.0f})
         .appendStringList(Lists.newArrayList("test1", "test2"))
         .appendCacheable(cacheable)
         .appendCacheable(null)
+        .appendCacheableList(Lists.newArrayList((Cacheable) null))
         .build();
 
-    final int expectedSize = 1                                  // id
-                             + 1                                // bool
-                             + 4                                // 'test'
-                             + Ints.BYTES                       // 10
-                             + Floats.BYTES                     // 0.1f
-                             + Doubles.BYTES                    // 2.3
-                             + Floats.BYTES * 2                 // 10.0f, 11.0f
-                             + 5 * 2                            // 'test1' 'test2'
-                             + cacheable.getCacheKey().length   // cacheable
-                             + 9 * separator.length;                               // separators
+    final int expectedSize = 1                                           // id
+                             + 1                                         // bool
+                             + 4                                         // 'test'
+                             + Ints.BYTES                                // 10
+                             + Floats.BYTES                              // 0.1f
+                             + Doubles.BYTES                             // 2.3
+                             + CacheKeyBuilder.STRING_SEPARATOR.length   // byte array
+                             + Floats.BYTES * 2                          // 10.0f, 11.0f
+                             + Ints.BYTES + 5 * 2 + 1         // 'test1' 'test2'
+                             + cacheable.getCacheKey().length            // cacheable
+                             + Ints.BYTES                                // cacheable list
+                             + 11;                                       // type keys
     assertEquals(expectedSize, actual.length);
 
     final byte[] expected = ByteBuffer.allocate(expectedSize)
                                       .put((byte) 10)
+                                      .put(CacheKeyBuilder.BOOLEAN_KEY)
                                       .put((byte) 0)
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.STRING_KEY)
                                       .put(StringUtils.toUtf8("test"))
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.INT_KEY)
                                       .putInt(10)
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.FLOAT_KEY)
                                       .putFloat(0.1f)
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.DOUBLE_KEY)
                                       .putDouble(2.3)
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.BYTE_ARRAY_KEY)
+                                      .put(CacheKeyBuilder.STRING_SEPARATOR)
+                                      .put(CacheKeyBuilder.FLOAT_ARRAY_KEY)
                                       .putFloat(10.0f)
                                       .putFloat(11.0f)
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.STRING_LIST_KEY)
+                                      .putInt(2)
                                       .put(StringUtils.toUtf8("test1"))
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.STRING_SEPARATOR)
                                       .put(StringUtils.toUtf8("test2"))
-                                      .put(separator)
+                                      .put(CacheKeyBuilder.CACHEABLE_KEY)
                                       .put(cacheable.getCacheKey())
-                                      .put(separator)
-                                      .array();
-
-    assertTrue(Arrays.equals(expected, actual));
-  }
-
-  @Test
-  public void testStrings()
-  {
-    final byte[] actual = new CacheKeyBuilder((byte) 10, separator)
-        .appendString("test")
-        .appendString("test")
-        .appendStringList(Lists.newArrayList("test", "test"))
-        .build();
-
-    final byte[] expected = ByteBuffer.allocate(actual.length)
-                                      .put((byte) 10)
-                                      .put(StringUtils.toUtf8("test"))
-                                      .put(separator)
-                                      .put(StringUtils.toUtf8("test"))
-                                      .put(separator)
-                                      .put(StringUtils.toUtf8("test"))
-                                      .put(separator)
-                                      .put(StringUtils.toUtf8("test"))
+                                      .put(CacheKeyBuilder.CACHEABLE_KEY)
+                                      .put(CacheKeyBuilder.CACHEABLE_LIST_KEY)
+                                      .putInt(1)
                                       .array();
 
     assertTrue(Arrays.equals(expected, actual));
@@ -147,19 +112,185 @@ public class CacheKeyBuilderTest
   @Test
   public void testNotEqualStrings()
   {
-    final byte[] key1 = new CacheKeyBuilder((byte) 10, separator)
-        .appendString("test")
-        .appendString("test")
-        .build();
+    final List<byte[]> keys = Lists.newArrayList();
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendString("test")
+            .appendString("test")
+            .build()
+    );
 
-    final byte[] key2 = new CacheKeyBuilder((byte) 10, separator)
-        .appendString("testtest")
-        .build();
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendString("testtest")
+            .build()
+    );
 
-    if (Arrays.equals(separator, CacheKeyBuilder.EMPTY_BYTES)) {
-      assertTrue(Arrays.equals(key1, key2));
-    } else {
-      assertFalse(Arrays.equals(key1, key2));
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendString("testtest")
+            .appendString("")
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendString("")
+            .appendString("testtest")
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendStringList(ImmutableList.of("test", "test"))
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendStringList(ImmutableList.of("testtest"))
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendStringList(ImmutableList.of("testtest", ""))
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendStringList(ImmutableList.of("", "testtest"))
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendStringList(ImmutableList.of("testtest"))
+            .appendStringList(ImmutableList.<String>of())
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendStringList(ImmutableList.<String>of())
+            .appendStringList(ImmutableList.of("testtest"))
+            .build()
+    );
+
+    assertNotEqualsEachOther(keys);
+  }
+
+  @Test
+  public void testNotEqualCacheables()
+  {
+    final Cacheable test = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return "test".getBytes();
+      }
+    };
+
+    final Cacheable testtest = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return "testtest".getBytes();
+      }
+    };
+
+    final List<byte[]> keys = Lists.newArrayList();
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendCacheable(test)
+            .appendCacheable(test)
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendCacheable(testtest)
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendCacheableList(Lists.newArrayList(test, test))
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendCacheableList(Lists.newArrayList(testtest))
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendCacheableList(Lists.newArrayList(testtest))
+            .appendCacheableList(Lists.<Cacheable>newArrayList())
+            .build()
+    );
+
+    keys.add(
+        new CacheKeyBuilder((byte) 10)
+            .appendCacheableList(Lists.<Cacheable>newArrayList())
+            .appendCacheableList(Lists.newArrayList(testtest))
+            .build()
+    );
+
+    assertNotEqualsEachOther(keys);
+  }
+
+  private static void assertNotEqualsEachOther(List<byte[]> keys)
+  {
+    for (byte[] k1 : keys) {
+      for (byte[] k2 : keys) {
+        if (k1 != k2) {
+          assertFalse(Arrays.equals(k1, k2));
+        }
+      }
     }
+  }
+
+  @Test
+  public void testEmptyOrNullStringLists()
+  {
+    byte[] key1 = new CacheKeyBuilder((byte) 10)
+        .appendStringList(Lists.newArrayList("", ""))
+        .build();
+
+    byte[] key2 = new CacheKeyBuilder((byte) 10)
+        .appendStringList(Lists.newArrayList(""))
+        .build();
+
+    assertFalse(Arrays.equals(key1, key2));
+
+    key1 = new CacheKeyBuilder((byte) 10)
+        .appendStringList(Lists.newArrayList(""))
+        .build();
+
+    key2 = new CacheKeyBuilder((byte) 10)
+        .appendStringList(Lists.newArrayList((String) null))
+        .build();
+
+    assertTrue(Arrays.equals(key1, key2));
+  }
+
+  @Test
+  public void testEmptyOrNullCacheables()
+  {
+    byte[] key1 = new CacheKeyBuilder((byte) 10)
+        .appendCacheableList(Lists.<Cacheable>newArrayList())
+        .build();
+
+    byte[] key2 = new CacheKeyBuilder((byte) 10)
+        .appendCacheableList(Lists.newArrayList((Cacheable) null))
+        .build();
+
+    assertFalse(Arrays.equals(key1, key2));
   }
 }

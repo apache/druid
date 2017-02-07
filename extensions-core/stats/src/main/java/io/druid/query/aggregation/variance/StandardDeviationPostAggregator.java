@@ -107,7 +107,7 @@ public class StandardDeviationPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.STANDARD_DEVIATION)
+    return new CacheKeyBuilder(PostAggregatorIds.VARIANCE_STANDARD_DEVIATION)
         .appendString(fieldName)
         .appendBoolean(isVariancePop)
         .build();

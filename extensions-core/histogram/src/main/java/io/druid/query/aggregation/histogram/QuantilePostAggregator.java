@@ -125,7 +125,7 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.QUANTILE)
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_QUANTILE)
         .appendString(fieldName)
         .appendFloat(probability)
         .build();

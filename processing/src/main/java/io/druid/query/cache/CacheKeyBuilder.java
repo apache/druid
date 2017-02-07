@@ -19,6 +19,7 @@
 
 package io.druid.query.cache;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -27,36 +28,76 @@ import io.druid.common.utils.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 public class CacheKeyBuilder
 {
-  static final byte[] DEFAULT_SEPARATOR = new byte[]{(byte) 0xFF};
-  public static final byte[] EMPTY_BYTES = new byte[0];
+  static final byte BYTE_KEY = 0;
+  static final byte BYTE_ARRAY_KEY = 1;
+  static final byte BOOLEAN_KEY = 2;
+  static final byte INT_KEY = 3;
+  static final byte FLOAT_KEY = 4;
+  static final byte FLOAT_ARRAY_KEY = 5;
+  static final byte DOUBLE_KEY = 6;
+  static final byte STRING_KEY = 7;
+  static final byte STRING_LIST_KEY = 8;
+  static final byte CACHEABLE_KEY = 9;
+  static final byte CACHEABLE_LIST_KEY = 10;
 
-  private static byte[] byteToByteArray(byte input)
+  static final byte[] STRING_SEPARATOR = new byte[]{(byte) 0xFF};
+  public static final byte[] EMPTY_BYTES = StringUtils.EMPTY_BYTES;
+
+  private static class Item
   {
-    return new byte[]{input};
+    private final byte typeKey;
+    private final byte[] item;
+
+    Item(byte typeKey, byte[] item)
+    {
+      this.typeKey = typeKey;
+      this.item = item;
+    }
+
+    public int byteSize()
+    {
+      return 1 + item.length;
+    }
   }
 
-  private static byte[] stringToByteArray(String input)
+  private static byte[] stringListToByteArray(List<String> input)
   {
-    return StringUtils.toUtf8WithNullToEmpty(input);
+    if (input.size() > 0) {
+      List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(input.size());
+      int totalByteLength = 0;
+      for (String eachStr : input) {
+        final byte[] byteArray = StringUtils.toUtf8WithNullToEmpty(eachStr);
+        totalByteLength += byteArray.length;
+        byteArrayList.add(byteArray);
+      }
+      return joinByteArrayList(byteArrayList, STRING_SEPARATOR, totalByteLength);
+    } else {
+      return EMPTY_BYTES;
+    }
   }
 
-  private static byte[] booleanToByteArray(boolean input)
+  private static byte[] joinByteArrayList(Collection<byte[]> byteArrayList, byte[] separator, int totalByteLength)
   {
-    return new byte[]{(byte) (input ? 1 : 0)};
-  }
+    final Iterator<byte[]> iterator = byteArrayList.iterator();
+    Preconditions.checkArgument(iterator.hasNext());
 
-  private static byte[] intToByteArray(int input)
-  {
-    return Ints.toByteArray(input);
-  }
+    final int bufSize = Ints.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
+    final ByteBuffer buffer = ByteBuffer.allocate(bufSize)
+                                        .putInt(byteArrayList.size())
+                                        .put(iterator.next());
 
-  private static byte[] floatToByteArray(float input)
-  {
-    return ByteBuffer.allocate(Floats.BYTES).putFloat(input).array();
+    while (iterator.hasNext()) {
+      buffer.put(separator).put(iterator.next());
+    }
+
+    return buffer.array();
   }
 
   private static byte[] floatArrayToByteArray(float[] input)
@@ -66,110 +107,128 @@ public class CacheKeyBuilder
     return buffer.array();
   }
 
-  private static byte[] doubleToByteArray(double input)
+  private static byte[] cacheableToByteArray(@Nullable Cacheable cacheable)
   {
-    return ByteBuffer.allocate(Doubles.BYTES).putDouble(input).array();
+    if (cacheable == null) {
+      return EMPTY_BYTES;
+    } else {
+      final byte[] key = cacheable.getCacheKey();
+      Preconditions.checkArgument(!Arrays.equals(key, EMPTY_BYTES), "cache key is equal to the empty key");
+      return key;
+    }
   }
 
-  private final List<byte[]> items = Lists.newArrayList();
+  private static byte[] cacheableListToByteArray(List<? extends Cacheable> input)
+  {
+    final int inputSize = input.size();
+    if (inputSize > 0) {
+      final List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(inputSize);
+      int totalByteLength = 0;
+      for (Cacheable eachCacheable : input) {
+        byte[] key = cacheableToByteArray(eachCacheable);
+        totalByteLength += key.length;
+        byteArrayList.add(key);
+      }
+
+      return joinByteArrayList(byteArrayList, EMPTY_BYTES, totalByteLength);
+    } else {
+      return EMPTY_BYTES;
+    }
+  }
+
+  private final List<Item> items = Lists.newArrayList();
   private final byte id;
-  private final byte[] separator;
   private int size;
 
   public CacheKeyBuilder(byte id)
   {
-    this(id, DEFAULT_SEPARATOR);
-  }
-
-  public CacheKeyBuilder(byte id, byte[] separator)
-  {
     this.id = id;
     this.size = 1;
-    this.separator = separator;
   }
 
   public CacheKeyBuilder appendByte(byte input)
   {
-    appendItem(byteToByteArray(input));
+    appendItem(BYTE_KEY, new byte[]{input});
+    return this;
+  }
+
+  public CacheKeyBuilder appendByteArray(byte[] input)
+  {
+    // TODO: check it is ok to not add input.length for fixed-size types
+    appendItem(BYTE_ARRAY_KEY, input);
     return this;
   }
 
   public CacheKeyBuilder appendString(@Nullable String input)
   {
-    appendItem(stringToByteArray(input));
+    appendItem(STRING_KEY, StringUtils.toUtf8WithNullToEmpty(input));
     return this;
   }
 
   public CacheKeyBuilder appendStringList(List<String> input)
   {
-    for (String eachStr : input) {
-      appendItem(stringToByteArray(eachStr));
-    }
+    appendItem(STRING_LIST_KEY, stringListToByteArray(input));
     return this;
   }
 
   public CacheKeyBuilder appendBoolean(boolean input)
   {
-    appendItem(booleanToByteArray(input));
+    appendItem(BOOLEAN_KEY, new byte[]{(byte) (input ? 1 : 0)});
     return this;
   }
 
   public CacheKeyBuilder appendInt(int input)
   {
-    appendItem(intToByteArray(input));
+    appendItem(INT_KEY, Ints.toByteArray(input));
     return this;
   }
 
   public CacheKeyBuilder appendFloat(float input)
   {
-    appendItem(floatToByteArray(input));
+    appendItem(FLOAT_KEY, ByteBuffer.allocate(Floats.BYTES).putFloat(input).array());
     return this;
   }
 
   public CacheKeyBuilder appendDouble(double input)
   {
-    appendItem(doubleToByteArray(input));
+    appendItem(DOUBLE_KEY, ByteBuffer.allocate(Doubles.BYTES).putDouble(input).array());
     return this;
   }
 
   public CacheKeyBuilder appendFloatArray(float[] input)
   {
-    appendItem(floatArrayToByteArray(input));
+    appendItem(FLOAT_ARRAY_KEY, floatArrayToByteArray(input));
     return this;
   }
 
   public CacheKeyBuilder appendCacheable(@Nullable Cacheable input)
   {
-    appendItem(input == null ? EMPTY_BYTES : input.getCacheKey());
+    appendItem(CACHEABLE_KEY, cacheableToByteArray(input));
     return this;
   }
 
-  public CacheKeyBuilder appendCacheableList(List<? extends Cacheable> inputs)
+  public CacheKeyBuilder appendCacheableList(List<? extends Cacheable> input)
   {
-    for (Cacheable input : inputs) {
-      appendItem(input.getCacheKey());
-    }
+    appendItem(CACHEABLE_LIST_KEY, cacheableListToByteArray(input));
     return this;
   }
 
-  private void appendItem(byte[] item)
+  private void appendItem(byte typeKey, byte[] input)
   {
+    final Item item = new Item(typeKey, input);
     items.add(item);
-    size += item.length;
+    size += item.byteSize();
   }
 
   public byte[] build()
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(size + separator.length * (items.size() - 1));
+    final ByteBuffer buffer = ByteBuffer.allocate(size);
     buffer.put(id);
 
-    for (int i = 0; i < items.size(); i++) {
-      if (i == items.size() - 1) {
-        buffer.put(items.get(i));
-      } else {
-        buffer.put(items.get(i)).put(separator);
-      }
+    for (Item item : items) {
+      buffer.put(item.typeKey).put(item.item);
     }
+
     return buffer.array();
   }
 }

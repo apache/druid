@@ -303,7 +303,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public byte[] computeCacheKey(TopNQuery query)
       {
-        return new CacheKeyBuilder(TOPN_QUERY, CacheKeyBuilder.EMPTY_BYTES)
+        return new CacheKeyBuilder(TOPN_QUERY)
             .appendCacheable(query.getDimensionSpec())
             .appendCacheable(query.getTopNMetricSpec())
             .appendInt(query.getThreshold())

@@ -81,7 +81,7 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.EQUAL_BUCKETS)
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_EQUAL_BUCKETS)
         .appendString(fieldName)
         .appendInt(numBuckets)
         .build();

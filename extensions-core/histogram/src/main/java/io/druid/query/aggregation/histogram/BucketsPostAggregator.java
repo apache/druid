@@ -91,7 +91,7 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.BUCKETS)
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_BUCKETS)
         .appendString(fieldName)
         .appendFloat(bucketSize)
         .appendFloat(offset)

@@ -80,7 +80,7 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.CUSTOM_BUCKETS)
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_CUSTOM_BUCKETS)
         .appendString(fieldName)
         .appendFloatArray(breaks)
         .build();

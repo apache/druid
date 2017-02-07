@@ -355,12 +355,14 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
-        return new CacheKeyBuilder(GROUPBY_QUERY, CacheKeyBuilder.EMPTY_BYTES)
+        return new CacheKeyBuilder(GROUPBY_QUERY)
             .appendByte(CACHE_STRATEGY_VERSION)
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimFilter())
             .appendCacheableList(query.getAggregatorSpecs())
             .appendCacheableList(query.getDimensions())
+            .appendCacheable(query.getHavingSpec())
+            .appendCacheable(query.getLimitSpec())
             .build();
       }
 

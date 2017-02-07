@@ -81,7 +81,7 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.MAX)
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_MAX)
         .appendString(fieldName)
         .build();
   }
