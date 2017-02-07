@@ -77,4 +77,15 @@ public class KafkaEmitterConfig {
 
   @JsonProperty
   public String getClusterName() { return clusterName; }
+
+  @Override
+  public String toString()
+  {
+    return "KafkaEmitterConfig{" +
+        "bootstrap.servers='" + bootstrapServers +
+        ", metric.topic=" + metricTopic +
+        ", alert.topic=" + alertTopic +
+        ", clusterName=" + clusterName +
+        '}';
+  }
 }
