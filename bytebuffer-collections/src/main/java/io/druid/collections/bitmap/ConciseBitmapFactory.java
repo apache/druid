@@ -20,7 +20,6 @@
 package io.druid.collections.bitmap;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 
 import java.nio.ByteBuffer;
