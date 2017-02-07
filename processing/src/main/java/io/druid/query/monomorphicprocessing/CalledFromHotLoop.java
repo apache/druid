@@ -21,6 +21,7 @@ package io.druid.query.monomorphicprocessing;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -34,6 +35,7 @@ import java.lang.annotation.Target;
  * @see HotLoopCallee
  */
 @Documented
+@Inherited
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 public @interface CalledFromHotLoop
