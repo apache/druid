@@ -19,27 +19,40 @@
 
 package io.druid.collections;
 
-import java.io.Closeable;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.google.common.base.Throwables;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import sun.misc.Cleaner;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
 {
   private static final Logger log = new Logger(ReferenceCountingResourceHolder.class);
 
-  private final Object lock = new Object();
+  private static final AtomicLong leakedResources = new AtomicLong();
+
+  public static long leakedResources()
+  {
+    return leakedResources.get();
+  }
+
   private final T object;
   private final Closeable closer;
+  private final AtomicInteger refCount = new AtomicInteger(1);
+  private final AtomicBoolean closed = new AtomicBoolean(false);
+  @SuppressWarnings("unused")
+  private final Cleaner cleaner;
 
-  private int refcount = 1;
-  private boolean didClose = false;
-
-  public ReferenceCountingResourceHolder(final T object, final Closeable closer)
+  ReferenceCountingResourceHolder(final T object, final Closeable closer)
   {
     this.object = object;
     this.closer = closer;
+    this.cleaner = Cleaner.create(this, new CloserRunnable(object, closer, refCount));
   }
 
   public static <T extends Closeable> ReferenceCountingResourceHolder<T> fromCloseable(final T object)
@@ -50,92 +63,110 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   @Override
   public T get()
   {
-    synchronized (lock) {
-      if (refcount <= 0) {
-        throw new ISE("Already closed!");
-      }
-
-      return object;
+    if (refCount.get() <= 0) {
+      throw new ISE("Already closed!");
     }
+    return object;
   }
 
   public Releaser increment()
   {
-    synchronized (lock) {
-      if (refcount <= 0) {
+    while (true) {
+      int count = this.refCount.get();
+      if (count <= 0) {
         throw new ISE("Already closed!");
       }
+      if (refCount.compareAndSet(count, count + 1)) {
+        break;
+      }
+    }
 
-      refcount++;
+    // This Releaser is supposed to be used from a single thread, so no synchronization/atomicity
+    return new Releaser()
+    {
+      boolean released = false;
 
-      return new Releaser()
+      @Override
+      public void close()
       {
-        final AtomicBoolean didRelease = new AtomicBoolean();
-
-        @Override
-        public void close()
-        {
-          if (didRelease.compareAndSet(false, true)) {
-            decrement();
-          } else {
-            log.warn("WTF?! release called but we are already released!");
-          }
+        if (!released) {
+          decrement();
+          released = true;
+        } else {
+          log.warn(new ISE("Already closed"), "Already closed");
         }
-
-        @Override
-        protected void finalize() throws Throwable
-        {
-          if (didRelease.compareAndSet(false, true)) {
-            log.warn("Not released! Object was[%s], releasing on finalize of releaser.", object);
-            decrement();
-          }
-        }
-      };
-    }
-  }
-
-  public int getReferenceCount()
-  {
-    synchronized (lock) {
-      return refcount;
-    }
+      }
+    };
   }
 
   @Override
   public void close()
   {
-    synchronized (lock) {
-      if (!didClose) {
-        didClose = true;
-        decrement();
-      } else {
-        log.warn(new ISE("Already closed!"), "Already closed");
-      }
-    }
-  }
-
-  @Override
-  protected void finalize() throws Throwable
-  {
-    synchronized (lock) {
-      if (!didClose) {
-        log.warn("Not closed! Object was[%s], closing on finalize of holder.", object);
-        didClose = true;
-        decrement();
-      }
+    if (closed.compareAndSet(false, true)) {
+      decrement();
+    } else {
+      log.warn(new ISE("Already closed"), "Already closed");
     }
   }
 
   private void decrement()
   {
-    synchronized (lock) {
-      refcount--;
-      if (refcount <= 0) {
-        try {
-          closer.close();
+    // Checking that the count is exactly equal to 0, rather than less or equal, helps to avoid calling closer.close()
+    // twice if there is a race with CloserRunnable. Such a race is possible and could be avoided only with
+    // reachabilityFence() (Java 9+) in ReferenceCountingResourceHolder's and Releaser's close() methods.
+    if (refCount.decrementAndGet() == 0) {
+      try {
+        closer.close();
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+  }
+
+  private static class CloserRunnable implements Runnable
+  {
+    private final Object object;
+    private final Closeable closer;
+    private final AtomicInteger refCount;
+
+    private CloserRunnable(Object object, Closeable closer, AtomicInteger refCount)
+    {
+      this.object = object;
+      this.closer = closer;
+      this.refCount = refCount;
+    }
+
+    @Override
+    public void run()
+    {
+      while (true) {
+        int count = refCount.get();
+        if (count <= 0) {
+          return;
         }
-        catch (Exception e) {
-          log.error(e, "WTF?! Close failed, uh oh...");
+        if (refCount.compareAndSet(count, 0)) {
+          try {
+            leakedResources.incrementAndGet();
+            closer.close();
+            return;
+          }
+          catch (Exception e) {
+            try {
+              log.error(e, "Exception in closer");
+            }
+            catch (Exception ignore) {
+              // ignore
+            }
+          }
+          finally {
+            try {
+              log.warn("Not closed! Object was[%s]", object);
+            }
+            catch (Exception ignore) {
+              // ignore
+            }
+          }
         }
       }
     }
