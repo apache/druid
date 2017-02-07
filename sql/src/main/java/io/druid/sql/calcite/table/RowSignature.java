@@ -76,6 +76,21 @@ public class RowSignature
     return new Builder();
   }
 
+  public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
+  {
+    if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
+      return ValueType.FLOAT;
+    } else if (SqlTypeName.DATETIME_TYPES.contains(sqlTypeName) || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
+      return ValueType.LONG;
+    } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
+      return ValueType.STRING;
+    } else if (SqlTypeName.OTHER == sqlTypeName) {
+      return ValueType.COMPLEX;
+    } else {
+      return null;
+    }
+  }
+
   public ValueType getColumnType(final String name)
   {
     return columnTypes.get(name);

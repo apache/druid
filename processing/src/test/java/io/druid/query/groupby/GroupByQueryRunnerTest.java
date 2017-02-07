@@ -81,6 +81,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
@@ -1266,8 +1267,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false),
-                    null
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
                 )
             )
         )
@@ -1345,8 +1345,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, false, false),
-                    null
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, false, false)
                 )
             )
         )
@@ -1424,8 +1423,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false),
-                    null
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false)
                 )
             )
         )
@@ -1503,8 +1501,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, "MISSING", true, false),
-                    null
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, "MISSING", true, false)
                 )
             )
         )
@@ -1581,8 +1578,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, true, false),
-                    null
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, true, false)
                 )
             )
         )
@@ -1826,7 +1822,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
-                new ExtractionDimensionSpec("quality", "alias", nullExtractionFn, null)
+                new ExtractionDimensionSpec("quality", "alias", nullExtractionFn)
             )
         )
         .build();
@@ -1895,7 +1891,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
-                new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn, null)
+                new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn)
             )
         )
         .build();
@@ -3052,8 +3048,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false),
-                    null
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
                 )
             )
         )
@@ -4207,8 +4202,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     Column.TIME_COLUMN_NAME,
                     Column.TIME_COLUMN_NAME,
-                    new TimeFormatExtractionFn("EEEE", null, null, null, false),
-                    null
+                    new TimeFormatExtractionFn("EEEE", null, null, null, false)
                 )
             )
         )
@@ -5646,8 +5640,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     Column.TIME_COLUMN_NAME,
                     "dayOfWeek",
-                    new TimeFormatExtractionFn("EEEE", null, null, null, false),
-                    null
+                    new TimeFormatExtractionFn("EEEE", null, null, null, false)
                 )
             )
         )
@@ -5908,8 +5901,7 @@ public class GroupByQueryRunnerTest
                             new TimeFormatExtractionFn("EEEE", null, null, null, false),
                             nullWednesdays,
                         }
-                    ),
-                    null
+                    )
                 )
             )
         )
@@ -6220,8 +6212,7 @@ public class GroupByQueryRunnerTest
                             false
                         ), false, null, false,
                         false
-                    ),
-                    null
+                    )
                 )
             )
         )
@@ -6295,8 +6286,7 @@ public class GroupByQueryRunnerTest
                             false
                         ), false, null, true,
                         false
-                    ),
-                    null
+                    )
                 )
             )
         )
@@ -7569,6 +7559,81 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByStringOutputAsLong()
+  {
+    ExtractionFn strlenFn = StrlenExtractionFn.instance();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new ExtractionDimensionSpec(
+            QueryRunnerTestHelper.qualityDimension,
+            "alias",
+            ValueType.LONG,
+            strlenFn
+        )))
+        .setDimFilter(new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "entertainment", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults;
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "alias",
+              "13",
+              "rows",
+              1L,
+              "idx",
+              158L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-02",
+              "alias",
+              "13",
+              "rows",
+              1L,
+              "idx",
+              166L
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "alias",
+              13L,
+              "rows",
+              1L,
+              "idx",
+              158L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-02",
+              "alias",
+              13L,
+              "rows",
+              1L,
+              "idx",
+              166L
+          )
+      );
+    }
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 }

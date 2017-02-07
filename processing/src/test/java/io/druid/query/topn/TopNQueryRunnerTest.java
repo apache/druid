@@ -62,6 +62,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -1697,8 +1698,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getDefault()),
-                null
+                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getDefault())
             )
         )
         .metric("rows")
@@ -1756,7 +1756,7 @@ public class TopNQueryRunnerTest
         .dimension(
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.qualityDimension,
-                new RegexDimExtractionFn(".(.)", false, null), null
+                new RegexDimExtractionFn(".(.)", false, null)
             )
         )
         .metric("index")
@@ -1826,8 +1826,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
         .metric("rows")
@@ -1891,8 +1890,7 @@ public class TopNQueryRunnerTest
                         false
                     ), false, "MISSING", true,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -1956,8 +1954,7 @@ public class TopNQueryRunnerTest
                         false
                     ), false, "MISSING", false,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -2022,8 +2019,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, true,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -2090,8 +2086,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, false,
                     false
-                ),
-                null
+                )
             )
         )
         .metric("rows")
@@ -2157,8 +2152,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, true,
                     false
-                ),
-                null
+                )
             )
         )
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
@@ -2224,8 +2218,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, false,
                     false
-                ),
-                null
+                )
             )
         )
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
@@ -2292,8 +2285,7 @@ public class TopNQueryRunnerTest
                         false
                     ), true, null, true,
                     false
-                ),
-                null
+                )
             )
         )
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
@@ -2346,8 +2338,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
@@ -2400,8 +2391,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("..(.)", false, null),
-                null
+                new RegexDimExtractionFn("..(.)", false, null)
             )
         )
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
@@ -2454,8 +2444,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
         .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
@@ -2525,7 +2514,7 @@ public class TopNQueryRunnerTest
                   {
                     return ExtractionType.MANY_TO_ONE;
                   }
-                }, null
+                }
             )
         )
         .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
@@ -2572,8 +2561,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)", false, null),
-                null
+                new RegexDimExtractionFn("(.)", false, null)
             )
         )
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
@@ -2619,8 +2607,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("..(.)", false, null),
-                null
+                new RegexDimExtractionFn("..(.)", false, null)
             )
         )
         .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("p", StringComparators.LEXICOGRAPHIC)))
@@ -2698,8 +2685,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                nullStringDimExtraction,
-                null
+                nullStringDimExtraction
             )
         )
         .build();
@@ -2788,8 +2774,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                emptyStringDimExtraction,
-                null
+                emptyStringDimExtraction
             )
         )
         .build();
@@ -3213,8 +3198,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 Column.TIME_COLUMN_NAME,
                 "dayOfWeek",
-                new TimeFormatExtractionFn("EEEE", null, null, null, false),
-                null
+                new TimeFormatExtractionFn("EEEE", null, null, null, false)
             )
         )
         .metric("index")
@@ -4456,6 +4440,80 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     expectedMap
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNStringOutputAsLong()
+  {
+    ExtractionFn strlenFn = StrlenExtractionFn.instance();
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.qualityDimension, "alias", ValueType.LONG, strlenFn))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 9L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 7L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 10L)
+                        .put(QueryRunnerTestHelper.indexMetric, 20479.497562408447D)
+                        .put("rows", 186L)
+                        .put("addRowsIndexConstant", 20666.497562408447D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 59.02102279663086D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", 13L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
                 )
             )
         )

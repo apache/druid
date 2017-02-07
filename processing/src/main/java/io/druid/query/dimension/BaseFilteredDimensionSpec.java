@@ -58,8 +58,7 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   @Override
   public ValueType getOutputType()
   {
-    // The filtered dimension specs only operate on String columns
-    return ValueType.STRING;
+    return delegate.getOutputType();
   }
 
   @Override

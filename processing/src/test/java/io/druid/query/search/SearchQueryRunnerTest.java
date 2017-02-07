@@ -374,8 +374,7 @@ public class SearchQueryRunnerTest
                                   new ExtractionDimensionSpec(
                                       QueryRunnerTestHelper.qualityDimension,
                                       null,
-                                      lookupExtractionFn,
-                                      null
+                                      lookupExtractionFn
                                   )
                               )
                               .query("☃")

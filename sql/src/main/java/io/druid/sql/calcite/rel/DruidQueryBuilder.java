@@ -97,15 +97,8 @@ public class DruidQueryBuilder
       final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
       final ValueType valueType;
 
-      if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.FLOAT;
-      } else if (SqlTypeName.DATETIME_TYPES.contains(sqlTypeName) || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.LONG;
-      } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.STRING;
-      } else if (SqlTypeName.OTHER == sqlTypeName) {
-        valueType = ValueType.COMPLEX;
-      } else {
+      valueType = RowSignature.getValueTypeForSqlTypeName(sqlTypeName);
+      if (valueType == null) {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
       }
 

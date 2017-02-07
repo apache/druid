@@ -21,6 +21,7 @@ package io.druid.sql.calcite.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
@@ -34,6 +35,7 @@ import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
@@ -65,13 +67,14 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       final DimFilter filter
   )
   {
+    final RexNode rexNode = Expressions.fromFieldAccess(
+        rowSignature,
+        project,
+        Iterables.getOnlyElement(aggregateCall.getArgList())
+    );
     final RowExtraction rex = Expressions.toRowExtraction(
         rowSignature.getRowOrder(),
-        Expressions.fromFieldAccess(
-            rowSignature,
-            project,
-            Iterables.getOnlyElement(aggregateCall.getArgList())
-        )
+        rexNode
     );
     if (rex == null) {
       return null;
@@ -82,7 +85,13 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     if (rowSignature.getColumnType(rex.getColumn()) == ValueType.COMPLEX) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(name, rex.getColumn());
     } else {
-      final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null);
+      final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+      final ValueType outputType = RowSignature.getValueTypeForSqlTypeName(sqlTypeName);
+      if (outputType == null) {
+        throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, name);
+      }
+
+      final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null, null);
       if (dimensionSpec == null) {
         return null;
       }

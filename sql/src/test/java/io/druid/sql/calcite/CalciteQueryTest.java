@@ -2255,7 +2255,7 @@ public class CalciteQueryTest
                         )
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(QueryGranularities.ALL)
-                        .setDimensions(DIMS(new DefaultDimensionSpec("a0", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("a0", "d0")))
                         .setAggregatorSpecs(AGGS(
                             new CountAggregatorFactory("a0")
                         ))
@@ -2509,16 +2509,16 @@ public class CalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(QueryGranularities.ALL)
                         .setDimensions(DIMS(
-                            new ExtractionDimensionSpec("dim1", "d0", new BucketExtractionFn(1.0, 0.0))
+                            new ExtractionDimensionSpec("dim1", "d0", ValueType.FLOAT, new BucketExtractionFn(1.0, 0.0))
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 3L},
+            new Object[]{0.0, 3L},
             new Object[]{1.0, 1L},
-            new Object[]{10.0, 1L},
-            new Object[]{2.0, 1L}
+            new Object[]{2.0, 1L},
+            new Object[]{10.0, 1L}
         )
     );
   }
@@ -2535,7 +2535,7 @@ public class CalciteQueryTest
                         .setGranularity(QueryGranularities.ALL)
                         .setDimensions(
                             DIMS(
-                                new ExtractionDimensionSpec("dim1", "d0", new BucketExtractionFn(1.0, 0.0))
+                                new ExtractionDimensionSpec("dim1", "d0", ValueType.FLOAT, new BucketExtractionFn(1.0, 0.0))
                             )
                         )
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
@@ -2557,7 +2557,7 @@ public class CalciteQueryTest
             new Object[]{10.0, 1L},
             new Object[]{2.0, 1L},
             new Object[]{1.0, 1L},
-            new Object[]{null, 3L}
+            new Object[]{0.0, 3L}
         )
     );
   }
@@ -2580,6 +2580,7 @@ public class CalciteQueryTest
                                 new ExtractionDimensionSpec(
                                     "__time",
                                     "d0",
+                                    ValueType.LONG,
                                     new TimeFormatExtractionFn(null, null, null, QueryGranularities.YEAR, true)
                                 ),
                                 new DefaultDimensionSpec("dim2", "d1")
@@ -2639,6 +2640,7 @@ public class CalciteQueryTest
                                 new ExtractionDimensionSpec(
                                     "dim1",
                                     "d0",
+                                    ValueType.LONG,
                                     StrlenExtractionFn.instance()
                                 )
                             )
@@ -2732,6 +2734,7 @@ public class CalciteQueryTest
                                 new ExtractionDimensionSpec(
                                     "__time",
                                     "d0",
+                                    ValueType.LONG,
                                     new TimeFormatExtractionFn("Y", null, null, QueryGranularities.NONE, true)
                                 )
                             )
@@ -2776,6 +2779,7 @@ public class CalciteQueryTest
                                 new ExtractionDimensionSpec(
                                     "__time",
                                     "d0",
+                                    ValueType.LONG,
                                     CASCADE(
                                         new TimeFormatExtractionFn(null, null, null, QueryGranularities.YEAR, true),
                                         new TimeFormatExtractionFn("Y", null, null, QueryGranularities.NONE, true)
@@ -2816,6 +2820,7 @@ public class CalciteQueryTest
                                 new ExtractionDimensionSpec(
                                     "__time",
                                     "d0",
+                                    ValueType.LONG,
                                     new TimeFormatExtractionFn(null, null, null, QueryGranularities.MONTH, true)
                                 )
                             )
@@ -2862,6 +2867,7 @@ public class CalciteQueryTest
                     new ExtractionDimensionSpec(
                         "__time",
                         "d0",
+                        ValueType.LONG,
                         new TimeFormatExtractionFn(null, null, null, QueryGranularities.MONTH, true)
                     )
                 )
@@ -2895,6 +2901,7 @@ public class CalciteQueryTest
                                 new ExtractionDimensionSpec(
                                     "__time",
                                     "d0",
+                                    ValueType.LONG,
                                     new TimeFormatExtractionFn(null, null, null, QueryGranularities.MONTH, true)
                                 )
                             )
