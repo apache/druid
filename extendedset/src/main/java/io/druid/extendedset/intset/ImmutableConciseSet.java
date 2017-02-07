@@ -60,7 +60,7 @@ public class ImmutableConciseSet
         } else if (ConciseSetUtils.isZeroSequence(w2)) {
           return -1;
         } else {
-          // w2 is "one sequence"
+          assert ConciseSetUtils.isOneSequence(w2);
           return 1;
         }
       } else if (ConciseSetUtils.isZeroSequence(w1)) {
@@ -69,7 +69,7 @@ public class ImmutableConciseSet
         }
         return Integer.compare(ConciseSetUtils.getSequenceNumWords(w1), ConciseSetUtils.getSequenceNumWords(w2));
       } else {
-        // w1 is "one sequence"
+        assert ConciseSetUtils.isOneSequence(w1);
         if (ConciseSetUtils.isOneSequence(w2)) {
           // reverse
           return Integer.compare(ConciseSetUtils.getSequenceNumWords(w2), ConciseSetUtils.getSequenceNumWords(w1));
@@ -104,7 +104,7 @@ public class ImmutableConciseSet
         } else if (ConciseSetUtils.isZeroSequence(w2)) {
           return 1;
         } else {
-          // w2 is "one sequence"
+          assert ConciseSetUtils.isOneSequence(w2);
           return -1;
         }
       } else if (ConciseSetUtils.isZeroSequence(w1)) {
@@ -114,7 +114,7 @@ public class ImmutableConciseSet
         }
         return -1;
       } else {
-        // w1 is "one sequence"
+        assert ConciseSetUtils.isOneSequence(w1);
         if (!ConciseSetUtils.isOneSequence(w2)) {
           return 1;
         }
@@ -323,7 +323,7 @@ public class ImmutableConciseSet
         newWord = last + ConciseSetUtils.getSequenceNumWords(wordToAdd);
       }
     } else {
-      // last is "one sequence"
+      assert ConciseSetUtils.isOneSequence(last);
       if (ConciseSetUtils.isAllOnesLiteral(wordToAdd)) {
         newWord = last + 1;
       } else if (ConciseSetUtils.isOneSequence(wordToAdd) && ConciseSetUtils.getFlippedBit(wordToAdd) == -1) {
@@ -430,7 +430,8 @@ public class ImmutableConciseSet
           itr.word = itr.next();
           changedIterators.add(itr);
         }
-      } else { // word is one sequence
+      } else {
+        assert ConciseSetUtils.isOneSequence(word);
         // extract a literal from the flip bits of the one sequence
         int flipBitLiteral = ConciseSetUtils.getLiteralFromOneSeqFlipBit(word);
 
@@ -447,7 +448,7 @@ public class ImmutableConciseSet
             } else if (ConciseSetUtils.isZeroSequence(w)) {
               flipBitLiteral |= ConciseSetUtils.getLiteralFromZeroSeqFlipBit(w);
             } else {
-              // w is one sequence
+              assert ConciseSetUtils.isOneSequence(w);
               flipBitLiteral |= ConciseSetUtils.getLiteralFromOneSeqFlipBit(w);
             }
           }
@@ -595,7 +596,7 @@ public class ImmutableConciseSet
             } else if (ConciseSetUtils.isZeroSequence(w)) {
               flipBitLiteral &= ConciseSetUtils.getLiteralFromZeroSeqFlipBit(w);
             } else {
-              // w is one sequence
+              ConciseSetUtils.isOneSequence(w);
               flipBitLiteral &= ConciseSetUtils.getLiteralFromOneSeqFlipBit(w);
             }
           }
