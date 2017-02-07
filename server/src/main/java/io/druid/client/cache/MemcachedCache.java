@@ -35,7 +35,6 @@ import com.google.common.primitives.Ints;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
-import io.druid.collections.LoadBalancingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.logger.Logger;
@@ -359,7 +358,7 @@ public class MemcachedCache implements Cache
       final Supplier<ResourceHolder<MemcachedClientIF>> clientSupplier;
 
       if (config.getNumConnections() > 1) {
-        clientSupplier = new LoadBalancingPool<MemcachedClientIF>(
+        clientSupplier = new MemcacheClientPool(
             config.getNumConnections(),
             new Supplier<MemcachedClientIF>()
             {
