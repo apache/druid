@@ -349,6 +349,8 @@ public class RowBasedGrouperHelper
       );
       ValueType type = rawInputRowSignature.get(dimensions.get(i).getDimension());
       if (type == null) {
+        // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
+        // their types aren't known, so default to String handling.
         type = ValueType.STRING;
       }
       switch (type) {

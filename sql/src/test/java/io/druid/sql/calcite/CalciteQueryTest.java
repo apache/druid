@@ -2250,15 +2250,12 @@ public class CalciteQueryTest
                                             .setGranularity(QueryGranularities.ALL)
                                             .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
                                             .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
-                                            .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(
-                                                new FieldAccessPostAggregator("a1", "a0")
-                                            ))
                                             .build()
                             )
                         )
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(QueryGranularities.ALL)
-                        .setDimensions(DIMS(new DefaultDimensionSpec("a1", "d0")))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("a0", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(
                             new CountAggregatorFactory("a0")
                         ))
