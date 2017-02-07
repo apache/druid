@@ -70,10 +70,10 @@ public class JSONPathSpecTest
 
     Assert.assertEquals(JSONPathFieldType.ROOT, timestamp.getType());
     Assert.assertEquals("timestamp", timestamp.getName());
-    Assert.assertEquals("timestamp", timestamp.getExpr());
+    Assert.assertEquals(null, timestamp.getExpr());
 
     Assert.assertEquals(JSONPathFieldType.ROOT, foodotbar1.getType());
     Assert.assertEquals("foo.bar1", foodotbar1.getName());
-    Assert.assertEquals("foo.bar1", foodotbar1.getExpr());
+    Assert.assertEquals(null, foodotbar1.getExpr());
   }
 }

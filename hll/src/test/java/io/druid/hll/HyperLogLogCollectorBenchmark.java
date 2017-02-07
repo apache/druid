@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.hyperloglog;
+package io.druid.hll;
 
 import com.google.caliper.Param;
 import com.google.caliper.Runner;

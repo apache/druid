@@ -29,6 +29,7 @@ import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 /**
@@ -116,6 +117,24 @@ public class DimensionPredicateFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    return Filters.estimatePredicateSelectivity(
+        dimension,
+        indexSelector,
+        predicateFactory.makeStringPredicate()
+    );
   }
 
   @Override

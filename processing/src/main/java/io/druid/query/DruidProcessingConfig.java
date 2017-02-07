@@ -63,4 +63,9 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   {
     return false;
   }
+
+  @Config(value = "${base_path}.tmpDir")
+  public String getTmpDir() {
+    return System.getProperty("java.io.tmpdir");
+  }
 }

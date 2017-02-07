@@ -19,6 +19,7 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -40,13 +41,20 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
+import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
+import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -103,7 +111,7 @@ public class Filters
 
   /**
    * Create a ValueMatcher that compares row values to the provided string.
-   *
+   * <p>
    * An implementation of this method should be able to handle dimensions of various types.
    *
    * @param columnSelectorFactory Selector for columns.
@@ -130,10 +138,10 @@ public class Filters
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.
-   *
+   * <p>
    * The caller provides a predicate factory that can create a predicate for each value type supported by Druid.
    * See {@link DruidPredicateFactory} for more information.
-   *
+   * <p>
    * When creating the ValueMatcher, the ValueMatcherFactory implementation should decide what type of predicate
    * to create from the predicate factory based on the ValueType of the specified dimension.
    *
@@ -181,6 +189,48 @@ public class Filters
   }
 
   /**
+   * Transform an iterable of indexes of bitmaps to an iterable of bitmaps
+   *
+   * @param indexes     indexes of bitmaps
+   * @param bitmapIndex an object to retrieve bitmaps using indexes
+   *
+   * @return an iterable of bitmaps
+   */
+  static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
+  {
+    // Do not use Iterables.transform() to avoid boxing/unboxing integers.
+    return new Iterable<ImmutableBitmap>()
+    {
+      @Override
+      public Iterator<ImmutableBitmap> iterator()
+      {
+        final IntIterator iterator = indexes.iterator();
+
+        return new Iterator<ImmutableBitmap>()
+        {
+          @Override
+          public boolean hasNext()
+          {
+            return iterator.hasNext();
+          }
+
+          @Override
+          public ImmutableBitmap next()
+          {
+            return bitmapIndex.getBitmap(iterator.nextInt());
+          }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+  }
+
+  /**
    * Return the union of bitmaps for all values matching a particular predicate.
    *
    * @param dimension dimension to look at
@@ -188,6 +238,8 @@ public class Filters
    * @param predicate predicate to use
    *
    * @return bitmap of matching rows
+   *
+   * @see #estimatePredicateSelectivity(String, BitmapIndexSelector, Predicate)
    */
   public static ImmutableBitmap matchPredicate(
       final String dimension,
@@ -202,73 +254,145 @@ public class Filters
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
     final Indexed<String> dimValues = selector.getDimensionValues(dimension);
     if (dimValues == null || dimValues.size() == 0) {
-      if (predicate.apply(null)) {
-        return selector.getBitmapFactory().complement(
-            selector.getBitmapFactory().makeEmptyImmutableBitmap(),
-            selector.getNumRows()
-        );
-      } else {
-        return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-      }
+      return predicate.apply(null) ? allTrue(selector) : allFalse(selector);
     }
 
     // Apply predicate to all dimension values and union the matching bitmaps
     final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-    return selector.getBitmapFactory().union(
-        new Iterable<ImmutableBitmap>()
-        {
-          @Override
-          public Iterator<ImmutableBitmap> iterator()
-          {
-            return new Iterator<ImmutableBitmap>()
-            {
-              private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
-              private int nextIndex = 0;
-              private ImmutableBitmap nextBitmap;
+    return selector.getBitmapFactory()
+                   .union(makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues));
+  }
 
-              {
-                findNextBitmap();
-              }
+  /**
+   * Return an estimated selectivity for bitmaps of all values matching the given predicate.
+   *
+   * @param dimension      dimension to look at
+   * @param indexSelector  bitmap selector
+   * @param predicate      predicate to use
+   *
+   * @return estimated selectivity
+   *
+   * @see #matchPredicate(String, BitmapIndexSelector, Predicate)
+   */
+  static double estimatePredicateSelectivity(
+      final String dimension,
+      final BitmapIndexSelector indexSelector,
+      final Predicate<String> predicate
+  )
+  {
+    Preconditions.checkNotNull(dimension, "dimension");
+    Preconditions.checkNotNull(indexSelector, "selector");
+    Preconditions.checkNotNull(predicate, "predicate");
 
-              private void findNextBitmap()
-              {
-                while (nextIndex < bitmapIndexCardinality) {
-                  if (predicate.apply(dimValues.get(nextIndex))) {
-                    nextBitmap = bitmapIndex.getBitmap(nextIndex);
-                    nextIndex++;
-                    return;
-                  }
-                  nextIndex++;
-                }
-                nextBitmap = null;
-              }
+    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
+    final Indexed<String> dimValues = indexSelector.getDimensionValues(dimension);
+    if (dimValues == null || dimValues.size() == 0) {
+      return predicate.apply(null) ? 1. : 0.;
+    }
 
-              @Override
-              public boolean hasNext()
-              {
-                return nextBitmap != null;
-              }
-
-              @Override
-              public ImmutableBitmap next()
-              {
-                ImmutableBitmap bitmap = nextBitmap;
-                if (bitmap == null) {
-                  throw new NoSuchElementException();
-                }
-                findNextBitmap();
-                return bitmap;
-              }
-
-              @Override
-              public void remove()
-              {
-                throw new UnsupportedOperationException();
-              }
-            };
-          }
-        }
+    // Apply predicate to all dimension values and union the matching bitmaps
+    final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
+    return estimatePredicateSelectivity(
+        bitmapIndex,
+        IntIteratorUtils.toIntList(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()),
+        indexSelector.getNumRows()
     );
+  }
+
+  @VisibleForTesting
+  static double estimatePredicateSelectivity(
+      BitmapIndex bitmapIndex,
+      IntList bitmapIndexes,
+      long totalNumRows
+  )
+  {
+    long numMatchedRows = 0;
+    for (int i = 0; i < bitmapIndexes.size(); i++) {
+      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmapIndexes.get(i));
+      numMatchedRows += bitmap.size();
+    }
+
+    return Math.min(1., (double) numMatchedRows / totalNumRows);
+  }
+
+  private static Iterable<ImmutableBitmap> makePredicateQualifyingBitmapIterable(
+      final BitmapIndex bitmapIndex,
+      final Predicate<String> predicate,
+      final Indexed<String> dimValues
+  )
+  {
+    return bitmapsFromIndexes(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues), bitmapIndex);
+  }
+
+  private static IntIterable makePredicateQualifyingIndexIterable(
+      final BitmapIndex bitmapIndex,
+      final Predicate<String> predicate,
+      final Indexed<String> dimValues
+  )
+  {
+    return new IntIterable()
+    {
+      @Override
+      public IntIterator iterator()
+      {
+        return new AbstractIntIterator()
+        {
+          private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
+          private int nextIndex = 0;
+          private int found = -1;
+
+          {
+            found = findNextIndex();
+          }
+
+          private int findNextIndex()
+          {
+            while (nextIndex < bitmapIndexCardinality && !predicate.apply(dimValues.get(nextIndex))) {
+              nextIndex++;
+            }
+
+            if (nextIndex < bitmapIndexCardinality) {
+              return nextIndex++;
+            } else {
+              return -1;
+            }
+          }
+
+          @Override
+          public boolean hasNext()
+          {
+            return found != -1;
+          }
+
+          @Override
+          public int nextInt()
+          {
+            int foundIndex = this.found;
+            if (foundIndex == -1) {
+              throw new NoSuchElementException();
+            }
+            this.found = findNextIndex();
+            return foundIndex;
+          }
+        };
+      }
+    };
+  }
+
+  static boolean supportsSelectivityEstimation(
+      Filter filter,
+      String dimension,
+      ColumnSelector columnSelector,
+      BitmapIndexSelector indexSelector
+  )
+  {
+    if (filter.supportsBitmapIndex(indexSelector)) {
+      final Column column = columnSelector.getColumn(dimension);
+      if (column != null) {
+        return !column.getCapabilities().hasMultipleValues();
+      }
+    }
+    return false;
   }
 
   public static ValueMatcher getLongValueMatcher(
@@ -366,7 +490,6 @@ public class Filters
     }
 
 
-
     if (current instanceof OrFilter) {
       List<Filter> children = Lists.newArrayList();
       for (Filter child : ((OrFilter) current).getFilters()) {
@@ -419,7 +542,8 @@ public class Filters
 
   // CNF conversion functions were adapted from Apache Hive, see:
   // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter flatten(Filter root) {
+  private static Filter flatten(Filter root)
+  {
     if (root instanceof BooleanFilter) {
       List<Filter> children = new ArrayList<>();
       children.addAll(((BooleanFilter) root).getFilters());
@@ -430,7 +554,7 @@ public class Filters
         // do we need to flatten?
         if (child.getClass() == root.getClass() && !(child instanceof NotFilter)) {
           boolean first = true;
-          List<Filter> grandKids = ((BooleanFilter)child).getFilters();
+          List<Filter> grandKids = ((BooleanFilter) child).getFilters();
           for (Filter grandkid : grandKids) {
             // for the first grandkid replace the original parent
             if (first) {
