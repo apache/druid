@@ -217,7 +217,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  start VARCHAR(255) NOT NULL,\n"
-                + "  %send%s VARCHAR(255) NOT NULL,\n"
+                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
                 + "  sequence_name VARCHAR(255) NOT NULL,\n"
                 + "  sequence_prev_id VARCHAR(255) NOT NULL,\n"
                 + "  sequence_name_prev_id_sha1 VARCHAR(255) NOT NULL,\n"
@@ -225,7 +225,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  PRIMARY KEY (id),\n"
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
                 + ")",
-                tableName, getQuoteString(), getQuoteString(), getPayloadType()
+                tableName, getPayloadType(), getQuoteString()
             )
         )
     );
@@ -261,14 +261,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  start VARCHAR(255) NOT NULL,\n"
-                + "  %send%s VARCHAR(255) NOT NULL,\n"
+                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
                 + "  partitioned BOOLEAN NOT NULL,\n"
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getQuoteString(), getQuoteString(), getPayloadType()
+                tableName, getPayloadType(), getQuoteString()
             ),
             String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
             String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
