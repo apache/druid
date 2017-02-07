@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.hyperloglog;
+package io.druid.hll;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -34,7 +34,6 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -694,125 +693,6 @@ public class HyperLogLogCollectorTest
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
     Assert.assertEquals(Double.MAX_VALUE, collector.estimateCardinality(), 1000);
-  }
-
-  @Test
-  public void testCompare1() throws Exception
-  {
-    HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
-    HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
-    collector1.add(fn.hashLong(0).asBytes());
-    HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
-    Comparator comparator = factory.getComparator();
-    for (int i = 1; i < 100; i = i + 2) {
-      collector1.add(fn.hashLong(i).asBytes());
-      collector2.add(fn.hashLong(i + 1).asBytes());
-      Assert.assertEquals(1, comparator.compare(collector1, collector2));
-      Assert.assertEquals(1, Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()));
-    }
-  }
-
-  @Test
-  public void testCompare2() throws Exception
-  {
-    Random rand = new Random(0);
-    HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
-    Comparator comparator = factory.getComparator();
-    for (int i = 1; i < 1000; ++i) {
-      HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
-      int j = rand.nextInt(50);
-      for (int l = 0; l < j; ++l) {
-        collector1.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
-      int k = j + 1 + rand.nextInt(5);
-      for (int l = 0; l < k; ++l) {
-        collector2.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      Assert.assertEquals(
-          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-          comparator.compare(collector1, collector2)
-      );
-    }
-
-    for (int i = 1; i < 100; ++i) {
-      HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
-      int j = rand.nextInt(500);
-      for (int l = 0; l < j; ++l) {
-        collector1.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
-      int k = j + 2 + rand.nextInt(5);
-      for (int l = 0; l < k; ++l) {
-        collector2.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      Assert.assertEquals(
-          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-          comparator.compare(collector1, collector2)
-      );
-    }
-
-    for (int i = 1; i < 10; ++i) {
-      HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
-      int j = rand.nextInt(100000);
-      for (int l = 0; l < j; ++l) {
-        collector1.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
-      int k = j + 20000 + rand.nextInt(100000);
-      for (int l = 0; l < k; ++l) {
-        collector2.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      Assert.assertEquals(
-          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-          comparator.compare(collector1, collector2)
-      );
-    }
-  }
-
-  @Test
-  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception {
-    // given
-    Random rand = new Random(0);
-    HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
-    Comparator comparator = factory.getComparator();
-
-    for (int i = 0; i < 1000; ++i) {
-      // given
-      HyperLogLogCollector leftCollector = HyperLogLogCollector.makeLatestCollector();
-      int j = rand.nextInt(9000) + 5000;
-      for (int l = 0; l < j; ++l) {
-        leftCollector.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      HyperLogLogCollector rightCollector = HyperLogLogCollector.makeLatestCollector();
-      int k = rand.nextInt(9000) + 5000;
-      for (int l = 0; l < k; ++l) {
-        rightCollector.add(fn.hashLong(rand.nextLong()).asBytes());
-      }
-
-      // when
-      final int orderedByCardinality = Double.compare(leftCollector.estimateCardinality(),
-              rightCollector.estimateCardinality());
-      final int orderedByComparator = comparator.compare(leftCollector, rightCollector);
-
-      // then, assert hyperloglog comparator behaves consistently with estimated cardinalities
-      Assert.assertEquals(
-              String.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
-                      "Left={cardinality=%f, hll=%s},\n" +
-                      "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
-                      leftCollector.estimateCardinality(), leftCollector,
-                      rightCollector.estimateCardinality(), rightCollector),
-              orderedByCardinality,
-              orderedByComparator
-      );
-    }
   }
 
   @Test

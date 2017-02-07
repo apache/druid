@@ -2886,7 +2886,7 @@ public class GroupByQueryRunnerTest
     // havingSpec equalTo/greaterThan/lessThan do not work on complex aggregators, even if they could be finalized.
     // See also: https://github.com/druid-io/druid/issues/2507
     expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Unknown type[class io.druid.query.aggregation.hyperloglog.HLLCV1]");
+    expectedException.expectMessage("Unknown type[class io.druid.hll.HLLCV1]");
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }

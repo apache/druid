@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.LongColumnSelector;
 import org.junit.Assert;

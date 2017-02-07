@@ -25,6 +25,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import org.mozilla.javascript.Context;
 
@@ -47,20 +48,35 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
-      final Predicate<String> contextualPredicate = new Predicate<String>()
-      {
-        @Override
-        public boolean apply(String input)
-        {
-          return predicateFactory.applyInContext(cx, input);
-        }
-      };
-
-      return Filters.matchPredicate(dimension, selector, contextualPredicate);
+      return Filters.matchPredicate(dimension, selector, makeStringPredicate(cx));
     }
     finally {
       Context.exit();
     }
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    final Context cx = Context.enter();
+    try {
+      return Filters.estimatePredicateSelectivity(dimension, indexSelector, makeStringPredicate(cx));
+    }
+    finally {
+      Context.exit();
+    }
+  }
+
+  private Predicate<String> makeStringPredicate(final Context context)
+  {
+    return new Predicate<String>()
+    {
+      @Override
+      public boolean apply(String input)
+      {
+        return predicateFactory.applyInContext(context, input);
+      }
+    };
   }
 
   @Override
@@ -74,5 +90,13 @@ public class JavaScriptFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 }

@@ -67,7 +67,8 @@ public class GroupByRowProcessor
       final Map<String, ValueType> rowSignature,
       final GroupByQueryConfig config,
       final BlockingPool<ByteBuffer> mergeBufferPool,
-      final ObjectMapper spillMapper
+      final ObjectMapper spillMapper,
+      final String processingTmpDir
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -78,8 +79,9 @@ public class GroupByRowProcessor
       aggregatorFactories[i] = query.getAggregatorSpecs().get(i);
     }
 
+
     final File temporaryStorageDirectory = new File(
-        System.getProperty("java.io.tmpdir"),
+        processingTmpDir,
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
