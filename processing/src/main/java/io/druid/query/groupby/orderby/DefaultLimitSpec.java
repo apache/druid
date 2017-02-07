@@ -117,8 +117,11 @@ public class DefaultLimitSpec implements LimitSpec
         final StringComparator naturalComparator;
         if (columnType == ValueType.STRING) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else {
+        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
           naturalComparator = StringComparators.NUMERIC;
+        } else {
+          sortingNeeded = true;
+          break;
         }
 
         if (columnSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING

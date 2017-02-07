@@ -32,6 +32,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
@@ -86,12 +87,12 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       aggregatorFactory = new HyperUniquesAggregatorFactory(name, rex.getColumn());
     } else {
       final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-      final ValueType outputType = RowSignature.getValueTypeForSqlTypeName(sqlTypeName);
+      final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
       if (outputType == null) {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, name);
       }
 
-      final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null, null);
+      final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null, ValueType.STRING);
       if (dimensionSpec == null) {
         return null;
       }

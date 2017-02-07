@@ -130,6 +130,8 @@ public class RowExtraction
       final ValueType outputType
   )
   {
+    Preconditions.checkNotNull(outputType, "outputType");
+
     final ValueType columnType = rowSignature.getColumnType(column);
     if (columnType == null) {
       return null;

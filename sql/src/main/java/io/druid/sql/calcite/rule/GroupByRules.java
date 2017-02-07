@@ -52,6 +52,7 @@ import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidNestedGroupBy;
@@ -448,7 +449,7 @@ public class GroupByRules
         }
 
         final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-        final ValueType outputType = RowSignature.getValueTypeForSqlTypeName(sqlTypeName);
+        final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
         if (outputType == null) {
           throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
         }

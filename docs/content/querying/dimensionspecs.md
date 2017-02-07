@@ -23,9 +23,9 @@ Returns dimension values as is and optionally renames the dimension.
 }
 ```
 
-When specifying a DimensionSpec on a numeric column, the user should include the type of the column in the `outputType` field. This is necessary as it is possible for a column with given name to have different value types in different segments; results will be converted to the type specified by `outputType` before merging.
+When specifying a DimensionSpec on a numeric column, the user should include the type of the column in the `outputType` field. If left unspecified, the `outputType` defaults to STRING.
 
-If left unspecified, the `outputType` defaults to STRING.
+Please refer to the [Output Types](#output-types) section for more details.
 
 ### Extraction DimensionSpec
 
@@ -36,9 +36,14 @@ Returns dimension values transformed using the given [extraction function](#extr
   "type" : "extraction",
   "dimension" : <dimension>,
   "outputName" :  <output_name>,
+  "outputType": <"STRING"|"LONG"|"FLOAT">,
   "extractionFn" : <extraction_function>
 }
 ```
+
+`outputType` may also be specified in an ExtractionDimensionSpec to apply type conversion to results before merging. If left unspecified, the `outputType` defaults to STRING.
+
+Please refer to the [Output Types](#output-types) section for more details.
 
 ### Filtered DimensionSpecs
 
@@ -60,6 +65,8 @@ Following filtered dimension spec retains only the values matching regex. Note t
 ```json
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
 ```
+
+Note that filtered DimensionSpecs are not supported when applied to a numeric column (when the base column in a segment contains long or float values, not related to what `outputType` specifies).
 
 For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
 
@@ -104,6 +111,21 @@ The second kind where it is not possible to pass at query time due to their size
   "name":"lookupName"
 }
 ```
+
+## Output Types
+
+The dimension specs provide an option to specify the output type of a column's values. This is necessary as it is possible for a column with given name to have different value types in different segments; results will be converted to the type specified by `outputType` before merging.
+
+Note that not all use cases for DimensionSpec currently support `outputType`, the table below shows which use cases support this option:
+
+|Query Type|Supported?|
+|--------|---------|
+|GroupBy (v1)|no|
+|GroupBy (v2)|yes|
+|TopN|yes|
+|Search|no|
+|Select|no|
+|Cardinality Aggregator|no|
 
 ## Extraction Functions
 

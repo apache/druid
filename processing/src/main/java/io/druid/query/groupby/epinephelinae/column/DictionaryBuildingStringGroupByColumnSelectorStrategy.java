@@ -49,10 +49,10 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   public void processValueFromGroupingKey(GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap)
   {
     final int id = key.getInt(selectorPlus.getKeyBufferPosition());
-    final String value = dictionary.get(id);
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
+      final String value = dictionary.get(id);
       resultMap.put(
           selectorPlus.getOutputName(),
           value

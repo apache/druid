@@ -30,6 +30,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.SelectProjection;
 import io.druid.sql.calcite.table.RowSignature;
@@ -113,7 +114,7 @@ public class SelectRules
           } while (sourceRowSignature.getColumnType(GroupByRules.dimOutputName(dimOutputNameCounter)) != null);
           final String outputName = GroupByRules.dimOutputName(dimOutputNameCounter);
           final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-          final ValueType outputType = RowSignature.getValueTypeForSqlTypeName(sqlTypeName);
+          final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
           if (outputType == null) {
             throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, outputName);
           }

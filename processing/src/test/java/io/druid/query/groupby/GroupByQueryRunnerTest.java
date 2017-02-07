@@ -6885,7 +6885,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -6946,7 +6946,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -7057,7 +7057,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("time dimension must provide an extraction function");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -7149,7 +7149,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -7181,52 +7181,27 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    List<Row> expectedResults;
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "index_alias",
+            158.747224f,
+            "rows",
+            1L,
+            "idx",
+            158L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "index_alias",
+            166.016049f,
+            "rows",
+            1L,
+            "idx",
+            166L
+        )
+    );
 
-    // Only GroupBy V2 supports grouping on non-Strings.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "index_alias",
-              "158.74722",
-              "rows",
-              1L,
-              "idx",
-              158L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-02",
-              "index_alias",
-              "166.01605",
-              "rows",
-              1L,
-              "idx",
-              166L
-          )
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "index_alias",
-              158.747224f,
-              "rows",
-              1L,
-              "idx",
-              158L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-02",
-              "index_alias",
-              166.016049f,
-              "rows",
-              1L,
-              "idx",
-              166L
-          )
-      );
-    }
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
@@ -7236,7 +7211,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -7350,7 +7325,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery query = GroupByQuery
@@ -7539,6 +7514,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByNumericStringsAsNumericWithDecoration()
   {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
     // rows with `technology` have `170000` in the qualityNumericString field
     RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
         new DefaultDimensionSpec("qualityNumericString", "ql", ValueType.LONG),
@@ -7570,39 +7550,21 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults;
     // "entertainment" rows are excluded by the decorated specs, they become empty rows
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", null,
-              "qf", null,
-              "count", 2L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", "170000",
-              "qf", "170000",
-              "count", 2L
-          )
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", 0L,
-              "qf", 0.0,
-              "count", 2L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", 170000L,
-              "qf", 170000.0,
-              "count", 2L
-          )
-      );
-    }
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql", 0L,
+            "qf", 0.0,
+            "count", 2L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql", 170000L,
+            "qf", 170000.0,
+            "count", 2L
+        )
+    );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
@@ -7613,12 +7575,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    } else {
-      // Filtered dimension specs are not supported on numerics right now, can remove this
-      // if support is added in the future.
-      expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("Filtered dimension specs are not supported on numeric columns.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
@@ -7651,39 +7608,14 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults;
-    // "entertainment" rows are excluded by the decorated specs, they become empty rows
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", null,
-              "qf", null,
-              "count", 2L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", "1700",
-              "qf", "17000.0",
-              "count", 2L
-          )
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", 0L,
-              "qf", 0.0,
-              "count", 2L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "ql", 1700L,
-              "qf", 17000.0,
-              "count", 2L
-          )
-      );
-    }
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql", 0L,
+            "qf", 0.0,
+            "count", 4L
+        )
+    );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
@@ -7695,7 +7627,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery subquery = GroupByQuery
@@ -7780,7 +7712,7 @@ public class GroupByQueryRunnerTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("time dimension must provide an extraction function");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     GroupByQuery subQuery = GroupByQuery
@@ -7873,6 +7805,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByStringOutputAsLong()
   {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+
     ExtractionFn strlenFn = StrlenExtractionFn.instance();
 
     GroupByQuery query = GroupByQuery
@@ -7895,51 +7832,26 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults;
-
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "alias",
-              "13",
-              "rows",
-              1L,
-              "idx",
-              158L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-02",
-              "alias",
-              "13",
-              "rows",
-              1L,
-              "idx",
-              166L
-          )
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-01",
-              "alias",
-              13L,
-              "rows",
-              1L,
-              "idx",
-              158L
-          ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
-              "2011-04-02",
-              "alias",
-              13L,
-              "rows",
-              1L,
-              "idx",
-              166L
-          )
-      );
-    }
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias",
+            13L,
+            "rows",
+            1L,
+            "idx",
+            158L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias",
+            13L,
+            "rows",
+            1L,
+            "idx",
+            166L
+        )
+    );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");

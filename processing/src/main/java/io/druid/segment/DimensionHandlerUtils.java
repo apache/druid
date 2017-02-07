@@ -133,9 +133,8 @@ public final class DimensionHandlerUtils
       );
       ColumnSelectorStrategyClass strategy = makeStrategy(
           strategyFactory,
-          dimName,
+          dimSpec,
           cursor.getColumnCapabilities(dimSpec.getDimension()),
-          dimSpec.getExtractionFn() != null,
           selector
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
@@ -156,19 +155,13 @@ public final class DimensionHandlerUtils
   {
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimName, capabilities, dimSpec.getExtractionFn() != null);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
     switch (capabilities.getType()) {
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
       case LONG:
-        if (dimSpec instanceof BaseFilteredDimensionSpec) {
-          throw new UnsupportedOperationException("Filtered dimension specs are not supported on numeric columns.");
-        }
         return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
       case FLOAT:
-        if (dimSpec instanceof BaseFilteredDimensionSpec) {
-          throw new UnsupportedOperationException("Filtered dimension specs are not supported on numeric columns.");
-        }
         return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
       default:
         return null;
@@ -179,9 +172,8 @@ public final class DimensionHandlerUtils
   // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
   // (e.g., treating missing columns as empty String columns)
   private static ColumnCapabilities getEffectiveCapabilities(
-      String dimName,
-      ColumnCapabilities capabilities,
-      boolean hasExFn
+      DimensionSpec dimSpec,
+      ColumnCapabilities capabilities
   )
   {
     if (capabilities == null) {
@@ -195,8 +187,16 @@ public final class DimensionHandlerUtils
 
     // Currently, all extractionFns output Strings, so the column will return String values via a
     // DimensionSelector if an extractionFn is present.
-    if (hasExFn) {
+    if (dimSpec.getExtractionFn() != null) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
+    }
+
+    // Filtered dimension specs are not supported on numerics, the numeric column
+    // will be treated as a null String column in that case
+    if (capabilities.getType() == ValueType.LONG || capabilities.getType() == ValueType.FLOAT) {
+      if (dimSpec instanceof BaseFilteredDimensionSpec) {
+        capabilities = DEFAULT_STRING_CAPABILITIES;
+      }
     }
 
     return capabilities;
@@ -204,13 +204,12 @@ public final class DimensionHandlerUtils
 
   private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
-      String dimName,
+      DimensionSpec dimSpec,
       ColumnCapabilities capabilities,
-      boolean hasExFn,
       ColumnValueSelector selector
   )
   {
-    capabilities = getEffectiveCapabilities(dimName, capabilities, hasExFn);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
