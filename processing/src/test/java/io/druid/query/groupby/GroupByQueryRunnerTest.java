@@ -30,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
@@ -76,6 +77,8 @@ import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.dimension.ListFilteredDimensionSpec;
+import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.extraction.CascadeExtractionFn;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
@@ -7532,6 +7535,160 @@ public class GroupByQueryRunnerTest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
+
+  @Test
+  public void testGroupByNumericStringsAsNumericWithDecoration()
+  {
+    // rows with `technology` have `170000` in the qualityNumericString field
+    RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
+        new DefaultDimensionSpec("qualityNumericString", "ql", ValueType.LONG),
+        "170000"
+    );
+
+    ListFilteredDimensionSpec listFilteredSpec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("qualityNumericString", "qf", ValueType.FLOAT),
+        Sets.newHashSet("170000"),
+        true
+    );
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                regexSpec,
+                listFilteredSpec
+            )
+        )
+        .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new CountAggregatorFactory("count")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults;
+    // "entertainment" rows are excluded by the decorated specs, they become empty rows
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", null,
+              "qf", null,
+              "count", 2L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", "170000",
+              "qf", "170000",
+              "count", 2L
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", 0L,
+              "qf", 0.0,
+              "count", 2L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", 170000L,
+              "qf", 170000.0,
+              "count", 2L
+          )
+      );
+    }
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByDecorationOnNumerics()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    } else {
+      // Filtered dimension specs are not supported on numerics right now, can remove this
+      // if support is added in the future.
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("Filtered dimension specs are not supported on numeric columns.");
+    }
+
+    RegexFilteredDimensionSpec regexSpec = new RegexFilteredDimensionSpec(
+        new DefaultDimensionSpec("qualityLong", "ql", ValueType.LONG),
+        "1700"
+    );
+
+    ListFilteredDimensionSpec listFilteredSpec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("qualityFloat", "qf", ValueType.FLOAT),
+        Sets.newHashSet("17000.0"),
+        true
+    );
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                regexSpec,
+                listFilteredSpec
+            )
+        )
+        .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new CountAggregatorFactory("count")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults;
+    // "entertainment" rows are excluded by the decorated specs, they become empty rows
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", null,
+              "qf", null,
+              "count", 2L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", "1700",
+              "qf", "17000.0",
+              "count", 2L
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", 0L,
+              "qf", 0.0,
+              "count", 2L
+          ),
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              "2011-04-01",
+              "ql", 1700L,
+              "qf", 17000.0,
+              "count", 2L
+          )
+      );
+    }
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
 
   @Test
   public void testGroupByNestedWithInnerQueryNumerics()

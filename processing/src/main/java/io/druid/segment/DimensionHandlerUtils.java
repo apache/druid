@@ -26,6 +26,7 @@ import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.dimension.BaseFilteredDimensionSpec;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -160,8 +161,14 @@ public final class DimensionHandlerUtils
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
       case LONG:
+        if (dimSpec instanceof BaseFilteredDimensionSpec) {
+          throw new UnsupportedOperationException("Filtered dimension specs are not supported on numeric columns.");
+        }
         return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
       case FLOAT:
+        if (dimSpec instanceof BaseFilteredDimensionSpec) {
+          throw new UnsupportedOperationException("Filtered dimension specs are not supported on numeric columns.");
+        }
         return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
       default:
         return null;
