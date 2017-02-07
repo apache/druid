@@ -424,7 +424,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateRows() throws Exception
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList,
+        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
         true
     );
 
@@ -445,7 +445,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateValues() throws Exception
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList,
+        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
         false
     );
 

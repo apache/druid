@@ -20,13 +20,12 @@
 package io.druid.query.aggregation.cardinality;
 
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 public class CardinalityBufferAggregator implements BufferAggregator
 {
@@ -35,13 +34,12 @@ public class CardinalityBufferAggregator implements BufferAggregator
 
   private static final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
 
-  @SuppressWarnings("unchecked")
   CardinalityBufferAggregator(
-      List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
+      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
       boolean byRow
   )
   {
-    this.selectorPluses = selectorPlusList.toArray(new ColumnSelectorPlus[] {});
+    this.selectorPluses = selectorPluses;
     this.byRow = byRow;
   }
 

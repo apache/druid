@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.cardinality;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -66,6 +67,7 @@ public class CardinalityAggregator implements Aggregator
 
   private HyperLogLogCollector collector;
 
+  @VisibleForTesting
   @SuppressWarnings("unchecked")
   CardinalityAggregator(
       String name,
