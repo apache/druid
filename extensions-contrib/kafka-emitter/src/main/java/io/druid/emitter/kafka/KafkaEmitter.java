@@ -86,10 +86,12 @@ public class KafkaEmitter implements Emitter {
   @Override
   public void emit(final Event event) {
     if(event != null) {
-      Map<String, Object> result = ImmutableMap.<String, Object>builder()
-          .putAll(event.toMap())
-          .put("clusterName", config.getClusterName())
-          .build();
+      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder().putAll(event.toMap());
+      if (config.getClusterName() != null) {
+        resultBuilder.put("clusterName", config.getClusterName());
+      }
+      Map<String, Object> result = resultBuilder.build();
+
       try {
         String resultJson = jsonMapper.writeValueAsString(result);
         if(event instanceof ServiceMetricEvent) {

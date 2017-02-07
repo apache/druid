@@ -63,7 +63,7 @@ public class KafkaEmitterConfig {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
-    this.clusterName = (clusterName == null || clusterName.isEmpty()) ? "NONAME" : clusterName;
+    this.clusterName = (clusterName == null || clusterName.isEmpty()) ? null : clusterName;
   }
 
   @JsonProperty
