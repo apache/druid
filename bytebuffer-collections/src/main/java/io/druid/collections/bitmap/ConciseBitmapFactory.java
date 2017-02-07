@@ -23,8 +23,8 @@ import com.google.common.collect.Iterables;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * As the name suggests, this class instantiates bitmaps of the types
@@ -111,11 +111,12 @@ public class ConciseBitmapFactory implements BitmapFactory
   public ImmutableBitmap union(Iterable<ImmutableBitmap> b)
       throws ClassCastException
   {
-    if (b instanceof List) {
-      final List<ImmutableBitmap> bitmapList = (List<ImmutableBitmap>) b;
-      if (bitmapList.isEmpty()) {
+    if (b instanceof Collection) {
+      final Collection<ImmutableBitmap> bitmapList = (Collection<ImmutableBitmap>) b;
+      final int size = bitmapList.size();
+      if (size == 0) {
         return makeEmptyImmutableBitmap();
-      } else if (bitmapList.size() == 1) {
+      } else if (size == 1) {
         return Iterables.getOnlyElement(b);
       }
     }
