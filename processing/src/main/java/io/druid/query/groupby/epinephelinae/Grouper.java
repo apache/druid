@@ -47,6 +47,13 @@ public interface Grouper<KeyType> extends Closeable
   void init();
 
   /**
+   * Check this grouper is initialized or not.
+   *
+   * @return true if the grouper is already initialized, otherwise false.
+   */
+  boolean isInitialized();
+
+  /**
    * Aggregate the current row with the provided key. Some implementations are thread-safe and
    * some are not.
    *

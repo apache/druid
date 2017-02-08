@@ -19,8 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Supplier;
-
 /**
  * A Sequence represents an iterable sequence of elements. Unlike normal Iterators however, it doesn't expose
  * a way for you to extract values from it, instead you provide it with a worker (an Accumulator) and that defines
@@ -47,19 +45,7 @@ public interface Sequence<T>
    */
   <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator);
 
-  /**
-   * Accumulate this sequence using the given accumulator.
-   * The {@code initValSupplier} provides an way for lazy evaluation of the initial value.
-   *
-   * @param initValSupplier the supplier which returns an initial value to pass along to start the accumulation.
-   * @param accumulator     the accumulator which is responsible for accumulating input values.
-   * @param <OutType>       the type of accumulated value.
-   *
-   * @return accumulated value.
-   */
-  <OutType> OutType accumulate(Supplier<OutType> initValSupplier, Accumulator<OutType, T> accumulator);
-
-  /**
+ /**
    * Return an Yielder for accumulated sequence.
    *
    * @param initValue   the initial value to pass along to start the accumulation.
@@ -71,18 +57,4 @@ public interface Sequence<T>
    * @see Yielder
    */
   <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator);
-
-  /**
-   * Return an Yielder for accumulated sequence.
-   * The {@code initValSupplier} provides an way for lazy evaluation of the initial value.
-   *
-   * @param initValSupplier the supplier which returns an initial value to pass along to start the accumulation.
-   * @param accumulator     the accumulator which is responsible for accumulating input values.
-   * @param <OutType>       the type of accumulated value.
-   *
-   * @return an Yielder for accumulated sequence.
-   *
-   * @see Yielder
-   */
-  <OutType> Yielder<OutType> toYielder(Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator);
 }

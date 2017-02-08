@@ -100,6 +100,12 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
+  public boolean isInitialized()
+  {
+    return grouper.isInitialized();
+  }
+
+  @Override
   public boolean aggregate(KeyType key, int keyHash)
   {
     if (grouper.aggregate(key, keyHash)) {

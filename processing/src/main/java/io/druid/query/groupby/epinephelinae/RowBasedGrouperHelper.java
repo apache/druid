@@ -125,6 +125,14 @@ public class RowBasedGrouperHelper
       dimensionSelectors = null;
     }
 
+    final int keySize = includeTimestamp ? query.getDimensions().size() + 1 : query.getDimensions().size();
+    final ValueExtractFunction valueExtractFn = makeValueExtractFunction(
+        query,
+        isInputRaw,
+        includeTimestamp,
+        dimensionSelectors
+    );
+
     final Accumulator<Grouper<RowBasedKey>, Row> accumulator = new Accumulator<Grouper<RowBasedKey>, Row>()
     {
       @Override
@@ -142,42 +150,14 @@ public class RowBasedGrouperHelper
           return null;
         }
 
+        if (!theGrouper.isInitialized()) {
+          theGrouper.init();
+        }
+
         columnSelectorRow.set(row);
 
-        final int dimStart;
-        final Comparable[] key;
-
-        if (includeTimestamp) {
-          key = new Comparable[query.getDimensions().size() + 1];
-
-          final long timestamp;
-          if (isInputRaw) {
-            if (query.getGranularity() instanceof AllGranularity) {
-              timestamp = query.getIntervals().get(0).getStartMillis();
-            } else {
-              timestamp = query.getGranularity().truncate(row.getTimestampFromEpoch());
-            }
-          } else {
-            timestamp = row.getTimestampFromEpoch();
-          }
-
-          key[0] = timestamp;
-          dimStart = 1;
-        } else {
-          key = new Comparable[query.getDimensions().size()];
-          dimStart = 0;
-        }
-
-        for (int i = dimStart; i < key.length; i++) {
-          final String value;
-          if (isInputRaw) {
-            IndexedInts index = dimensionSelectors[i - dimStart].getRow();
-            value = index.size() == 0 ? "" : dimensionSelectors[i - dimStart].lookupName(index.get(0));
-          } else {
-            value = (String) row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
-          }
-          key[i] = Strings.nullToEmpty(value);
-        }
+        final Comparable[] key = new Comparable[keySize];
+        valueExtractFn.apply(row, key);
 
         final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
         if (!didAggregate) {
@@ -191,6 +171,126 @@ public class RowBasedGrouperHelper
     };
 
     return new Pair<>(grouper, accumulator);
+  }
+
+  private interface TimestampExtractFunction
+  {
+    long apply(Row row);
+  }
+
+  private static TimestampExtractFunction makeTimestampExtractFunction(
+      final GroupByQuery query,
+      final boolean isInputRaw
+  )
+  {
+    if (isInputRaw) {
+      if (query.getGranularity() instanceof AllGranularity) {
+        return new TimestampExtractFunction()
+        {
+          @Override
+          public long apply(Row row)
+          {
+            return query.getIntervals().get(0).getStartMillis();
+          }
+        };
+      } else {
+        return new TimestampExtractFunction()
+        {
+          @Override
+          public long apply(Row row)
+          {
+            return query.getGranularity().truncate(row.getTimestampFromEpoch());
+          }
+        };
+      }
+    } else {
+      return new TimestampExtractFunction()
+      {
+        @Override
+        public long apply(Row row)
+        {
+          return row.getTimestampFromEpoch();
+        }
+      };
+    }
+  }
+
+  private interface ValueExtractFunction
+  {
+    Comparable[] apply(Row row, Comparable[] key);
+  }
+
+  private static ValueExtractFunction makeValueExtractFunction(
+      final GroupByQuery query,
+      final boolean isInputRaw,
+      final boolean includeTimestamp,
+      final DimensionSelector[] dimensionSelectors
+  )
+  {
+    final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
+                                                        makeTimestampExtractFunction(query, isInputRaw) :
+                                                        null;
+    if (isInputRaw) {
+      if (includeTimestamp) {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            key[0] = timestampExtractFn.apply(row);
+            for (int i = 1; i < key.length; i++) {
+              final IndexedInts index = dimensionSelectors[i - 1].getRow();
+              final String value = index.size() == 0 ? "" : dimensionSelectors[i - 1].lookupName(index.get(0));
+              key[i] = Strings.nullToEmpty(value);
+            }
+            return key;
+          }
+        };
+      } else {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            for (int i = 0; i < key.length; i++) {
+              final IndexedInts index = dimensionSelectors[i].getRow();
+              final String value = index.size() == 0 ? "" : dimensionSelectors[i].lookupName(index.get(0));
+              key[i] = Strings.nullToEmpty(value);
+            }
+            return key;
+          }
+        };
+      }
+    } else {
+      if (includeTimestamp) {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            key[0] = timestampExtractFn.apply(row);
+            for (int i = 1; i < key.length; i++) {
+              final String value = (String) row.getRaw(query.getDimensions().get(i - 1).getOutputName());
+              key[i] = Strings.nullToEmpty(value);
+            }
+            return key;
+          }
+        };
+      } else {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            for (int i = 0; i < key.length; i++) {
+              final String value = (String) row.getRaw(query.getDimensions().get(i).getOutputName());
+              key[i] = Strings.nullToEmpty(value);
+            }
+            return key;
+          }
+        };
+      }
+    }
   }
 
   public static CloseableGrouperIterator<RowBasedKey, Row> makeGrouperIterator(

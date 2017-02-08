@@ -20,10 +20,9 @@
 package io.druid.collections;
 
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
+
 import com.google.common.io.Closer;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -39,13 +38,13 @@ import java.util.PriorityQueue;
 /**
  * An OrderedMergeIterator is an iterator that merges together multiple sorted iterators.  It is written assuming
  * that the input Iterators are provided in order.  That is, it places an extra restriction in the input iterators.
- * <p>
+ *
  * Normally a merge operation could operate with the actual input iterators in any order as long as the actual values
  * in the iterators are sorted.  This requires that not only the individual values be sorted, but that the iterators
  * be provided in the order of the first element of each iterator.
- * <p>
+ *
  * If this doesn't make sense, check out OrderedMergeSequenceTest.testScrewsUpOnOutOfOrderBeginningOfList()
- * <p>
+ *
  * It places this extra restriction on the input data in order to implement an optimization that allows it to
  * remain as lazy as possible in the face of a common case where the iterators are just appended one after the other.
  */
@@ -66,17 +65,9 @@ public class OrderedMergeSequence<T> implements Sequence<T>
   @Override
   public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
   {
-    return accumulate(Suppliers.ofInstance(initValue), accumulator);
-  }
-
-  @Override
-  public <OutType> OutType accumulate(
-      Supplier<OutType> initValSupplier, Accumulator<OutType, T> accumulator
-  )
-  {
     Yielder<OutType> yielder = null;
     try {
-      yielder = toYielder(initValSupplier, YieldingAccumulators.fromAccumulator(accumulator));
+      yielder = toYielder(initValue, YieldingAccumulators.fromAccumulator(accumulator));
       return yielder.get();
     }
     finally {
@@ -87,23 +78,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    return toYielder(Suppliers.ofInstance(initValue), accumulator);
-  }
-
-  @Override
-  public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
-  )
-  {
-    final PriorityQueue<Yielder<T>> pQueue = makePriorityQueue();
-    final Yielder<Yielder<T>> oldDudeAtCrosswalk = makeOldDudeAtCrosswalk();
-
-    return makeYielder(pQueue, oldDudeAtCrosswalk, initValSupplier.get(), accumulator);
-  }
-
-  private PriorityQueue<Yielder<T>> makePriorityQueue()
-  {
-    return new PriorityQueue<Yielder<T>>(
+    PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<Yielder<T>>(
         32,
         ordering.onResultOf(
             new Function<Yielder<T>, T>()
@@ -116,19 +91,16 @@ public class OrderedMergeSequence<T> implements Sequence<T>
             }
         )
     );
-  }
 
-  private Yielder<Yielder<T>> makeOldDudeAtCrosswalk()
-  {
-    return sequences.toYielder(
-        (Yielder<T>) null,
+    Yielder<Yielder<T>> oldDudeAtCrosswalk = sequences.toYielder(
+        null,
         new YieldingAccumulator<Yielder<T>, Sequence<T>>()
         {
           @Override
           public Yielder<T> accumulate(Yielder<T> accumulated, Sequence<T> in)
           {
             final Yielder<T> retVal = in.toYielder(
-                (T) null,
+                null,
                 new YieldingAccumulator<T, T>()
                 {
                   @Override
@@ -148,7 +120,8 @@ public class OrderedMergeSequence<T> implements Sequence<T>
                 throw Throwables.propagate(e);
               }
               return null;
-            } else {
+            }
+            else {
               yield();
             }
 
@@ -156,6 +129,8 @@ public class OrderedMergeSequence<T> implements Sequence<T>
           }
         }
     );
+
+    return makeYielder(pQueue, oldDudeAtCrosswalk, initValue, accumulator);
   }
 
   private <OutType> Yielder<OutType> makeYielder(
@@ -170,16 +145,19 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       Yielder<T> yielder;
       if (oldDudeAtCrosswalk.isDone()) {
         yielder = pQueue.remove();
-      } else if (pQueue.isEmpty()) {
+      }
+      else if (pQueue.isEmpty()) {
         yielder = oldDudeAtCrosswalk.get();
         oldDudeAtCrosswalk = oldDudeAtCrosswalk.next(null);
-      } else {
+      }
+      else {
         Yielder<T> queueYielder = pQueue.peek();
         Yielder<T> iterYielder = oldDudeAtCrosswalk.get();
 
         if (ordering.compare(queueYielder.get(), iterYielder.get()) <= 0) {
           yielder = pQueue.remove();
-        } else {
+        }
+        else {
           yielder = oldDudeAtCrosswalk.get();
           oldDudeAtCrosswalk = oldDudeAtCrosswalk.next(null);
         }
@@ -194,7 +172,8 @@ public class OrderedMergeSequence<T> implements Sequence<T>
         catch (IOException e) {
           throw Throwables.propagate(e);
         }
-      } else {
+      }
+      else {
         pQueue.add(yielder);
       }
     }
@@ -230,7 +209,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       public void close() throws IOException
       {
         Closer closer = Closer.create();
-        while (!pQueue.isEmpty()) {
+        while(!pQueue.isEmpty()) {
           closer.register(pQueue.remove());
         }
         closer.close();

@@ -177,15 +177,7 @@ public class GroupByRowProcessor
               closeOnFailure.add(grouper);
 
               final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(
-                  new Supplier<Grouper<RowBasedKey>>()
-                  {
-                    @Override
-                    public Grouper<RowBasedKey> get()
-                    {
-                      grouper.init();
-                      return grouper;
-                    }
-                  },
+                  grouper,
                   accumulator
               );
               if (retVal != grouper) {

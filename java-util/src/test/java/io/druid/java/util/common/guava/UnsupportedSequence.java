@@ -19,8 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Supplier;
-
 /**
 */
 public class UnsupportedSequence implements Sequence<Integer>
@@ -34,24 +32,8 @@ public class UnsupportedSequence implements Sequence<Integer>
   }
 
   @Override
-  public <OutType> OutType accumulate(
-      Supplier<OutType> initValSupplier, Accumulator<OutType, Integer> accumulator
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public <OutType> Yielder<OutType> toYielder(
       OutType initValue, YieldingAccumulator<OutType, Integer> accumulator
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, Integer> accumulator
   )
   {
     throw new UnsupportedOperationException();

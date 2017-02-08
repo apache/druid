@@ -63,6 +63,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private final int concurrencyHint;
   private final KeySerdeFactory<KeyType> keySerdeFactory;
 
+  private volatile boolean initialized = false;
+
   public ConcurrentGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
@@ -104,33 +106,51 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void init()
   {
-    final ByteBuffer buffer = bufferSupplier.get();
-    final int sliceSize = (buffer.capacity() / concurrencyHint);
+    if (!initialized) {
+      synchronized (bufferSupplier) {
+        if (!initialized) {
+          final ByteBuffer buffer = bufferSupplier.get();
+          final int sliceSize = (buffer.capacity() / concurrencyHint);
 
-    for (int i = 0; i < concurrencyHint; i++) {
-      final ByteBuffer slice = buffer.duplicate();
-      slice.position(sliceSize * i);
-      slice.limit(slice.position() + sliceSize);
-      final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
-          Suppliers.ofInstance(slice.slice()),
-          keySerdeFactory,
-          columnSelectorFactory,
-          aggregatorFactories,
-          bufferGrouperMaxSize,
-          bufferGrouperMaxLoadFactor,
-          bufferGrouperInitialBuckets,
-          temporaryStorage,
-          spillMapper,
-          false
-      );
-      grouper.init();
-      groupers.add(grouper);
+          for (int i = 0; i < concurrencyHint; i++) {
+            final ByteBuffer slice = buffer.duplicate();
+            slice.position(sliceSize * i);
+            slice.limit(slice.position() + sliceSize);
+            final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
+                Suppliers.ofInstance(slice.slice()),
+                keySerdeFactory,
+                columnSelectorFactory,
+                aggregatorFactories,
+                bufferGrouperMaxSize,
+                bufferGrouperMaxLoadFactor,
+                bufferGrouperInitialBuckets,
+                temporaryStorage,
+                spillMapper,
+                false
+            );
+            grouper.init();
+            groupers.add(grouper);
+          }
+
+          initialized = true;
+        }
+      }
     }
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return initialized;
   }
 
   @Override
   public boolean aggregate(KeyType key, int keyHash)
   {
+    if (!initialized) {
+      throw new ISE("Grouper is not initialized");
+    }
+
     if (closed) {
       throw new ISE("Grouper is closed");
     }
@@ -167,6 +187,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void reset()
   {
+    if (!initialized) {
+      throw new ISE("Grouper is not initialized");
+    }
+
     if (closed) {
       throw new ISE("Grouper is closed");
     }
@@ -181,6 +205,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public Iterator<Entry<KeyType>> iterator(final boolean sorted)
   {
+    if (!initialized) {
+      throw new ISE("Grouper is not initialized");
+    }
+
     if (closed) {
       throw new ISE("Grouper is closed");
     }

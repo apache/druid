@@ -93,6 +93,8 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
   // Maximum number of elements in the table before it must be resized
   private int maxSize;
 
+  private boolean initialized = false;
+
   public BufferGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
@@ -129,9 +131,18 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void init()
   {
-    this.buffer = bufferSupplier.get();
-    this.tableArenaSize = (buffer.capacity() / (bucketSize + Ints.BYTES)) * bucketSize;
-    reset();
+    if (!initialized) {
+      this.buffer = bufferSupplier.get();
+      this.tableArenaSize = (buffer.capacity() / (bucketSize + Ints.BYTES)) * bucketSize;
+      reset();
+      initialized = true;
+    }
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return initialized;
   }
 
   @Override

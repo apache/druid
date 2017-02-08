@@ -20,7 +20,6 @@
 package io.druid.query.spec;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -80,20 +79,12 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
       @Override
       public <OutType> OutType accumulate(final OutType initValue, final Accumulator<OutType, T> accumulator)
       {
-        return accumulate(Suppliers.ofInstance(initValue), accumulator);
-      }
-
-      @Override
-      public <OutType> OutType accumulate(
-          final Supplier<OutType> initValSupplier, final Accumulator<OutType, T> accumulator
-      )
-      {
         try {
-          return baseSequence.accumulate(initValSupplier, accumulator);
+          return baseSequence.accumulate(initValue, accumulator);
         }
         catch (SegmentMissingException e) {
           appendMissingSegment(responseContext);
-          return initValSupplier.get();
+          return initValue;
         }
       }
 
@@ -103,20 +94,12 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           final YieldingAccumulator<OutType, T> accumulator
       )
       {
-        return toYielder(Suppliers.ofInstance(initValue), accumulator);
-      }
-
-      @Override
-      public <OutType> Yielder<OutType> toYielder(
-          final Supplier<OutType> initValSupplier, final YieldingAccumulator<OutType, T> accumulator
-      )
-      {
         try {
-          return makeYielder(baseSequence.toYielder(initValSupplier, accumulator));
+          return makeYielder(baseSequence.toYielder(initValue, accumulator));
         }
         catch (SegmentMissingException e) {
           appendMissingSegment(responseContext);
-          return Yielders.done(initValSupplier.get(), null);
+          return Yielders.done(initValue, null);
         }
       }
 

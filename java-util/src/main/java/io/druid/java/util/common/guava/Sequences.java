@@ -22,7 +22,6 @@ package io.druid.java.util.common.guava;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import java.io.Closeable;
@@ -120,7 +119,7 @@ public class Sequences
     return new WrappingSequence<>(seq, wrapper);
   }
 
-  public static <T> Sequence<T> withEffect(final Sequence<T> seq, final Runnable effect, final Executor exec)
+  public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
   {
     // Uses YieldingSequenceBase to be able to execute the effect if all elements of the wrapped seq are processed
     // (i. e. it "is done"), but the yielder of the underlying seq throws some exception from close(). This logic could
@@ -131,17 +130,9 @@ public class Sequences
     return new YieldingSequenceBase<T>()
     {
       @Override
-      public <OutType> Yielder<OutType> toYielder(OutType initValSupplier, YieldingAccumulator<OutType, T> accumulator)
+      public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
       {
-        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValSupplier, accumulator), effect, exec);
-      }
-
-      @Override
-      public <OutType> Yielder<OutType> toYielder(
-          Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
-      )
-      {
-        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValSupplier, accumulator), effect, exec);
+        return new ExecuteWhenDoneYielder<>(seq.toYielder(initValue, accumulator), effect, exec);
       }
     };
   }
@@ -168,25 +159,9 @@ public class Sequences
     }
 
     @Override
-    public <OutType> OutType accumulate(
-        Supplier<OutType> initValSupplier, Accumulator<OutType, Object> accumulator
-    )
-    {
-      return initValSupplier.get();
-    }
-
-    @Override
     public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, Object> accumulator)
     {
       return Yielders.done(initValue, null);
-    }
-
-    @Override
-    public <OutType> Yielder<OutType> toYielder(
-        Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, Object> accumulator
-    )
-    {
-      return Yielders.done(initValSupplier.get(), null);
     }
   }
 }

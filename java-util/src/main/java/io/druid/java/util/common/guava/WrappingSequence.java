@@ -21,7 +21,6 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 
 /**
@@ -40,14 +39,6 @@ final class WrappingSequence<T> implements Sequence<T>
   @Override
   public <OutType> OutType accumulate(final OutType outType, final Accumulator<OutType, T> accumulator)
   {
-    return accumulate(Suppliers.ofInstance(outType), accumulator);
-  }
-
-  @Override
-  public <OutType> OutType accumulate(
-      final Supplier<OutType> initValSupplier, final Accumulator<OutType, T> accumulator
-  )
-  {
     OutType result;
     try {
       wrapper.before();
@@ -56,7 +47,7 @@ final class WrappingSequence<T> implements Sequence<T>
         @Override
         public OutType get()
         {
-          return baseSequence.accumulate(initValSupplier, accumulator);
+          return baseSequence.accumulate(outType, accumulator);
         }
       });
     }
@@ -86,14 +77,6 @@ final class WrappingSequence<T> implements Sequence<T>
       final YieldingAccumulator<OutType, T> accumulator
   )
   {
-    return toYielder(Suppliers.ofInstance(initValue), accumulator);
-  }
-
-  @Override
-  public <OutType> Yielder<OutType> toYielder(
-      final Supplier<OutType> initValSupplier, final YieldingAccumulator<OutType, T> accumulator
-  )
-  {
     try {
       wrapper.before();
       return wrapper.wrap(new Supplier<Yielder<OutType>>()
@@ -101,7 +84,7 @@ final class WrappingSequence<T> implements Sequence<T>
         @Override
         public Yielder<OutType> get()
         {
-          return new WrappingYielder<>(baseSequence.toYielder(initValSupplier, accumulator), wrapper);
+          return new WrappingYielder<>(baseSequence.toYielder(initValue, accumulator), wrapper);
         }
       });
     }

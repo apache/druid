@@ -19,8 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 
 import java.io.Closeable;
@@ -44,30 +42,13 @@ public class ConcatSequence<T> implements Sequence<T>
   {
     return baseSequences.accumulate(
         initValue, new Accumulator<OutType, Sequence<T>>()
-        {
-          @Override
-          public OutType accumulate(OutType accumulated, Sequence<T> in)
-          {
-            return in.accumulate(accumulated, accumulator);
-          }
-        }
-    );
-  }
-
-  @Override
-  public <OutType> OutType accumulate(
-      final Supplier<OutType> initValSupplier, final Accumulator<OutType, T> accumulator
-  )
-  {
-    return baseSequences.accumulate(
-        initValSupplier, new Accumulator<OutType, Sequence<T>>()
-        {
-          @Override
-          public OutType accumulate(OutType accumulated, Sequence<T> in)
-          {
-            return in.accumulate(accumulated, accumulator);
-          }
-        }
+    {
+      @Override
+      public OutType accumulate(OutType accumulated, Sequence<T> in)
+      {
+        return in.accumulate(accumulated, accumulator);
+      }
+    }
     );
   }
 
@@ -77,16 +58,8 @@ public class ConcatSequence<T> implements Sequence<T>
       final YieldingAccumulator<OutType, T> accumulator
   )
   {
-    return toYielder(Suppliers.ofInstance(initValue), accumulator);
-  }
-
-  @Override
-  public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
-  )
-  {
     Yielder<Sequence<T>> yielderYielder = baseSequences.toYielder(
-        (Sequence<T>) null,
+        null,
         new YieldingAccumulator<Sequence<T>, Sequence<T>>()
         {
           @Override
@@ -99,7 +72,7 @@ public class ConcatSequence<T> implements Sequence<T>
     );
 
     try {
-      return makeYielder(yielderYielder, initValSupplier, accumulator);
+      return makeYielder(yielderYielder, initValue, accumulator);
     }
     catch (Throwable t) {
       try {
@@ -114,21 +87,17 @@ public class ConcatSequence<T> implements Sequence<T>
 
   public <OutType> Yielder<OutType> makeYielder(
       Yielder<Sequence<T>> yielderYielder,
-      Supplier<OutType> initValSupplier,
+      OutType initValue,
       YieldingAccumulator<OutType, T> accumulator
   )
   {
-    if (yielderYielder.isDone()) {
-      return Yielders.done(initValSupplier.get(), yielderYielder);
-    } else {
-      // pass the supplier to get the first Yielder
-      Yielder<OutType> yielder = yielderYielder.get().toYielder(initValSupplier, accumulator);
-
+    while (!yielderYielder.isDone()) {
+      Yielder<OutType> yielder = yielderYielder.get().toYielder(initValue, accumulator);
       if (accumulator.yielded()) {
         return wrapYielder(yielder, yielderYielder, accumulator);
       }
 
-      OutType initVal = yielder.get();
+      initValue = yielder.get();
       try {
         yielder.close();
       }
@@ -137,26 +106,9 @@ public class ConcatSequence<T> implements Sequence<T>
       }
 
       yielderYielder = yielderYielder.next(null);
-
-      while (!yielderYielder.isDone()) {
-        yielder = yielderYielder.get().toYielder(initVal, accumulator);
-        if (accumulator.yielded()) {
-          return wrapYielder(yielder, yielderYielder, accumulator);
-        }
-
-        initVal = yielder.get();
-        try {
-          yielder.close();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
-
-        yielderYielder = yielderYielder.next(null);
-      }
-
-      return Yielders.done(initVal, yielderYielder);
     }
+
+    return Yielders.done(initValue, yielderYielder);
   }
 
   private <OutType> Yielder<OutType> wrapYielder(
@@ -174,7 +126,7 @@ public class ConcatSequence<T> implements Sequence<T>
         throw Throwables.propagate(e);
       }
 
-      return makeYielder(yielderYielder.next(null), Suppliers.ofInstance(nextInit), accumulator);
+      return makeYielder(yielderYielder.next(null), nextInit, accumulator);
     }
 
     return new Yielder<OutType>()

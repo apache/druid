@@ -19,8 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Supplier;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
@@ -43,21 +41,6 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> fn)
   {
     IterType iterator = maker.make();
-    return accumulate(iterator, initValue, fn);
-  }
-
-  @Override
-  public <OutType> OutType accumulate(Supplier<OutType> initValSupplier, final Accumulator<OutType, T> fn)
-  {
-    final IterType iterator = maker.make();
-    // initValue.get() is called here to guarantee some kind of initialization for initValue is executed
-    // after making the iterator
-    final OutType retVal = initValSupplier.get();
-    return accumulate(iterator, retVal, fn);
-  }
-
-  private <OutType> OutType accumulate(IterType iterator, OutType initValue, final Accumulator<OutType, T> fn)
-  {
     try {
       while (iterator.hasNext()) {
         initValue = fn.accumulate(initValue, iterator.next());
@@ -83,29 +66,6 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
 
     try {
       return makeYielder(initValue, accumulator, iterator);
-    }
-    catch (Throwable t) {
-      try {
-        maker.cleanup(iterator);
-      }
-      catch (Exception e) {
-        t.addSuppressed(e);
-      }
-      throw t;
-    }
-  }
-
-  @Override
-  public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
-  )
-  {
-    final IterType iterator = maker.make();
-
-    try {
-      // initValue.get() is called here to guarantee some kind of initialization for initValue is executed
-      // after making the iterator
-      return makeYielder(initValSupplier.get(), accumulator, iterator);
     }
     catch (Throwable t) {
       try {

@@ -19,8 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Supplier;
-
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -64,25 +62,9 @@ public class TestSequence<T> implements Sequence<T>
   }
 
   @Override
-  public <OutType> OutType accumulate(
-      Supplier<OutType> initValSupplier, Accumulator<OutType, T> accumulator
-  )
-  {
-    return base.accumulate(initValSupplier, accumulator);
-  }
-
-  @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
     return base.toYielder(initValue, accumulator);
-  }
-
-  @Override
-  public <OutType> Yielder<OutType> toYielder(
-      Supplier<OutType> initValSupplier, YieldingAccumulator<OutType, T> accumulator
-  )
-  {
-    return base.toYielder(initValSupplier, accumulator);
   }
 
   public boolean isClosed()

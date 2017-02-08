@@ -37,7 +37,7 @@ public class BlockingPool<T>
 {
   private static final Logger log = new Logger(BlockingPool.class);
 
-  private final BlockingQueue<T> objects;
+  protected final BlockingQueue<T> objects;
 
   public BlockingPool(
       Supplier<T> generator,

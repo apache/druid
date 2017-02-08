@@ -50,7 +50,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 @RunWith(Parameterized.class)
-public class NestedGroupByQueryRunnerFailureTest
+public class GroupByQueryRunnerFailureTest
 {
   public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
@@ -107,7 +107,7 @@ public class NestedGroupByQueryRunnerFailureTest
     return args;
   }
 
-  public NestedGroupByQueryRunnerFailureTest(QueryRunner<Row> runner)
+  public GroupByQueryRunnerFailureTest(QueryRunner<Row> runner)
   {
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
   }
@@ -126,10 +126,7 @@ public class NestedGroupByQueryRunnerFailureTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(QueryGranularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec(
-                                "quality",
-                                "alias"
-                            )))
+                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
                             .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
