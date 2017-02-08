@@ -82,13 +82,13 @@ public class InFilter implements Filter
   {
     if (extractionFn == null) {
       final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-      return Filters.estimatePredicateSelectivity(
+      return Filters.estimateSelectivity(
           bitmapIndex,
           IntIteratorUtils.toIntList(getBitmapIndexIterable(bitmapIndex).iterator()),
           indexSelector.getNumRows()
       );
     } else {
-      return Filters.estimatePredicateSelectivity(
+      return Filters.estimateSelectivity(
           dimension,
           indexSelector,
           getPredicateFactory().makeStringPredicate()

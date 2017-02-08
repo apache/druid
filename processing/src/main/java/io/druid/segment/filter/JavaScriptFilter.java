@@ -60,7 +60,7 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
-      return Filters.estimatePredicateSelectivity(dimension, indexSelector, makeStringPredicate(cx));
+      return Filters.estimateSelectivity(dimension, indexSelector, makeStringPredicate(cx));
     }
     finally {
       Context.exit();

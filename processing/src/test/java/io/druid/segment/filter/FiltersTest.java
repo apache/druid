@@ -42,7 +42,7 @@ public class FiltersTest
     final List<ImmutableBitmap> bitmaps = Lists.newArrayListWithCapacity(bitmapNum);
     final BitmapIndex bitmapIndex = makeNonOverlappedBitmapIndexes(bitmapNum, bitmaps);
 
-    final double estimated = Filters.estimatePredicateSelectivity(
+    final double estimated = Filters.estimateSelectivity(
         bitmapIndex,
         IntIteratorUtils.toIntList(IntIterators.fromTo(0, bitmapNum)),
         10000

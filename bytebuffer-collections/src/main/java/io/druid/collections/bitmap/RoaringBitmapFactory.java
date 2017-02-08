@@ -20,6 +20,7 @@
 package io.druid.collections.bitmap;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -27,6 +28,7 @@ import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -142,6 +144,16 @@ public class RoaringBitmapFactory implements BitmapFactory
   @Override
   public ImmutableBitmap union(Iterable<ImmutableBitmap> b)
   {
+    if (b instanceof Collection) {
+      final Collection<ImmutableBitmap> bitmapList = (Collection<ImmutableBitmap>) b;
+      final int size = bitmapList.size();
+      if (size == 0) {
+        return makeEmptyImmutableBitmap();
+      } else if (size == 1) {
+        return Iterables.getOnlyElement(b);
+      }
+    }
+
     return new WrappedImmutableRoaringBitmap(ImmutableRoaringBitmap.or(unwrap(b).iterator()));
   }
 

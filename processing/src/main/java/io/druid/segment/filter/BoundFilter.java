@@ -85,13 +85,13 @@ public class BoundFilter implements Filter
         return doesMatch(null) ? 1. : 0.;
       }
 
-      return Filters.estimatePredicateSelectivity(
+      return Filters.estimateSelectivity(
           bitmapIndex,
           getBitmapIndexList(boundDimFilter, bitmapIndex),
           indexSelector.getNumRows()
       );
     } else {
-      return Filters.estimatePredicateSelectivity(
+      return Filters.estimateSelectivity(
           boundDimFilter.getDimension(),
           indexSelector,
           getPredicateFactory().makeStringPredicate()
