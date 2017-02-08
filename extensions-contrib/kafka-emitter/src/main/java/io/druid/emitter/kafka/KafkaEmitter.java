@@ -73,6 +73,7 @@ public class KafkaEmitter implements Emitter {
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIALIZER);
     props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
+    props.putAll(config.getKafkaProducerConfig());
 
     return new KafkaProducer<>(props);
   }

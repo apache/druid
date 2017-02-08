@@ -21,6 +21,7 @@ package io.druid.emitter.kafka;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,7 +40,9 @@ public class KafkaEmitterConfigTest {
   @Test
   public void testSerDeserKafkaEmitterConfig() throws IOException {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
-                                                                   "alertTest", "clusterNameTest");
+                                                                   "alertTest", "clusterNameTest",
+                                                                    ImmutableMap.<String, String>builder()
+                                                                        .put("testKey", "testValue").build());
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.reader(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);

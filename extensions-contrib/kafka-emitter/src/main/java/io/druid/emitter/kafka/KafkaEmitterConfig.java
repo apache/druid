@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import java.util.Map;
+
 public class KafkaEmitterConfig {
 
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
@@ -34,6 +36,8 @@ public class KafkaEmitterConfig {
   final private String alertTopic;
   @JsonProperty
   final private String clusterName;
+  @JsonProperty("producer.config")
+  private Map<String, String> kafkaProducerConfig;
 
   @Override
   public boolean equals(Object o) {
@@ -59,11 +63,13 @@ public class KafkaEmitterConfig {
   public KafkaEmitterConfig(@JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
                             @JsonProperty("metric.topic") String metricTopic,
                             @JsonProperty("alert.topic") String alertTopic,
-                            @JsonProperty("clusterName") String clusterName) {
+                            @JsonProperty("clusterName") String clusterName,
+                            @JsonProperty("producer.config") Map<String, String> kafkaProducerConfig) {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
-    this.clusterName = (clusterName == null || clusterName.isEmpty()) ? null : clusterName;
+    this.clusterName = clusterName;
+    this.kafkaProducerConfig = kafkaProducerConfig;
   }
 
   @JsonProperty
@@ -78,6 +84,9 @@ public class KafkaEmitterConfig {
   @JsonProperty
   public String getClusterName() { return clusterName; }
 
+  @JsonProperty
+  public Map<String, String> getKafkaProducerConfig() { return kafkaProducerConfig; }
+
   @Override
   public String toString()
   {
@@ -86,6 +95,7 @@ public class KafkaEmitterConfig {
         ", metric.topic=" + metricTopic +
         ", alert.topic=" + alertTopic +
         ", clusterName=" + clusterName +
+        ", producer.config=" + kafkaProducerConfig.toString() +
         '}';
   }
 }
