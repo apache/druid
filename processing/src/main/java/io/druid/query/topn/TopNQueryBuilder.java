@@ -275,9 +275,10 @@ public class TopNQueryBuilder
     return this;
   }
 
-  public TopNQueryBuilder aggregators(List<AggregatorFactory> a)
+  @SuppressWarnings("unchecked")
+  public TopNQueryBuilder aggregators(List<? extends AggregatorFactory> a)
   {
-    aggregatorSpecs = a;
+    aggregatorSpecs = (List<AggregatorFactory>) a;
     return this;
   }
 

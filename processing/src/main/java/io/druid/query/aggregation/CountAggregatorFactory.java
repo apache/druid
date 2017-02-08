@@ -21,12 +21,13 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -36,15 +37,21 @@ public class CountAggregatorFactory extends AggregatorFactory
 {
   private static final byte[] CACHE_KEY = new byte[]{0x0};
   private final String name;
+  private final String fieldName;
 
   @JsonCreator
   public CountAggregatorFactory(
       @JsonProperty("name") String name
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    this(name, name);
+  }
 
-    this.name = name;
+  @VisibleForTesting
+  public CountAggregatorFactory(String name, String fieldName)
+  {
+    this.name = Preconditions.checkNotNull(name, "name");
+    this.fieldName = Preconditions.checkNotNull(fieldName, "fieldName");
   }
 
   @Override
@@ -80,7 +87,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(name));
+    return Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory(fieldName, fieldName));
   }
 
   @Override
@@ -131,6 +138,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   {
     return "CountAggregatorFactory{" +
            "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
            '}';
   }
 
@@ -146,16 +154,20 @@ public class CountAggregatorFactory extends AggregatorFactory
 
     CountAggregatorFactory that = (CountAggregatorFactory) o;
 
-    if (name != null ? !name.equals(that.name) : that.name != null) {
+    if (!name.equals(that.name)) {
       return false;
     }
-
+    if (!fieldName.equals(that.fieldName)) {
+      return false;
+    }
     return true;
   }
 
   @Override
   public int hashCode()
   {
-    return name != null ? name.hashCode() : 0;
+    int result = name.hashCode();
+    result = 31 * result + fieldName.hashCode();
+    return result;
   }
 }
