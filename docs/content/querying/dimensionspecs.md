@@ -66,8 +66,6 @@ Following filtered dimension spec retains only the values matching regex. Note t
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
 ```
 
-Note that filtered DimensionSpecs are not supported when applied to a numeric column (when the base column in a segment contains long or float values, not related to what `outputType` specifies).
-
 For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
 
 ### Lookup DimensionSpecs

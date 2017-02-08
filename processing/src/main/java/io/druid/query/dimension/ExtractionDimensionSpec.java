@@ -106,6 +106,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean mustDecorate()
+  {
+    return false;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);

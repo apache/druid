@@ -68,6 +68,12 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean mustDecorate()
+  {
+    return true;
+  }
+
+  @Override
   public boolean preservesOrdering()
   {
     return delegate.preservesOrdering();

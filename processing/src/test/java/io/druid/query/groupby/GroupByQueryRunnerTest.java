@@ -7613,14 +7613,19 @@ public class GroupByQueryRunnerTest
             "2011-04-01",
             "ql", 0L,
             "qf", 0.0,
-            "count", 4L
+            "count", 2L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "ql", 1700L,
+            "qf", 17000.0,
+            "count", 2L
         )
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
-
 
   @Test
   public void testGroupByNestedWithInnerQueryNumerics()

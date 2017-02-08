@@ -49,6 +49,9 @@ public interface DimensionSpec
 
   DimensionSelector decorate(DimensionSelector selector);
 
+  // Does this DimensionSpec require that decorate() be called to produce correct results?
+  boolean mustDecorate();
+
   byte[] getCacheKey();
 
   boolean preservesOrdering();

@@ -27,7 +27,6 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.dimension.BaseFilteredDimensionSpec;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -345,6 +344,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   return virtualColumns.makeDimensionSelector(dimensionSpec, this);
                 }
 
+                return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+              }
+
+              private DimensionSelector makeDimensionSelectorUndecorated(
+                  DimensionSpec dimensionSpec
+              )
+              {
                 final String dimension = dimensionSpec.getDimension();
                 final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
@@ -354,22 +360,15 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       extractionFn,
                       descending
                   );
-                  return dimensionSpec.decorate(selector);
+                  return selector;
                 }
 
                 ColumnCapabilities capabilities = getColumnCapabilities(dimension);
                 if (capabilities != null) {
                   if (capabilities.getType() == ValueType.LONG) {
-                    if (dimensionSpec instanceof BaseFilteredDimensionSpec) {
-                      // Filtered dimension specs are not supported on numerics
-                      return dimensionSpec.decorate(NullDimensionSelector.instance());
-                    }
                     return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
                   }
                   if (capabilities.getType() == ValueType.FLOAT) {
-                    if (dimensionSpec instanceof BaseFilteredDimensionSpec) {
-                      return dimensionSpec.decorate(NullDimensionSelector.instance());
-                    }
                     return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
                   }
                 }
