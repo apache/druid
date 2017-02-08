@@ -266,12 +266,26 @@ public class TopNQueryQueryToolChestTest
         .postAggregators(
             ImmutableList.<PostAggregator>of(
                 new ArithmeticPostAggregator(
-                    "part_sum",
+                    "part_part_sum",
                     "+",
                     ImmutableList.<PostAggregator>of(
                         new FieldAccessPostAggregator(
                             null,
                             "metric1"
+                        ),
+                        new FieldAccessPostAggregator(
+                            null,
+                            "metric1"
+                        )
+                    )
+                ),
+                new ArithmeticPostAggregator(
+                    "part_sum",
+                    "+",
+                    ImmutableList.<PostAggregator>of(
+                        new FieldAccessPostAggregator(
+                            null,
+                            "part_part_sum"
                         ),
                         new FieldAccessPostAggregator(
                             null,
@@ -335,12 +349,26 @@ public class TopNQueryQueryToolChestTest
             )
         ),
         new ArithmeticPostAggregator(
-            "part_sum",
+            "part_part_sum",
             "+",
             ImmutableList.<PostAggregator>of(
                 new FieldAccessPostAggregator(
                     null,
                     "metric1"
+                ),
+                new FieldAccessPostAggregator(
+                    null,
+                    "metric1"
+                )
+            )
+        ),
+        new ArithmeticPostAggregator(
+            "part_sum",
+            "+",
+            ImmutableList.<PostAggregator>of(
+                new FieldAccessPostAggregator(
+                    null,
+                    "part_part_sum"
                 ),
                 new FieldAccessPostAggregator(
                     null,

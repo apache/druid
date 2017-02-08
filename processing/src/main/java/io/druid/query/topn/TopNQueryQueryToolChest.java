@@ -59,7 +59,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  */
@@ -310,14 +309,22 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     if (found != null) {
       final Map<String, PostAggregator> foundMap = Maps.newHashMap();
       final Map<String, PostAggregator> notCheckedMap = Maps.newHashMap();
+      final List<String> postAggregatorNameOrder = Lists.newArrayList();
 
       for (PostAggregator eachAggregator : postAggregators) {
         if (eachAggregator != found) {
           notCheckedMap.put(eachAggregator.getName(), eachAggregator);
+          postAggregatorNameOrder.add(eachAggregator.getName());
+        } else {
+          // Since inner post aggregators always appear first than outer post aggregators,
+          // it should be fine to break here.
+          break;
         }
       }
       foundMap.put(found.getName(), found);
-      foundMap.putAll(getDependentPostAggregators(found, notCheckedMap));
+      foundMap.putAll(
+          getDependentPostAggregators(found, postAggregatorNameOrder, notCheckedMap)
+      );
 
       return foundMap.values();
     } else {
@@ -325,19 +332,28 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
   }
 
-  private static Map<String, PostAggregator> getDependentPostAggregators(PostAggregator cur, Map<String, PostAggregator> notChecked)
+  private static Map<String, PostAggregator> getDependentPostAggregators(
+      PostAggregator cur,
+      List<String> postAggregatorNameOrder,
+      Map<String, PostAggregator> notChecked
+  )
   {
     final Map<String, PostAggregator> found = Maps.newHashMap();
 
     for (String eachDependentField : cur.getDependentFields()) {
-      for (Entry<String, PostAggregator> entry : notChecked.entrySet()) {
-        if (eachDependentField.equals(entry.getKey())) {
-          final String foundPostAggName = entry.getKey();
-          final PostAggregator foundPostAgg = entry.getValue();
-          final Map<String, PostAggregator> newNotChecked = Maps.newHashMap(notChecked);
-          found.put(foundPostAggName, foundPostAgg);
-          newNotChecked.remove(foundPostAggName);
-          found.putAll(getDependentPostAggregators(foundPostAgg, newNotChecked));
+      for (int i = 0; i < postAggregatorNameOrder.size(); i++) {
+        final String postAggregatorName = postAggregatorNameOrder.get(i);
+        if (eachDependentField.equals(postAggregatorName)) {
+          final PostAggregator foundPostAgg = notChecked.get(postAggregatorName);
+          found.put(postAggregatorName, foundPostAgg);
+
+          // Further find nested post aggregators
+          final List<String> remainIterOrder = postAggregatorNameOrder.subList(0, i);
+          final Map<String, PostAggregator> remainNotChecked = Maps.newHashMapWithExpectedSize(remainIterOrder.size());
+          for (String remainPostAggName : remainIterOrder) {
+            remainNotChecked.put(remainPostAggName, notChecked.get(remainPostAggName));
+          }
+          found.putAll(getDependentPostAggregators(foundPostAgg, remainIterOrder, remainNotChecked));
         }
       }
     }
