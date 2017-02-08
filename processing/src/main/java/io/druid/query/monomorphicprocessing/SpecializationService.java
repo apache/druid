@@ -72,7 +72,8 @@ public final class SpecializationService
       Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
       theUnsafe.setAccessible(true);
       UNSAFE = (Unsafe) theUnsafe.get(null);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException("Cannot access Unsafe methods", e);
     }
   }
