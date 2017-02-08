@@ -32,6 +32,7 @@ import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -69,10 +70,7 @@ public class FileRequestLogger implements RequestLogger
       synchronized (lock) {
         currentDay = mutableDateTime.toDateTime();
 
-        fileWriter = new OutputStreamWriter(
-            new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-            Charsets.UTF_8
-        );
+        fileWriter = getFileWriter();
       }
       long nextDay = currentDay.plusDays(1).getMillis();
       Duration delay = new Duration(nextDay - new DateTime().getMillis());
@@ -90,10 +88,7 @@ public class FileRequestLogger implements RequestLogger
                 synchronized (lock) {
                   currentDay = currentDay.plusDays(1);
                   CloseQuietly.close(fileWriter);
-                  fileWriter = new OutputStreamWriter(
-                      new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-                      Charsets.UTF_8
-                  );
+                  fileWriter = getFileWriter();
                 }
               }
               catch (Exception e) {
@@ -108,6 +103,13 @@ public class FileRequestLogger implements RequestLogger
     catch (IOException e) {
       Throwables.propagate(e);
     }
+  }
+
+  private OutputStreamWriter getFileWriter() throws FileNotFoundException {
+    return new OutputStreamWriter(
+            new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+            Charsets.UTF_8
+    );
   }
 
   @LifecycleStop
