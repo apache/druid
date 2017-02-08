@@ -360,13 +360,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         }
       }
       loadSegment(segment, callback);
-      if (!announcer.isAnnounced(segment)) {
-        try {
-          announcer.announceSegment(segment);
-        }
-        catch (IOException e) {
-          throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
-        }
+      try {
+        announcer.announceSegment(segment);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
       }
     }
     catch (SegmentLoadingException e) {
@@ -408,14 +406,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                       segment.getIdentifier()
                   );
                   loadSegment(segment, callback);
-                  if (!announcer.isAnnounced(segment)) {
-                    try {
-                      backgroundSegmentAnnouncer.announceSegment(segment);
-                    }
-                    catch (InterruptedException e) {
-                      Thread.currentThread().interrupt();
-                      throw new SegmentLoadingException(e, "Loading Interrupted");
-                    }
+                  try {
+                    backgroundSegmentAnnouncer.announceSegment(segment);
+                  }
+                  catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new SegmentLoadingException(e, "Loading Interrupted");
                   }
                 }
                 catch (SegmentLoadingException e) {

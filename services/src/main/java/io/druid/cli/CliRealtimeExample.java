@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -35,6 +36,8 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.SegmentChangeRequestHistory;
+import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.timeline.DataSegment;
 
@@ -170,9 +173,9 @@ public class CliRealtimeExample extends ServerRunnable
     }
 
     @Override
-    public boolean isAnnounced(DataSegment segment)
+    public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
     {
-      return false;
+      throw new UnsupportedOperationException("not supported");
     }
   }
 }

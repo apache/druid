@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
@@ -62,6 +63,8 @@ import io.druid.segment.realtime.plumber.Plumbers;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.SegmentChangeRequestHistory;
+import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -250,9 +253,9 @@ public class RealtimeIndexTask extends AbstractTask
       }
 
       @Override
-      public boolean isAnnounced(DataSegment segment)
+      public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
       {
-        return toolbox.getSegmentAnnouncer().isAnnounced(segment);
+        return toolbox.getSegmentAnnouncer().getSegmentChangesSince(counter);
       }
     };
 

@@ -24,10 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-
 import io.druid.common.utils.UUIDUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.java.util.common.ISE;
@@ -38,8 +40,11 @@ import io.druid.timeline.DataSegment;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -63,6 +68,9 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<SegmentZNode>();
   private final Map<DataSegment, SegmentZNode> segmentLookup = Maps.newConcurrentMap();
   private final Function<DataSegment, DataSegment> segmentTransformer;
+
+  private final SegmentChangeRequestHistory changes = new SegmentChangeRequestHistory();
+  private final SegmentZNode dummyZnode;
 
   @Inject
   public BatchDataSegmentAnnouncer(
@@ -95,18 +103,37 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
         return rv;
       }
     };
+
+    if (this.config.isSkipSegmentAnnouncementOnZk()) {
+      dummyZnode = new SegmentZNode("PLACE_HOLDER_ONLY");
+    } else {
+      dummyZnode = null;
+    }
   }
 
   @Override
   public void announceSegment(DataSegment segment) throws IOException
   {
-    DataSegment toAnnounce = segmentTransformer.apply(segment);
-    int newBytesLen = jsonMapper.writeValueAsBytes(toAnnounce).length;
-    if (newBytesLen > config.getMaxBytesPerNode()) {
-      throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxBytesPerNode());
+    if (segmentLookup.containsKey(segment)) {
+      log.info("Skipping announcement of segment [%s]. Announcement exists already.");
+      return;
     }
 
+    DataSegment toAnnounce = segmentTransformer.apply(segment);
+
     synchronized (lock) {
+      changes.addSegmentChangeRequest(new SegmentChangeRequestLoad(toAnnounce));
+
+      if (config.isSkipSegmentAnnouncementOnZk()) {
+        segmentLookup.put(segment, dummyZnode);
+        return;
+      }
+
+      int newBytesLen = jsonMapper.writeValueAsBytes(toAnnounce).length;
+      if (newBytesLen > config.getMaxBytesPerNode()) {
+        throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxBytesPerNode());
+      }
+
       boolean done = false;
       if (!availableZNodes.isEmpty()) {
         // update existing batch
@@ -155,13 +182,20 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   @Override
   public void unannounceSegment(DataSegment segment) throws IOException
   {
-    final SegmentZNode segmentZNode = segmentLookup.remove(segment);
-    if (segmentZNode == null) {
-      log.warn("No path to unannounce segment[%s]", segment.getIdentifier());
-      return;
-    }
-
     synchronized (lock) {
+      final SegmentZNode segmentZNode = segmentLookup.remove(segment);
+
+      if (segmentZNode == null) {
+        log.warn("No path to unannounce segment[%s]", segment.getIdentifier());
+        return;
+      }
+
+      changes.addSegmentChangeRequest(new SegmentChangeRequestDrop(segment));
+
+      if (config.isSkipSegmentAnnouncementOnZk()) {
+        return;
+      }
+
       segmentZNode.removeSegment(segment);
 
       log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
@@ -178,38 +212,60 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   @Override
   public void announceSegments(Iterable<DataSegment> segments) throws IOException
   {
-    Iterable<DataSegment> toAnnounce = Iterables.transform(segments, segmentTransformer);
     SegmentZNode segmentZNode = new SegmentZNode(makeServedSegmentPath());
     Set<DataSegment> batch = Sets.newHashSet();
+    List<DataSegmentChangeRequest> changesBatch = new ArrayList<>();
+
     int byteSize = 0;
     int count = 0;
 
-    for (DataSegment segment : toAnnounce) {
-      int newBytesLen = jsonMapper.writeValueAsBytes(segment).length;
+    synchronized (lock) {
+      for (DataSegment ds : segments) {
 
-      if (newBytesLen > config.getMaxBytesPerNode()) {
-        throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxBytesPerNode());
+        if (segmentLookup.containsKey(ds)) {
+          log.info("Skipping announcement of segment [%s]. Announcement exists already.");
+          return;
+        }
+
+        DataSegment segment = segmentTransformer.apply(ds);
+
+        changesBatch.add(new SegmentChangeRequestLoad(segment));
+
+        if (config.isSkipSegmentAnnouncementOnZk()) {
+          segmentLookup.put(segment, dummyZnode);
+          continue;
+        }
+
+        int newBytesLen = jsonMapper.writeValueAsBytes(segment).length;
+
+        if (newBytesLen > config.getMaxBytesPerNode()) {
+          throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxBytesPerNode());
+        }
+
+        if (count >= config.getSegmentsPerNode() || byteSize + newBytesLen > config.getMaxBytesPerNode()) {
+          segmentZNode.addSegments(batch);
+          announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
+
+          segmentZNode = new SegmentZNode(makeServedSegmentPath());
+          batch = Sets.newHashSet();
+          count = 0;
+          byteSize = 0;
+        }
+
+        log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
+        segmentLookup.put(segment, segmentZNode);
+        batch.add(segment);
+        count++;
+        byteSize += newBytesLen;
       }
-
-      if (count >= config.getSegmentsPerNode() || byteSize + newBytesLen > config.getMaxBytesPerNode()) {
-        segmentZNode.addSegments(batch);
-        announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
-
-        segmentZNode = new SegmentZNode(makeServedSegmentPath());
-        batch = Sets.newHashSet();
-        count = 0;
-        byteSize = 0;
-      }
-
-      log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
-      segmentLookup.put(segment, segmentZNode);
-      batch.add(segment);
-      count++;
-      byteSize += newBytesLen;
     }
 
-    segmentZNode.addSegments(batch);
-    announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
+    changes.addSegmentChangeRequests(changesBatch);
+
+    if (!config.isSkipSegmentAnnouncementOnZk()) {
+      segmentZNode.addSegments(batch);
+      announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
+    }
   }
 
   @Override
@@ -221,20 +277,43 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   }
 
   @Override
-  public boolean isAnnounced(DataSegment segment)
+  public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
   {
-    return segmentLookup.containsKey(segment);
+    if (counter.getCounter() < 0) {
+      synchronized (lock) {
+        Iterable<DataSegmentChangeRequest> segments = Iterables.transform(
+            segmentLookup.keySet(),
+            new Function<DataSegment, DataSegmentChangeRequest>()
+            {
+              @Nullable
+              @Override
+              public SegmentChangeRequestLoad apply(DataSegment input)
+              {
+                return new SegmentChangeRequestLoad(input);
+              }
+            }
+        );
+
+        SettableFuture<SegmentChangeRequestsSnapshot> future = SettableFuture.create();
+        future.set(new SegmentChangeRequestsSnapshot(changes.getLastCounter(), Lists.newArrayList(segments)));
+        return future;
+      }
+    } else {
+      return changes.getRequestsSince(counter);
+    }
   }
 
   private String makeServedSegmentPath()
   {
     // server.getName() is already in the zk path
-    return makeServedSegmentPath(UUIDUtils.generateUuid(
-        server.getHost(),
-        server.getType(),
-        server.getTier(),
-        new DateTime().toString()
-    ));
+    return makeServedSegmentPath(
+        UUIDUtils.generateUuid(
+            server.getHost(),
+            server.getType(),
+            server.getTier(),
+            new DateTime().toString()
+        )
+    );
   }
 
   private String makeServedSegmentPath(String zNode)

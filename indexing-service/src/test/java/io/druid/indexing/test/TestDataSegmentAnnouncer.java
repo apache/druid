@@ -21,7 +21,10 @@ package io.druid.indexing.test;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.SegmentChangeRequestHistory;
+import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -60,9 +63,9 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public boolean isAnnounced(DataSegment segment)
+  public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
   {
-    return announcedSegments.contains(segment);
+    throw new UnsupportedOperationException("not supported");
   }
 
   public Set<DataSegment> getAnnouncedSegments()

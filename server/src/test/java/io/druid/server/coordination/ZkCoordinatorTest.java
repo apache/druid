@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
@@ -186,9 +187,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
       }
 
       @Override
-      public boolean isAnnounced(DataSegment segment)
+      public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter)
       {
-        return segmentsAnnouncedByMe.contains(segment);
+        return delegate.getSegmentChangesSince(counter);
       }
     };
 

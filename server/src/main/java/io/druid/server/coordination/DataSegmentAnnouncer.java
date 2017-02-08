@@ -19,6 +19,7 @@
 
 package io.druid.server.coordination;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -34,7 +35,7 @@ public interface DataSegmentAnnouncer
   public void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
 
   /**
-   * @return true if the segment was already announced, otherwise false
+   * Returns Future that lists the segment load/drop requests since given counter.
    */
-  public boolean isAnnounced(DataSegment segment);
+  public ListenableFuture<SegmentChangeRequestsSnapshot> getSegmentChangesSince(SegmentChangeRequestHistory.Counter counter);
 }
