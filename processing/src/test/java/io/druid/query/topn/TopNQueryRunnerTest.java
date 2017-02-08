@@ -100,6 +100,23 @@ public class TopNQueryRunnerTest
   @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
+    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
+    List<Object[]> parameters = new ArrayList<>();
+    for (int i = 0; i < 8; i++) {
+      for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
+        Object[] params = new Object[4];
+        params[0] = firstParameter;
+        params[1] = (i & 1) != 0;
+        params[2] = (i & 2) != 0;
+        params[3] = (i & 4) != 0;
+        parameters.add(params);
+      }
+    }
+    return parameters;
+  }
+
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners() throws IOException
+  {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
         QueryRunnerTestHelper.makeQueryRunners(
@@ -135,18 +152,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    List<Object[]> parameters = new ArrayList<>();
-    for (int i = 0; i < 8; i++) {
-      for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
-        Object[] params = new Object[4];
-        params[0] = firstParameter;
-        params[1] = (i & 1) != 0;
-        params[2] = (i & 2) != 0;
-        params[3] = (i & 4) != 0;
-        parameters.add(params);
-      }
-    }
-    return parameters;
+    return retVal;
   }
 
   private final QueryRunner<Result<TopNResultValue>> runner;

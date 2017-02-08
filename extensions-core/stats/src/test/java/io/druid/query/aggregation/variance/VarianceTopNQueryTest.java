@@ -54,7 +54,7 @@ public class VarianceTopNQueryTest
   @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return TopNQueryRunnerTest.constructorFeeder();
+    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
   }
 
   private final QueryRunner runner;
