@@ -154,14 +154,14 @@ public class TopNQueryRunnerTest
 
   public TopNQueryRunnerTest(
       QueryRunner<Result<TopNResultValue>> runner,
-      boolean dontSpecializeGeneric1AggPooledTopN,
-      boolean dontSpecializeGeneric2AggPooledTopN,
+      boolean specializeGeneric1AggPooledTopN,
+      boolean specializeGeneric2AggPooledTopN,
       boolean duplicateSingleAggregatorQueries
   )
   {
     this.runner = runner;
-    System.setProperty("dontSpecializeGeneric1AggPooledTopN", String.valueOf(dontSpecializeGeneric1AggPooledTopN));
-    System.setProperty("dontSpecializeGeneric2AggPooledTopN", String.valueOf(dontSpecializeGeneric2AggPooledTopN));
+    PooledTopNAlgorithm.specializeGeneric1AggPooledTopN = specializeGeneric1AggPooledTopN;
+    PooledTopNAlgorithm.specializeGeneric2AggPooledTopN = specializeGeneric2AggPooledTopN;
     this.duplicateSingleAggregatorQueries = duplicateSingleAggregatorQueries;
   }
 

@@ -19,6 +19,7 @@
 
 package io.druid.query.topn;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
@@ -42,9 +43,12 @@ import java.util.Arrays;
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
 {
-  private static final boolean specializeGeneric1AggPooledTopN =
+  /** Non-final fields for testing, see TopNQueryRunnerTest */
+  @VisibleForTesting
+  static boolean specializeGeneric1AggPooledTopN =
       !Boolean.getBoolean("dontSpecializeGeneric1AggPooledTopN");
-  private static final boolean specializeGeneric2AggPooledTopN =
+  @VisibleForTesting
+  static boolean specializeGeneric2AggPooledTopN =
       !Boolean.getBoolean("dontSpecializeGeneric2AggPooledTopN");
 
   private static final Generic1AggPooledTopNScanner defaultGeneric1AggScanner =
