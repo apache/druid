@@ -148,7 +148,7 @@ public class DoubleGreatestPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.DOUBLE_GREATEST)
-        .appendCacheableList(fields)
+        .appendCacheables(fields)
         .build();
   }
 }

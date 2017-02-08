@@ -57,10 +57,10 @@ public class CacheKeyBuilderTest
         .appendDouble(2.3)
         .appendByteArray(CacheKeyBuilder.STRING_SEPARATOR) // test when an item is same with the separator
         .appendFloatArray(new float[]{10.0f, 11.0f})
-        .appendStringList(Lists.newArrayList("test1", "test2"))
+        .appendStrings(Lists.newArrayList("test1", "test2"))
         .appendCacheable(cacheable)
         .appendCacheable(null)
-        .appendCacheableList(Lists.newArrayList((Cacheable) null))
+        .appendCacheables(Lists.newArrayList((Cacheable) null))
         .build();
 
     final int expectedSize = 1                                           // id
@@ -71,7 +71,7 @@ public class CacheKeyBuilderTest
                              + Doubles.BYTES                             // 2.3
                              + CacheKeyBuilder.STRING_SEPARATOR.length   // byte array
                              + Floats.BYTES * 2                          // 10.0f, 11.0f
-                             + Ints.BYTES + 5 * 2 + 1         // 'test1' 'test2'
+                             + Ints.BYTES + 5 * 2 + 1                    // 'test1' 'test2'
                              + cacheable.getCacheKey().length            // cacheable
                              + Ints.BYTES                                // cacheable list
                              + 11;                                       // type keys
@@ -110,6 +110,48 @@ public class CacheKeyBuilderTest
   }
 
   @Test
+  public void testDifferentOrderList()
+  {
+    byte[] key1 = new CacheKeyBuilder((byte) 10)
+        .appendStrings(Lists.newArrayList("AB", "BA"))
+        .build();
+
+    byte[] key2 = new CacheKeyBuilder((byte) 10)
+        .appendStrings(Lists.newArrayList("BA", "AB"))
+        .build();
+
+    assertTrue(Arrays.equals(key1, key2));
+
+    final Cacheable cacheable1 = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[]{1};
+      }
+    };
+
+    final Cacheable cacheable2 = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[]{2};
+      }
+    };
+
+    key1 = new CacheKeyBuilder((byte) 10)
+        .appendCacheables(Lists.newArrayList(cacheable1, cacheable2))
+        .build();
+
+    key2 = new CacheKeyBuilder((byte) 10)
+        .appendCacheables(Lists.newArrayList(cacheable2, cacheable1))
+        .build();
+
+    assertTrue(Arrays.equals(key1, key2));
+  }
+
+  @Test
   public void testNotEqualStrings()
   {
     final List<byte[]> keys = Lists.newArrayList();
@@ -142,39 +184,33 @@ public class CacheKeyBuilderTest
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStringList(ImmutableList.of("test", "test"))
+            .appendStrings(ImmutableList.of("test", "test"))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStringList(ImmutableList.of("testtest"))
+            .appendStrings(ImmutableList.of("testtest"))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStringList(ImmutableList.of("testtest", ""))
+            .appendStrings(ImmutableList.of("testtest", ""))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStringList(ImmutableList.of("", "testtest"))
+            .appendStrings(ImmutableList.of("testtest"))
+            .appendStrings(ImmutableList.<String>of())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStringList(ImmutableList.of("testtest"))
-            .appendStringList(ImmutableList.<String>of())
-            .build()
-    );
-
-    keys.add(
-        new CacheKeyBuilder((byte) 10)
-            .appendStringList(ImmutableList.<String>of())
-            .appendStringList(ImmutableList.of("testtest"))
+            .appendStrings(ImmutableList.<String>of())
+            .appendStrings(ImmutableList.of("testtest"))
             .build()
     );
 
@@ -218,27 +254,27 @@ public class CacheKeyBuilderTest
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheableList(Lists.newArrayList(test, test))
+            .appendCacheables(Lists.newArrayList(test, test))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheableList(Lists.newArrayList(testtest))
+            .appendCacheables(Lists.newArrayList(testtest))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheableList(Lists.newArrayList(testtest))
-            .appendCacheableList(Lists.<Cacheable>newArrayList())
+            .appendCacheables(Lists.newArrayList(testtest))
+            .appendCacheables(Lists.<Cacheable>newArrayList())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheableList(Lists.<Cacheable>newArrayList())
-            .appendCacheableList(Lists.newArrayList(testtest))
+            .appendCacheables(Lists.<Cacheable>newArrayList())
+            .appendCacheables(Lists.newArrayList(testtest))
             .build()
     );
 
@@ -260,21 +296,21 @@ public class CacheKeyBuilderTest
   public void testEmptyOrNullStringLists()
   {
     byte[] key1 = new CacheKeyBuilder((byte) 10)
-        .appendStringList(Lists.newArrayList("", ""))
+        .appendStrings(Lists.newArrayList("", ""))
         .build();
 
     byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendStringList(Lists.newArrayList(""))
+        .appendStrings(Lists.newArrayList(""))
         .build();
 
     assertFalse(Arrays.equals(key1, key2));
 
     key1 = new CacheKeyBuilder((byte) 10)
-        .appendStringList(Lists.newArrayList(""))
+        .appendStrings(Lists.newArrayList(""))
         .build();
 
     key2 = new CacheKeyBuilder((byte) 10)
-        .appendStringList(Lists.newArrayList((String) null))
+        .appendStrings(Lists.newArrayList((String) null))
         .build();
 
     assertTrue(Arrays.equals(key1, key2));
@@ -283,12 +319,12 @@ public class CacheKeyBuilderTest
   @Test
   public void testEmptyOrNullCacheables()
   {
-    byte[] key1 = new CacheKeyBuilder((byte) 10)
-        .appendCacheableList(Lists.<Cacheable>newArrayList())
+    final byte[] key1 = new CacheKeyBuilder((byte) 10)
+        .appendCacheables(Lists.<Cacheable>newArrayList())
         .build();
 
-    byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendCacheableList(Lists.newArrayList((Cacheable) null))
+    final byte[] key2 = new CacheKeyBuilder((byte) 10)
+        .appendCacheables(Lists.newArrayList((Cacheable) null))
         .build();
 
     assertFalse(Arrays.equals(key1, key2));

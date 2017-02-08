@@ -129,7 +129,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   {
     return new CacheKeyBuilder(PostAggregatorIds.ARITHMETIC)
         .appendString(fnName)
-        .appendCacheableList(fields)
+        .appendCacheables(fields)
         .appendString(ordering)
         .build();
   }

@@ -19,17 +19,20 @@
 
 package io.druid.query.cache;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.UnsignedBytes;
 import io.druid.common.utils.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -48,7 +51,7 @@ public class CacheKeyBuilder
   static final byte CACHEABLE_LIST_KEY = 10;
 
   static final byte[] STRING_SEPARATOR = new byte[]{(byte) 0xFF};
-  public static final byte[] EMPTY_BYTES = StringUtils.EMPTY_BYTES;
+  static final byte[] EMPTY_BYTES = StringUtils.EMPTY_BYTES;
 
   private static class Item
   {
@@ -61,43 +64,10 @@ public class CacheKeyBuilder
       this.item = item;
     }
 
-    public int byteSize()
+    int byteSize()
     {
       return 1 + item.length;
     }
-  }
-
-  private static byte[] stringListToByteArray(List<String> input)
-  {
-    if (input.size() > 0) {
-      List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(input.size());
-      int totalByteLength = 0;
-      for (String eachStr : input) {
-        final byte[] byteArray = StringUtils.toUtf8WithNullToEmpty(eachStr);
-        totalByteLength += byteArray.length;
-        byteArrayList.add(byteArray);
-      }
-      return joinByteArrayList(byteArrayList, STRING_SEPARATOR, totalByteLength);
-    } else {
-      return EMPTY_BYTES;
-    }
-  }
-
-  private static byte[] joinByteArrayList(Collection<byte[]> byteArrayList, byte[] separator, int totalByteLength)
-  {
-    final Iterator<byte[]> iterator = byteArrayList.iterator();
-    Preconditions.checkArgument(iterator.hasNext());
-
-    final int bufSize = Ints.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
-    final ByteBuffer buffer = ByteBuffer.allocate(bufSize)
-                                        .putInt(byteArrayList.size())
-                                        .put(iterator.next());
-
-    while (iterator.hasNext()) {
-      buffer.put(separator).put(iterator.next());
-    }
-
-    return buffer.array();
   }
 
   private static byte[] floatArrayToByteArray(float[] input)
@@ -118,19 +88,67 @@ public class CacheKeyBuilder
     }
   }
 
-  private static byte[] cacheableListToByteArray(List<? extends Cacheable> input)
+  private static byte[] stringCollectionToByteArray(Collection<String> input)
   {
-    final int inputSize = input.size();
-    if (inputSize > 0) {
-      final List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(inputSize);
+    return collectionToByteArray(
+        input,
+        new Function<String, byte[]>()
+        {
+          @Override
+          public byte[] apply(@Nullable String input)
+          {
+            return StringUtils.toUtf8WithNullToEmpty(input);
+          }
+        },
+        STRING_SEPARATOR
+    );
+  }
+
+  private static byte[] cacheableCollectionToByteArray(Collection<? extends Cacheable> input)
+  {
+    return collectionToByteArray(
+        input,
+        new Function<Cacheable, byte[]>()
+        {
+          @Override
+          public byte[] apply(@Nullable Cacheable input)
+          {
+            return input == null ? EMPTY_BYTES : input.getCacheKey();
+          }
+        },
+        EMPTY_BYTES
+    );
+  }
+
+  private static <T> byte[] collectionToByteArray(
+      Collection<? extends T> collection,
+      Function<T, byte[]> serializeFunction,
+      byte[] separator
+  )
+  {
+    if (collection.size() > 0) {
+      List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(collection.size());
       int totalByteLength = 0;
-      for (Cacheable eachCacheable : input) {
-        byte[] key = cacheableToByteArray(eachCacheable);
-        totalByteLength += key.length;
-        byteArrayList.add(key);
+      for (T eachItem : collection) {
+        final byte[] byteArray = serializeFunction.apply(eachItem);
+        totalByteLength += byteArray.length;
+        byteArrayList.add(byteArray);
       }
 
-      return joinByteArrayList(byteArrayList, EMPTY_BYTES, totalByteLength);
+      // Sort the byte array list to guarantee that collections of same items but in different orders make the same result
+      Collections.sort(byteArrayList, UnsignedBytes.lexicographicalComparator());
+
+      final Iterator<byte[]> iterator = byteArrayList.iterator();
+      final int bufSize = Ints.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
+      final ByteBuffer buffer = ByteBuffer.allocate(bufSize)
+                                          .putInt(byteArrayList.size())
+                                          .put(iterator.next());
+
+      while (iterator.hasNext()) {
+        buffer.put(separator).put(iterator.next());
+      }
+
+      return buffer.array();
     } else {
       return EMPTY_BYTES;
     }
@@ -154,7 +172,6 @@ public class CacheKeyBuilder
 
   public CacheKeyBuilder appendByteArray(byte[] input)
   {
-    // TODO: check it is ok to not add input.length for fixed-size types
     appendItem(BYTE_ARRAY_KEY, input);
     return this;
   }
@@ -165,9 +182,9 @@ public class CacheKeyBuilder
     return this;
   }
 
-  public CacheKeyBuilder appendStringList(List<String> input)
+  public CacheKeyBuilder appendStrings(Collection<String> input)
   {
-    appendItem(STRING_LIST_KEY, stringListToByteArray(input));
+    appendItem(STRING_LIST_KEY, stringCollectionToByteArray(input));
     return this;
   }
 
@@ -207,9 +224,9 @@ public class CacheKeyBuilder
     return this;
   }
 
-  public CacheKeyBuilder appendCacheableList(List<? extends Cacheable> input)
+  public CacheKeyBuilder appendCacheables(Collection<? extends Cacheable> input)
   {
-    appendItem(CACHEABLE_LIST_KEY, cacheableListToByteArray(input));
+    appendItem(CACHEABLE_LIST_KEY, cacheableCollectionToByteArray(input));
     return this;
   }
 

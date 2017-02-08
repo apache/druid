@@ -167,7 +167,7 @@ public class SketchSetPostAggregator implements PostAggregator
   {
     return new CacheKeyBuilder(PostAggregatorIds.DATA_SKETCHES_SKETCH_SET)
         .appendString(getFunc())
-        .appendCacheableList(fields)
+        .appendCacheables(fields)
         .appendInt(maxSketchSize)
         .build();
   }

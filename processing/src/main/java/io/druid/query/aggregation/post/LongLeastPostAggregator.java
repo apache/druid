@@ -149,7 +149,7 @@ public class LongLeastPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.LONG_LEAST)
-        .appendCacheableList(fields)
+        .appendCacheables(fields)
         .build();
   }
 }

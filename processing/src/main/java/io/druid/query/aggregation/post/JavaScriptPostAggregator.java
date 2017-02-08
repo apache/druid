@@ -132,7 +132,7 @@ public class JavaScriptPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.JAVA_SCRIPT)
-        .appendStringList(fieldNames)
+        .appendStrings(fieldNames)
         .appendString(function)
         .build();
   }
