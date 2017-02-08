@@ -31,9 +31,9 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class CacheKeyBuilderTest
 {
@@ -106,7 +106,7 @@ public class CacheKeyBuilderTest
                                       .putInt(1)
                                       .array();
 
-    assertTrue(Arrays.equals(expected, actual));
+    assertArrayEquals(expected, actual);
   }
 
   @Test
@@ -120,7 +120,7 @@ public class CacheKeyBuilderTest
         .appendStrings(Lists.newArrayList("BA", "AB"))
         .build();
 
-    assertTrue(Arrays.equals(key1, key2));
+    assertArrayEquals(key1, key2);
 
     final Cacheable cacheable1 = new Cacheable()
     {
@@ -148,7 +148,7 @@ public class CacheKeyBuilderTest
         .appendCacheables(Lists.newArrayList(cacheable2, cacheable1))
         .build();
 
-    assertTrue(Arrays.equals(key1, key2));
+    assertArrayEquals(key1, key2);
   }
 
   @Test
@@ -313,7 +313,7 @@ public class CacheKeyBuilderTest
         .appendStrings(Lists.newArrayList((String) null))
         .build();
 
-    assertTrue(Arrays.equals(key1, key2));
+    assertArrayEquals(key1, key2);
   }
 
   @Test
