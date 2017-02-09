@@ -21,7 +21,6 @@ package io.druid.storage.azure;
 
 import com.google.common.collect.ImmutableMap;
 import com.microsoft.azure.storage.StorageException;
-
 import io.druid.java.util.common.FileUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -46,7 +45,6 @@ import static org.junit.Assert.assertTrue;
 public class AzureDataSegmentPullerTest extends EasyMockSupport
 {
 
-  private AzureStorage azureStorage;
   private static final String SEGMENT_FILE_NAME = "segment";
   private static final String containerName = "container";
   private static final String blobPath = "/path/to/storage/index.zip";
@@ -61,6 +59,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       0,
       1
   );
+  private AzureStorage azureStorage;
 
   @Before
   public void before()
@@ -91,7 +90,8 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       assertEquals(value.length(), expected.length());
 
       verifyAll();
-    } finally {
+    }
+    finally {
       pulledFile.delete();
       org.apache.commons.io.FileUtils.deleteDirectory(toDir);
     }
@@ -123,8 +123,9 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       assertFalse(outDir.exists());
 
       verifyAll();
-    } finally {
-      outDir.delete();
+    }
+    finally {
+      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
     }
 
   }
@@ -146,7 +147,8 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       puller.getSegmentFiles(dataSegment, outDir);
 
       verifyAll();
-    } finally {
+    }
+    finally {
       outDir.delete();
     }
 

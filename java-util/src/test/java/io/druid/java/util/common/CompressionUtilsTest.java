@@ -53,8 +53,6 @@ import java.util.zip.GZIPOutputStream;
 
 public class CompressionUtilsTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   private static final String content;
   private static final byte[] expected;
   private static final byte[] gzBytes;
@@ -85,8 +83,18 @@ public class CompressionUtilsTest
     gzBytes = gzByteStream.toByteArray();
   }
 
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   private File testDir;
   private File testFile;
+
+  public static void assertGoodDataStream(InputStream stream) throws IOException
+  {
+    try (final ByteArrayOutputStream bos = new ByteArrayOutputStream(expected.length)) {
+      ByteStreams.copy(stream, bos);
+      Assert.assertArrayEquals(expected, bos.toByteArray());
+    }
+  }
 
   @Before
   public void setUp() throws IOException
@@ -97,14 +105,6 @@ public class CompressionUtilsTest
       outputStream.write(StringUtils.toUtf8(content));
     }
     Assert.assertTrue(testFile.getParentFile().equals(testDir));
-  }
-
-  public static void assertGoodDataStream(InputStream stream) throws IOException
-  {
-    try (final ByteArrayOutputStream bos = new ByteArrayOutputStream(expected.length)) {
-      ByteStreams.copy(stream, bos);
-      Assert.assertArrayEquals(expected, bos.toByteArray());
-    }
   }
 
   @Test
@@ -146,7 +146,6 @@ public class CompressionUtilsTest
       if (zipFile.exists()) {
         zipFile.delete();
       }
-
       if (tmpDir.exists()) {
         tmpDir.delete();
       }
@@ -262,53 +261,6 @@ public class CompressionUtilsTest
     }
   }
 
-  private static class ZeroRemainingInputStream extends FilterInputStream
-  {
-    private final AtomicInteger pos = new AtomicInteger(0);
-
-    protected ZeroRemainingInputStream(InputStream in)
-    {
-      super(in);
-    }
-
-    @Override
-    public synchronized void reset() throws IOException
-    {
-      super.reset();
-      pos.set(0);
-    }
-
-    @Override
-    public int read(byte b[]) throws IOException
-    {
-      final int len = Math.min(b.length, gzBytes.length - pos.get() % gzBytes.length);
-      pos.addAndGet(len);
-      return read(b, 0, len);
-    }
-
-    @Override
-    public int read() throws IOException
-    {
-      pos.incrementAndGet();
-      return super.read();
-    }
-
-    @Override
-    public int read(byte b[], int off, int len) throws IOException
-    {
-      final int l = Math.min(len, gzBytes.length - pos.get() % gzBytes.length);
-      pos.addAndGet(l);
-      return super.read(b, off, l);
-    }
-
-    @Override
-    public int available() throws IOException
-    {
-      return 0;
-    }
-  }
-
-
   @Test
   // Sanity check to make sure the test class works as expected
   public void testZeroRemainingInputStream() throws IOException
@@ -419,7 +371,6 @@ public class CompressionUtilsTest
       }
     }
   }
-
 
   @Test
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
@@ -549,7 +500,6 @@ public class CompressionUtilsTest
     Assert.assertEquals(4, flushes.get()); // 2 for suppressed closes, 2 for manual calls to shake out errors
   }
 
-
   @Test(expected = IOException.class)
   public void testStreamErrorGzip() throws Exception
   {
@@ -605,5 +555,51 @@ public class CompressionUtilsTest
             }
         )
     );
+  }
+
+  private static class ZeroRemainingInputStream extends FilterInputStream
+  {
+    private final AtomicInteger pos = new AtomicInteger(0);
+
+    protected ZeroRemainingInputStream(InputStream in)
+    {
+      super(in);
+    }
+
+    @Override
+    public synchronized void reset() throws IOException
+    {
+      super.reset();
+      pos.set(0);
+    }
+
+    @Override
+    public int read(byte b[]) throws IOException
+    {
+      final int len = Math.min(b.length, gzBytes.length - pos.get() % gzBytes.length);
+      pos.addAndGet(len);
+      return read(b, 0, len);
+    }
+
+    @Override
+    public int read() throws IOException
+    {
+      pos.incrementAndGet();
+      return super.read();
+    }
+
+    @Override
+    public int read(byte b[], int off, int len) throws IOException
+    {
+      final int l = Math.min(len, gzBytes.length - pos.get() % gzBytes.length);
+      pos.addAndGet(l);
+      return super.read(b, off, l);
+    }
+
+    @Override
+    public int available() throws IOException
+    {
+      return 0;
+    }
   }
 }

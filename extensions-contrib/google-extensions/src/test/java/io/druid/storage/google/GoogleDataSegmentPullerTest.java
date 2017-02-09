@@ -70,7 +70,8 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       assertFalse(outDir.exists());
 
       verifyAll();
-    } finally {
+    }
+    finally {
       org.apache.commons.io.FileUtils.deleteDirectory(outDir);
     }
   }
@@ -93,7 +94,8 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       puller.getSegmentFiles(dataSegment, outDir);
 
       verifyAll();
-    } finally {
+    }
+    finally {
       org.apache.commons.io.FileUtils.deleteDirectory(outDir);
     }
   }
