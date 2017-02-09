@@ -19,9 +19,10 @@
 
 package io.druid.query.dimension;
 
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
 public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
 {
-  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities);
+  ColumnSelectorStrategyClass makeColumnSelectorStrategy(ColumnCapabilities capabilities, ColumnValueSelector selector);
 }

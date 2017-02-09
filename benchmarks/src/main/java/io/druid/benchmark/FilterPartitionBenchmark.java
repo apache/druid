@@ -46,6 +46,7 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -626,14 +627,13 @@ public class FilterPartitionBenchmark
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return false;
-              }
-            };
+            return DruidLongPredicate.ALWAYS_FALSE;
+          }
+
+          @Override
+          public DruidFloatPredicate makeFloatPredicate()
+          {
+            return DruidFloatPredicate.ALWAYS_FALSE;
           }
         };
 
