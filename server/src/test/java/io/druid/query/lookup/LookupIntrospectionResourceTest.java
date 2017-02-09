@@ -105,6 +105,12 @@ public class LookupIntrospectionResourceTest
         return true;
       }
 
+      @Override
+      public boolean replaces(@Nullable LookupExtractorFactory other)
+      {
+        return true;
+      }
+
       @Nullable
       @Override
       public LookupIntrospectHandler getIntrospectHandler()

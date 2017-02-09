@@ -71,6 +71,12 @@ public class LookupExtractorFactoryContainerTest
       return false;
     }
 
+    @Override
+    public boolean replaces(@Nullable LookupExtractorFactory other)
+    {
+      return true;
+    }
+
     @Nullable
     @Override
     public LookupIntrospectHandler getIntrospectHandler()

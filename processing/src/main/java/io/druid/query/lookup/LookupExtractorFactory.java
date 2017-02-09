@@ -52,6 +52,13 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
   public boolean close();
 
   /**
+   * This method is deprecated and is not removed only to allow 0.9.x to 0.10.x transition. It is not used
+   * on a cluster that is running 0.10.x. It will be removed in the next release.
+   */
+  @Deprecated
+  boolean replaces(@Nullable LookupExtractorFactory other);
+
+  /**
    * @return Returns the actual introspection request handler, can return {@code null} if it is not supported.
    * This will be called once per HTTP request to introspect the actual lookup.
    */

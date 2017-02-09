@@ -54,7 +54,7 @@ public class LookupExtractorFactoryContainer
 
   public boolean replaces(LookupExtractorFactoryContainer other) {
     if (version == null && other.getVersion() == null) {
-      return !this.lookupExtractorFactory.equals(other.getLookupExtractorFactory());
+      return !this.lookupExtractorFactory.replaces(other.getLookupExtractorFactory());
     }
 
     if (version == null && other.getVersion() != null) {

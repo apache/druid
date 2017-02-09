@@ -67,6 +67,19 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
     return true;
   }
 
+  /**
+   * For MapLookups, the replaces consideration is very easy, it simply considers if the other is the same as this one
+   *
+   * @param other Some other LookupExtractorFactory which might need replaced
+   *
+   * @return true - should replace,   false - should not replace
+   */
+  @Override
+  public boolean replaces(@Nullable LookupExtractorFactory other)
+  {
+    return !equals(other);
+  }
+
   @Nullable
   @Override
   public LookupIntrospectHandler getIntrospectHandler()

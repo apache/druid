@@ -227,32 +227,41 @@ public class RegisteredLookupExtractionFnTest
   private void managerReturnsMap(LookupReferencesManager manager)
   {
     EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(
-        new LookupExtractorFactoryContainer("v0", new LookupExtractorFactory()
-    {
-      @Override
-      public boolean start()
-      {
-        return false;
-      }
+        new LookupExtractorFactoryContainer(
+            "v0", new LookupExtractorFactory()
+        {
+          @Override
+          public boolean start()
+          {
+            return false;
+          }
 
-      @Override
-      public boolean close()
-      {
-        return false;
-      }
+          @Override
+          public boolean replaces(@Nullable LookupExtractorFactory other)
+          {
+            return false;
+          }
 
-      @Nullable
-      @Override
-      public LookupIntrospectHandler getIntrospectHandler()
-      {
-        return null;
-      }
+          @Override
+          public boolean close()
+          {
+            return false;
+          }
 
-      @Override
-      public LookupExtractor get()
-      {
-        return LOOKUP_EXTRACTOR;
-      }
-    })).anyTimes();
+          @Nullable
+          @Override
+          public LookupIntrospectHandler getIntrospectHandler()
+          {
+            return null;
+          }
+
+          @Override
+          public LookupExtractor get()
+          {
+            return LOOKUP_EXTRACTOR;
+          }
+        }
+        )
+    ).anyTimes();
   }
 }

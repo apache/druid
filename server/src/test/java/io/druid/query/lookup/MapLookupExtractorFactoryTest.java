@@ -41,14 +41,14 @@ public class MapLookupExtractorFactoryTest
   }
 
   @Test
-  public void testEquals()
+  public void testReplaces()
   {
-    Assert.assertTrue(factory.equals(factory));
-    Assert.assertTrue(factory.equals(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
-    Assert.assertFalse(factory.equals(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
-    Assert.assertFalse(factory.equals(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
-    Assert.assertFalse(factory.equals(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
-    Assert.assertFalse(factory.equals(null));
+    Assert.assertFalse(factory.replaces(factory));
+    Assert.assertFalse(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
+    Assert.assertTrue(factory.replaces(null));
   }
 
   @Test

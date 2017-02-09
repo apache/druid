@@ -327,7 +327,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
-  public boolean equals(@Nullable Object other)
+  public boolean replaces(@Nullable LookupExtractorFactory other)
   {
     if (this == other) {
       return false;
