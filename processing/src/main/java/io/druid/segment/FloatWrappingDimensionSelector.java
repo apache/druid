@@ -17,15 +17,29 @@
  * under the License.
  */
 
-package io.druid.segment.loading;
+package io.druid.segment;
 
-import io.druid.segment.QueryableIndex;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
-import java.io.File;
-
-/**
- */
-public interface QueryableIndexFactory
+public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
-  public QueryableIndex factorize(File parentDir) throws SegmentLoadingException;
+  private final FloatColumnSelector selector;
+  private final ExtractionFn extractionFn;
+
+  public FloatWrappingDimensionSelector(FloatColumnSelector selector, ExtractionFn extractionFn)
+  {
+    this.selector = selector;
+    this.extractionFn = extractionFn;
+  }
+
+  @Override
+  protected String getValue()
+  {
+    if (extractionFn == null) {
+      return String.valueOf(selector.get());
+    } else {
+      return extractionFn.apply(selector.get());
+    }
+  }
 }

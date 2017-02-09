@@ -19,35 +19,35 @@
 
 package io.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
-import io.druid.segment.QueryableIndex;
+import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.Segment;
+import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
 
 /**
  */
-public class MMappedQueryableIndexFactory implements QueryableIndexFactory
+public class MMappedQueryableSegmentizerFactory implements SegmentizerFactory
 {
-  private static final Logger log = new Logger(MMappedQueryableIndexFactory.class);
+  private static final Logger log = new Logger(MMappedQueryableSegmentizerFactory.class);
 
   private final IndexIO indexIO;
 
-  @Inject
-  public MMappedQueryableIndexFactory(IndexIO indexIO)
+  public MMappedQueryableSegmentizerFactory(@JacksonInject IndexIO indexIO)
   {
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
   @Override
-  public QueryableIndex factorize(File parentDir) throws SegmentLoadingException
+  public Segment factorize(DataSegment dataSegment, File parentDir) throws SegmentLoadingException
   {
     try {
-      return indexIO.loadIndex(parentDir);
+      return new QueryableIndexSegment(dataSegment.getIdentifier(), indexIO.loadIndex(parentDir));
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "%s", e.getMessage());
