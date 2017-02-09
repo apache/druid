@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
@@ -37,6 +36,7 @@ import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -66,9 +66,18 @@ public class DataSchema
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
     this.parser = parser;
 
-    if (aggregators.length == 0) {
+    if (aggregators == null || aggregators.length == 0) {
       log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
+    } else {
+      //validate for no duplication
+      Set<String> names = new HashSet<>();
+      for (AggregatorFactory factory : aggregators) {
+        if (!names.add(factory.getName())) {
+          throw new IAE("duplicate aggregators found with name [%s].", factory.getName());
+        }
+      }
     }
+
     this.aggregators = aggregators;
 
     if (granularitySpec == null) {
