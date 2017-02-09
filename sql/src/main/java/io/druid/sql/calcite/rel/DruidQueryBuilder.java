@@ -47,6 +47,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.ExtractionFns;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollations;
@@ -97,17 +98,8 @@ public class DruidQueryBuilder
       final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
       final ValueType valueType;
 
-      if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.FLOAT;
-      } else if (SqlTypeName.TIMESTAMP == sqlTypeName
-                 || SqlTypeName.DATE == sqlTypeName
-                 || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.LONG;
-      } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.STRING;
-      } else if (SqlTypeName.OTHER == sqlTypeName) {
-        valueType = ValueType.COMPLEX;
-      } else {
+      valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      if (valueType == null) {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
       }
 

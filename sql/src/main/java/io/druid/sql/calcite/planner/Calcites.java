@@ -21,11 +21,13 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ConversionUtil;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -90,6 +92,23 @@ public class Calcites
       }
       builder.append("'");
       return isPlainAscii ? builder.toString() : "U&" + builder.toString();
+    }
+  }
+
+  public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
+  {
+    if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
+      return ValueType.FLOAT;
+    } else if (SqlTypeName.TIMESTAMP == sqlTypeName
+               || SqlTypeName.DATE == sqlTypeName
+               || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
+      return ValueType.LONG;
+    } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
+      return ValueType.STRING;
+    } else if (SqlTypeName.OTHER == sqlTypeName) {
+      return ValueType.COMPLEX;
+    } else {
+      return null;
     }
   }
 

@@ -369,6 +369,8 @@ public class QueryMaker
         coercedValue = Strings.nullToEmpty((String) value);
       } else if (value instanceof NlsString) {
         coercedValue = ((NlsString) value).getValue();
+      } else if (value instanceof Number) {
+        coercedValue = String.valueOf(value);
       } else {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }

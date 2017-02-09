@@ -124,8 +124,14 @@ public class RowExtraction
     return Filters.FILTERABLE_TYPES.contains(rowSignature.getColumnType(column));
   }
 
-  public DimensionSpec toDimensionSpec(final RowSignature rowSignature, final String outputName)
+  public DimensionSpec toDimensionSpec(
+      final RowSignature rowSignature,
+      final String outputName,
+      final ValueType outputType
+  )
   {
+    Preconditions.checkNotNull(outputType, "outputType");
+
     final ValueType columnType = rowSignature.getColumnType(column);
     if (columnType == null) {
       return null;
@@ -133,10 +139,16 @@ public class RowExtraction
 
     if (columnType == ValueType.STRING || (column.equals(Column.TIME_COLUMN_NAME) && extractionFn != null)) {
       return extractionFn == null
-             ? new DefaultDimensionSpec(column, outputName)
-             : new ExtractionDimensionSpec(column, outputName, extractionFn);
+             ? new DefaultDimensionSpec(column, outputName, outputType)
+             : new ExtractionDimensionSpec(column, outputName, outputType, extractionFn);
+    } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+      if (extractionFn == null) {
+        return new DefaultDimensionSpec(column, outputName, outputType);
+      } else {
+        return new ExtractionDimensionSpec(column, outputName, outputType, extractionFn);
+      }
     } else {
-      // Can't create dimensionSpecs for non-string, non-time.
+      // Can't create dimensionSpecs for non-string, non-numeric columns
       return null;
     }
   }
