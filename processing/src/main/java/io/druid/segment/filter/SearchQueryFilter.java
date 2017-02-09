@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.search.search.SearchQuerySpec;
@@ -64,6 +65,19 @@ public class SearchQueryFilter extends DimensionPredicateFilter
             {
               @Override
               public boolean applyLong(long input)
+              {
+                return query.accept(String.valueOf(input));
+              }
+            };
+          }
+
+          @Override
+          public DruidFloatPredicate makeFloatPredicate()
+          {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
               {
                 return query.accept(String.valueOf(input));
               }

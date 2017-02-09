@@ -19,6 +19,7 @@
 
 package io.druid.query.topn;
 
+import com.google.common.base.Function;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
@@ -28,6 +29,7 @@ import io.druid.query.ColumnSelectorPlus;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
@@ -190,6 +192,10 @@ public class PooledTopNAlgorithm
       final int numProcessed
   )
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
     final ByteBuffer resultsBuf = params.getResultsBuf();
     final int numBytesPerRecord = params.getNumBytesPerRecord();
     final int[] aggregatorSizes = params.getAggregatorSizes();
@@ -457,9 +463,17 @@ public class PooledTopNAlgorithm
       TopNResultBuilder resultBuilder
   )
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
     final ByteBuffer resultsBuf = params.getResultsBuf();
     final int[] aggregatorSizes = params.getAggregatorSizes();
     final DimensionSelector dimSelector = params.getDimSelector();
+
+    final ValueType outType = query.getDimensionSpec().getOutputType();
+    final boolean needsResultConversion = outType != ValueType.STRING;
+    final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(outType);
 
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i];
@@ -470,8 +484,14 @@ public class PooledTopNAlgorithm
           position += aggregatorSizes[j];
         }
 
+        Object retVal = dimSelector.lookupName(i);
+        if (needsResultConversion) {
+          retVal = valueTransformer.apply(retVal);
+        }
+
+
         resultBuilder.addEntry(
-            dimSelector.lookupName(i),
+            (Comparable) retVal,
             i,
             vals
         );

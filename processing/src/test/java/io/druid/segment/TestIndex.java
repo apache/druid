@@ -35,6 +35,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -59,6 +60,9 @@ public class TestIndex
       "ts",
       "market",
       "quality",
+      "qualityLong",
+      "qualityFloat",
+      "qualityNumericString",
       "placement",
       "placementish",
       "index",
@@ -71,6 +75,7 @@ public class TestIndex
   public static final String[] DIMENSIONS = new String[]{
       "market",
       "quality",
+      "qualityNumericString",
       "placement",
       "placementish",
       "partial_null_column",
@@ -88,7 +93,9 @@ public class TestIndex
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
       new DoubleMinAggregatorFactory(METRICS[1], METRICS[0]),
       new DoubleMaxAggregatorFactory(METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
-      new HyperUniquesAggregatorFactory("quality_uniques", "quality")
+      new HyperUniquesAggregatorFactory("quality_uniques", "quality"),
+      new LongSumAggregatorFactory("qualityLong", "qualityLong"),
+      new DoubleSumAggregatorFactory("qualityFloat", "qualityFloat")
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
@@ -115,7 +122,7 @@ public class TestIndex
       }
     }
 
-    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv");
+    return realtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv");
   }
 
   public static IncrementalIndex getNoRollupIncrementalTestIndex()
@@ -126,7 +133,7 @@ public class TestIndex
       }
     }
 
-    return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.tsv", false);
+    return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false);
   }
 
   public static QueryableIndex getMMappedTestIndex()
@@ -165,8 +172,8 @@ public class TestIndex
       }
 
       try {
-        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top");
-        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom");
+        IncrementalIndex top = makeRealtimeIndex("druid.sample.numeric.tsv.top");
+        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
 
         File tmpFile = File.createTempFile("yay", "who");
         tmpFile.delete();

@@ -19,12 +19,14 @@
 
 package io.druid.query.extraction;
 
+import java.util.Objects;
+
 public abstract class DimExtractionFn implements ExtractionFn
 {
   @Override
   public String apply(Object value)
   {
-    return apply(value == null ? null : value.toString());
+    return apply(Objects.toString(value, null));
   }
 
   @Override

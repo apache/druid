@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.PriorityQueue;
 
 /**
@@ -81,11 +82,12 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNResultBuilder addEntry(
-      String dimName,
+      Comparable dimNameObj,
       Object dimValIndex,
       Object[] metricVals
   )
   {
+    final String dimName = Objects.toString(dimNameObj, null);
     final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + 1);
 
     if (shouldAdd(dimName)) {
@@ -131,7 +133,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
   {
     Object dimensionValueObj = dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName());
-    String dimensionValue = dimensionValueObj == null ? null : dimensionValueObj.toString();
+    String dimensionValue = Objects.toString(dimensionValueObj, null);
 
     if (shouldAdd(dimensionValue)) {
       pQueue.add(

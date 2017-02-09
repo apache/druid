@@ -37,6 +37,7 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -142,6 +143,20 @@ public class FilterPartitionTest extends BaseFilterTest
               }
             };
           }
+
+          @Override
+          public DruidFloatPredicate makeFloatPredicate()
+          {
+            return new DruidFloatPredicate()
+            {
+              @Override
+              public boolean applyFloat(float input)
+              {
+                return Objects.equals(valueOrNull, String.valueOf(input));
+              }
+            };
+          }
+
         };
 
         return new NoBitmapDimensionPredicateFilter(dimension, predicateFactory, extractionFn);

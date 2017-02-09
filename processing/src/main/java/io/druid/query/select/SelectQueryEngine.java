@@ -39,6 +39,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
@@ -67,13 +68,17 @@ public class SelectQueryEngine
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities
+        ColumnCapabilities capabilities, ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
       switch(type) {
         case STRING:
           return new StringSelectColumnSelectorStrategy();
+        case LONG:
+          return new LongSelectColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatSelectColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -118,6 +123,37 @@ public class SelectQueryEngine
           }
           resultMap.put(outputName, dimVals);
         }
+      }
+    }
+  }
+
+  public static class LongSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<LongColumnSelector>
+  {
+
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, LongColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
+  public static class FloatSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<FloatColumnSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, FloatColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
       }
     }
   }

@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidFloatPredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -48,11 +49,13 @@ public class InFilter implements Filter
   private final Set<String> values;
   private final ExtractionFn extractionFn;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
+  private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
 
   public InFilter(
       String dimension,
       Set<String> values,
       Supplier<DruidLongPredicate> longPredicateSupplier,
+      Supplier<DruidFloatPredicate> floatPredicateSupplier,
       ExtractionFn extractionFn
   )
   {
@@ -60,6 +63,7 @@ public class InFilter implements Filter
     this.values = values;
     this.extractionFn = extractionFn;
     this.longPredicateSupplier = longPredicateSupplier;
+    this.floatPredicateSupplier = floatPredicateSupplier;
   }
 
   @Override
@@ -190,6 +194,23 @@ public class InFilter implements Filter
           };
         } else {
           return longPredicateSupplier.get();
+        }
+      }
+
+      @Override
+      public DruidFloatPredicate makeFloatPredicate()
+      {
+        if (extractionFn != null) {
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
+            {
+              return values.contains(extractionFn.apply(input));
+            }
+          };
+        } else {
+          return floatPredicateSupplier.get();
         }
       }
     };

@@ -19,7 +19,7 @@
 
 package io.druid.query.topn;
 
-import com.google.common.collect.Maps;
+import com.google.common.base.Function;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
@@ -61,6 +61,9 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
     ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
     return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, capabilities);
   }
@@ -74,7 +77,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
-    return Maps.newHashMap();
+    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    return selectorPlus.getColumnSelectorStrategy().makeDimExtractionAggregateStore();
   }
 
   @Override
@@ -88,16 +92,13 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
     final Cursor cursor = params.getCursor();
     final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
 
-    while (!cursor.isDone()) {
-      selectorPlus.getColumnSelectorStrategy().dimExtractionScanAndAggregate(
-          query,
-          selectorPlus.getSelector(),
-          cursor,
-          rowSelector,
-          aggregatesStore
-      );
-      cursor.advance();
-    }
+    selectorPlus.getColumnSelectorStrategy().dimExtractionScanAndAggregate(
+        query,
+        selectorPlus.getSelector(),
+        cursor,
+        rowSelector,
+        aggregatesStore
+    );
   }
 
   @Override
@@ -108,21 +109,17 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
-      Aggregator[] aggs = entry.getValue();
-      if (aggs != null && aggs.length > 0) {
-        Object[] vals = new Object[aggs.length];
-        for (int i = 0; i < aggs.length; i++) {
-          vals[i] = aggs[i].get();
-        }
+    final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    final boolean needsResultTypeConversion = needsResultTypeConversion(params);
+    final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(
+        query.getDimensionSpec().getOutputType()
+    );
 
-        resultBuilder.addEntry(
-            entry.getKey() == null ? null : entry.getKey().toString(),
-            entry.getKey(),
-            vals
-        );
-      }
-    }
+    selectorPlus.getColumnSelectorStrategy().updateDimExtractionResults(
+        aggregatesStore,
+        needsResultTypeConversion ? valueTransformer : null,
+        resultBuilder
+    );
   }
 
   @Override
@@ -138,5 +135,12 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   public void cleanup(TopNParams params)
   {
+  }
+
+  private boolean needsResultTypeConversion(TopNParams params)
+  {
+    ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
+    TopNColumnSelectorStrategy strategy = selectorPlus.getColumnSelectorStrategy();
+    return query.getDimensionSpec().getOutputType() != strategy.getValueType();
   }
 }

@@ -58,40 +58,40 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class ScanQueryRunnerTest
 {
-  // copied from druid.sample.tsv
+  // copied from druid.sample.numeric.tsv
   public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
-      "2011-01-12T00:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000",
-      "2011-01-12T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	800.000000	value",
-      "2011-01-12T00:00:00.000Z	upfront	premium	preferred	ppreferred	800.000000	value"
+      "2011-01-12T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	health\t1300\t13000.0\t130000\tpreferred	hpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	news\t1500\t15000.0\t150000\tpreferred	npreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	technology\t1700\t17000.0\t170000\tpreferred	tpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	travel\t1800\t18000.0\t180000\tpreferred	tpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	total_market	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	1000.000000",
+      "2011-01-12T00:00:00.000Z	total_market	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	1000.000000",
+      "2011-01-12T00:00:00.000Z	upfront	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	800.000000	value",
+      "2011-01-12T00:00:00.000Z	upfront	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	800.000000	value"
   };
   public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-      "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
-      "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
-      "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
-      "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
-      "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
-      "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928",
-      "2011-01-13T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
-      "2011-01-13T00:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875",
-      "2011-01-13T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	826.060182	value",
-      "2011-01-13T00:00:00.000Z	upfront	premium	preferred	ppreferred	1564.617729	value"
+      "2011-01-13T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	94.874713",
+      "2011-01-13T00:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	103.629399",
+      "2011-01-13T00:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	110.087299",
+      "2011-01-13T00:00:00.000Z	spot	health\t1300\t13000.0\t130000\tpreferred	hpreferred	114.947403",
+      "2011-01-13T00:00:00.000Z	spot	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	104.465767",
+      "2011-01-13T00:00:00.000Z	spot	news\t1500\t15000.0\t150000\tpreferred	npreferred	102.851683",
+      "2011-01-13T00:00:00.000Z	spot	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	108.863011",
+      "2011-01-13T00:00:00.000Z	spot	technology\t1700\t17000.0\t170000\tpreferred	tpreferred	111.356672",
+      "2011-01-13T00:00:00.000Z	spot	travel\t1800\t18000.0\t180000\tpreferred	tpreferred	106.236928",
+      "2011-01-13T00:00:00.000Z	total_market	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	1040.945505",
+      "2011-01-13T00:00:00.000Z	total_market	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	1689.012875",
+      "2011-01-13T00:00:00.000Z	upfront	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	826.060182	value",
+      "2011-01-13T00:00:00.000Z	upfront	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	1564.617729	value"
   };
 
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
-      new Interval("2011-01-12/2011-01-14")
+      new Interval("2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z")
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
@@ -133,6 +133,7 @@ public class ScanQueryRunnerTest
         ScanResultValue.timestampKey,
         "market",
         "quality",
+        "qualityNumericString",
         "placement",
         "placementish",
         "partial_null_column",
@@ -140,7 +141,9 @@ public class ScanQueryRunnerTest
         "index",
         "indexMin",
         "indexMaxPlusTen",
-        "quality_uniques"
+        "quality_uniques",
+        "qualityLong",
+        "qualityFloat"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
@@ -168,6 +171,9 @@ public class ScanQueryRunnerTest
         ScanResultValue.timestampKey,
         "market",
         "quality",
+        "qualityLong",
+        "qualityFloat",
+        "qualityNumericString",
         "placement",
         "placementish",
         "partial_null_column",
@@ -219,6 +225,9 @@ public class ScanQueryRunnerTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 QueryRunnerTestHelper.indexMetric + ":FLOAT"
             },
             V_0112_0114
@@ -250,6 +259,9 @@ public class ScanQueryRunnerTest
             new String[]{
                 ScanResultValue.timestampKey + ":TIME",
                 QueryRunnerTestHelper.marketDimension + ":STRING",
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -441,6 +453,9 @@ public class ScanQueryRunnerTest
             ScanResultValue.timestampKey + ":TIME",
             QueryRunnerTestHelper.marketDimension + ":STRING",
             QueryRunnerTestHelper.qualityDimension + ":STRING",
+            "qualityLong" + ":LONG",
+            "qualityFloat" + ":FLOAT",
+            "qualityNumericString" + ":STRING",
             QueryRunnerTestHelper.placementDimension + ":STRING",
             QueryRunnerTestHelper.placementishDimension + ":STRINGS",
             QueryRunnerTestHelper.indexMetric + ":FLOAT",

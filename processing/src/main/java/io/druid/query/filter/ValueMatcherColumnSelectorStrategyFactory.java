@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 
@@ -41,15 +42,19 @@ public class ValueMatcherColumnSelectorStrategyFactory
 
   @Override
   public ValueMatcherColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities
+      ColumnCapabilities capabilities, ColumnValueSelector selector
   )
   {
     ValueType type = capabilities.getType();
     switch (type) {
       case STRING:
         return new StringValueMatcherColumnSelectorStrategy();
+      case LONG:
+        return new LongValueMatcherColumnSelectorStrategy();
+      case FLOAT:
+        return new FloatValueMatcherColumnSelectorStrategy();
       default:
-        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+        throw new IAE("Cannot create column selector strategy from invalid type [%s]", type);
     }
   }
 }

@@ -44,6 +44,7 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
@@ -51,6 +52,7 @@ import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidNestedGroupBy;
@@ -437,17 +439,25 @@ public class GroupByRules
         // nobody actually expects to see the literal.
         rowOrder.add(dimOutputName(dimOutputNameCounter++));
       } else {
+        final RexNode rexNode = Expressions.fromFieldAccess(sourceRowSignature, project, i);
         final RowExtraction rex = Expressions.toRowExtraction(
             sourceRowSignature.getRowOrder(),
-            Expressions.fromFieldAccess(sourceRowSignature, project, i)
+            rexNode
         );
         if (rex == null) {
           return null;
         }
 
+        final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+        final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+        if (outputType == null) {
+          throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
+        }
+
         final DimensionSpec dimensionSpec = rex.toDimensionSpec(
             sourceRowSignature,
-            dimOutputName(dimOutputNameCounter++)
+            dimOutputName(dimOutputNameCounter++),
+            outputType
         );
         if (dimensionSpec == null) {
           return null;

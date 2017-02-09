@@ -17,26 +17,25 @@
  * under the License.
  */
 
-package io.druid.query.topn.types;
+package io.druid.query.aggregation.cardinality.types;
 
-import io.druid.java.util.common.IAE;
-import io.druid.query.dimension.ColumnSelectorStrategyFactory;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
+import com.google.common.hash.Hasher;
+import io.druid.hll.HyperLogLogCollector;
+import io.druid.query.aggregation.cardinality.CardinalityAggregator;
+import io.druid.segment.LongColumnSelector;
 
-public class TopNStrategyFactory implements ColumnSelectorStrategyFactory<TopNColumnSelectorStrategy>
+public class LongCardinalityAggregatorColumnSelectorStrategy
+    implements CardinalityAggregatorColumnSelectorStrategy<LongColumnSelector>
 {
   @Override
-  public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities
-  )
+  public void hashRow(LongColumnSelector dimSelector, Hasher hasher)
   {
-    ValueType type = capabilities.getType();
-    switch(type) {
-      case STRING:
-        return new StringTopNColumnSelectorStrategy();
-      default:
-        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
-    }
+    hasher.putLong(dimSelector.get());
+  }
+
+  @Override
+  public void hashValues(LongColumnSelector dimSelector, HyperLogLogCollector collector)
+  {
+    collector.add(CardinalityAggregator.hashFn.hashLong(dimSelector.get()).asBytes());
   }
 }

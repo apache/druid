@@ -179,6 +179,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   false,
+                  null,
                   config,
                   mergeBufferHolder.get(),
                   concurrencyHint,

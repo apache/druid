@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,6 +37,18 @@ public class DefaultDimensionSpecTest
   {
     final String name = "foo";
     final DimensionSpec spec = new DefaultDimensionSpec(name, name);
+    final String json = mapper.writeValueAsString(spec);
+    final DimensionSpec other = mapper.readValue(json, DimensionSpec.class);
+    Assert.assertEquals(spec.toString(), other.toString());
+    Assert.assertEquals(spec, other);
+    Assert.assertEquals(spec.hashCode(), other.hashCode());
+  }
+
+  @Test
+  public void testEqualsSerdeWithType() throws IOException
+  {
+    final String name = "foo";
+    final DimensionSpec spec = new DefaultDimensionSpec(name, name, ValueType.FLOAT);
     final String json = mapper.writeValueAsString(spec);
     final DimensionSpec other = mapper.readValue(json, DimensionSpec.class);
     Assert.assertEquals(spec.toString(), other.toString());

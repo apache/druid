@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.MatchingDimExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,6 +49,40 @@ public class ExtractionDimensionSpecTest
     Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
     Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
     Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
+    Assert.assertEquals(ValueType.STRING, extractionDimensionSpec.getOutputType());
+    Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
+
+    Assert.assertEquals(
+        extractionDimensionSpec,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionDimensionSpec),
+            DimensionSpec.class
+        )
+    );
+  }
+
+  @Test
+  public void testSerdeWithType() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+
+    final String oldJson = "{\n"
+                           + "    \"type\": \"extraction\",\n"
+                           + "    \"outputName\": \"first3Letters\",\n"
+                           + "    \"outputType\": \"LONG\",\n"
+                           + "    \"dimension\": \"myDim\","
+                           + "    \"extractionFn\": {\n"
+                           + "        \"type\": \"regex\",\n"
+                           + "        \"expr\": \"(...).*\"\n"
+                           + "    }\n"
+                           + "}";
+
+    final ExtractionDimensionSpec extractionDimensionSpec = (ExtractionDimensionSpec) objectMapper.readValue(oldJson, DimensionSpec.class);
+
+    Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
+    Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
+    Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
+    Assert.assertEquals(ValueType.LONG, extractionDimensionSpec.getOutputType());
     Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
 
     Assert.assertEquals(

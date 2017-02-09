@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 /**
  */
@@ -40,11 +41,18 @@ public interface DimensionSpec
 
   String getOutputName();
 
+  ValueType getOutputType();
+
   //ExtractionFn can be implemented with decorate(..) fn
   @Deprecated
   ExtractionFn getExtractionFn();
 
   DimensionSelector decorate(DimensionSelector selector);
+
+  /**
+   * Does this DimensionSpec require that decorate() be called to produce correct results?
+   */
+  boolean mustDecorate();
 
   byte[] getCacheKey();
 

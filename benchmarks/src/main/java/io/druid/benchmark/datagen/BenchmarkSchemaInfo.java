@@ -29,16 +29,19 @@ public class BenchmarkSchemaInfo
   private List<BenchmarkColumnSchema> columnSchemas;
   private List<AggregatorFactory> aggs;
   private Interval dataInterval;
+  private boolean withRollup;
 
   public BenchmarkSchemaInfo (
       List<BenchmarkColumnSchema> columnSchemas,
       List<AggregatorFactory> aggs,
-      Interval dataInterval
+      Interval dataInterval,
+      boolean withRollup
   )
   {
     this.columnSchemas = columnSchemas;
     this.aggs = aggs;
     this.dataInterval = dataInterval;
+    this.withRollup = withRollup;
   }
 
   public List<BenchmarkColumnSchema> getColumnSchemas()
@@ -61,4 +64,8 @@ public class BenchmarkSchemaInfo
     return dataInterval;
   }
 
+  public boolean isWithRollup()
+  {
+    return withRollup;
+  }
 }

@@ -20,8 +20,11 @@
 package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Floats;
+import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -30,6 +33,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class DimensionHandlerUtils
@@ -62,6 +66,15 @@ public final class DimensionHandlerUtils
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
     return new StringDimensionHandler(dimensionName, multiValueHandling);
+  }
+
+  public static List<ValueType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)
+  {
+    List<ValueType> types = new ArrayList<>(dimSpecs.size());
+    for (DimensionSpec dimSpec : dimSpecs) {
+      types.add(dimSpec.getOutputType());
+    }
+    return types;
   }
 
   /**
@@ -113,14 +126,15 @@ public final class DimensionHandlerUtils
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = dimensionSpecs.get(i);
       final String dimName = dimSpec.getDimension();
-      ColumnSelectorStrategyClass strategy = makeStrategy(
-          strategyFactory,
-          dimName,
-          cursor.getColumnCapabilities(dimSpec.getDimension())
-      );
       final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
           cursor
+      );
+      ColumnSelectorStrategyClass strategy = makeStrategy(
+          strategyFactory,
+          dimSpec,
+          cursor.getColumnCapabilities(dimSpec.getDimension()),
+          selector
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
           dimName,
@@ -133,11 +147,31 @@ public final class DimensionHandlerUtils
     return dims;
   }
 
+  public static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+      DimensionSpec dimSpec,
+      ColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    String dimName = dimSpec.getDimension();
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
+    switch (capabilities.getType()) {
+      case STRING:
+        return columnSelectorFactory.makeDimensionSelector(dimSpec);
+      case LONG:
+        return columnSelectorFactory.makeLongColumnSelector(dimSpec.getDimension());
+      case FLOAT:
+        return columnSelectorFactory.makeFloatColumnSelector(dimSpec.getDimension());
+      default:
+        return null;
+    }
+  }
+
   // When determining the capabilites of a column during query processing, this function
   // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
   // (e.g., treating missing columns as empty String columns)
   private static ColumnCapabilities getEffectiveCapabilities(
-      String dimName,
+      DimensionSpec dimSpec,
       ColumnCapabilities capabilities
   )
   {
@@ -145,37 +179,80 @@ public final class DimensionHandlerUtils
       capabilities = DEFAULT_STRING_CAPABILITIES;
     }
 
-    // non-Strings aren't actually supported yet
-    if (capabilities.getType() != ValueType.STRING) {
+    // Complex dimension type is not supported
+    if (capabilities.getType() == ValueType.COMPLEX) {
       capabilities = DEFAULT_STRING_CAPABILITIES;
+    }
+
+    // Currently, all extractionFns output Strings, so the column will return String values via a
+    // DimensionSelector if an extractionFn is present.
+    if (dimSpec.getExtractionFn() != null) {
+      capabilities = DEFAULT_STRING_CAPABILITIES;
+    }
+
+    // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
+    // we need to wrap selectors on numeric columns with a string casting DimensionSelector.
+    if (capabilities.getType() == ValueType.LONG || capabilities.getType() == ValueType.FLOAT) {
+      if (dimSpec.mustDecorate()) {
+        capabilities = DEFAULT_STRING_CAPABILITIES;
+      }
     }
 
     return capabilities;
   }
 
-  private static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+  private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
+      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       DimensionSpec dimSpec,
-      ColumnSelectorFactory columnSelectorFactory
+      ColumnCapabilities capabilities,
+      ColumnValueSelector selector
   )
   {
-    String dimName = dimSpec.getDimension();
-    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
-    capabilities = getEffectiveCapabilities(dimName, capabilities);
-    switch (capabilities.getType()) {
-      case STRING:
-        return columnSelectorFactory.makeDimensionSelector(dimSpec);
-      default:
-        return null;
+    capabilities = getEffectiveCapabilities(dimSpec, capabilities);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
+  }
+
+  public static Long convertObjectToLong(Object valObj)
+  {
+    if (valObj == null) {
+      return 0L;
+    }
+
+    if (valObj instanceof Long) {
+      return (Long) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).longValue();
+    } else if (valObj instanceof String) {
+      try {
+        return GuavaUtils.tryParseLong((String) valObj);
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse value[%s] as long", valObj);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
   }
 
-  private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
-      ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
-      String dimName,
-      ColumnCapabilities capabilities
-  )
+  public static Float convertObjectToFloat(Object valObj)
   {
-    capabilities = getEffectiveCapabilities(dimName, capabilities);
-    return strategyFactory.makeColumnSelectorStrategy(capabilities);
+    if (valObj == null) {
+      return 0.0f;
+    }
+
+    if (valObj instanceof Float) {
+      return (Float) valObj;
+    } else if (valObj instanceof Number) {
+      return ((Number) valObj).floatValue();
+    } else if (valObj instanceof String) {
+      try {
+        return Floats.tryParse((String) valObj);
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse value[%s] as float", valObj);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
   }
 }

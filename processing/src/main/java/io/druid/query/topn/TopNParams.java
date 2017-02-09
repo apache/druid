@@ -43,10 +43,6 @@ public class TopNParams
     this.cursor = cursor;
     this.cardinality = selectorPlus.getColumnSelectorStrategy().getCardinality(selectorPlus.getSelector());
     this.numValuesPerPass = numValuesPerPass;
-
-    if (cardinality < 0) {
-      throw new UnsupportedOperationException("Cannot operate on a dimension without a dictionary");
-    }
   }
 
   // Only used by TopN algorithms that support String exclusively

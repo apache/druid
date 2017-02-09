@@ -39,6 +39,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -107,10 +108,25 @@ public class DefaultLimitSpec implements LimitSpec
       for (int i = 0; i < columns.size(); i++) {
         final OrderByColumnSpec columnSpec = columns.get(i);
 
+        if (aggAndPostAggNames.contains(columnSpec.getDimension())) {
+          sortingNeeded = true;
+          break;
+        }
+
+        final ValueType columnType = getOrderByType(columnSpec, dimensions);
+        final StringComparator naturalComparator;
+        if (columnType == ValueType.STRING) {
+          naturalComparator = StringComparators.LEXICOGRAPHIC;
+        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT) {
+          naturalComparator = StringComparators.NUMERIC;
+        } else {
+          sortingNeeded = true;
+          break;
+        }
+
         if (columnSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING
-            || !columnSpec.getDimensionComparator().equals(StringComparators.LEXICOGRAPHIC)
-            || !columnSpec.getDimension().equals(dimensions.get(i).getOutputName())
-            || aggAndPostAggNames.contains(columnSpec.getDimension())) {
+            || !columnSpec.getDimensionComparator().equals(naturalComparator)
+            || !columnSpec.getDimension().equals(dimensions.get(i).getOutputName())) {
           sortingNeeded = true;
           break;
         }
@@ -135,6 +151,17 @@ public class DefaultLimitSpec implements LimitSpec
   public LimitSpec merge(LimitSpec other)
   {
     return this;
+  }
+
+  private ValueType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
+  {
+    for (DimensionSpec dimSpec : dimensions) {
+      if (columnSpec.getDimension().equals(dimSpec.getOutputName())) {
+        return dimSpec.getOutputType();
+      }
+    }
+
+    throw new ISE("Unknown column in order clause[%s]", columnSpec);
   }
 
   private Ordering<Row> makeComparator(
