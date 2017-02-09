@@ -36,6 +36,7 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategyFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
@@ -197,7 +198,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HyperUniquesAggregatorFactory(name, name);
+    return new HyperUniquesAggregatorFactory(name, name, false);
   }
 
   @Override
@@ -297,7 +298,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "hyperUnique";
+    return HyperUniquesSerde.TYPE_NAME;
   }
 
   @Override

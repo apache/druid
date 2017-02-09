@@ -22,34 +22,34 @@ package io.druid.jackson;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.hash.Hashing;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.HistogramAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
-import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.aggregation.hyperloglog.PreComputedHyperUniquesSerde;
+import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.DoubleGreatestPostAggregator;
 import io.druid.query.aggregation.post.DoubleLeastPostAggregator;
+import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.aggregation.post.JavaScriptPostAggregator;
-import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.aggregation.post.LongGreatestPostAggregator;
 import io.druid.query.aggregation.post.LongLeastPostAggregator;
 import io.druid.segment.serde.ComplexMetrics;
@@ -62,8 +62,12 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+    if (ComplexMetrics.getSerdeForType(HyperUniquesSerde.TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
+    }
+
+    if (ComplexMetrics.getSerdeForType(PreComputedHyperUniquesSerde.TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(PreComputedHyperUniquesSerde.TYPE_NAME, new PreComputedHyperUniquesSerde());
     }
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);

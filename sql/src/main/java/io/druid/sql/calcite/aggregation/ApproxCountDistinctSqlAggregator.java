@@ -80,7 +80,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
 
     if (rowSignature.getColumnType(rex.getColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HyperUniquesAggregatorFactory(name, rex.getColumn());
+      aggregatorFactory = new HyperUniquesAggregatorFactory(name, rex.getColumn(), false);
     } else {
       final DimensionSpec dimensionSpec = rex.toDimensionSpec(rowSignature, null);
       if (dimensionSpec == null) {
