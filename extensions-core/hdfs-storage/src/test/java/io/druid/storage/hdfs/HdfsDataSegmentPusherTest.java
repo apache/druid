@@ -109,14 +109,13 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush);
 
-    StringBuilder indexBuilder =  new StringBuilder(String.format(
-        "%s/%s/index.zip",
-        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-        DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
-    ));
-    indexBuilder.setCharAt(indexBuilder.lastIndexOf("/"), '_');  //replaces last `/` with `_`
 
-    String indexUri = indexBuilder.toString();
+    String indexUri = String.format(
+        "%s/%s/%d_index.zip",
+        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+        DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush),
+        segmentToPush.getShardSpec().getPartitionNum()
+    );
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(segmentToPush, segment);
@@ -128,15 +127,20 @@ public class HdfsDataSegmentPusherTest
     ), segment.getLoadSpec());
     // rename directory after push
     final String segmentPath = DataSegmentPusherUtil.getHdfsStorageDir(segment);
-    indexBuilder = new StringBuilder(String.format("%s/%s/index.zip", storageDirectory, segmentPath));
-    indexBuilder.setCharAt(indexBuilder.lastIndexOf("/"), '_');
 
-    StringBuilder descriptorBuilder = new StringBuilder(String.format("%s/%s/descriptor.json", storageDirectory, segmentPath));
-    descriptorBuilder.setCharAt(descriptorBuilder.lastIndexOf("/"), '_');
-
-    File indexFile = new File(indexBuilder.toString());
+    File indexFile = new File(String.format(
+        "%s/%s/%d_index.zip",
+        storageDirectory,
+        segmentPath,
+        segment.getShardSpec().getPartitionNum()
+    ));
     Assert.assertTrue(indexFile.exists());
-    File descriptorFile = new File(descriptorBuilder.toString());
+    File descriptorFile = new File(String.format(
+        "%s/%s/%d_descriptor.json",
+        storageDirectory,
+        segmentPath,
+        segment.getShardSpec().getPartitionNum()
+    ));
     Assert.assertTrue(descriptorFile.exists());
 
     // push twice will fail and temp dir cleaned

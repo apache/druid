@@ -80,8 +80,8 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
       while (it.hasNext()) {
         final LocatedFileStatus locatedFileStatus = it.next();
         final Path path = locatedFileStatus.getPath();
-        Path indexZip;
         if (path.getName().endsWith("descriptor.json")) {
+          final Path indexZip;
           final String descriptorParts[] = path.getName().split("_");
           if (descriptorParts.length == 2
               && descriptorParts[1].equals("descriptor.json")

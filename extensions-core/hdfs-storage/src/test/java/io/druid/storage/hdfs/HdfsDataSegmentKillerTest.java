@@ -102,7 +102,7 @@ public class HdfsDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(new Path(partition012Dir, "index.zip").toString()));
 
-    Assert.assertFalse(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
   }
 
   @Test
@@ -132,7 +132,7 @@ public class HdfsDataSegmentKillerTest
 
     Assert.assertFalse(fs.exists(version11Dir));
     Assert.assertFalse(fs.exists(interval1Dir));
-    Assert.assertFalse(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
     Assert.assertTrue(fs.exists(new Path("/tmp")));
 
   }
@@ -158,14 +158,21 @@ public class HdfsDataSegmentKillerTest
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
     Assert.assertTrue(fs.mkdirs(path));
-    try (FSDataOutputStream os = fs.create(new Path(path, "index.zip")); FSDataOutputStream oos= fs.create(new Path(path, "descriptor.json"))) {
+    try (FSDataOutputStream os = fs.create(new Path(path, "index.zip")); FSDataOutputStream oos = fs.create(new Path(
+        path,
+        "descriptor.json"
+    ))) {
     }
   }
 
-  private void makePartitionDirWithIndexWitNewFormat(FileSystem fs, Path path, Integer partitionNumber) throws IOException
+  private void makePartitionDirWithIndexWitNewFormat(FileSystem fs, Path path, Integer partitionNumber)
+      throws IOException
   {
     Assert.assertTrue(fs.mkdirs(path));
-    try (FSDataOutputStream os = fs.create(new Path(path, String.format("%s_index.zip",partitionNumber))); FSDataOutputStream oos= fs.create(new Path(path, String.format("%s_descriptor.json",partitionNumber)))) {
+    try (FSDataOutputStream os = fs.create(new Path(
+        path,
+        String.format("%s_index.zip", partitionNumber)
+    )); FSDataOutputStream oos = fs.create(new Path(path, String.format("%s_descriptor.json", partitionNumber)))) {
     }
   }
 

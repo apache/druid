@@ -48,21 +48,37 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     this.storageDirectory = new Path(pusherConfig.getStorageDirectory());
   }
 
+  private static Path getPath(DataSegment segment)
+  {
+    return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
+  }
+
+  // returns path up to data source for a segment
+  private static Path getDataSourcePath(DataSegment segment)
+  {
+    final String dataSource = segment.getDataSource();
+    final String segmentPath = getPath(segment).toUri().toString();
+
+    StringBuilder builder = new StringBuilder(segmentPath.split(dataSource)[0]);
+    builder.append(dataSource);
+    return new Path(builder.toString());
+  }
+
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
-    final Path path = getPath(segment);
-    log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), path);
+    final Path segmentPath = getPath(segment);
+    log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), segmentPath);
 
     try {
-      String segmentLocation = path.getName();
-      final FileSystem fs = path.getFileSystem(config);
+      String segmentLocation = segmentPath.getName();
+      final FileSystem fs = segmentPath.getFileSystem(config);
       if (!segmentLocation.endsWith(".zip")) {
-        throw new SegmentLoadingException("Unknown file type[%s]", path);
+        throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
       } else {
 
-        if (!fs.exists(path)) {
-          log.warn("Segment Path [%s] does not exist. It appears to have been deleted already.", path);
+        if (!fs.exists(segmentPath)) {
+          log.warn("Segment Path [%s] does not exist. It appears to have been deleted already.", segmentPath);
           return;
         }
 
@@ -71,13 +87,13 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         if (zipParts.length == 2
             && zipParts[1].equals("index.zip")
             && StringUtils.isNumeric(zipParts[0])) {
-          if (!fs.delete(path, false)) {
+          if (!fs.delete(segmentPath, false)) {
             throw new SegmentLoadingException(
                 "Unable to kill segment, failed to delete [%s]",
-                path.toString()
+                segmentPath.toString()
             );
           }
-          Path descriptorPath = new Path(path.getParent(), String.format("%s_descriptor.json", zipParts[0]));
+          Path descriptorPath = new Path(segmentPath.getParent(), String.format("%s_descriptor.json", zipParts[0]));
           //delete partitionNumber_descriptor.json
           if (!fs.delete(descriptorPath, false)) {
             throw new SegmentLoadingException(
@@ -85,14 +101,15 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
                 descriptorPath.toString()
             );
           }
-        } else { //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
-          if (!fs.delete(path, false)) {
+        } else { //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/
+          // index.zip
+          if (!fs.delete(segmentPath, false)) {
             throw new SegmentLoadingException(
                 "Unable to kill segment, failed to delete [%s]",
-                path.toString()
+                segmentPath.toString()
             );
           }
-          Path descriptorPath = new Path(path.getParent(), "descriptor.json");
+          Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
           if (!fs.delete(descriptorPath, false)) {
             throw new SegmentLoadingException(
                 "Unable to kill segment, failed to delete [%s]",
@@ -102,7 +119,9 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
         }
 
-        deleteEmptyParents(fs, path.getParent());
+        Path dataSourcepath = getDataSourcePath(segment);
+
+        deleteEmptyParents(fs, segmentPath.getParent(), dataSourcepath);
       }
     }
     catch (IOException e) {
@@ -118,24 +137,18 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     fs.delete(storageDirectory, true);
   }
 
-  private void deleteEmptyParents(FileSystem fs, Path path)
+  private void deleteEmptyParents(FileSystem fs, Path path, Path dataSourcepath)
   {
-    if(fs.makeQualified(path).equals(fs.makeQualified(storageDirectory))) {
+    if (fs.makeQualified(path).equals(fs.makeQualified(dataSourcepath))) {
       return;
     }
     try {
-      if(fs.listStatus(path).length == 0 && fs.delete(path, false))
-      {
-        deleteEmptyParents(fs, path.getParent());
+      if (fs.listStatus(path).length == 0 && fs.delete(path, false)) {
+        deleteEmptyParents(fs, path.getParent(), dataSourcepath);
       }
     }
     catch (Exception e) {
       log.makeAlert(e, "uncaught exception during segment killer").emit();
     }
-  }
-
-  private Path getPath(DataSegment segment)
-  {
-    return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
   }
 }

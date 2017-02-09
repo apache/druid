@@ -84,7 +84,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File inDir, DataSegment segment) throws IOException
   {
-    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDirUptoVersion(segment);
+    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
 
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",

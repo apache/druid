@@ -553,13 +553,23 @@ public class HadoopConverterJob
           finalSegmentTemplate,
           context.getConfiguration(),
           context,
-          context.getTaskAttemptID(),
           outDir,
-          JobHelper.makeSegmentOutputPathUptoVersionForHdfs(
+          JobHelper.makeIndexZipPath(
               baseOutputPath,
               outputFS,
               finalSegmentTemplate
-          )
+          ),
+          JobHelper.makeDescriptorPath(
+              baseOutputPath,
+              outputFS,
+              finalSegmentTemplate
+          ),
+          JobHelper.makeTmpPath(
+              baseOutputPath,
+              outputFS,
+              finalSegmentTemplate,
+              context.getTaskAttemptID()
+              )
       );
       context.progress();
       context.setStatus("Finished PUSH");

@@ -54,18 +54,6 @@ public class DataSegmentPusherUtil
   public static String getHdfsStorageDir(DataSegment segment)
   {
     return JOINER.join(
-        getHdfsStorageDirUptoVersion(segment),
-        segment.getShardSpec().getPartitionNum()
-    );
-  }
-
-  /**
-   * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in
-   * path names. So we format paths differently for HDFS.
-   */
-  public static String getHdfsStorageDirUptoVersion(DataSegment segment)
-  {
-    return JOINER.join(
         segment.getDataSource(),
         String.format(
             "%s_%s",

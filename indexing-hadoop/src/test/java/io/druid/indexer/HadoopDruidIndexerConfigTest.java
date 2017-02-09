@@ -39,6 +39,8 @@ import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -106,7 +108,7 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeSegmentOutputPathUptoVersionForHdfs(
+    Path path = JobHelper.makeIndexZipPath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new DistributedFileSystem(),
         new DataSegment(
@@ -122,9 +124,54 @@ public class HadoopDruidIndexerConfigTest
         )
     );
     Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version",
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
+        + "/4712_index.zip",
         path.toString()
     );
+
+    path = JobHelper.makeDescriptorPath(
+        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
+        new DistributedFileSystem(),
+        new DataSegment(
+            cfg.getSchema().getDataSchema().getDataSource(),
+            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+            cfg.getSchema().getTuningConfig().getVersion(),
+            null,
+            null,
+            null,
+            new NumberedShardSpec(bucket.partitionNum, 5000),
+            -1,
+            -1
+        )
+    );
+    Assert.assertEquals(
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
+        + "/4712_descriptor.json",
+        path.toString()
+    );
+
+    path = JobHelper.makeTmpPath(
+        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
+        new DistributedFileSystem(),
+        new DataSegment(
+            cfg.getSchema().getDataSchema().getDataSource(),
+            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+            cfg.getSchema().getTuningConfig().getVersion(),
+            null,
+            null,
+            null,
+            new NumberedShardSpec(bucket.partitionNum, 5000),
+            -1,
+            -1
+        ),
+        new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0)
+    );
+    Assert.assertEquals(
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
+        + "/4712_index.zip.0",
+        path.toString()
+    );
+
   }
 
   @Test
@@ -166,7 +213,7 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeSegmentOutputPath(
+    Path path = JobHelper.makeIndexZipPath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new LocalFileSystem(),
         new DataSegment(
@@ -182,7 +229,51 @@ public class HadoopDruidIndexerConfigTest
         )
     );
     Assert.assertEquals(
-        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712",
+        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
+        + "version/4712/index.zip",
+        path.toString()
+    );
+
+    path = JobHelper.makeDescriptorPath(
+        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
+        new LocalFileSystem(),
+        new DataSegment(
+            cfg.getSchema().getDataSchema().getDataSource(),
+            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+            cfg.getSchema().getTuningConfig().getVersion(),
+            null,
+            null,
+            null,
+            new NumberedShardSpec(bucket.partitionNum, 5000),
+            -1,
+            -1
+        )
+    );
+    Assert.assertEquals(
+        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
+        + "version/4712/descriptor.json",
+        path.toString()
+    );
+
+    path = JobHelper.makeTmpPath(
+        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
+        new LocalFileSystem(),
+        new DataSegment(
+            cfg.getSchema().getDataSchema().getDataSource(),
+            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+            cfg.getSchema().getTuningConfig().getVersion(),
+            null,
+            null,
+            null,
+            new NumberedShardSpec(bucket.partitionNum, 5000),
+            -1,
+            -1
+        ),
+        new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0)
+    );
+    Assert.assertEquals(
+        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
+        + "version/4712/4712_index.zip.0",
         path.toString()
     );
 
@@ -194,7 +285,10 @@ public class HadoopDruidIndexerConfigTest
     List<HadoopyShardSpec> specs = Lists.newArrayList();
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
-      specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, null, new DefaultObjectMapper()), i));
+      specs.add(new HadoopyShardSpec(
+          new HashBasedNumberedShardSpec(i, partitionCount, null, new DefaultObjectMapper()),
+          i
+      ));
     }
 
     HadoopIngestionSpec spec = new HadoopIngestionSpec(

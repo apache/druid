@@ -376,18 +376,15 @@ public class JobHelper
       final DataSegment segmentTemplate,
       final Configuration configuration,
       final Progressable progressable,
-      final TaskAttemptID taskAttemptID,
       final File mergedBase,
-      final Path segmentBasePath
+      final Path finalIndexZipFilePath,
+      final Path finalDescriptorPath,
+      final Path tmpPath
   )
       throws IOException
   {
-    final FileSystem outputFS = FileSystem.get(segmentBasePath.toUri(), configuration);
+    final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
 
-    final Path tmpPath = outputFS.getScheme().equals("hdfs") || outputFS.getScheme().equals("viewfs") ? new Path(
-        segmentBasePath,
-        String.format("%d_index.zip.%d", segmentTemplate.getShardSpec().getPartitionNum(), taskAttemptID.getId())
-    ) : new Path(segmentBasePath, String.format("index.zip.%d", taskAttemptID.getId()));
 
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
@@ -417,18 +414,12 @@ public class JobHelper
     zipPusher.push();
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
 
-    Path finalIndexZipFilePath = new Path(segmentBasePath, "index.zip");
-    URI indexOutURI = finalIndexZipFilePath.toUri();
+    final URI indexOutURI = finalIndexZipFilePath.toUri();
     final ImmutableMap<String, Object> loadSpec;
     // TODO: Make this a part of Pushers or Pullers
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
-        finalIndexZipFilePath = new Path(
-            segmentBasePath,
-            String.format("%d_index.zip", segmentTemplate.getShardSpec().getPartitionNum())
-        );
-        indexOutURI = finalIndexZipFilePath.toUri();
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
@@ -472,17 +463,7 @@ public class JobHelper
           )
       );
     }
-    Path finalDescriptorPath = new Path(segmentBasePath, "descriptor.json");
 
-    if ("hdfs".equals(outputFS.getScheme()) || "viewfs".equals(outputFS.getScheme())) {
-      finalDescriptorPath = new Path(
-          segmentBasePath,
-          String.format(
-              "%d_descriptor.json",
-              segmentTemplate.getShardSpec().getPartitionNum()
-          )
-      );
-    }
     writeSegmentDescriptor(
         outputFS,
         finalSegment,
@@ -596,30 +577,105 @@ public class JobHelper
     out.putNextEntry(new ZipEntry(file.getName()));
   }
 
-  public static Path makeSegmentOutputPath(
-      Path basePath,
-      FileSystem fileSystem,
-      DataSegment segment
-  )
+  public static boolean isHdfs(FileSystem fs)
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
-                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
-                        : DataSegmentPusherUtil.getStorageDir(segment);
-    return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
+    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme());
   }
 
-  //This method is very similar to makeSegmentOutputPath() method except it returns output path upto version
-  //directory.
-  public static Path makeSegmentOutputPathUptoVersionForHdfs(
-      Path basePath,
-      FileSystem fileSystem,
-      DataSegment segment
+  public static Path makeIndexZipPath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate
   )
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
-                        ? DataSegmentPusherUtil.getHdfsStorageDirUptoVersion(segment)
-                        : DataSegmentPusherUtil.getStorageDir(segment);
-    return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
+    final Path finalIndexZipPath;
+    final String segmentDir;
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      finalIndexZipPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum()
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      finalIndexZipPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/index.zip",
+              segmentDir
+          )
+      );
+    }
+    return finalIndexZipPath;
+  }
+
+  public static Path makeDescriptorPath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate
+  )
+  {
+    final Path finalDescriptorPath;
+    final String segmentDir;
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      finalDescriptorPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_descriptor.json",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum()
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      finalDescriptorPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/descriptor.json",
+              segmentDir.toString()
+          )
+      );
+    }
+    return finalDescriptorPath;
+  }
+
+  public static Path makeTmpPath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate,
+      final TaskAttemptID taskAttemptID
+  )
+  {
+    final String segmentDir;
+
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      return new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip.%d",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              taskAttemptID.getId()
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      return new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip.%d",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              taskAttemptID.getId()
+          )
+      );
+    }
   }
 
   /**
