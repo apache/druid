@@ -3509,7 +3509,7 @@ public class TopNQueryRunnerTest
         .intervals(QueryRunnerTestHelper.secondOnly)
         .aggregators(duplicateAggregators(
             QueryRunnerTestHelper.rowsCount,
-            new CountAggregatorFactory("rows1", "rows")
+            new CountAggregatorFactory("rows1")
         ))
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
@@ -3548,7 +3548,7 @@ public class TopNQueryRunnerTest
         .intervals(QueryRunnerTestHelper.secondOnly)
         .aggregators(duplicateAggregators(
             QueryRunnerTestHelper.rowsCount,
-            new CountAggregatorFactory("rows1", "rows")
+            new CountAggregatorFactory("rows1")
         ))
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
