@@ -57,38 +57,45 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       throws IOException, SegmentLoadingException
   {
     final File outDir = Files.createTempDirectory("druid").toFile();
-    outDir.deleteOnExit();
-    GoogleStorage storage = createMock(GoogleStorage.class);
+    try {
+      GoogleStorage storage = createMock(GoogleStorage.class);
 
-    expect(storage.get(bucket, path)).andThrow(new IOException(""));
+      expect(storage.get(bucket, path)).andThrow(new IOException(""));
 
-    replayAll();
+      replayAll();
 
-    GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
-    puller.getSegmentFiles(bucket, path, outDir);
+      GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
+      puller.getSegmentFiles(bucket, path, outDir);
 
-    assertFalse(outDir.exists());
+      assertFalse(outDir.exists());
 
-    verifyAll();
+      verifyAll();
+    } finally {
+      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+    }
   }
 
   @Test
-  public void getSegmentFilesTest() throws SegmentLoadingException
+  public void getSegmentFilesTest() throws SegmentLoadingException, IOException
   {
     final File outDir = new File("");
-    final FileUtils.FileCopyResult result = createMock(FileUtils.FileCopyResult.class);
-    GoogleStorage storage = createMock(GoogleStorage.class);
-    GoogleDataSegmentPuller puller = createMockBuilder(GoogleDataSegmentPuller.class).withConstructor(
-        storage
-    ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class).createMock();
+    try {
+      final FileUtils.FileCopyResult result = createMock(FileUtils.FileCopyResult.class);
+      GoogleStorage storage = createMock(GoogleStorage.class);
+      GoogleDataSegmentPuller puller = createMockBuilder(GoogleDataSegmentPuller.class).withConstructor(
+          storage
+      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class).createMock();
 
-    expect(puller.getSegmentFiles(bucket, path, outDir)).andReturn(result);
+      expect(puller.getSegmentFiles(bucket, path, outDir)).andReturn(result);
 
-    replayAll();
+      replayAll();
 
-    puller.getSegmentFiles(dataSegment, outDir);
+      puller.getSegmentFiles(dataSegment, outDir);
 
-    verifyAll();
+      verifyAll();
+    } finally {
+      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+    }
   }
 
   @Test
@@ -104,7 +111,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       assertTrue(outDir.exists());
     }
     finally {
-      outDir.delete();
+      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
     }
   }
 }

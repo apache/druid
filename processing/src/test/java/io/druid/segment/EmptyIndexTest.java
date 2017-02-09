@@ -28,6 +28,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,32 +47,40 @@ public class EmptyIndexTest
     if (!tmpDir.mkdir()) {
       throw new IllegalStateException("tmp mkdir failed");
     }
-    tmpDir.deleteOnExit();
 
-    IncrementalIndex emptyIndex = new OnheapIncrementalIndex(
-        0,
-        QueryGranularities.NONE,
-        new AggregatorFactory[0],
-        1000
-    );
-    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
-        new Interval("2012-08-01/P3D"),
-        emptyIndex,
-        new ConciseBitmapFactory()
-    );
-    TestHelper.getTestIndexMerger().merge(
-        Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
-        true,
-        new AggregatorFactory[0],
-        tmpDir,
-        new IndexSpec()
-    );
+    try {
+      IncrementalIndex emptyIndex = new OnheapIncrementalIndex(
+          0,
+          QueryGranularities.NONE,
+          new AggregatorFactory[0],
+          1000
+      );
+      IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
+          new Interval("2012-08-01/P3D"),
+          emptyIndex,
+          new ConciseBitmapFactory()
+      );
+      TestHelper.getTestIndexMerger().merge(
+          Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
+          true,
+          new AggregatorFactory[0],
+          tmpDir,
+          new IndexSpec()
+      );
 
-    QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
+      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
 
-    Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
-    Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));
-    Assert.assertEquals("getDataInterval", new Interval("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
-    Assert.assertEquals("getReadOnlyTimestamps", 0, emptyQueryableIndex.getColumn(Column.TIME_COLUMN_NAME).getLength());
+      Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
+      Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));
+      Assert.assertEquals("getDataInterval", new Interval("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
+      Assert.assertEquals(
+          "getReadOnlyTimestamps",
+          0,
+          emptyQueryableIndex.getColumn(Column.TIME_COLUMN_NAME).getLength()
+      );
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
   }
 }

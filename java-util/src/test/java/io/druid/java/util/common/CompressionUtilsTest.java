@@ -131,15 +131,25 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodZipCompressUncompress");
     final File zipFile = new File(tmpDir, "compressionUtilTest.zip");
-    zipFile.deleteOnExit();
-    CompressionUtils.zip(testDir, zipFile);
-    final File newDir = new File(tmpDir, "newDir");
-    newDir.mkdir();
-    CompressionUtils.unzip(zipFile, newDir);
-    final Path newPath = Paths.get(newDir.getAbsolutePath(), testFile.getName());
-    Assert.assertTrue(newPath.toFile().exists());
-    try (final FileInputStream inputStream = new FileInputStream(newPath.toFile())) {
-      assertGoodDataStream(inputStream);
+    try {
+      CompressionUtils.zip(testDir, zipFile);
+      final File newDir = new File(tmpDir, "newDir");
+      newDir.mkdir();
+      CompressionUtils.unzip(zipFile, newDir);
+      final Path newPath = Paths.get(newDir.getAbsolutePath(), testFile.getName());
+      Assert.assertTrue(newPath.toFile().exists());
+      try (final FileInputStream inputStream = new FileInputStream(newPath.toFile())) {
+        assertGoodDataStream(inputStream);
+      }
+    }
+    finally {
+      if (zipFile.exists()) {
+        zipFile.delete();
+      }
+
+      if (tmpDir.exists()) {
+        tmpDir.delete();
+      }
     }
   }
 

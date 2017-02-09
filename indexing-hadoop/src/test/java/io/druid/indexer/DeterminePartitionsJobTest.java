@@ -212,66 +212,74 @@ public class DeterminePartitionsJobTest
     this.expectedStartEndForEachShard = expectedStartEndForEachShard;
 
     dataFile = File.createTempFile("test_website_data", "tmp");
-    dataFile.deleteOnExit();
     tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
 
-    FileUtils.writeLines(dataFile, data);
+    try {
+      FileUtils.writeLines(dataFile, data);
 
-    config = new HadoopDruidIndexerConfig(
-        new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
-                            null,
-                            ImmutableList.of("timestamp", "host", "country", "visited_num")
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
-                new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(new Interval(interval))
-                ),
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
-            new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
-                    "paths",
-                    dataFile.getCanonicalPath(),
-                    "type",
-                    "static"
-                ),
-                null,
-                tmpDir.getCanonicalPath()
-            ),
-            new HadoopTuningConfig(
-                tmpDir.getCanonicalPath(),
-                null,
-                new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped),
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false
-            )
-        )
-    );
+      config = new HadoopDruidIndexerConfig(
+          new HadoopIngestionSpec(
+              new DataSchema(
+                  "website",
+                  HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                      new StringInputRowParser(
+                          new CSVParseSpec(
+                              new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                              new DimensionsSpec(
+                                  DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")),
+                                  null,
+                                  null
+                              ),
+                              null,
+                              ImmutableList.of("timestamp", "host", "country", "visited_num")
+                          ),
+                          null
+                      ),
+                      Map.class
+                  ),
+                  new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
+                  new UniformGranularitySpec(
+                      Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(new Interval(interval))
+                  ),
+                  HadoopDruidIndexerConfig.JSON_MAPPER
+              ),
+              new HadoopIOConfig(
+                  ImmutableMap.<String, Object>of(
+                      "paths",
+                      dataFile.getCanonicalPath(),
+                      "type",
+                      "static"
+                  ),
+                  null,
+                  tmpDir.getCanonicalPath()
+              ),
+              new HadoopTuningConfig(
+                  tmpDir.getCanonicalPath(),
+                  null,
+                  new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped),
+                  null,
+                  null,
+                  null,
+                  false,
+                  false,
+                  false,
+                  false,
+                  null,
+                  false,
+                  false,
+                  null,
+                  null,
+                  null,
+                  false,
+                  false
+              )
+          )
+      );
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+      FileUtils.forceDelete(dataFile);
+    }
   }
 
   @Test

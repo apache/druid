@@ -73,4 +73,8 @@ public class HadoopIOPeonTest
   {
     ioPeon.cleanup();
   }
+  @Test(expected = UnsupportedOperationException.class) public void testClose() throws IOException
+  {
+    ioPeon.close();
+  }
 }
