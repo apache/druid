@@ -115,11 +115,11 @@ public class CacheKeyBuilderTest
   public void testDifferentOrderList()
   {
     byte[] key1 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList("AB", "BA"))
+        .appendStringsIgnoringOrder(Lists.newArrayList("AB", "BA"))
         .build();
 
     byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList("BA", "AB"))
+        .appendStringsIgnoringOrder(Lists.newArrayList("BA", "AB"))
         .build();
 
     assertArrayEquals(key1, key2);
@@ -143,11 +143,11 @@ public class CacheKeyBuilderTest
     };
 
     key1 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.newArrayList(cacheable1, cacheable2))
+        .appendCacheablesIgnoringOrder(Lists.newArrayList(cacheable1, cacheable2))
         .build();
 
     key2 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.newArrayList(cacheable2, cacheable1))
+        .appendCacheablesIgnoringOrder(Lists.newArrayList(cacheable2, cacheable1))
         .build();
 
     assertArrayEquals(key1, key2);
