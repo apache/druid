@@ -375,11 +375,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
                 if (dimensionDesc == null) {
-                  return dimensionSpec.decorate(NullDimensionSelector.instance());
+                  return NullDimensionSelector.instance();
                 }
 
                 final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                return dimensionSpec.decorate((DimensionSelector) indexer.makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc));
+                return (DimensionSelector) indexer.makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc);
               }
 
               @Override
