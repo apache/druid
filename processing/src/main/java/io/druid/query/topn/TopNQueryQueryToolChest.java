@@ -97,7 +97,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     ).toArray(new String[0]);
   }
 
-  public static List<PostAggregator> prunePostAggregators(TopNQuery query)
+  private static List<PostAggregator> prunePostAggregators(TopNQuery query)
   {
     return AggregatorUtil.pruneDependentPostAgg(
         query.getPostAggregatorSpecs(),

@@ -131,7 +131,7 @@ public class ArithmeticPostAggregator implements PostAggregator
         .appendString(fnName)
         .appendString(ordering);
 
-    if (preserveFieldOrder(op)) {
+    if (preserveFieldOrderInCacheKey(op)) {
       builder.appendCacheables(fields);
     } else {
       builder.appendCacheablesIgnoringOrder(fields);
@@ -169,7 +169,7 @@ public class ArithmeticPostAggregator implements PostAggregator
            '}';
   }
 
-  private static boolean preserveFieldOrder(Ops op)
+  private static boolean preserveFieldOrderInCacheKey(Ops op)
   {
     switch (op) {
       case PLUS:

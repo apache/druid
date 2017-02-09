@@ -169,7 +169,7 @@ public class SketchSetPostAggregator implements PostAggregator
         .appendString(getFunc())
         .appendInt(maxSketchSize);
 
-    if (preserveFieldOrder(func)) {
+    if (preserveFieldOrderInCacheKey(func)) {
       builder.appendCacheables(fields);
     } else {
       builder.appendCacheablesIgnoringOrder(fields);
@@ -178,7 +178,7 @@ public class SketchSetPostAggregator implements PostAggregator
     return builder.build();
   }
 
-  private static boolean preserveFieldOrder(SketchHolder.Func func)
+  private static boolean preserveFieldOrderInCacheKey(SketchHolder.Func func)
   {
     switch (func) {
       case NOT:
