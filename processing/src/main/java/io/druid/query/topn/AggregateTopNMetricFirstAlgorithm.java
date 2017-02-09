@@ -128,6 +128,10 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   private int[] getDimValSelectorForTopNMetric(TopNParams params, TopNResultBuilder resultBuilder)
   {
+    if (params.getCardinality() < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
+    }
+
     int[] dimValSelector = new int[params.getCardinality()];
     Arrays.fill(dimValSelector, SKIP_POSITION_VALUE);
 

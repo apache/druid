@@ -19,19 +19,29 @@
 
 package io.druid.query.topn.types;
 
+import com.google.common.base.Function;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Capabilities;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
+import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
-public interface TopNColumnSelectorStrategy<ValueSelectorType extends ColumnValueSelector> extends ColumnSelectorStrategy
+public interface TopNColumnSelectorStrategy
+    <ValueSelectorType extends ColumnValueSelector, DimExtractionAggregateStoreType extends Map>
+    extends ColumnSelectorStrategy
 {
+  int CARDINALITY_UNKNOWN = -1;
+
   int getCardinality(ValueSelectorType selector);
+
+  ValueType getValueType();
 
   /**
    * Used by DimExtractionTopNAlgorithm.
@@ -50,11 +60,20 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType extends ColumnValu
    */
   Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, Capabilities capabilities);
 
+  /**
+   * Used by DimExtractionTopNAlgorithm.
+   *
+   * Creates an aggregate store map suitable for this strategy's type that will be
+   * passed to dimExtractionScanAndAggregate() and updateDimExtractionResults().
+   *
+   * @return Aggregate store map
+   */
+  DimExtractionAggregateStoreType makeDimExtractionAggregateStore();
 
   /**
    * Used by DimExtractionTopNAlgorithm.
    *
-   * Read the current row from a dimension value selector, and for each row value:
+   * Iterate through the cursor, reading the current row from a dimension value selector, and for each row value:
    * 1. Retrieve the Aggregator[] for the row value from rowSelector (fast integer lookup) or from
    *    aggregatesStore (slower map).
    *
@@ -77,6 +96,22 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType extends ColumnValu
       ValueSelectorType selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      DimExtractionAggregateStoreType aggregatesStore
+  );
+
+  /**
+   * Used by DimExtractionTopNAlgorithm.
+   *
+   * Read entries from the aggregates store, adding the keys and associated values to the resultBuilder, applying the
+   * valueTransformer to the keys if present
+   *
+   * @param aggregatesStore Map created by makeDimExtractionAggregateStore()
+   * @param valueTransformer Converts keys to different types, if null no conversion is needed
+   * @param resultBuilder TopN result builder
+   */
+  void updateDimExtractionResults(
+      DimExtractionAggregateStoreType aggregatesStore,
+      @Nullable Function<Object, Object> valueTransformer,
+      TopNResultBuilder resultBuilder
   );
 }

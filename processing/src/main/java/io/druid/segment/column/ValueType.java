@@ -19,6 +19,8 @@
 
 package io.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
 */
 public enum ValueType
@@ -26,5 +28,14 @@ public enum ValueType
   FLOAT,
   LONG,
   STRING,
-  COMPLEX
+  COMPLEX;
+
+  @JsonCreator
+  public static ValueType fromString(String name)
+  {
+    if (name == null) {
+      return null;
+    }
+    return valueOf(name.toUpperCase());
+  }
 }

@@ -349,7 +349,7 @@ public class SchemaEvolutionTest
 
     // Only float(3) -- which we can't filter, but can aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.100000381469727, "c", 2L)),
         runQuery(query, factory, ImmutableList.of(index3))
     );
 
@@ -362,9 +362,9 @@ public class SchemaEvolutionTest
     // string(1) + long(2) + float(3) + nonexistent(4)
     Assert.assertEquals(
         timeseriesResult(ImmutableMap.of(
-            "a", 19L,
-            "b", 19.0,
-            "c", 4L
+            "a", 38L,
+            "b", 38.10000038146973,
+            "c", 6L
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
     );

@@ -454,6 +454,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         );
                       }
 
+                      if (columnDesc.getCapabilities().getType() == ValueType.LONG) {
+                        return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
+                      }
+
+                      if (columnDesc.getCapabilities().getType() == ValueType.FLOAT) {
+                        return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
+                      }
+
                       DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
