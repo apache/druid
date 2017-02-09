@@ -20,9 +20,7 @@
 package io.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -55,7 +53,6 @@ import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +97,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     ).toArray(new String[0]);
   }
 
-  private static List<PostAggregator> prunePostAggregators(TopNQuery query)
+  public static List<PostAggregator> prunePostAggregators(TopNQuery query)
   {
     return AggregatorUtil.pruneDependentPostAgg(
         query.getPostAggregatorSpecs(),
@@ -291,75 +288,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return TYPE_REFERENCE;
   }
 
-  @VisibleForTesting
-  static Collection<PostAggregator> findPostAggregatorsForSort(
-      TopNMetricSpec metricSpec,
-      List<PostAggregator> postAggregators,
-      DimensionSpec dimensionSpec
-  )
-  {
-    PostAggregator found = null;
-    for (PostAggregator eachAggregator : postAggregators) {
-      if (eachAggregator.getName().equals(metricSpec.getMetricName(dimensionSpec))) {
-        found = eachAggregator;
-        break;
-      }
-    }
 
-    if (found != null) {
-      final Map<String, PostAggregator> foundMap = Maps.newHashMap();
-      final Map<String, PostAggregator> notCheckedMap = Maps.newHashMap();
-      final List<String> postAggregatorNameOrder = Lists.newArrayList();
-
-      for (PostAggregator eachAggregator : postAggregators) {
-        if (eachAggregator != found) {
-          notCheckedMap.put(eachAggregator.getName(), eachAggregator);
-          postAggregatorNameOrder.add(eachAggregator.getName());
-        } else {
-          // Since inner post aggregators always appear first than outer post aggregators,
-          // it should be fine to break here.
-          break;
-        }
-      }
-      foundMap.put(found.getName(), found);
-      foundMap.putAll(
-          getDependentPostAggregators(found, postAggregatorNameOrder, notCheckedMap)
-      );
-
-      return foundMap.values();
-    } else {
-      return ImmutableList.of();
-    }
-  }
-
-  private static Map<String, PostAggregator> getDependentPostAggregators(
-      PostAggregator cur,
-      List<String> postAggregatorNameOrder,
-      Map<String, PostAggregator> notChecked
-  )
-  {
-    final Map<String, PostAggregator> found = Maps.newHashMap();
-
-    for (String eachDependentField : cur.getDependentFields()) {
-      for (int i = 0; i < postAggregatorNameOrder.size(); i++) {
-        final String postAggregatorName = postAggregatorNameOrder.get(i);
-        if (eachDependentField.equals(postAggregatorName)) {
-          final PostAggregator foundPostAgg = notChecked.get(postAggregatorName);
-          found.put(postAggregatorName, foundPostAgg);
-
-          // Further find nested post aggregators
-          final List<String> remainIterOrder = postAggregatorNameOrder.subList(0, i);
-          final Map<String, PostAggregator> remainNotChecked = Maps.newHashMapWithExpectedSize(remainIterOrder.size());
-          for (String remainPostAggName : remainIterOrder) {
-            remainNotChecked.put(remainPostAggName, notChecked.get(remainPostAggName));
-          }
-          found.putAll(getDependentPostAggregators(foundPostAgg, remainIterOrder, remainNotChecked));
-        }
-      }
-    }
-
-    return found;
-  }
 
   @Override
   public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
@@ -382,13 +311,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             .appendInt(query.getThreshold())
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
-            .appendCacheables(query.getAggregatorSpecs());
+            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs());
 
-        final Collection<PostAggregator> sortPostAggregators = findPostAggregatorsForSort(query.getTopNMetricSpec(), query.getPostAggregatorSpecs(), query.getDimensionSpec());
-        if (!sortPostAggregators.isEmpty()) {
+        final List<PostAggregator> postAggregators = prunePostAggregators(query);
+        if (!postAggregators.isEmpty()) {
           // Append post aggregators only when they are used as sort keys.
           // Note that appending an empty list produces a different cache key from not appending it.
-          builder.appendCacheables(sortPostAggregators);
+          builder.appendCacheablesIgnoringOrder(postAggregators);
         }
 
         return builder.build();

@@ -22,7 +22,6 @@ package io.druid.query.topn;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
@@ -51,9 +50,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 
 public class TopNQueryQueryToolChestTest
@@ -250,146 +246,5 @@ public class TopNQueryQueryToolChestTest
       this.query = (TopNQuery) query;
       return query.run(runner, responseContext);
     }
-  }
-
-  @Test
-  public void testFindPostAggregatorsForSort()
-  {
-    final TopNQuery query = new TopNQueryBuilder()
-        .dataSource(new TableDataSource("dummy"))
-        .dimension("test", "test")
-        .metric("sum")
-        .threshold(3)
-        .granularity(QueryGranularities.ALL)
-        .intervals(ImmutableList.of(new Interval("2015-01-01/2015-01-02")))
-        .aggregators(ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")))
-        .postAggregators(
-            ImmutableList.<PostAggregator>of(
-                new ArithmeticPostAggregator(
-                    "part_part_sum",
-                    "+",
-                    ImmutableList.<PostAggregator>of(
-                        new FieldAccessPostAggregator(
-                            null,
-                            "metric1"
-                        ),
-                        new FieldAccessPostAggregator(
-                            null,
-                            "metric1"
-                        )
-                    )
-                ),
-                new ArithmeticPostAggregator(
-                    "part_sum",
-                    "+",
-                    ImmutableList.<PostAggregator>of(
-                        new FieldAccessPostAggregator(
-                            null,
-                            "part_part_sum"
-                        ),
-                        new FieldAccessPostAggregator(
-                            null,
-                            "metric1"
-                        )
-                    )
-                ),
-                new ArithmeticPostAggregator(
-                    "sum",
-                    "+",
-                    ImmutableList.<PostAggregator>of(
-                        new FieldAccessPostAggregator(
-                            "part_sum",
-                            "part_sum"
-                        ),
-                        new FieldAccessPostAggregator(
-                            null,
-                            "metric1"
-                        )
-                    )
-                ),
-                new ArithmeticPostAggregator(
-                    "sub",
-                    "-",
-                    ImmutableList.<PostAggregator>of(
-                        new FieldAccessPostAggregator(
-                            null,
-                            "metric1"
-                        ),
-                        new FieldAccessPostAggregator(
-                            null,
-                            "metric1"
-                        )
-                    )
-                )
-            )
-        )
-        .build();
-
-    final List<PostAggregator> actual = Lists.newArrayList(
-        TopNQueryQueryToolChest.findPostAggregatorsForSort(
-            query.getTopNMetricSpec(),
-            query.getPostAggregatorSpecs(),
-            query.getDimensionSpec()
-        )
-    );
-
-    final List<PostAggregator> expected = Lists.<PostAggregator>newArrayList(
-        new ArithmeticPostAggregator(
-            "sum",
-            "+",
-            ImmutableList.<PostAggregator>of(
-                new FieldAccessPostAggregator(
-                    "part_sum",
-                    "part_sum"
-                ),
-                new FieldAccessPostAggregator(
-                    null,
-                    "metric1"
-                )
-            )
-        ),
-        new ArithmeticPostAggregator(
-            "part_part_sum",
-            "+",
-            ImmutableList.<PostAggregator>of(
-                new FieldAccessPostAggregator(
-                    null,
-                    "metric1"
-                ),
-                new FieldAccessPostAggregator(
-                    null,
-                    "metric1"
-                )
-            )
-        ),
-        new ArithmeticPostAggregator(
-            "part_sum",
-            "+",
-            ImmutableList.<PostAggregator>of(
-                new FieldAccessPostAggregator(
-                    null,
-                    "part_part_sum"
-                ),
-                new FieldAccessPostAggregator(
-                    null,
-                    "metric1"
-                )
-            )
-        )
-    );
-
-    final Comparator<PostAggregator> nameComparator = new Comparator<PostAggregator>()
-    {
-      @Override
-      public int compare(PostAggregator o1, PostAggregator o2)
-      {
-        return o1.getName().compareTo(o2.getName());
-      }
-    };
-
-    Collections.sort(actual, nameComparator);
-    Collections.sort(expected, nameComparator);
-
-    Assert.assertTrue(expected.equals(actual));
   }
 }

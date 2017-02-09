@@ -148,7 +148,7 @@ public class DoubleLeastPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.DOUBLE_LEAST)
-        .appendCacheables(fields)
+        .appendCacheablesIgnoringOrder(fields)
         .build();
   }
 }

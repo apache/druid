@@ -60,7 +60,7 @@ public class CacheKeyBuilderTest
         .appendStrings(Lists.newArrayList("test1", "test2"))
         .appendCacheable(cacheable)
         .appendCacheable(null)
-        .appendCacheables(Lists.newArrayList((Cacheable) null))
+        .appendCacheables(Lists.newArrayList(cacheable, null, cacheable))
         .build();
 
     final int expectedSize = 1                                           // id
@@ -73,7 +73,7 @@ public class CacheKeyBuilderTest
                              + Floats.BYTES * 2                          // 10.0f, 11.0f
                              + Ints.BYTES + 5 * 2 + 1                    // 'test1' 'test2'
                              + cacheable.getCacheKey().length            // cacheable
-                             + Ints.BYTES                                // cacheable list
+                             + Ints.BYTES + 4                                // cacheable list
                              + 11;                                       // type keys
     assertEquals(expectedSize, actual.length);
 
@@ -103,7 +103,9 @@ public class CacheKeyBuilderTest
                                       .put(cacheable.getCacheKey())
                                       .put(CacheKeyBuilder.CACHEABLE_KEY)
                                       .put(CacheKeyBuilder.CACHEABLE_LIST_KEY)
-                                      .putInt(1)
+                                      .putInt(3)
+                                      .put(cacheable.getCacheKey())
+                                      .put(cacheable.getCacheKey())
                                       .array();
 
     assertArrayEquals(expected, actual);
@@ -328,5 +330,68 @@ public class CacheKeyBuilderTest
         .build();
 
     assertFalse(Arrays.equals(key1, key2));
+  }
+
+  @Test
+  public void testIgnoringOrder()
+  {
+    byte[] actual = new CacheKeyBuilder((byte) 10)
+        .appendStringsIgnoringOrder(Lists.newArrayList("test2", "test1", "te"))
+        .build();
+
+    byte[] expected = ByteBuffer.allocate(20)
+                                .put((byte) 10)
+                                .put(CacheKeyBuilder.STRING_LIST_KEY)
+                                .putInt(3)
+                                .put(StringUtils.toUtf8("te"))
+                                .put(CacheKeyBuilder.STRING_SEPARATOR)
+                                .put(StringUtils.toUtf8("test1"))
+                                .put(CacheKeyBuilder.STRING_SEPARATOR)
+                                .put(StringUtils.toUtf8("test2"))
+                                .array();
+
+    assertArrayEquals(expected, actual);
+
+    final Cacheable c1 = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return "te".getBytes();
+      }
+    };
+
+    final Cacheable c2 = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return "test1".getBytes();
+      }
+    };
+
+    final Cacheable c3 = new Cacheable()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return "test2".getBytes();
+      }
+    };
+
+    actual = new CacheKeyBuilder((byte) 10)
+        .appendCacheablesIgnoringOrder(Lists.newArrayList(c3, c2, c1))
+        .build();
+
+    expected = ByteBuffer.allocate(18)
+                         .put((byte) 10)
+                         .put(CacheKeyBuilder.CACHEABLE_LIST_KEY)
+                         .putInt(3)
+                         .put(c1.getCacheKey())
+                         .put(c2.getCacheKey())
+                         .put(c3.getCacheKey())
+                         .array();
+
+    assertArrayEquals(expected, actual);
   }
 }

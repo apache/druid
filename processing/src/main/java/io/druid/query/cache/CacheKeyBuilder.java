@@ -88,7 +88,7 @@ public class CacheKeyBuilder
     }
   }
 
-  private static byte[] stringCollectionToByteArray(Collection<String> input)
+  private static byte[] stringCollectionToByteArray(Collection<String> input, boolean preserveOrder)
   {
     return collectionToByteArray(
         input,
@@ -100,11 +100,12 @@ public class CacheKeyBuilder
             return StringUtils.toUtf8WithNullToEmpty(input);
           }
         },
-        STRING_SEPARATOR
+        STRING_SEPARATOR,
+        preserveOrder
     );
   }
 
-  private static byte[] cacheableCollectionToByteArray(Collection<? extends Cacheable> input)
+  private static byte[] cacheableCollectionToByteArray(Collection<? extends Cacheable> input, boolean preserveOrder)
   {
     return collectionToByteArray(
         input,
@@ -116,14 +117,16 @@ public class CacheKeyBuilder
             return input == null ? EMPTY_BYTES : input.getCacheKey();
           }
         },
-        EMPTY_BYTES
+        EMPTY_BYTES,
+        preserveOrder
     );
   }
 
   private static <T> byte[] collectionToByteArray(
       Collection<? extends T> collection,
       Function<T, byte[]> serializeFunction,
-      byte[] separator
+      byte[] separator,
+      boolean preserveOrder
   )
   {
     if (collection.size() > 0) {
@@ -135,8 +138,10 @@ public class CacheKeyBuilder
         byteArrayList.add(byteArray);
       }
 
-      // Sort the byte array list to guarantee that collections of same items but in different orders make the same result
-      Collections.sort(byteArrayList, UnsignedBytes.lexicographicalComparator());
+      if (!preserveOrder) {
+        // Sort the byte array list to guarantee that collections of same items but in different orders make the same result
+        Collections.sort(byteArrayList, UnsignedBytes.lexicographicalComparator());
+      }
 
       final Iterator<byte[]> iterator = byteArrayList.iterator();
       final int bufSize = Ints.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
@@ -184,7 +189,13 @@ public class CacheKeyBuilder
 
   public CacheKeyBuilder appendStrings(Collection<String> input)
   {
-    appendItem(STRING_LIST_KEY, stringCollectionToByteArray(input));
+    appendItem(STRING_LIST_KEY, stringCollectionToByteArray(input, true));
+    return this;
+  }
+
+  public CacheKeyBuilder appendStringsIgnoringOrder(Collection<String> input)
+  {
+    appendItem(STRING_LIST_KEY, stringCollectionToByteArray(input, false));
     return this;
   }
 
@@ -226,7 +237,13 @@ public class CacheKeyBuilder
 
   public CacheKeyBuilder appendCacheables(Collection<? extends Cacheable> input)
   {
-    appendItem(CACHEABLE_LIST_KEY, cacheableCollectionToByteArray(input));
+    appendItem(CACHEABLE_LIST_KEY, cacheableCollectionToByteArray(input, true));
+    return this;
+  }
+
+  public CacheKeyBuilder appendCacheablesIgnoringOrder(Collection<? extends Cacheable> input)
+  {
+    appendItem(CACHEABLE_LIST_KEY, cacheableCollectionToByteArray(input, false));
     return this;
   }
 

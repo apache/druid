@@ -127,11 +127,17 @@ public class ArithmeticPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.ARITHMETIC)
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.ARITHMETIC)
         .appendString(fnName)
-        .appendCacheables(fields)
-        .appendString(ordering)
-        .build();
+        .appendString(ordering);
+
+    if (preserveFieldOrder(op)) {
+      builder.appendCacheables(fields);
+    } else {
+      builder.appendCacheablesIgnoringOrder(fields);
+    }
+
+    return builder.build();
   }
 
   @JsonProperty("fn")
@@ -161,6 +167,21 @@ public class ArithmeticPostAggregator implements PostAggregator
            ", fields=" + fields +
            ", op=" + op +
            '}';
+  }
+
+  private static boolean preserveFieldOrder(Ops op)
+  {
+    switch (op) {
+      case PLUS:
+      case MULT:
+        return false;
+      case MINUS:
+      case DIV:
+      case QUOTIENT:
+        return true;
+      default:
+        throw new IAE(op.fn);
+    }
   }
 
   private static enum Ops

@@ -165,10 +165,29 @@ public class SketchSetPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.DATA_SKETCHES_SKETCH_SET)
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.DATA_SKETCHES_SKETCH_SET)
         .appendString(getFunc())
-        .appendCacheables(fields)
-        .appendInt(maxSketchSize)
-        .build();
+        .appendInt(maxSketchSize);
+
+    if (preserveFieldOrder(func)) {
+      builder.appendCacheables(fields);
+    } else {
+      builder.appendCacheablesIgnoringOrder(fields);
+    }
+
+    return builder.build();
+  }
+
+  private static boolean preserveFieldOrder(SketchHolder.Func func)
+  {
+    switch (func) {
+      case NOT:
+        return true;
+      case UNION:
+      case INTERSECT:
+        return false;
+      default:
+        throw new IAE(func.name());
+    }
   }
 }

@@ -209,6 +209,32 @@ public class CachingClusteredClientTest
       new LongSumAggregatorFactory("imps", "imps"),
       new LongSumAggregatorFactory("impers2", "imps")
   );
+  private static final List<PostAggregator> DIFF_ORDER_POST_AGGS = Arrays.<PostAggregator>asList(
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row",
+          "/",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("imps", "imps"),
+              new FieldAccessPostAggregator("rows", "rows")
+          )
+      ),
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row_half",
+          "/",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
+              new ConstantPostAggregator("constant", 2)
+          )
+      ),
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row_double",
+          "*",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
+              new ConstantPostAggregator("constant", 2)
+          )
+      )
+  );
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
   private static final QueryGranularity GRANULARITY = QueryGranularities.DAY;
@@ -271,7 +297,7 @@ public class CachingClusteredClientTest
         new Function<Integer, Object[]>()
         {
           @Override
-          public Object[] apply(@Nullable Integer input)
+          public Object[] apply(Integer input)
           {
             return new Object[]{input};
           }
@@ -765,10 +791,11 @@ public class CachingClusteredClientTest
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        client, new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    )
+        client,
+        new TopNQueryQueryToolChest(
+            new TopNQueryConfig(),
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        )
     );
 
     testQueryCaching(
@@ -818,7 +845,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
-                   .postAggregators(POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -872,7 +899,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-11-04/2011-11-08")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
-                   .postAggregators(POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -994,7 +1021,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
-                   .postAggregators(POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
@@ -1068,7 +1095,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("avg_imps_per_row_double")
                    .aggregators(AGGS)
-                   .postAggregators(POST_AGGS)
+                   .postAggregators(DIFF_ORDER_POST_AGGS)
                    .build(),
             context
         )
