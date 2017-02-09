@@ -99,7 +99,9 @@ public class DruidQueryBuilder
 
       if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
         valueType = ValueType.FLOAT;
-      } else if (SqlTypeName.DATETIME_TYPES.contains(sqlTypeName) || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
+      } else if (SqlTypeName.TIMESTAMP == sqlTypeName
+                 || SqlTypeName.DATE == sqlTypeName
+                 || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
         valueType = ValueType.LONG;
       } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
         valueType = ValueType.STRING;

@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.expression;
 
+import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 
@@ -44,11 +45,17 @@ public interface ExpressionConversion
    * Translate a row-expression to a Druid column reference. Note that this signature will probably need to change
    * once we support extractions from multiple columns.
    *
-   * @param converter  converter that can be used to convert sub-expressions
-   * @param rowOrder   order of fields in the Druid rows to be extracted from
-   * @param expression expression meant to be applied on top of the table
+   * @param converter      converter that can be used to convert sub-expressions
+   * @param plannerContext SQL planner context
+   * @param rowOrder       order of fields in the Druid rows to be extracted from
+   * @param expression     expression meant to be applied on top of the table
    *
    * @return (columnName, extractionFn) or null
    */
-  RowExtraction convert(ExpressionConverter converter, List<String> rowOrder, RexNode expression);
+  RowExtraction convert(
+      ExpressionConverter converter,
+      PlannerContext plannerContext,
+      List<String> rowOrder,
+      RexNode expression
+  );
 }

@@ -42,6 +42,11 @@ import java.util.List;
 
 public class SelectRules
 {
+  private static final List<RelOptRule> RULES = ImmutableList.of(
+      new DruidSelectProjectionRule(),
+      new DruidSelectSortRule()
+  );
+
   private SelectRules()
   {
     // No instantiation.
@@ -49,10 +54,7 @@ public class SelectRules
 
   public static List<RelOptRule> rules()
   {
-    return ImmutableList.of(
-        new DruidSelectProjectionRule(),
-        new DruidSelectSortRule()
-    );
+    return RULES;
   }
 
   static class DruidSelectProjectionRule extends RelOptRule
@@ -89,6 +91,7 @@ public class SelectRules
       int dimOutputNameCounter = 0;
       for (int i = 0; i < project.getRowType().getFieldCount(); i++) {
         final RowExtraction rex = Expressions.toRowExtraction(
+            druidRel.getPlannerContext(),
             sourceRowSignature.getRowOrder(),
             project.getChildExps().get(i)
         );

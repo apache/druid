@@ -46,7 +46,8 @@ import io.druid.query.topn.DimensionAndMetricValueExtractor;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.Column;
-import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -56,7 +57,6 @@ import org.apache.calcite.util.NlsString;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,15 +67,20 @@ import java.util.concurrent.atomic.AtomicReference;
 public class QueryMaker
 {
   private final QuerySegmentWalker walker;
-  private final PlannerConfig plannerConfig;
+  private final PlannerContext plannerContext;
 
   public QueryMaker(
       final QuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
+      final PlannerContext plannerContext
   )
   {
     this.walker = walker;
-    this.plannerConfig = plannerConfig;
+    this.plannerContext = plannerContext;
+  }
+
+  public PlannerContext getPlannerContext()
+  {
+    return plannerContext;
   }
 
   public Sequence<Object[]> runQuery(
@@ -102,8 +107,8 @@ public class QueryMaker
     final TopNQuery topNQuery = queryBuilder.toTopNQuery(
         dataSource,
         sourceRowSignature,
-        plannerConfig.getMaxTopNLimit(),
-        plannerConfig.isUseApproximateTopN()
+        plannerContext.getPlannerConfig().getMaxTopNLimit(),
+        plannerContext.getPlannerConfig().isUseApproximateTopN()
     );
     if (topNQuery != null) {
       return executeTopN(queryBuilder, topNQuery);
@@ -155,22 +160,22 @@ public class QueryMaker
               @Override
               public Sequence<Object[]> next()
               {
-                final SelectQuery query = baseQuery.withPagingSpec(
+                final SelectQuery queryWithContextAndPagination = baseQuery.withPagingSpec(
                     new PagingSpec(
                         pagingIdentifiers.get(),
-                        plannerConfig.getSelectThreshold(),
+                        plannerContext.getPlannerConfig().getSelectThreshold(),
                         true
                     )
-                );
+                ).withOverriddenContext(plannerContext.getQueryContext());
 
-                Hook.QUERY_PLAN.run(query);
+                Hook.QUERY_PLAN.run(queryWithContextAndPagination);
 
                 morePages.set(false);
                 final AtomicBoolean gotResult = new AtomicBoolean();
 
                 return Sequences.concat(
                     Sequences.map(
-                        query.run(walker, Maps.<String, Object>newHashMap()),
+                        queryWithContextAndPagination.run(walker, Maps.<String, Object>newHashMap()),
                         new Function<Result<SelectResultValue>, Sequence<Object[]>>()
                         {
                           @Override
@@ -238,10 +243,11 @@ public class QueryMaker
     final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
     final String timeOutputName = dimensions.isEmpty() ? null : Iterables.getOnlyElement(dimensions).getOutputName();
 
-    Hook.QUERY_PLAN.run(query);
+    final TimeseriesQuery queryWithContext = query.withOverriddenContext(plannerContext.getQueryContext());
+    Hook.QUERY_PLAN.run(queryWithContext);
 
     return Sequences.map(
-        query.run(walker, Maps.<String, Object>newHashMap()),
+        queryWithContext.run(walker, Maps.<String, Object>newHashMap()),
         new Function<Result<TimeseriesResultValue>, Object[]>()
         {
           @Override
@@ -272,11 +278,12 @@ public class QueryMaker
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
-    Hook.QUERY_PLAN.run(query);
+    final TopNQuery queryWithContext = query.withOverriddenContext(plannerContext.getQueryContext());
+    Hook.QUERY_PLAN.run(queryWithContext);
 
     return Sequences.concat(
         Sequences.map(
-            query.run(walker, Maps.<String, Object>newHashMap()),
+            queryWithContext.run(walker, Maps.<String, Object>newHashMap()),
             new Function<Result<TopNResultValue>, Sequence<Object[]>>()
             {
               @Override
@@ -309,10 +316,11 @@ public class QueryMaker
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
-    Hook.QUERY_PLAN.run(query);
+    final GroupByQuery queryWithContext = query.withOverriddenContext(plannerContext.getQueryContext());
+    Hook.QUERY_PLAN.run(queryWithContext);
 
     return Sequences.map(
-        query.run(walker, Maps.<String, Object>newHashMap()),
+        queryWithContext.run(walker, Maps.<String, Object>newHashMap()),
         new Function<io.druid.data.input.Row, Object[]>()
         {
           @Override
@@ -335,8 +343,10 @@ public class QueryMaker
   {
     if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
       return ColumnMetaData.Rep.of(String.class);
-    } else if (SqlTypeName.DATETIME_TYPES.contains(sqlType)) {
+    } else if (sqlType == SqlTypeName.TIMESTAMP) {
       return ColumnMetaData.Rep.of(Long.class);
+    } else if (sqlType == SqlTypeName.DATE) {
+      return ColumnMetaData.Rep.of(Integer.class);
     } else if (sqlType == SqlTypeName.INTEGER) {
       return ColumnMetaData.Rep.of(Integer.class);
     } else if (sqlType == SqlTypeName.BIGINT) {
@@ -350,7 +360,7 @@ public class QueryMaker
     }
   }
 
-  private static Object coerce(final Object value, final SqlTypeName sqlType)
+  private Object coerce(final Object value, final SqlTypeName sqlType)
   {
     final Object coercedValue;
 
@@ -365,24 +375,33 @@ public class QueryMaker
     } else if (value == null) {
       coercedValue = null;
     } else if (sqlType == SqlTypeName.DATE) {
-      final Long millis = (Long) coerce(value, SqlTypeName.TIMESTAMP);
-      if (millis == null) {
-        return null;
-      } else {
-        return new DateTime(millis.longValue()).dayOfMonth().roundFloorCopy().getMillis();
-      }
-    } else if (sqlType == SqlTypeName.TIMESTAMP) {
+      final DateTime dateTime;
+
       if (value instanceof Number) {
-        coercedValue = new DateTime(((Number) value).longValue()).getMillis();
+        dateTime = new DateTime(((Number) value).longValue());
       } else if (value instanceof String) {
-        coercedValue = Long.parseLong((String) value);
-      } else if (value instanceof Calendar) {
-        coercedValue = ((Calendar) value).getTimeInMillis();
+        dateTime = new DateTime(Long.parseLong((String) value));
       } else if (value instanceof DateTime) {
-        coercedValue = ((DateTime) value).getMillis();
+        dateTime = (DateTime) value;
       } else {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
+
+      return Calcites.jodaToCalciteDate(dateTime, plannerContext.getTimeZone());
+    } else if (sqlType == SqlTypeName.TIMESTAMP) {
+      final DateTime dateTime;
+
+      if (value instanceof Number) {
+        dateTime = new DateTime(((Number) value).longValue());
+      } else if (value instanceof String) {
+        dateTime = new DateTime(Long.parseLong((String) value));
+      } else if (value instanceof DateTime) {
+        dateTime = (DateTime) value;
+      } else {
+        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+      }
+
+      return Calcites.jodaToCalciteTimestamp(dateTime, plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.INTEGER) {
       if (value instanceof String) {
         coercedValue = Ints.tryParse((String) value);

@@ -19,8 +19,10 @@
 
 package io.druid.sql.calcite.expression;
 
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
+import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -46,6 +48,7 @@ public class ExtractExpressionConversion extends AbstractExpressionConversion
   @Override
   public RowExtraction convert(
       final ExpressionConverter converter,
+      final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
   )
@@ -56,7 +59,7 @@ public class ExtractExpressionConversion extends AbstractExpressionConversion
     final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
     final RexNode expr = call.getOperands().get(1);
 
-    final RowExtraction rex = converter.convert(rowOrder, expr);
+    final RowExtraction rex = converter.convert(plannerContext, rowOrder, expr);
     if (rex == null) {
       return null;
     }
@@ -76,10 +79,22 @@ public class ExtractExpressionConversion extends AbstractExpressionConversion
       baseExtractionFn = rex.getExtractionFn();
     }
 
+    if (baseExtractionFn instanceof TimeFormatExtractionFn) {
+      final TimeFormatExtractionFn baseTimeFormatFn = (TimeFormatExtractionFn) baseExtractionFn;
+      final QueryGranularity queryGranularity = ExtractionFns.toQueryGranularity(baseTimeFormatFn);
+      if (queryGranularity != null) {
+        // Combine EXTRACT(X FROM FLOOR(Y TO Z)) into a single extractionFn.
+        return RowExtraction.of(
+            rex.getColumn(),
+            new TimeFormatExtractionFn(dateTimeFormat, plannerContext.getTimeZone(), null, queryGranularity, true)
+        );
+      }
+    }
+
     return RowExtraction.of(
         rex.getColumn(),
         ExtractionFns.compose(
-            new TimeFormatExtractionFn(dateTimeFormat, null, null, null, true),
+            new TimeFormatExtractionFn(dateTimeFormat, plannerContext.getTimeZone(), null, null, true),
             baseExtractionFn
         )
     );
