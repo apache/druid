@@ -256,7 +256,7 @@ public class ConcatSequenceTest
     );
 
     Yielder<Integer> yielder = seq.toYielder(
-        (Integer) null,
+        null,
         new YieldingAccumulator<Integer, Integer>()
         {
           @Override

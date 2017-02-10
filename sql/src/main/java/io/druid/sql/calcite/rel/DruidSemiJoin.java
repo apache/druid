@@ -211,7 +211,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
     final Set<List<String>> valuess = Sets.newHashSet();
     final List<DimFilter> filters = Lists.newArrayList();
     right.runQuery().accumulate(
-        (Object) null,
+        null,
         new Accumulator<Object, Object[]>()
         {
           @Override

@@ -44,7 +44,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
     limit = query.getLimit();
     Sequence<ScanResultValue> baseSequence = baseRunner.run(query, responseContext);
     yielder = baseSequence.toYielder(
-        (ScanResultValue) null,
+        null,
         new YieldingAccumulator<ScanResultValue, ScanResultValue>()
         {
           @Override

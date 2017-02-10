@@ -157,9 +157,9 @@ inner query's results stream with off-heap fact map and on-heap string dictionar
 strategy perform the outer query on the broker in a single-threaded fashion.
 
 Note that groupBys require a separate merge buffer on the broker for each layer beyond the first layer of the groupBy.
-This merge buffer is immediately released once they are not used anymore during the query processing. However, deeply 
-nested groupBys (there are two or more groupBy layers beyond the first one) can potentially lead to deadlocks since the 
-merge buffers are limited in number and are acquired one-by-one instead of a complete set. At this time, we recommend 
+This merge buffer is immediately released once they are not used anymore during the query processing. However, deeply
+nested groupBys (there are two or more groupBy layers beyond the first one) can potentially lead to deadlocks since the
+merge buffers are limited in number and are acquired one-by-one instead of a complete set. At this time, we recommend
 that you avoid too many concurrent execution of deeply nested groupBys with the v2 strategy.
 
 #### Server configuration
