@@ -103,7 +103,7 @@ public class DoubleLeastPostAggregator implements PostAggregator
   @Override
   public DoubleLeastPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return new DoubleLeastPostAggregator(name, Queries.decorate(fields, aggregators));
+    return new DoubleLeastPostAggregator(name, Queries.decoratePostAggregators(fields, aggregators));
   }
 
   @JsonProperty

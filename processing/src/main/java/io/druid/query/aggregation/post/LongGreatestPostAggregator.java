@@ -104,7 +104,7 @@ public class LongGreatestPostAggregator implements PostAggregator
   @Override
   public LongGreatestPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return new LongGreatestPostAggregator(name, Queries.decorate(fields, aggregators));
+    return new LongGreatestPostAggregator(name, Queries.decoratePostAggregators(fields, aggregators));
   }
 
   @JsonProperty

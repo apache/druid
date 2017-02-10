@@ -19,9 +19,11 @@
 
 package io.druid.query.aggregation.post;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;
@@ -40,6 +42,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -105,6 +108,68 @@ public class FinalizingFieldAccessPostAggregatorTest
     ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
 
     Assert.assertEquals(new Double(9.0f), arithmeticPostAggregator.compute(metricValues));
+    EasyMock.verify();
+  }
+
+  @Test
+  public void testComparatorsWithFinalizing() throws Exception
+  {
+    AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(aggFactory.finalizeComputation("test_val1"))
+            .andReturn(new Long(10L))
+            .times(1);
+    EasyMock.expect(aggFactory.finalizeComputation("test_val2"))
+            .andReturn(new Long(21))
+            .times(1);
+    EasyMock.expect(aggFactory.finalizeComputation("test_val3"))
+            .andReturn(new Long(3))
+            .times(1);
+    EasyMock.expect(aggFactory.finalizeComputation("test_val4"))
+            .andReturn(null)
+            .times(1);
+    EasyMock.expect(aggFactory.getComparator())
+        .andReturn(Ordering.natural().<Long>nullsLast())
+        .times(1);
+    EasyMock.replay(aggFactory);
+
+    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+        "final_billy", "billy", ImmutableMap.of("billy", aggFactory)
+    );
+
+    List<Object> computedValues = Lists.newArrayList();
+    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val1")));
+    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val2")));
+    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val3")));
+    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val4")));
+
+    Collections.sort(computedValues, postAgg.getComparator());
+    Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[]{}));
+    EasyMock.verify();
+  }
+
+  @Test
+  public void testComparatorsWithFinalizingAndComparatorNull() throws Exception
+  {
+    AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(aggFactory.getComparator())
+            .andReturn(null)
+            .times(1);
+    EasyMock.replay(aggFactory);
+
+    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+        "final_billy", "joe", ImmutableMap.of("billy", aggFactory));
+
+    List<Object> computedValues = Lists.newArrayList();
+    Map<String, Object> forNull = Maps.newHashMap();
+    forNull.put("joe", (Object)null); // guava does not allow the value to be null.
+    computedValues.add(postAgg.compute(ImmutableMap.of("joe", (Object)"test_val1")));
+    computedValues.add(postAgg.compute(ImmutableMap.of("joe", (Object)"test_val2")));
+    computedValues.add(postAgg.compute(forNull));
+    computedValues.add(postAgg.compute(ImmutableMap.of("joe", (Object)"test_val4")));
+    Collections.sort(computedValues, postAgg.getComparator());
+
+    Assert.assertArrayEquals(new Object[]{null, "test_val1", "test_val2", "test_val4"}, computedValues.toArray(new Object[]{}));
+
     EasyMock.verify();
   }
 

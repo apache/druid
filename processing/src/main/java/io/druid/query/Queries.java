@@ -34,8 +34,8 @@ import java.util.Set;
  */
 public class Queries
 {
-  public static List<PostAggregator> decorate(List<PostAggregator> postAggs,
-                                              Map<String, AggregatorFactory> aggFactories)
+  public static List<PostAggregator> decoratePostAggregators(List<PostAggregator> postAggs,
+                                                             Map<String, AggregatorFactory> aggFactories)
   {
     List<PostAggregator> decorated = Lists.newArrayListWithExpectedSize(postAggs.size());
     for (PostAggregator aggregator : postAggs) {
