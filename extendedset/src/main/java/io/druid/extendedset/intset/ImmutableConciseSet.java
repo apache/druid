@@ -37,8 +37,7 @@ public class ImmutableConciseSet
 
   private static final Comparator<WordIterator> UNION_COMPARATOR = new Comparator<WordIterator>()
   {
-    // lhs = current word position, rhs = the iterator
-    // Comparison is first by index, then one fills > literals > zero fills
+    // Comparison is first by index, then one fills < literals < zero fills
     // one fills are sorted by length (longer one fills have priority)
     // similarily, shorter zero fills have priority
     @Override
@@ -81,8 +80,7 @@ public class ImmutableConciseSet
 
   private static final Comparator<WordIterator> INTERSECTION_COMPARATOR = new Comparator<WordIterator>()
   {
-    // lhs = current word position, rhs = the iterator
-    // Comparison is first by index, then zero fills > literals > one fills
+    // Comparison is first by index, then zero fills < literals < one fills
     // zero fills are sorted by length (longer zero fills have priority)
     // similarily, shorter one fills have priority
     @Override
@@ -589,8 +587,8 @@ public class ImmutableConciseSet
           int w = i.getWord();
 
           if (i.startIndex == itr.startIndex) {
-            // if a literal was created from a flip bit, AND it with other literals or literals from flip bits in the same
-            // position
+            // if a literal was created from a flip bit, AND it with other literals or literals from flip bits in the
+            // same position
             if (ConciseSetUtils.isLiteral(w)) {
               flipBitLiteral &= w;
             } else if (ConciseSetUtils.isZeroSequence(w)) {
