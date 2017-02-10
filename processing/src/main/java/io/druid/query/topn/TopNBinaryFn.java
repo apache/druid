@@ -84,16 +84,16 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       return merger.getResult(arg1, comparator);
     }
 
-    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();
+    Map<Object, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();
 
     TopNResultValue arg1Vals = arg1.getValue();
     TopNResultValue arg2Vals = arg2.getValue();
 
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
-      retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
+      retVals.put(arg1Val.getDimensionValue(dimension), arg1Val);
     }
     for (DimensionAndMetricValueExtractor arg2Val : arg2Vals) {
-      final String dimensionValue = arg2Val.getStringDimensionValue(dimension);
+      final Object dimensionValue = arg2Val.getDimensionValue(dimension);
       DimensionAndMetricValueExtractor arg1Val = retVals.get(dimensionValue);
 
       if (arg1Val != null) {

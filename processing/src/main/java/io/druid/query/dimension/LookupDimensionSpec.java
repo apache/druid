@@ -31,6 +31,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -109,6 +110,13 @@ public class LookupDimensionSpec implements DimensionSpec
     return outputName;
   }
 
+  @Override
+  public ValueType getOutputType()
+  {
+    // Extraction functions always output String
+    return ValueType.STRING;
+  }
+
   @JsonProperty
   @Nullable
   public LookupExtractor getLookup()
@@ -147,6 +155,12 @@ public class LookupDimensionSpec implements DimensionSpec
   public DimensionSelector decorate(DimensionSelector selector)
   {
     return selector;
+  }
+
+  @Override
+  public boolean mustDecorate()
+  {
+    return false;
   }
 
   @Override
