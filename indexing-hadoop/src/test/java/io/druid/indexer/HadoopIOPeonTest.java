@@ -69,10 +69,6 @@ public class HadoopIOPeonTest
     Assert.assertNotNull(ioPeon.makeInputStream(tmpFolder.newFile(TMP_FILE_NAME).getName()));
   }
 
-  @Test(expected = UnsupportedOperationException.class) public void testCleanup() throws IOException
-  {
-    ioPeon.cleanup();
-  }
   @Test(expected = UnsupportedOperationException.class) public void testClose() throws IOException
   {
     ioPeon.close();

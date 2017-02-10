@@ -61,14 +61,8 @@ class IOPeonForTesting implements IOPeon
   }
 
   @Override
-  public void cleanup() throws IOException
-  {
-    outStreams.clear();
-  }
-
-  @Override
   public void close() throws IOException
   {
-    cleanup();
+    outStreams.clear();
   }
 }

@@ -30,6 +30,4 @@ public interface IOPeon extends Closeable
 {
   public OutputStream makeOutputStream(String filename) throws IOException;
   public InputStream makeInputStream(String filename) throws IOException;
-  @Deprecated
-  public void cleanup() throws IOException;
 }

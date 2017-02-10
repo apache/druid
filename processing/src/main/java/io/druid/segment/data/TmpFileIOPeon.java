@@ -71,7 +71,7 @@ public class TmpFileIOPeon implements IOPeon
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void close() throws IOException
   {
     for (File file : createdFiles.values()) {
       file.delete();
@@ -82,11 +82,5 @@ public class TmpFileIOPeon implements IOPeon
   public boolean isOverwriteAllowed()
   {
     return allowOverwrite;
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    cleanup();
   }
 }
