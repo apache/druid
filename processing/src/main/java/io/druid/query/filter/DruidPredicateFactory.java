@@ -26,4 +26,6 @@ public interface DruidPredicateFactory
   public Predicate<String> makeStringPredicate();
 
   public DruidLongPredicate makeLongPredicate();
+
+  public DruidFloatPredicate makeFloatPredicate();
 }

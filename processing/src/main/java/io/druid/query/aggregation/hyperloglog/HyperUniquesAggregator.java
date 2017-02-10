@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.hyperloglog;
 
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -55,7 +56,7 @@ public class HyperUniquesAggregator implements Aggregator
   public Object get()
   {
     // Workaround for OnheapIncrementalIndex's penchant for calling "aggregate" and "get" simultaneously.
-    return HyperLogLogCollector.makeCollector(collector.getStorageBuffer().duplicate());
+    return HyperLogLogCollector.makeCollectorSharingStorage(collector);
   }
 
   @Override
@@ -68,12 +69,6 @@ public class HyperUniquesAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("HyperUniquesAggregator does not support getLong()");
-  }
-
-  @Override
-  public String getName()
-  {
-    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override

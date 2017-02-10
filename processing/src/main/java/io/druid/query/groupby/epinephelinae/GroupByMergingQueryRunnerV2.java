@@ -82,6 +82,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private final int concurrencyHint;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
+  private final String processingTmpDir;
 
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
@@ -90,7 +91,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
-      ObjectMapper spillMapper
+      ObjectMapper spillMapper,
+      String processingTmpDir
   )
   {
     this.config = config;
@@ -100,6 +102,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     this.concurrencyHint = concurrencyHint;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
+    this.processingTmpDir = processingTmpDir;
   }
 
   @Override
@@ -131,7 +134,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     }
 
     final File temporaryStorageDirectory = new File(
-        System.getProperty("java.io.tmpdir"),
+        processingTmpDir,
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
@@ -177,6 +180,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   false,
+                  null,
                   config,
                   Suppliers.ofInstance(mergeBufferHolder.get()),
                   concurrencyHint,

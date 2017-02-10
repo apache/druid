@@ -50,6 +50,7 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.table.RowSignature;
 import io.druid.timeline.DataSegment;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -296,7 +297,7 @@ public class DruidSchema extends AbstractSchema
     }
 
     final Map<String, ColumnAnalysis> columnMetadata = Iterables.getOnlyElement(results).getColumns();
-    final Map<String, ValueType> columnValueTypes = Maps.newHashMap();
+    final RowSignature.Builder rowSignature = RowSignature.builder();
 
     for (Map.Entry<String, ColumnAnalysis> entry : columnMetadata.entrySet()) {
       if (entry.getValue().isError()) {
@@ -314,13 +315,13 @@ public class DruidSchema extends AbstractSchema
         valueType = ValueType.COMPLEX;
       }
 
-      columnValueTypes.put(entry.getKey(), valueType);
+      rowSignature.add(entry.getKey(), valueType);
     }
 
     return new DruidTable(
         queryMaker,
         new TableDataSource(dataSource),
-        columnValueTypes
+        rowSignature.build()
     );
   }
 }

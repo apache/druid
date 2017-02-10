@@ -148,8 +148,10 @@ Some Druid extensions also include SQL language extensions.
 
 If the [approximate histogram extension](../development/extensions-core/approximate-histograms.html) is loaded:
 
-- `QUANTILE(column, probability)` on numeric or approximate histogram columns computes approximate quantiles. The
-"probability" should be between 0 and 1 (exclusive).
+- `APPROX_QUANTILE(column, probability)` or `APPROX_QUANTILE(column, probability, resolution)` on numeric or
+approximate histogram columns computes approximate quantiles. The "probability" should be between 0 and 1 (exclusive).
+The "resolution" is the number of centroids to use for the computation. Higher resolutions will be give more
+precise results but also have higher overhead. If not provided, the default resolution is 50.
 
 ### Unsupported features
 
@@ -157,8 +159,6 @@ Druid does not support all SQL features. Most of these are due to missing featur
 language. Some unsupported SQL features include:
 
 - Grouping on functions of multiple columns, like concatenation: `SELECT COUNT(*) FROM data_source GROUP BY dim1 || ' ' || dim2`
-- Grouping on long and float columns.
-- Filtering on float columns.
 - Filtering on non-boolean interactions between columns, like two columns equaling each other: `SELECT COUNT(*) FROM data_source WHERE dim1 = dim2`.
 - A number of miscellaneous functions, like `TRIM`.
 - Joins, other than semi-joins as described above.

@@ -90,21 +90,21 @@ public class TimeBoundaryQueryRunnerTest
 
   // Adapted from MultiSegmentSelectQueryTest, with modifications to make filtering meaningful
   public static final String[] V_0112 = {
-      "2011-01-12T01:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-      "2011-01-12T02:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-      "2011-01-13T01:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
+      "2011-01-12T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	100.000000",
+      "2011-01-12T02:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	100.000000",
+      "2011-01-13T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	100.000000",
+      "2011-01-13T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	100.000000",
   };
   public static final String[] V_0113 = {
-      "2011-01-14T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-14T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-      "2011-01-15T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-15T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-16T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-16T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-16T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-      "2011-01-17T01:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-17T02:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
+      "2011-01-14T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	94.874713",
+      "2011-01-14T02:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	110.087299",
+      "2011-01-15T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	94.874713",
+      "2011-01-15T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	103.629399",
+      "2011-01-16T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	94.874713",
+      "2011-01-16T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	103.629399",
+      "2011-01-16T02:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	110.087299",
+      "2011-01-17T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	103.629399",
+      "2011-01-17T02:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	110.087299",
   };
 
   private static IncrementalIndex newIndex(String minTimeStamp)

@@ -38,11 +38,6 @@ public class DimensionAndMetricValueExtractor extends MetricValueExtractor
     this.value = value;
   }
 
-  public String getStringDimensionValue(String dimension)
-  {
-    return (String) value.get(dimension);
-  }
-
   public Object getDimensionValue(String dimension)
   {
     return value.get(dimension);

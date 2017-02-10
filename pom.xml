@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.9.3-SNAPSHOT</version>
+    <version>0.10.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,7 +54,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.9.3-SNAPSHOT</tag>
+        <tag>0.10.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -92,9 +92,11 @@
         <module>java-util</module>
         <module>bytebuffer-collections</module>
         <module>extendedset</module>
+        <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
+        <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
@@ -943,6 +945,9 @@
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
                         <additionalparam>-Xdoclint:none</additionalparam>
+
+                        <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
+                        <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
                     </configuration>
                 </plugin>
                 <plugin>

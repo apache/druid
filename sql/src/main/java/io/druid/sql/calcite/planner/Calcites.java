@@ -27,6 +27,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.rel.DruidConvention;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -149,6 +150,21 @@ public class Calcites
         e.addSuppressed(e2);
         throw e;
       }
+    }
+  }
+
+  public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
+  {
+    if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
+      return ValueType.FLOAT;
+    } else if (SqlTypeName.DATETIME_TYPES.contains(sqlTypeName) || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
+      return ValueType.LONG;
+    } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
+      return ValueType.STRING;
+    } else if (SqlTypeName.OTHER == sqlTypeName) {
+      return ValueType.COMPLEX;
+    } else {
+      return null;
     }
   }
 

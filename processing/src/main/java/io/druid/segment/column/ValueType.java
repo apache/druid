@@ -19,6 +19,8 @@
 
 package io.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
 */
 public enum ValueType
@@ -28,15 +30,12 @@ public enum ValueType
   STRING,
   COMPLEX;
 
-  public static ValueType typeFor(Class clazz)
+  @JsonCreator
+  public static ValueType fromString(String name)
   {
-    if (clazz == String.class) {
-      return STRING;
-    } else if (clazz == float.class || clazz == Float.TYPE) {
-      return FLOAT;
-    } else if (clazz == long.class || clazz == Long.TYPE) {
-      return LONG;
+    if (name == null) {
+      return null;
     }
-    return COMPLEX;
+    return valueOf(name.toUpperCase());
   }
 }

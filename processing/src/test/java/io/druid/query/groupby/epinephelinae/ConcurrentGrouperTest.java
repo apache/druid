@@ -65,7 +65,7 @@ public class ConcurrentGrouperTest
       if (called.compareAndSet(false, true)) {
         return ByteBuffer.allocate(192);
       } else {
-        throw new IAE("Cannot get twice");
+        throw new IAE("should be called once");
       }
     }
   };

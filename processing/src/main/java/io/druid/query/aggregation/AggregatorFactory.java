@@ -127,15 +127,6 @@ public abstract class AggregatorFactory
   public abstract int getMaxIntermediateSize();
 
   /**
-   * Deprecated, to be removed in 0.10.0. See https://github.com/druid-io/druid/issues/3588.
-   */
-  @Deprecated
-  public Object getAggregatorStartValue()
-  {
-    throw new UnsupportedOperationException("getAggregatorStartValue is deprecated");
-  }
-
-  /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
    * returns merged AggregatorFactory[] (for the metadata for merged segment).
    * Null is returned if it is not possible to do the merging for any of the following reason.

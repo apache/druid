@@ -44,6 +44,7 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
@@ -51,6 +52,7 @@ import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidNestedGroupBy;
@@ -433,17 +435,25 @@ public class GroupByRules
         // nobody actually expects to see the literal.
         rowOrder.add(dimOutputName(dimOutputNameCounter++));
       } else {
+        final RexNode rexNode = Expressions.fromFieldAccess(sourceRowSignature, project, i);
         final RowExtraction rex = Expressions.toRowExtraction(
             sourceRowSignature.getRowOrder(),
-            Expressions.fromFieldAccess(sourceRowSignature, project, i)
+            rexNode
         );
         if (rex == null) {
           return null;
         }
 
+        final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
+        final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+        if (outputType == null) {
+          throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
+        }
+
         final DimensionSpec dimensionSpec = rex.toDimensionSpec(
             sourceRowSignature,
-            dimOutputName(dimOutputNameCounter++)
+            dimOutputName(dimOutputNameCounter++),
+            outputType
         );
         if (dimensionSpec == null) {
           return null;
@@ -728,7 +738,6 @@ public class GroupByRules
     final String name = aggOutputName(aggNumber);
     final SqlKind kind = call.getAggregation().getKind();
     final SqlTypeName outputType = call.getType().getSqlTypeName();
-    final Aggregation retVal;
 
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)
@@ -748,15 +757,16 @@ public class GroupByRules
 
     if (kind == SqlKind.COUNT && call.getArgList().isEmpty()) {
       // COUNT(*)
-      retVal = Aggregation.create(new CountAggregatorFactory(name));
+      return Aggregation.create(new CountAggregatorFactory(name)).filter(makeFilter(filters, sourceRowSignature));
     } else if (kind == SqlKind.COUNT && call.isDistinct()) {
       // COUNT(DISTINCT x)
-      retVal = approximateCountDistinct ? APPROX_COUNT_DISTINCT.toDruidAggregation(
+      return approximateCountDistinct ? APPROX_COUNT_DISTINCT.toDruidAggregation(
           name,
           sourceRowSignature,
           existingAggregations,
           project,
-          call
+          call,
+          makeFilter(filters, sourceRowSignature)
       ) : null;
     } else if (kind == SqlKind.COUNT
                || kind == SqlKind.SUM
@@ -834,9 +844,10 @@ public class GroupByRules
 
       if (forceCount || kind == SqlKind.COUNT) {
         // COUNT(x)
-        retVal = Aggregation.create(new CountAggregatorFactory(name));
+        return Aggregation.create(new CountAggregatorFactory(name)).filter(makeFilter(filters, sourceRowSignature));
       } else {
         // Built-in aggregator that is not COUNT.
+        final Aggregation retVal;
         final String fieldName = input.getFieldName();
         final String expression = input.getExpression();
 
@@ -877,26 +888,21 @@ public class GroupByRules
           // Not reached.
           throw new ISE("WTF?! Kind[%s] got into the built-in aggregator path somehow?!", kind);
         }
+
+        return retVal.filter(makeFilter(filters, sourceRowSignature));
       }
     } else {
       // Not a built-in aggregator, check operator table.
       final SqlAggregator sqlAggregator = operatorTable.lookupAggregator(call.getAggregation().getName());
-      retVal = sqlAggregator != null ? sqlAggregator.toDruidAggregation(
+      return sqlAggregator != null ? sqlAggregator.toDruidAggregation(
           name,
           sourceRowSignature,
           existingAggregations,
           project,
-          call
+          call,
+          makeFilter(filters, sourceRowSignature)
       ) : null;
     }
-
-    final DimFilter filter = filters.isEmpty()
-                             ? null
-                             : Filtration.create(new AndDimFilter(filters))
-                                         .optimizeFilterOnly(sourceRowSignature)
-                                         .getDimFilter();
-
-    return retVal != null ? retVal.filter(filter) : null;
   }
 
   public static String dimOutputName(final int dimNumber)
@@ -912,5 +918,14 @@ public class GroupByRules
   private static String aggInternalName(final int aggNumber, final String key)
   {
     return "A" + aggNumber + ":" + key;
+  }
+
+  private static DimFilter makeFilter(final List<DimFilter> filters, final RowSignature sourceRowSignature)
+  {
+    return filters.isEmpty()
+           ? null
+           : Filtration.create(new AndDimFilter(filters))
+                       .optimizeFilterOnly(sourceRowSignature)
+                       .getDimFilter();
   }
 }
