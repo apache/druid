@@ -594,7 +594,7 @@ public class ImmutableConciseSet
             } else if (ConciseSetUtils.isZeroSequence(w)) {
               flipBitLiteral &= ConciseSetUtils.getLiteralFromZeroSeqFlipBit(w);
             } else {
-              ConciseSetUtils.isOneSequence(w);
+              assert ConciseSetUtils.isOneSequence(w);
               flipBitLiteral &= ConciseSetUtils.getLiteralFromOneSeqFlipBit(w);
             }
           }
@@ -629,7 +629,8 @@ public class ImmutableConciseSet
           qSize--;
           wordsWalkedAtSequenceEnd = Math.min(itr.wordsWalked, wordsWalkedAtSequenceEnd);
         }
-      } else { // one fills
+      } else {
+        assert ConciseSetUtils.isOneSequence(word);
         int flipBitLiteral;
         int qIndex = 1;
         while (qIndex < qSize &&
