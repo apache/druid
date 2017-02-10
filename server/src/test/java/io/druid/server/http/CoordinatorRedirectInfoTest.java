@@ -44,7 +44,7 @@ public class CoordinatorRedirectInfoTest
   {
     EasyMock.expect(druidCoordinator.isLeader()).andReturn(true).anyTimes();
     EasyMock.replay(druidCoordinator);
-    Assert.assertTrue(coordinatorRedirectInfo.doLocal());
+    Assert.assertTrue(coordinatorRedirectInfo.doLocal(null));
     EasyMock.verify(druidCoordinator);
   }
 
