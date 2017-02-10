@@ -36,5 +36,12 @@ public interface PostAggregator
 
   public String getName();
 
+  /**
+   * Returns a richer post aggregator which are built from the given aggregators with their names and some accessible
+   * environmental variables such as ones in the object scope.
+   *
+   * @param aggregators A map of aggregator factories with their names.
+   *
+   */
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators);
 }

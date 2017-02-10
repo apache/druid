@@ -104,7 +104,7 @@ public class LongLeastPostAggregator implements PostAggregator
   @Override
   public LongLeastPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return new LongLeastPostAggregator(name, Queries.decorate(fields, aggregators));
+    return new LongLeastPostAggregator(name, Queries.decoratePostAggregators(fields, aggregators));
   }
 
   @JsonProperty

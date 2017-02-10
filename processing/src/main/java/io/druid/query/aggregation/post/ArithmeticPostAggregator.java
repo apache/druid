@@ -129,7 +129,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   @Override
   public ArithmeticPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return new ArithmeticPostAggregator(name, fnName, Queries.decorate(fields, aggregators), ordering);
+    return new ArithmeticPostAggregator(name, fnName, Queries.decoratePostAggregators(fields, aggregators), ordering);
   }
 
   @JsonProperty("fn")
