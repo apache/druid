@@ -34,7 +34,7 @@ import java.io.IOException;
 
 /**
  * A Fire Department has a Firehose and a Plumber.
- * <p>
+ * <p/>
  * This is a metaphor for a realtime stream (Firehose) and a coordinator of sinks (Plumber). The Firehose provides the
  * realtime stream of data.  The Plumber directs each drop of water from the firehose into the correct sink and makes
  * sure that the sinks don't overflow.
@@ -60,7 +60,11 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig(null) : tuningConfig;
-
+    /*this.appenderatorFactory = appenderatorFactory;
+    Preconditions.checkArgument(
+        this.ioConfig.getPlumberSchool() == null && this.appenderatorFactory == null,
+        "Either plumber or appenderator needs to be specified"
+    );*/
   }
 
   /**

@@ -24,13 +24,15 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.appenderator.AppenderatorPlumberSchool;
 
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RealtimePlumberSchool.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class),
-    @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class)
+    @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class),
+    @JsonSubTypes.Type(name = "appenderator", value = AppenderatorPlumberSchool.class)
 })
 public interface PlumberSchool
 {

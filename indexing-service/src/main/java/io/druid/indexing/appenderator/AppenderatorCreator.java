@@ -17,24 +17,22 @@
  * under the License.
  */
 
-package io.druid.segment.realtime.appenderator;
+package io.druid.indexing.appenderator;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.indexing.common.TaskToolbox;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.appenderator.Appenderator;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultRealtimeAppenderatorFactory.class),
-    @JsonSubTypes.Type(name = "offline", value = DefaultOfflineAppenderatorFactory.class)
-})
-public interface AppenderatorFactory
+public interface AppenderatorCreator
 {
   Appenderator build(
       DataSchema schema,
       RealtimeTuningConfig config,
-      FireDepartmentMetrics metrics
+      FireDepartmentMetrics metrics,
+      TaskToolbox toolbox
   );
 }
