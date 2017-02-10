@@ -1590,7 +1590,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testIntersectionZeroSequenceRemovedFromQueue()
   {
-    // Seems that it is important to test this case with naturally constructed ConciseSet, because the end of the
+    // Seems that it is impossible to test this case with naturally constructed ConciseSet, because the end of the
     // sequence is defined by the last set bit, then naturally constructed ConciseSet won't have the last word as zero
     // sequence, it will be a literal or one sequence.
     int zeroSequence = 1; // Zero sequence of length 62
