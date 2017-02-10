@@ -53,21 +53,23 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Test(expected = UnsupportedOperationException.class)
   public void testComputeWithoutFinalizing()
   {
+    String aggName = "rows";
     Aggregator agg = new CountAggregator();
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
 
     Map<String, Object> metricValues = Maps.newHashMap();
-    metricValues.put(agg.getName(), agg.get());
+    metricValues.put(aggName, agg.get());
 
-    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", "rows");
+    FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
     Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
   }
 
   @Test
   public void testComputedWithFinalizing()
   {
+    String aggName = "biily";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.finalizeComputation("test"))
             .andReturn(new Long(3L))
@@ -75,11 +77,11 @@ public class FinalizingFieldAccessPostAggregatorTest
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
-        "final_billy", "billy", ImmutableMap.of("billy", aggFactory)
+        "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
     Map<String, Object> metricValues = Maps.newHashMap();
-    metricValues.put("billy", "test");
+    metricValues.put(aggName, "test");
 
     Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
@@ -88,6 +90,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Test
   public void testComputedInArithmeticPostAggregator()
   {
+    String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.finalizeComputation("test"))
             .andReturn(new Long(3L))
@@ -95,11 +98,11 @@ public class FinalizingFieldAccessPostAggregatorTest
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
-        "final_billy", "billy", ImmutableMap.of("billy", aggFactory)
+        "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
     Map<String, Object> metricValues = Maps.newHashMap();
-    metricValues.put("billy", "test");
+    metricValues.put(aggName, "test");
 
     List<PostAggregator> postAggsList = Lists.newArrayList(
         new ConstantPostAggregator("roku", 6), postAgg);
@@ -113,6 +116,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Test
   public void testComparatorsWithFinalizing() throws Exception
   {
+    String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.finalizeComputation("test_val1"))
             .andReturn(new Long(10L))
@@ -132,14 +136,14 @@ public class FinalizingFieldAccessPostAggregatorTest
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
-        "final_billy", "billy", ImmutableMap.of("billy", aggFactory)
+        "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
     List<Object> computedValues = Lists.newArrayList();
-    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val1")));
-    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val2")));
-    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val3")));
-    computedValues.add(postAgg.compute(ImmutableMap.of("billy", (Object)"test_val4")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val1")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val2")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val3")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val4")));
 
     Collections.sort(computedValues, postAgg.getComparator());
     Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[]{}));
@@ -149,6 +153,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Test
   public void testComparatorsWithFinalizingAndComparatorNull() throws Exception
   {
+    String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.getComparator())
             .andReturn(null)
@@ -156,7 +161,7 @@ public class FinalizingFieldAccessPostAggregatorTest
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
-        "final_billy", "joe", ImmutableMap.of("billy", aggFactory));
+        "final_billy", "joe", ImmutableMap.of(aggName, aggFactory));
 
     List<Object> computedValues = Lists.newArrayList();
     Map<String, Object> forNull = Maps.newHashMap();
