@@ -263,8 +263,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private void closeAggregators()
   {
     Closer closer = Closer.create();
-    for (Aggregator[] aggregators : aggregators.values()) {
-      for (Aggregator agg : aggregators) {
+    for (Aggregator[] aggs : aggregators.values()) {
+      for (Aggregator agg : aggs) {
         closer.register(agg);
       }
     }
