@@ -281,7 +281,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox);
+        final FiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       appenderator = appenderator0;
@@ -841,7 +841,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private FiniteAppenderatorDriver newDriver(
       final Appenderator appenderator,
-      final TaskToolbox toolbox
+      final TaskToolbox toolbox,
+      final FireDepartmentMetrics metrics
   )
   {
     return new FiniteAppenderatorDriver(
@@ -851,7 +852,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
         tuningConfig.getMaxRowsPerSegment(),
-        tuningConfig.getHandoffConditionTimeout()
+        tuningConfig.getHandoffConditionTimeout(),
+        metrics
     );
   }
 
