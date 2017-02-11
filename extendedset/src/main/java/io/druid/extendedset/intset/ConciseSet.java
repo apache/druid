@@ -20,8 +20,6 @@
 package io.druid.extendedset.intset;
 
 
-import io.druid.extendedset.utilities.BitCount;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -71,11 +69,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    * <code>true</code> if the class must simulate the behavior of WAH
    */
   private final boolean simulateWAH;
-  /**
-   * User for <i>fail-fast</i> iterator. It counts the number of operations
-   * that <i>do</i> modify {@link #words}
-   */
-  protected transient volatile int modCount = 0;
   /**
    * This is the compressed bitmap, that is a collection of words. For each
    * word:
@@ -317,7 +310,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    */
   private static int getLiteralBitCount(int word)
   {
-    return BitCount.count(getLiteralBits(word));
+    return Integer.bitCount(getLiteralBits(word));
   }
 
   /**
@@ -371,7 +364,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
    */
   private void reset()
   {
-    modCount++;
     words = null;
     last = -1;
     size = 0;
@@ -392,7 +384,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
     ConciseSet res = empty();
     res.last = last;
     res.lastWordIndex = lastWordIndex;
-    res.modCount = 0;
     res.size = size;
     res.words = Arrays.copyOf(words, lastWordIndex + 1);
     return res;
@@ -994,7 +985,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
           if ((w & (1 << bitPosition)) == 0) {
             return -1;
           }
-          return index + BitCount.count(w & ~(0xFFFFFFFF << bitPosition));
+          return index + Integer.bitCount(w & ~(0xFFFFFFFF << bitPosition));
         }
         blockIndex--;
         index += getLiteralBitCount(w);
@@ -1011,7 +1002,7 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
             if ((l & (1 << bitPosition)) == 0) {
               return -1;
             }
-            return index + BitCount.count(l & ~(0xFFFFFFFF << bitPosition));
+            return index + Integer.bitCount(l & ~(0xFFFFFFFF << bitPosition));
           }
 
           // if we are in the middle of a sequence of 1's, the bit already exist
@@ -1116,7 +1107,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   @Override
   public void complement()
   {
-    modCount++;
 
     if (isEmpty()) {
       return;
@@ -1348,7 +1338,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
     this.size = other.size;
     this.last = other.last;
     this.lastWordIndex = other.lastWordIndex;
-    this.modCount++;
     return true;
   }
 
@@ -1358,7 +1347,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   @Override
   public boolean add(int e)
   {
-    modCount++;
 
     // range check
     if (e < ConciseSetUtils.MIN_ALLOWED_SET_BIT || e > ConciseSetUtils.MAX_ALLOWED_INTEGER) {
@@ -1455,7 +1443,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   @Override
   public boolean remove(int o)
   {
-    modCount++;
 
     if (isEmpty()) {
       return false;
@@ -1886,7 +1873,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   @Override
   public boolean retainAll(IntSet c)
   {
-    modCount++;
 
     if (isEmpty() || c == this) {
       return false;
@@ -1917,7 +1903,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   @Override
   public boolean addAll(IntSet c)
   {
-    modCount++;
     if (c == null || c.isEmpty() || this == c) {
       return false;
     }
@@ -1936,7 +1921,6 @@ public class ConciseSet extends AbstractIntSet implements java.io.Serializable
   @Override
   public boolean removeAll(IntSet c)
   {
-    modCount++;
 
     if (c == null || c.isEmpty() || isEmpty()) {
       return false;
