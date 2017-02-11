@@ -104,19 +104,15 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testOnHeapIncrementalIndexClose() throws Exception
   {
-    // Prepare the mocks
-    LongMaxAggregatorFactory aggFact = EasyMock.createMockBuilder(LongMaxAggregatorFactory.class)
-                                               .withConstructor("max", "max")
-                                               .createMock();
+    // Prepare the mocks & set close() call count expectation to 1
     Aggregator mockedAggregator = EasyMock.createMock(LongMaxAggregator.class);
-    // set close() call count expectation to 1
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
     final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
             0,
             QueryGranularities.MINUTE,
-            new AggregatorFactory[]{aggFact},
+            new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
             MAX_ROWS
     );
 

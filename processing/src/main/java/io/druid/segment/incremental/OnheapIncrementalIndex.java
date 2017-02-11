@@ -20,7 +20,9 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.io.Closer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
@@ -37,6 +39,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -257,12 +260,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     rowContainer.set(null);
   }
 
-  private void closeAggregators(Map<Integer, Aggregator[]> intMap)
+  private void closeAggregators()
   {
-    for (Aggregator[] aggregators : intMap.values()) {
+    Closer closer = Closer.create();
+    for (Aggregator[] aggregators : aggregators.values()) {
       for (Aggregator agg : aggregators) {
-        agg.close();
+        closer.register(agg);
       }
+    }
+
+    try {
+      closer.close();
+    }
+    catch (IOException e) {
+      Throwables.propagate(e);
     }
   }
 
@@ -336,7 +347,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   public void close()
   {
     super.close();
-    closeAggregators(aggregators);
+    closeAggregators();
     aggregators.clear();
     facts.clear();
     if (selectors != null) {
