@@ -27,7 +27,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.EmittingLogger;
@@ -49,7 +48,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
@@ -151,7 +149,7 @@ public class AppenderatorIndexTask extends AbstractTask
     this.spec = fireDepartment;
     this.metrics = new FireDepartmentMetrics();
     Preconditions.checkNotNull(appenderatorCreator, "No appenderator found!");
-    this.appenderatorCreator= appenderatorCreator;
+    this.appenderatorCreator = appenderatorCreator;
   }
 
   @Override
@@ -219,7 +217,6 @@ public class AppenderatorIndexTask extends AbstractTask
     final String dataSchema = toolbox.getObjectMapper().writeValueAsString(spec.getDataSchema());
     final String tuningConfig = toolbox.getObjectMapper().writeValueAsString(spec.getIOConfig());
     final String ioConfig = toolbox.getObjectMapper().writeValueAsString(spec.getTuningConfig());
-
     final String sequenceName = DigestUtils.sha1Hex(dataSchema + tuningConfig + ioConfig).substring(0, 15);
 
     try (
@@ -231,13 +228,17 @@ public class AppenderatorIndexTask extends AbstractTask
         );
         final FiniteAppenderatorDriver driver = makeDriver(appenderator0, toolbox)
     ) {
-      driver.startJob();
       appenderator = appenderator0;
+
+      driver.startJob();
       final Firehose firehose = spec.connect();
-      while (firehose.hasMore()) {
+      while (firehose != null && firehose.hasMore() && !gracefullyStopped) {
         final InputRow row = firehose.nextRow();
         driver.add(row, sequenceName, committerSupplier);
       }
+
+      finishingJob = true;
+
       final SegmentsAndMetadata published =
           driver.finish(
               new TransactionalSegmentPublisher()
@@ -284,9 +285,14 @@ public class AppenderatorIndexTask extends AbstractTask
           && (e.getCause() == null || !(e.getCause() instanceof InterruptedException))) {
         throw e;
       }
-
       log.info("The task was asked to stop before completing");
     }
+    catch (Throwable e) {
+      log.makeAlert(e, "Exception aborted appenderator processing[%s]", getDataSource())
+         .emit();
+      throw e;
+    }
+
     return TaskStatus.success(getId());
   }
 
@@ -381,23 +387,5 @@ public class AppenderatorIndexTask extends AbstractTask
                && isFirehoseDrainableByClosing(((TimedShutoffFirehoseFactory) firehoseFactory).getDelegateFactory()))
            || (firehoseFactory instanceof ClippedFirehoseFactory
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
-  }
-
-  public static class TaskActionSegmentPublisher implements SegmentPublisher
-  {
-    final Task task;
-    final TaskToolbox taskToolbox;
-
-    public TaskActionSegmentPublisher(Task task, TaskToolbox taskToolbox)
-    {
-      this.task = task;
-      this.taskToolbox = taskToolbox;
-    }
-
-    @Override
-    public void publishSegment(DataSegment segment) throws IOException
-    {
-      taskToolbox.publishSegments(ImmutableList.of(segment));
-    }
   }
 }
