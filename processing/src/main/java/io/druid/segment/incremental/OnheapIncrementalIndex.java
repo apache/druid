@@ -257,6 +257,15 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     rowContainer.set(null);
   }
 
+  private void closeAggregators(Map<Integer, Aggregator[]> intMap)
+  {
+    for (Aggregator[] aggregators : intMap.values()) {
+      for (Aggregator agg : aggregators) {
+        agg.close();
+      }
+    }
+  }
+
   protected Aggregator[] concurrentGet(int offset)
   {
     // All get operations should be fine
@@ -327,6 +336,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   public void close()
   {
     super.close();
+    closeAggregators(aggregators);
     aggregators.clear();
     facts.clear();
     if (selectors != null) {
