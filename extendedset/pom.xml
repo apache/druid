@@ -41,6 +41,7 @@
       <artifactId>guava</artifactId>
       <version>16.0.1</version>
     </dependency>
+
     <dependency>
       <groupId>org.roaringbitmap</groupId>
       <artifactId>RoaringBitmap</artifactId>
