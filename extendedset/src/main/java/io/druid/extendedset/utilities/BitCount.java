@@ -35,23 +35,6 @@ public class BitCount
 {
   /**
    * Population count
-   * <p>
-   * It counts a single word
-   *
-   * @param word word to count
-   *
-   * @return population count
-   */
-  public static int count(int word)
-  {
-    word -= ((word >>> 1) & 0x55555555);
-    word = (word & 0x33333333) + ((word >>> 2) & 0x33333333);
-    word = (word + (word >>> 4)) & 0x0F0F0F0F;
-    return (word * 0x01010101) >>> 24;
-  }
-
-  /**
-   * Population count
    *
    * @param buffer array of <code>int</code>
    *
@@ -132,7 +115,7 @@ public class BitCount
   {
     int cnt = 0;
     for (; x < n; x++) {
-      cnt += count(data[x]);
+      cnt += Integer.bitCount(data[x]);
     }
     return cnt;
   }
@@ -219,7 +202,7 @@ public class BitCount
   {
     int cnt = 0;
     for (x++; x < n; x += 2) {
-      cnt += count(data[x]);
+      cnt += Integer.bitCount(data[x]);
     }
     return cnt;
   }
@@ -247,7 +230,7 @@ public class BitCount
 
       int size1 = 0;
       for (int j = 0; j < x.length; j++) {
-        size1 += count(x[j]);
+        size1 += Integer.bitCount(x[j]);
       }
       int size2 = count(x);
 
@@ -256,7 +239,7 @@ public class BitCount
         System.out.println("ERRORE!");
         System.out.println(size1 + ", " + size2);
         for (int j = 0; j < x.length; j++) {
-          System.out.format("x[%d] = %d --> %d\n", j, x[j], count(x[j]));
+          System.out.format("x[%d] = %d --> %d\n", j, x[j], Integer.bitCount(x[j]));
         }
         return;
       }
@@ -273,7 +256,7 @@ public class BitCount
 
       int size1 = 0;
       for (int j = 1; j < x.length; j += 2) {
-        size1 += count(x[j]);
+        size1 += Integer.bitCount(x[j]);
       }
       int size2 = count_2(x);
 
@@ -282,7 +265,7 @@ public class BitCount
         System.out.println("ERRORE!");
         System.out.println(size1 + ", " + size2);
         for (int j = 1; j < x.length; j += 2) {
-          System.out.format("x[%d] = %d --> %d\n", j, x[j], count(x[j]));
+          System.out.format("x[%d] = %d --> %d\n", j, x[j], Integer.bitCount(x[j]));
         }
         return;
       }
@@ -301,7 +284,7 @@ public class BitCount
       @SuppressWarnings("unused")
       int size = 0;
       for (int j = 0; j < x.length; j++) {
-        size += count(x[j]);
+        size += Integer.bitCount(x[j]);
       }
     }
     System.out.println(System.currentTimeMillis() - t);
@@ -330,7 +313,7 @@ public class BitCount
       @SuppressWarnings("unused")
       int size = 0;
       for (int j = 1; j < x.length; j += 2) {
-        size += count(x[j]);
+        size += Integer.bitCount(x[j]);
       }
     }
     System.out.println(System.currentTimeMillis() - t);

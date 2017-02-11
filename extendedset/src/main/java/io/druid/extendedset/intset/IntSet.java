@@ -19,8 +19,6 @@
 package io.druid.extendedset.intset;
 
 
-import io.druid.extendedset.ExtendedSet;
-
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -29,15 +27,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
- * Very similar to {@link ExtendedSet} but for the primitive <code>int</code>
- * type.
- *
  * @author Alessandro Colantonio
  * @version $Id: IntSet.java 135 2011-01-04 15:54:48Z cocciasik $
- * @see ArraySet
- * @see ConciseSet
- * @see FastSet
- * @see HashIntSet
  */
 public interface IntSet extends Cloneable, Comparable<IntSet>
 {
@@ -609,7 +600,7 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
    * An {@link Iterator}-like interface that allows to "skip" some elements of
    * the set
    */
-  public interface IntIterator
+  public interface IntIterator extends org.roaringbitmap.IntIterator
   {
     /**
      * @return <tt>true</tt> if the iterator has more elements.

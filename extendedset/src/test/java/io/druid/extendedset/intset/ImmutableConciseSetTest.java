@@ -19,6 +19,8 @@ package io.druid.extendedset.intset;
 import com.google.common.collect.Lists;
 import junit.framework.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -31,9 +33,23 @@ import java.util.Set;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class ImmutableConciseSetTest
 {
   public static final int NO_COMPLEMENT_LENGTH = -1;
+
+  @Parameterized.Parameters
+  public static List<Object[]> parameters()
+  {
+    return Arrays.asList(new Object[] {false}, new Object[] {true});
+  }
+
+  private boolean compact;
+
+  public ImmutableConciseSetTest(boolean compact)
+  {
+    this.compact = compact;
+  }
 
   @Test
   public void testWordIteratorNext1()
@@ -46,7 +62,7 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet iSet = ImmutableConciseSet.newImmutableFromMutable(set);
 
     ImmutableConciseSet.WordIterator itr = iSet.newWordIterator();
-    Assert.assertEquals(new Integer(0x8000003E), itr.next());
+    Assert.assertEquals(0x8000003E, itr.next());
 
     Assert.assertEquals(itr.hasNext(), false);
   }
@@ -62,8 +78,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet iSet = ImmutableConciseSet.newImmutableFromMutable(set);
 
     ImmutableConciseSet.WordIterator itr = iSet.newWordIterator();
-    Assert.assertEquals(new Integer(0x40000C98), itr.next());
-    Assert.assertEquals(new Integer(0x81FFFFFF), itr.next());
+    Assert.assertEquals(0x40000C98, itr.next());
+    Assert.assertEquals(0x81FFFFFF, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -82,8 +98,8 @@ public class ImmutableConciseSetTest
 
     ImmutableConciseSet.WordIterator itr = iSet.newWordIterator();
     itr.advanceTo(50);
-    Assert.assertEquals(new Integer(1073744998), itr.next());
-    Assert.assertEquals(new Integer(0x81FFFFFF), itr.next());
+    Assert.assertEquals(1073744998, itr.next());
+    Assert.assertEquals(0x81FFFFFF, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -102,7 +118,7 @@ public class ImmutableConciseSetTest
 
     ImmutableConciseSet.WordIterator itr = iSet.newWordIterator();
     itr.advanceTo(3225);
-    Assert.assertEquals(new Integer(0x81FFFFFF), itr.next());
+    Assert.assertEquals(0x81FFFFFF, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -115,7 +131,7 @@ public class ImmutableConciseSetTest
 
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x40000001), itr.next());
+    Assert.assertEquals(0x40000001, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -127,7 +143,7 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x40000005), itr.next());
+    Assert.assertEquals(0x40000005, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -139,8 +155,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(-1), itr.next());
-    Assert.assertEquals(new Integer(0x42000004), itr.next());
+    Assert.assertEquals(-1, itr.next());
+    Assert.assertEquals(0x42000004, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -152,7 +168,7 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x40000005), itr.next());
+    Assert.assertEquals(0x40000005, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -164,7 +180,7 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x40000009), itr.next());
+    Assert.assertEquals(0x40000009, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -176,8 +192,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x40000004), itr.next());
-    Assert.assertEquals(new Integer(0x42000004), itr.next());
+    Assert.assertEquals(0x40000004, itr.next());
+    Assert.assertEquals(0x42000004, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -189,8 +205,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x00000001), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x00000001, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -202,8 +218,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x00000005), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x00000005, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -215,9 +231,9 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x80000000), itr.next());
-    Assert.assertEquals(new Integer(0x02000004), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x80000000, itr.next());
+    Assert.assertEquals(0x02000004, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -229,8 +245,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x00000005), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x00000005, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -242,8 +258,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x00000009), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x00000009, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -255,9 +271,9 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x00000004), itr.next());
-    Assert.assertEquals(new Integer(0x02000004), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x00000004, itr.next());
+    Assert.assertEquals(0x02000004, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -269,8 +285,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x02000001), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x02000001, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -282,9 +298,9 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x80000003), itr.next());
-    Assert.assertEquals(new Integer(0x80000000), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x80000003, itr.next());
+    Assert.assertEquals(0x80000000, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -296,8 +312,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x02000005), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x02000005, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -309,9 +325,9 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x80000003), itr.next());
-    Assert.assertEquals(new Integer(0x00000004), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x80000003, itr.next());
+    Assert.assertEquals(0x00000004, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -323,9 +339,9 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x80000001), itr.next());
-    Assert.assertEquals(new Integer(0x02000004), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0x80000001, itr.next());
+    Assert.assertEquals(0x02000004, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -337,7 +353,7 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x42000001), itr.next());
+    Assert.assertEquals(0x42000001, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -349,8 +365,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0xFFFFFFEE), itr.next());
-    Assert.assertEquals(new Integer(-1), itr.next());
+    Assert.assertEquals(0xFFFFFFEE, itr.next());
+    Assert.assertEquals(-1, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -362,7 +378,7 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0x42000005), itr.next());
+    Assert.assertEquals(0x42000005, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -374,8 +390,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0xFFFFFFFC), itr.next());
-    Assert.assertEquals(new Integer(0x40000004), itr.next());
+    Assert.assertEquals(0xFFFFFFFC, itr.next());
+    Assert.assertEquals(0x40000004, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -387,8 +403,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0xFFFFFFFE), itr.next());
-    Assert.assertEquals(new Integer(0x42000004), itr.next());
+    Assert.assertEquals(0xFFFFFFFE, itr.next());
+    Assert.assertEquals(0x42000004, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -400,8 +416,8 @@ public class ImmutableConciseSetTest
     ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
-    Assert.assertEquals(new Integer(0xFFFFFFFE), itr.next());
-    Assert.assertEquals(new Integer(0xFFEFFEFF), itr.next());
+    Assert.assertEquals(0xFFFFFFFE, itr.next());
+    Assert.assertEquals(0xFFEFFEFF, itr.next());
     Assert.assertEquals(itr.hasNext(), false);
   }
 
@@ -1097,6 +1113,33 @@ public class ImmutableConciseSetTest
     verifyUnion(expected, sets);
   }
 
+  @Test
+  public void testUnion23()
+  {
+    ConciseSet set1 = new ConciseSet();
+    set1.add(10);
+    set1.add(1000);
+
+    ConciseSet set2 = new ConciseSet();
+    for (int i = 0; i < 10; i++) {
+      set2.add(i);
+    }
+    for (int i = 11; i < 1000; i++) {
+      set2.add(i);
+    }
+
+    List<ImmutableConciseSet> sets = Arrays.asList(
+        ImmutableConciseSet.compact(ImmutableConciseSet.newImmutableFromMutable(set1)),
+        ImmutableConciseSet.compact(ImmutableConciseSet.newImmutableFromMutable(set2))
+    );
+    List<Integer> expected = new ArrayList<>();
+    for (int i = 0; i <= 1000; i++) {
+      expected.add(i);
+    }
+
+    verifyUnion(expected, sets);
+  }
+
   private void verifyUnion(List<Integer> expected, List<ImmutableConciseSet> sets)
   {
     List<Integer> actual = Lists.newArrayList();
@@ -1126,12 +1169,8 @@ public class ImmutableConciseSetTest
     for (int i : ints2) {
       set2.add(i);
     }
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   /**
@@ -1153,12 +1192,8 @@ public class ImmutableConciseSetTest
     for (int i : ints2) {
       set2.add(i);
     }
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   /**
@@ -1176,12 +1211,7 @@ public class ImmutableConciseSetTest
       expected.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   /**
@@ -1201,12 +1231,7 @@ public class ImmutableConciseSetTest
       }
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   /**
@@ -1227,12 +1252,8 @@ public class ImmutableConciseSetTest
     for (int i : ints2) {
       set2.add(i);
     }
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   /**
@@ -1259,16 +1280,11 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     for (int i = 1000; i < 1005; i++) {
       expected.add(i);
     }
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1286,11 +1302,6 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(100);
     expected.add(500);
@@ -1298,7 +1309,7 @@ public class ImmutableConciseSetTest
       expected.add(i);
     }
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1318,11 +1329,6 @@ public class ImmutableConciseSetTest
     }
     set2.add(4001);
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(100);
     expected.add(500);
@@ -1331,7 +1337,7 @@ public class ImmutableConciseSetTest
     }
     expected.add(4001);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1347,16 +1353,11 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(2005);
     expected.add(3005);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1373,16 +1374,11 @@ public class ImmutableConciseSetTest
     set2.add(600);
     set2.add(4001);
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(500);
     expected.add(600);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1399,18 +1395,13 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(2005);
     for (int i = 2800; i < 3007; i++) {
       expected.add(i);
     }
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1429,11 +1420,6 @@ public class ImmutableConciseSetTest
     }
     set2.add(10005);
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(2005);
     for (int i = 2800; i < 3007; i++) {
@@ -1441,7 +1427,7 @@ public class ImmutableConciseSetTest
     }
     expected.add(10005);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1455,14 +1441,9 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1480,11 +1461,6 @@ public class ImmutableConciseSetTest
     set2.add(100);
     set2.add(101);
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(0);
     expected.add(3);
@@ -1492,7 +1468,7 @@ public class ImmutableConciseSetTest
     expected.add(100);
     expected.add(101);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1511,11 +1487,6 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(0);
     expected.add(3);
@@ -1524,7 +1495,7 @@ public class ImmutableConciseSetTest
       expected.add(i);
     }
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1540,14 +1511,9 @@ public class ImmutableConciseSetTest
     set2.add(100);
     set2.add(101);
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1561,15 +1527,10 @@ public class ImmutableConciseSetTest
     ConciseSet set2 = new ConciseSet();
     set2.add(4001);
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(4001);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1585,17 +1546,12 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     for (int i = 32; i < 62; i++) {
       expected.add(i);
     }
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
   }
 
   @Test
@@ -1609,21 +1565,125 @@ public class ImmutableConciseSetTest
       set2.add(i);
     }
 
-    List<ImmutableConciseSet> sets = Arrays.asList(
-        ImmutableConciseSet.newImmutableFromMutable(set1),
-        ImmutableConciseSet.newImmutableFromMutable(set2)
-    );
-
     List<Integer> expected = Lists.newArrayList();
     expected.add(2005);
 
-    verifyIntersection(expected, sets);
+    verifyIntersection(expected, set1, set2);
+  }
+
+  @Test
+  public void testIntersectionLiteralAndOneFill()
+  {
+    ConciseSet set1 = new ConciseSet();
+    for (int i = 0; i < 31; i += 2) {
+      set1.add(i);
+    }
+    ConciseSet set2 = new ConciseSet();
+    for (int i = 0; i < 1000; i++) {
+      if (i != 2) {
+        set2.add(i);
+      }
+    }
+    verifyIntersection(set1, set2);
+  }
+
+  @Test
+  public void testIntersectionZeroSequenceRemovedFromQueue()
+  {
+    // Seems that it is impossible to test this case with naturally constructed ConciseSet, because the end of the
+    // sequence is defined by the last set bit, then naturally constructed ConciseSet won't have the last word as zero
+    // sequence, it will be a literal or one sequence.
+    int zeroSequence = 1; // Zero sequence of length 62
+    ConciseSet set1 = new ConciseSet(new int[] {zeroSequence}, false);
+
+    ConciseSet set2 = new ConciseSet();
+    for (int i = 0; i < 1000; i++) {
+      set2.add(i);
+    }
+    verifyIntersection(set1, set2);
+  }
+
+  @Test
+  public void testIntersectionOneFillAndOneFillWithFlipBit()
+  {
+    ConciseSet set1 = new ConciseSet();
+    for (int i = 0; i < 100; i++) {
+      set1.add(i);
+    }
+    ConciseSet set2 = new ConciseSet();
+    for (int i = 0; i < 1000; i++) {
+      if (i != 2) {
+        set2.add(i);
+      }
+    }
+    verifyIntersection(set1, set2);
+  }
+
+  @Test
+  public void testIntersectionSecondOneFillRemovedFromQueue()
+  {
+    ConciseSet set1 = new ConciseSet();
+    for (int i = 0; i < 31 * 2; i++) {
+      set1.add(i);
+    }
+    set1.add(100);
+
+    ConciseSet set2 = new ConciseSet();
+    for (int i = 0; i < 31 * 3; i++) {
+      set2.add(i);
+    }
+
+    verifyIntersection(set1, set2);
+  }
+
+  @Test
+  public void testIntersectionFirstOneFillRemovedFromQueue()
+  {
+    ConciseSet set1 = new ConciseSet();
+    for (int i = 0; i < 31 * 2; i++) {
+      set1.add(i);
+    }
+
+    ConciseSet set2 = new ConciseSet();
+    for (int i = 0; i < 31 * 3; i++) {
+      set2.add(i);
+    }
+
+    verifyIntersection(set1, set2);
   }
 
   @Test
   public void testIntersectionTerminates() throws Exception
   {
     verifyIntersection(Arrays.<Integer>asList(), Arrays.asList(new ImmutableConciseSet(), new ImmutableConciseSet()));
+  }
+
+  private void verifyIntersection(ConciseSet set1, ConciseSet set2)
+  {
+    List<Integer> expectedIntersection = toList(set1);
+    expectedIntersection.retainAll(toList(set2));
+    verifyIntersection(expectedIntersection, set1, set2);
+  }
+
+  private static List<Integer> toList(ConciseSet set)
+  {
+    List<Integer> list1 = new ArrayList<>();
+    for (IntSet.IntIterator it = set.iterator(); it.hasNext(); ) {
+      list1.add(it.next());
+    }
+    return list1;
+  }
+
+  private void verifyIntersection(List<Integer> expected, ConciseSet set1, ConciseSet set2)
+  {
+    ImmutableConciseSet immutableSet1 = ImmutableConciseSet.newImmutableFromMutable(set1);
+    ImmutableConciseSet immutableSet2 = ImmutableConciseSet.newImmutableFromMutable(set2);
+    if (compact) {
+      immutableSet1 = ImmutableConciseSet.compact(immutableSet1);
+      immutableSet2 = ImmutableConciseSet.compact(immutableSet2);
+    }
+    List<ImmutableConciseSet> immutableSets = Arrays.asList(immutableSet1, immutableSet2);
+    verifyIntersection(expected, immutableSets);
   }
 
   private void verifyIntersection(List<Integer> expected, List<ImmutableConciseSet> sets)
