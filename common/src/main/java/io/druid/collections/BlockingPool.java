@@ -19,6 +19,7 @@
 
 package io.druid.collections;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 
@@ -37,7 +38,7 @@ public class BlockingPool<T>
 {
   private static final Logger log = new Logger(BlockingPool.class);
 
-  protected final BlockingQueue<T> objects;
+  private final BlockingQueue<T> objects;
 
   public BlockingPool(
       Supplier<T> generator,
@@ -77,5 +78,11 @@ public class BlockingPool<T>
           }
         }
     );
+  }
+
+  @VisibleForTesting
+  protected int getQueueSize()
+  {
+    return objects.size();
   }
 }

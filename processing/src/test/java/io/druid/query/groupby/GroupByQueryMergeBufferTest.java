@@ -74,8 +74,9 @@ public class GroupByQueryMergeBufferTest
     public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout) throws InterruptedException
     {
       final ReferenceCountingResourceHolder<ByteBuffer> holder = super.take(timeout);
-      if (minRemainBufferNum > objects.size()) {
-        minRemainBufferNum = objects.size();
+      final int queueSize = getQueueSize();
+      if (minRemainBufferNum > queueSize) {
+        minRemainBufferNum = queueSize;
       }
       return holder;
     }
