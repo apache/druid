@@ -40,6 +40,11 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class KafkaEmitter implements Emitter {
   private static Logger log = new Logger(KafkaEmitter.class);
@@ -50,21 +55,16 @@ public class KafkaEmitter implements Emitter {
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
-  private final Callback producerCallback;
   private final ObjectMapper jsonMapper;
+  private final Queue<ProducerRecord<String, String>> metricQueue;
+  private final ScheduledExecutorService scheduler;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper) {
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.producer = getKafkaProducer(config);
-    this.producerCallback = new Callback() {
-      @Override
-      public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-        if(e != null) {
-          log.warn(e, "Exception occured!");
-        }
-      }
-    };
+    this.metricQueue = new ConcurrentLinkedQueue<>();
+    this.scheduler = Executors.newScheduledThreadPool(1);
   }
 
   private Producer<String, String> getKafkaProducer(KafkaEmitterConfig config) {
@@ -81,7 +81,28 @@ public class KafkaEmitter implements Emitter {
   @Override
   @LifecycleStart
   public void start() {
+    scheduler.scheduleWithFixedDelay(new Runnable() {
+      public void run() {
+        sendToKafka();
+      }
+    }, 10, 10, TimeUnit.SECONDS);
     log.info("Starting Kafka Emitter.");
+  }
+
+  private void sendToKafka() {
+    ProducerRecord<String, String> recordToSend;
+    while((recordToSend = metricQueue.poll()) != null) {
+      final ProducerRecord<String, String> finalRecordToSend = recordToSend;
+      producer.send(recordToSend, new Callback() {
+        @Override
+        public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+          if(e != null) {
+            log.warn(e, "Exception occured!");
+            metricQueue.add(finalRecordToSend);
+          }
+        }
+      });
+    }
   }
 
   @Override
@@ -96,9 +117,9 @@ public class KafkaEmitter implements Emitter {
       try {
         String resultJson = jsonMapper.writeValueAsString(result);
         if(event instanceof ServiceMetricEvent) {
-          producer.send(new ProducerRecord<String, String>(config.getMetricTopic(), resultJson), producerCallback);
+          metricQueue.add(new ProducerRecord<String, String>(config.getMetricTopic(), resultJson));
         } else if(event instanceof AlertEvent) {
-          producer.send(new ProducerRecord<String, String>(config.getAlertTopic(), resultJson), producerCallback);
+          metricQueue.add(new ProducerRecord<String, String>(config.getAlertTopic(), resultJson));
         }
       } catch (JsonProcessingException e) {
         log.warn(e, "Failed to generate json");
@@ -114,6 +135,7 @@ public class KafkaEmitter implements Emitter {
   @Override
   @LifecycleStop
   public void close() throws IOException {
+    scheduler.shutdownNow();
     producer.close();
   }
 }
