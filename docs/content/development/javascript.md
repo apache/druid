@@ -22,6 +22,14 @@ without needing to write and deploy Druid extensions.
 
 Druid uses the Mozilla Rhino engine at optimization level 9 to compile and execute JavaScript.
 
+## Security
+
+Druid does not execute JavaScript functions in a sandbox, so they have full access to the machine. So Javascript
+functions allow users to execute arbutrary code inside druid process. So, by default, Javascript is disabled.
+However, on dev/staging environments or secured production environments you can enable those by setting
+the [configuration property](../configuration/index.html)
+`druid.javascript.enabled = true`.
+
 ## Global variables
 
 Avoid using global variables. Druid may share the global scope between multiple threads, which can lead to
@@ -35,13 +43,6 @@ functions can have steeper performance penalties. Druid compiles JavaScript func
 You may need to pay special attention to garbage collection when making heavy use of JavaScript functions, especially
 garbage collection of the compiled classes themselves. Be sure to use a garbage collector configuration that supports
 timely collection of unused classes (this is generally easier on JDK8 with the Metaspace than it is on JDK7).
-
-## Security
-
-Druid does not execute JavaScript functions in a sandbox, so they have full access to the machine. If you are running
-a cluster where users that can submit queries should not be allowed to execute arbitrary code, we recommend disabling
-JavaScript functionality by setting the [configuration property](../configuration/index.html)
-`druid.javascript.disabled = true`.
 
 ## JavaScript vs. Native Extensions
 

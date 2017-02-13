@@ -50,14 +50,14 @@ public class JavaScriptParseSpecTest
     jsonMapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         )
     );
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
         "abc",
-        JavaScriptConfig.getDefault()
+        JavaScriptConfig.getEnabledInstance()
     );
     final JavaScriptParseSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
@@ -73,7 +73,7 @@ public class JavaScriptParseSpecTest
   @Test
   public void testMakeParser()
   {
-    final JavaScriptConfig config = JavaScriptConfig.getDefault();
+    final JavaScriptConfig config = JavaScriptConfig.getEnabledInstance();
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
@@ -89,7 +89,7 @@ public class JavaScriptParseSpecTest
   @Test
   public void testMakeParserNotAllowed()
   {
-    final JavaScriptConfig config = new JavaScriptConfig(true);
+    final JavaScriptConfig config = new JavaScriptConfig(false);
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),

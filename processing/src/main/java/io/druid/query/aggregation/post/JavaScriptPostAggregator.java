@@ -97,7 +97,7 @@ public class JavaScriptPostAggregator implements PostAggregator
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
     Preconditions.checkNotNull(fieldNames, "Must have a valid, non-null fieldNames");
     Preconditions.checkNotNull(function, "Must have a valid, non-null function");
-    Preconditions.checkState(!config.isDisabled(), "JavaScript is disabled");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled.");
 
     this.name = name;
     this.fieldNames = fieldNames;

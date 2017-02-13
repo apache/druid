@@ -665,7 +665,7 @@ public class SearchQueryRunnerTest
   public void testSearchOnLongColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
@@ -711,7 +711,7 @@ public class SearchQueryRunnerTest
   public void testSearchOnFloatColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(

@@ -19,31 +19,31 @@
 
 package io.druid.js;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.Objects;
 
 public class JavaScriptConfig
 {
   public static final int DEFAULT_OPTIMIZATION_LEVEL = 9;
 
-  private static final JavaScriptConfig DEFAULT = new JavaScriptConfig(false);
+  private static final JavaScriptConfig ENABLED_INSTANCE = new JavaScriptConfig(true);
 
   @JsonProperty
-  private boolean disabled = false;
+  private boolean enabled = false;
 
-  public JavaScriptConfig()
+  @JsonCreator
+  public JavaScriptConfig(
+      @JsonProperty("enabled") Boolean enabled
+  )
   {
+    if (enabled != null) {
+      this.enabled = enabled.booleanValue();
+    }
   }
 
-  public JavaScriptConfig(boolean disabled)
+  public boolean isEnabled()
   {
-    this.disabled = disabled;
-  }
-
-  public boolean isDisabled()
-  {
-    return disabled;
+    return enabled;
   }
 
   @Override
@@ -55,26 +55,29 @@ public class JavaScriptConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    JavaScriptConfig config = (JavaScriptConfig) o;
-    return disabled == config.disabled;
+
+    JavaScriptConfig that = (JavaScriptConfig) o;
+
+    return enabled == that.enabled;
+
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(disabled);
+    return (enabled ? 1 : 0);
   }
 
   @Override
   public String toString()
   {
     return "JavaScriptConfig{" +
-           "disabled=" + disabled +
+           "enabled=" + enabled +
            '}';
   }
 
-  public static JavaScriptConfig getDefault()
+  public static JavaScriptConfig getEnabledInstance()
   {
-    return DEFAULT;
+    return ENABLED_INSTANCE;
   }
 }

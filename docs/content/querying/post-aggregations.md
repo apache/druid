@@ -99,8 +99,7 @@ Example JavaScript aggregator:
 ```
 
 <div class="note info">
-Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
-about using Druid's JavaScript functionality.
+JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
 
 ### HyperUnique Cardinality post-aggregator

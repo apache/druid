@@ -60,7 +60,7 @@ public class GetDimensionRangeSetTest
   );
   private final DimFilter other1 = new RegexDimFilter("someDim", "pattern", null);
   private final DimFilter other2 = new JavaScriptDimFilter("someOtherDim", "function(x) { return x }", null,
-                                                           JavaScriptConfig.getDefault());
+                                                           JavaScriptConfig.getEnabledInstance());
   private final DimFilter other3 = new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("a", true), null);
 
   private final DimFilter interval1 = new IntervalDimFilter(

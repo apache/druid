@@ -80,10 +80,10 @@ public class JavaScriptExtractionFn implements ExtractionFn
     this.function = function;
     this.injective = injective;
 
-    if (config.isDisabled()) {
-      this.fn = null;
-    } else {
+    if (config.isEnabled()) {
       this.fn = compile(function);
+    } else {
+      this.fn = null;
     }
   }
 

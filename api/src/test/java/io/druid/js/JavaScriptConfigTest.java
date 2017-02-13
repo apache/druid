@@ -25,13 +25,39 @@ import org.junit.Test;
 
 public class JavaScriptConfigTest
 {
+  private static ObjectMapper mapper = new ObjectMapper();
+
   @Test
   public void testSerde() throws Exception
   {
-    final JavaScriptConfig config = new JavaScriptConfig(true);
-    final ObjectMapper mapper = new ObjectMapper();
-    final JavaScriptConfig config2 = mapper.readValue(mapper.writeValueAsBytes(config), JavaScriptConfig.class);
-    Assert.assertTrue(config2.isDisabled());
-    Assert.assertEquals(config, config2);
+    String json = "{\"enabled\":true}";
+
+    JavaScriptConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                json,
+                JavaScriptConfig.class
+            )
+        ), JavaScriptConfig.class
+    );
+
+    Assert.assertTrue(config.isEnabled());
+  }
+
+  @Test
+  public void testSerdeWithDefaults() throws Exception
+  {
+    String json = "{}";
+
+    JavaScriptConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                json,
+                JavaScriptConfig.class
+            )
+        ), JavaScriptConfig.class
+    );
+
+    Assert.assertFalse(config.isEnabled());
   }
 }

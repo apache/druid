@@ -276,7 +276,7 @@ public class JavaScriptAggregatorTest
         scriptDoubleSum.get("fnAggregate"),
         scriptDoubleSum.get("fnReset"),
         scriptDoubleSum.get("fnCombine"),
-        new JavaScriptConfig(true)
+        new JavaScriptConfig(false)
     );
 
     expectedException.expect(IllegalStateException.class);
@@ -294,7 +294,7 @@ public class JavaScriptAggregatorTest
         scriptDoubleSum.get("fnAggregate"),
         scriptDoubleSum.get("fnReset"),
         scriptDoubleSum.get("fnCombine"),
-        new JavaScriptConfig(true)
+        new JavaScriptConfig(false)
     );
 
     expectedException.expect(IllegalStateException.class);

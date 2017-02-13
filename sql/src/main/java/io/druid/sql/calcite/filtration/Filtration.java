@@ -37,10 +37,10 @@ public class Filtration
 {
   private static final Interval ETERNITY = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
   private static final DimFilter MATCH_NOTHING = new JavaScriptDimFilter(
-      "dummy", "function(x){return false;}", null, JavaScriptConfig.getDefault()
+      "dummy", "function(x){return false;}", null, JavaScriptConfig.getEnabledInstance()
   );
   private static final DimFilter MATCH_EVERYTHING = new JavaScriptDimFilter(
-      "dummy", "function(x){return true;}", null, JavaScriptConfig.getDefault()
+      "dummy", "function(x){return true;}", null, JavaScriptConfig.getEnabledInstance()
   );
 
   // 1) If "dimFilter" is null, it should be ignored and not affect filtration.

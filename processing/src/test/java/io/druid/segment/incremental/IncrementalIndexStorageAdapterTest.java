@@ -191,7 +191,7 @@ public class IncrementalIndexStorageAdapterTest
                             "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
                             "function() { return 0; }",
                             "function(a,b) { return a + b; }",
-                            JavaScriptConfig.getDefault()
+                            JavaScriptConfig.getEnabledInstance()
                         )
                     )
                     .build(),

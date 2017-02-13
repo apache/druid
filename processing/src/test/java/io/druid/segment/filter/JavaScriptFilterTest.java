@@ -185,7 +185,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
         dimension,
         function,
         extractionFn,
-        JavaScriptConfig.getDefault()
+        JavaScriptConfig.getEnabledInstance()
     );
   }
 }

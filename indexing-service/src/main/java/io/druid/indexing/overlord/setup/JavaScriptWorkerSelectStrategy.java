@@ -57,7 +57,7 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
   {
     Preconditions.checkNotNull(fn, "function must not be null");
 
-    if (config.isDisabled()) {
+    if (!config.isEnabled()) {
       throw new ISE("JavaScript is disabled");
     }
 

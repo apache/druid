@@ -85,10 +85,10 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     this.fnCombine = fnCombine;
     this.config = config;
 
-    if (config.isDisabled()) {
-      this.compiledScript = null;
-    } else {
+    if (config.isEnabled()) {
       this.compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+    } else {
+      this.compiledScript = null;
     }
   }
 

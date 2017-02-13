@@ -3457,10 +3457,10 @@ public class GroupByQueryRunnerTest
   public void testDimFilterHavingSpecWithExtractionFns()
   {
     String extractionJsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     String extractionJsFn2 = "function(num) { return num + 10; }";
-    ExtractionFn extractionFn2 = new JavaScriptExtractionFn(extractionJsFn2, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn2 = new JavaScriptExtractionFn(extractionJsFn2, false, JavaScriptConfig.getEnabledInstance());
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
@@ -3793,7 +3793,7 @@ public class GroupByQueryRunnerTest
             "quality",
             "function(dim){ return true; }",
             null,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -3858,7 +3858,7 @@ public class GroupByQueryRunnerTest
             "quality",
             "function(dim){ return true; }",
             null,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -3932,7 +3932,7 @@ public class GroupByQueryRunnerTest
             "quality",
             "function(dim){ return true; }",
             null,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -4334,7 +4334,7 @@ public class GroupByQueryRunnerTest
             "quality",
             "function(dim){ return true; }",
             null,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -4600,7 +4600,7 @@ public class GroupByQueryRunnerTest
             "quality",
             "function(dim){ return true; }",
             null,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -4863,7 +4863,7 @@ public class GroupByQueryRunnerTest
             "market",
             "function(dim){ return true; }",
             null,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -4875,7 +4875,7 @@ public class GroupByQueryRunnerTest
                     "function(current, index, dim){return current + index + dim.length;}",
                     "function(){return 0;}",
                     "function(a,b){return a + b;}",
-                    JavaScriptConfig.getDefault()
+                    JavaScriptConfig.getEnabledInstance()
                 )
             )
         )
@@ -5257,7 +5257,7 @@ public class GroupByQueryRunnerTest
                     "function(current, index, dim){return current + index + dim.length;}",
                     "function(){return 0;}",
                     "function(a,b){return a + b;}",
-                    JavaScriptConfig.getDefault()
+                    JavaScriptConfig.getEnabledInstance()
                 )
             )
         )
@@ -5320,7 +5320,7 @@ public class GroupByQueryRunnerTest
                     "function(current, index, rows){return current + index + rows;}",
                     "function(){return 0;}",
                     "function(a,b){return a + b;}",
-                    JavaScriptConfig.getDefault()
+                    JavaScriptConfig.getEnabledInstance()
                 )
             )
         )
@@ -6691,7 +6691,7 @@ public class GroupByQueryRunnerTest
 
     String extractionJsFn = "function(str) { return 'super-' + str; }";
     String jsFn = "function(x) { return(x === 'super-mezzanine') }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     List<DimFilter> superFilterList = new ArrayList<>();
     superFilterList.add(new SelectorDimFilter("quality", "super-mezzanine", extractionFn));
@@ -6716,7 +6716,7 @@ public class GroupByQueryRunnerTest
         new ContainsSearchQuerySpec("super-mezzanine", true),
         extractionFn
     ));
-    superFilterList.add(new JavaScriptDimFilter("quality", jsFn, extractionFn, JavaScriptConfig.getDefault()));
+    superFilterList.add(new JavaScriptDimFilter("quality", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance()));
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -6775,7 +6775,7 @@ public class GroupByQueryRunnerTest
         new ContainsSearchQuerySpec("EMPTY", true),
         extractionFn
     ));
-    superFilterList.add(new JavaScriptDimFilter("null_column", jsFn, extractionFn, JavaScriptConfig.getDefault()));
+    superFilterList.add(new JavaScriptDimFilter("null_column", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance()));
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
@@ -6806,7 +6806,7 @@ public class GroupByQueryRunnerTest
   public void testGroupByCardinalityAggWithExtractionFn()
   {
     String helloJsFn = "function(str) { return 'hello' }";
-    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     GroupByQuery query = GroupByQuery
         .builder()
@@ -7011,7 +7011,7 @@ public class GroupByQueryRunnerTest
     }
 
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     GroupByQuery query = GroupByQuery
         .builder()
@@ -7103,7 +7103,7 @@ public class GroupByQueryRunnerTest
   public void testGroupByLongTimeColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     GroupByQuery query = GroupByQuery
         .builder()
@@ -7276,7 +7276,7 @@ public class GroupByQueryRunnerTest
     }
 
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     GroupByQuery query = GroupByQuery
         .builder()
