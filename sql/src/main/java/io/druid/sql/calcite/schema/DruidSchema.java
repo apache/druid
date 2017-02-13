@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -283,8 +282,8 @@ public class DruidSchema extends AbstractSchema
         new TableDataSource(dataSource),
         null,
         null,
-        true,
-        null,
+        false,
+        ImmutableMap.<String, Object>of("useCache", false, "populateCache", false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         null,
         true
@@ -296,26 +295,39 @@ public class DruidSchema extends AbstractSchema
       return null;
     }
 
-    final Map<String, ColumnAnalysis> columnMetadata = Iterables.getOnlyElement(results).getColumns();
+    final Map<String, ValueType> columnTypes = Maps.newLinkedHashMap();
+
+    // Resolve conflicts by taking the latest metadata. This aids in gradual schema evolution.
+    String maxSegmentId = "";
+
+    for (SegmentAnalysis analysis : results) {
+      for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
+        if (entry.getValue().isError()) {
+          // Skip columns with analysis errors.
+          continue;
+        }
+
+        if (!columnTypes.containsKey(entry.getKey()) || analysis.getId().compareTo(maxSegmentId) > 0) {
+          ValueType valueType;
+          try {
+            valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
+          }
+          catch (IllegalArgumentException e) {
+            // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
+            // what kind of complex column it is, which we may want to preserve some day.
+            valueType = ValueType.COMPLEX;
+          }
+
+          columnTypes.put(entry.getKey(), valueType);
+        }
+      }
+
+      maxSegmentId = analysis.getId();
+    }
+
     final RowSignature.Builder rowSignature = RowSignature.builder();
-
-    for (Map.Entry<String, ColumnAnalysis> entry : columnMetadata.entrySet()) {
-      if (entry.getValue().isError()) {
-        // Ignore columns with metadata consistency errors.
-        continue;
-      }
-
-      ValueType valueType;
-      try {
-        valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
-      }
-      catch (IllegalArgumentException e) {
-        // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
-        // what kind of complex column it is, which we may want to preserve some day.
-        valueType = ValueType.COMPLEX;
-      }
-
-      rowSignature.add(entry.getKey(), valueType);
+    for (Map.Entry<String, ValueType> entry : columnTypes.entrySet()) {
+      rowSignature.add(entry.getKey(), entry.getValue());
     }
 
     return new DruidTable(
