@@ -1039,10 +1039,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox) throws IOException
+  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
+      throws IOException
   {
     Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
-    for (Map.Entry<TopicPartition, Long>  outOfRangePartition: outOfRangePartitions.entrySet()) {
+    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
       partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
     }
     boolean result = taskToolbox.getTaskActionClient()
@@ -1056,7 +1057,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                 ));
 
     if (result) {
-      log.warn("Successfully sent the reset request for partitions [%s], waiting to be killed", partitionOffsetMap.keySet());
+      log.makeAlert("Resetting Kafka offsets for datasource [%s]", getDataSource())
+         .addData("partitions", partitionOffsetMap.keySet())
+         .emit();
       // wait for being killed by supervisor
       try {
         Thread.sleep(Long.MAX_VALUE);
