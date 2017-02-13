@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
@@ -30,6 +29,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -104,7 +104,7 @@ public class TestIndex
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
   }
 

@@ -123,4 +123,66 @@ public class HyperUniquesAggregationTest
     Assert.assertEquals(3.0, row.getFloatMetric("index_hll"), 0.1);
     Assert.assertEquals(3.0, row.getFloatMetric("index_unique_count"), 0.1);
   }
+
+  @Test
+  public void testIngestAndQueryPrecomputedHll() throws Exception
+  {
+    AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            Lists.newArrayList(new AggregatorsModule()),
+            config,
+            tempFolder
+    );
+
+    String metricSpec = "[{"
+            + "\"type\": \"hyperUnique\","
+            + "\"name\": \"index_hll\","
+            + "\"fieldName\": \"preComputedHll\","
+            + "\"isInputHyperUnique\": true"
+            + "}]";
+
+    String parseSpec = "{"
+            + "\"type\" : \"string\","
+            + "\"parseSpec\" : {"
+            + "    \"format\" : \"tsv\","
+            + "    \"timestampSpec\" : {"
+            + "        \"column\" : \"timestamp\","
+            + "        \"format\" : \"auto\""
+            + "},"
+            + "    \"dimensionsSpec\" : {"
+            + "        \"dimensions\": [],"
+            + "        \"dimensionExclusions\" : [],"
+            + "        \"spatialDimensions\" : []"
+            + "    },"
+            + "    \"columns\": [\"timestamp\", \"market\", \"preComputedHll\"]"
+            + "  }"
+            + "}";
+
+    String query = "{"
+            + "\"queryType\": \"groupBy\","
+            + "\"dataSource\": \"test_datasource\","
+            + "\"granularity\": \"ALL\","
+            + "\"dimensions\": [],"
+            + "\"aggregations\": ["
+            + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
+            + "],"
+            + "\"postAggregations\": ["
+            + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
+            + "],"
+            + "\"intervals\": [ \"1970/2050\" ]"
+            + "}";
+
+    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+            new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),
+            parseSpec,
+            metricSpec,
+            0,
+            QueryGranularities.DAY,
+            50000,
+            query
+    );
+
+    MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
+    Assert.assertEquals(4.0, row.getFloatMetric("index_hll"), 0.1);
+    Assert.assertEquals(4.0, row.getFloatMetric("index_unique_count"), 0.1);
+  }
 }
