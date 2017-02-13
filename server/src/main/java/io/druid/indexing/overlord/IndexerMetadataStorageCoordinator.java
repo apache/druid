@@ -21,6 +21,7 @@ package io.druid.indexing.overlord;
 
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TaskDataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -42,7 +43,7 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IOException
    */
   List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
-      throws IOException;
+          throws IOException;
 
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
@@ -55,7 +56,7 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IOException
    */
   List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
-      throws IOException;
+          throws IOException;
 
   /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
@@ -86,11 +87,11 @@ public interface IndexerMetadataStorageCoordinator
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
   SegmentIdentifier allocatePendingSegment(
-      String dataSource,
-      String sequenceName,
-      String previousSegmentId,
-      Interval interval,
-      String maxVersion
+          String dataSource,
+          String sequenceName,
+          String previousSegmentId,
+          Interval interval,
+          String maxVersion
   ) throws IOException;
 
   /**
@@ -113,9 +114,9 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
    */
   SegmentPublishResult announceHistoricalSegments(
-      Set<DataSegment> segments,
-      DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+          Set<DataSegment> segments,
+          DataSourceMetadata startMetadata,
+          DataSourceMetadata endMetadata
   ) throws IOException;
 
   DataSourceMetadata getDataSourceMetadata(String dataSource);
@@ -150,4 +151,11 @@ public interface IndexerMetadataStorageCoordinator
    * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
    */
   List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
+
+  /**
+   * Get all task which active property is 0, is used to delete the useless segments in pendingSegment table.
+   * @param interval Filter the tasks to ones that include tasks in this interval exclusively. Start is inclusive, end is exclusive
+   * @return The TaskDataSegment list which used to match the pendingSegment table's payload
+   */
+  List<TaskDataSegment> getNotActiveTask(final Interval interval);
 }
