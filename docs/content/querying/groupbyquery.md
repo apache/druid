@@ -185,7 +185,7 @@ When using the "v2" strategy, the following runtime properties apply:
 
 Additionally, the "v2" strategy uses merging buffers for merging. It is currently the only query implementation that
 does so. By default, Druid is configured without any merging buffer pool, so to use the "v2" strategy you must also
-set `druid.processing.numMergeBuffers` to some non-zero number. Furthermore, if you want to execute deeply nested gropuBys,
+set `druid.processing.numMergeBuffers` to some non-zero number. Furthermore, if you want to execute deeply nested groupBys,
 you must set `druid.processing.numMergeBuffers` to at least 2.
 
 This may require allocating more direct memory. The amount of direct memory needed by Druid is at least
