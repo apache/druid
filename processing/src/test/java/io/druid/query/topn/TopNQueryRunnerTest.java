@@ -1705,7 +1705,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getDefault())
+                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getEnabledInstance())
             )
         )
         .metric("rows")
@@ -2923,7 +2923,7 @@ public class TopNQueryRunnerTest
   public void testTopNQueryCardinalityAggregatorWithExtractionFn()
   {
     String helloJsFn = "function(str) { return 'hello' }";
-    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     DimensionSpec dimSpec = new ExtractionDimensionSpec(QueryRunnerTestHelper.marketDimension,
                                                         QueryRunnerTestHelper.marketDimension,
@@ -3747,7 +3747,7 @@ public class TopNQueryRunnerTest
   public void testFullOnTopNFloatColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -3966,7 +3966,7 @@ public class TopNQueryRunnerTest
   public void testFullOnTopNLongColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -4329,7 +4329,7 @@ public class TopNQueryRunnerTest
   public void testFullOnTopNLongTimeColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -4404,7 +4404,7 @@ public class TopNQueryRunnerTest
   public void testFullOnTopNDimExtractionAllNulls()
   {
     String jsFn = "function(str) { return null; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)

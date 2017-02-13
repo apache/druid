@@ -53,7 +53,7 @@ public class JavaScriptExtractionFnTest
   public void testJavascriptSubstring()
   {
     String function = "function(str) { return str.substring(0,3); }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);
@@ -65,7 +65,7 @@ public class JavaScriptExtractionFnTest
   public void testJavascriptNotAllowed()
   {
     String function = "function(str) { return str.substring(0,3); }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, new JavaScriptConfig(true));
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, new JavaScriptConfig(false));
 
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("JavaScript is disabled");
@@ -78,28 +78,28 @@ public class JavaScriptExtractionFnTest
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
     final long millis = new DateTime("2015-01-02T13:00:59.999Z").getMillis();
-    Assert.assertEquals("Second 59" , new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getDefault()).apply(millis));
+    Assert.assertEquals("Second 59" , new JavaScriptExtractionFn(utcHour, false, JavaScriptConfig.getEnabledInstance()).apply(millis));
   }
 
   @Test
   public void testLongs() throws Exception
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getDefault()).apply(1234L));
+    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234L));
   }
 
   @Test
   public void testFloats() throws Exception
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getDefault()).apply(1234.0));
+    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234.0));
   }
 
   @Test
   public void testCastingAndNull()
   {
     String function = "function(x) {\n  x = Number(x);\n  if(isNaN(x)) return null;\n  return Math.floor(x / 5) * 5;\n}";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     Iterator<String> it = Iterators.forArray("0", "5", "5", "10", null);
 
@@ -114,7 +114,7 @@ public class JavaScriptExtractionFnTest
   public void testJavascriptRegex()
   {
     String function = "function(str) { return str.replace(/[aeiou]/g, ''); }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     Iterator it = Iterators.forArray("Qt", "Clgry", "Tky", "Stckhlm", "Vncvr", "Prtr", "Wllngtn", "Ontr");
     for (String str : testStrings) {
@@ -127,7 +127,7 @@ public class JavaScriptExtractionFnTest
   public void testJavascriptIsNull()
   {
     String function = "function(x) { if (x == null) { return 'yes'; } else { return 'no' } }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     Assert.assertEquals("yes", extractionFn.apply((String) null));
     Assert.assertEquals("yes", extractionFn.apply((Object) null));
@@ -332,7 +332,7 @@ public class JavaScriptExtractionFnTest
                       + ""
                       + "}";
 
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getDefault());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     Iterator<String> inputs = Iterators.forArray("introducing", "exploratory", "analytics", "on", "large", "datasets");
     Iterator<String> it = Iterators.forArray("introduc", "exploratori", "analyt", "on", "larg", "dataset");
@@ -350,7 +350,7 @@ public class JavaScriptExtractionFnTest
     objectMapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         )
     );
 
@@ -372,7 +372,7 @@ public class JavaScriptExtractionFnTest
   @Test
   public void testInjective()
   {
-    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", false, JavaScriptConfig.getDefault()).getExtractionType());
-    Assert.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", true, JavaScriptConfig.getDefault()).getExtractionType());
+    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", false, JavaScriptConfig.getEnabledInstance()).getExtractionType());
+    Assert.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, new JavaScriptExtractionFn("function(str) { return str; }", true, JavaScriptConfig.getEnabledInstance()).getExtractionType());
   }
 }

@@ -139,7 +139,7 @@ public class QueryRunnerTestHelper
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
       "ntimestamps",
@@ -149,7 +149,7 @@ public class QueryRunnerTestHelper
       ") { return current + 1; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
       "pishcount",
@@ -157,7 +157,7 @@ public class QueryRunnerTestHelper
       "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
