@@ -86,6 +86,11 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   @Override
   public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
+    writeToChannelVersionOne(channel);
+  }
+
+  private void writeToChannelVersionOne(WritableByteChannel channel) throws IOException
+  {
     writer.writeToChannel(
         channel,
         null

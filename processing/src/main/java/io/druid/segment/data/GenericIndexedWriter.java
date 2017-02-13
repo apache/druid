@@ -52,6 +52,7 @@ import java.util.Arrays;
  */
 public class GenericIndexedWriter<T> implements Closeable
 {
+  private static int PAGE_SIZE = 4096;
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ObjectStrategy<T> strategy;
@@ -73,7 +74,7 @@ public class GenericIndexedWriter<T> implements Closeable
       ObjectStrategy<T> strategy
   )
   {
-    this(ioPeon, filenameBase, strategy, Integer.MAX_VALUE);
+    this(ioPeon, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
   }
 
   public GenericIndexedWriter(
@@ -88,6 +89,7 @@ public class GenericIndexedWriter<T> implements Closeable
     this.strategy = strategy;
     this.fileSizeLimit = fileSizeLimit;
     fileNameByteArray = filenameBase.getBytes();
+    buf = ByteBuffer.allocate(Ints.BYTES);
   }
 
   public static String generateValueFileName(String fileNameBase, int fileNum)
@@ -108,10 +110,11 @@ public class GenericIndexedWriter<T> implements Closeable
   )
       throws IOException
   {
+    ByteBuffer holderBuffer = ByteBuffer.wrap(buffer);
     while (numBytesToPutInFile > 0) {
       int bytesRead = is.read(buffer, 0, Math.min(buffer.length, Ints.saturatedCast(numBytesToPutInFile)));
       if (bytesRead != -1) {
-        smooshChannel.write((ByteBuffer) ByteBuffer.wrap(buffer).limit(bytesRead));
+        smooshChannel.write((ByteBuffer) holderBuffer.clear().limit(bytesRead));
         numBytesToPutInFile -= bytesRead;
       } else {
         throw new ISE("Could not write [%d] bytes into smooshChannel.", numBytesToPutInFile);
@@ -119,11 +122,18 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
-  private static void writeLongValueToByteBuffer(ByteBuffer buf, long value, CountingOutputStream outLong)
+  private static void writeLongValueToOutputStream(ByteBuffer helperBuf, long value, CountingOutputStream outLong)
       throws IOException
   {
-    buf.asLongBuffer().put(0, value);
-    outLong.write(buf.array());
+    helperBuf.putLong(0, value);
+    outLong.write(helperBuf.array());
+  }
+
+  private static void writeIntValueToOutputStream(ByteBuffer helperBuf, int value, CountingOutputStream outLong)
+      throws IOException
+  {
+    helperBuf.putInt(0, value);
+    outLong.write(helperBuf.array());
   }
 
   public void open() throws IOException
@@ -145,15 +155,15 @@ public class GenericIndexedWriter<T> implements Closeable
     valuesOut.write(bytesToWrite);
 
     if (!requireMultipleFiles) {
-      headerOut.write(Ints.toByteArray(Ints.checkedCast(valuesOut.getCount())));
+      writeIntValueToOutputStream(buf, (int) valuesOut.getCount(), headerOut);
     } else {
-      writeLongValueToByteBuffer(buf, valuesOut.getCount(), headerOutLong);
+      writeLongValueToOutputStream(buf, valuesOut.getCount(), headerOutLong);
     }
 
     if (!requireMultipleFiles && getSerializedSize() > fileSizeLimit) {
       requireMultipleFiles = true;
       initializeHeaderOutLong();
-      buf = ByteBuffer.wrap(new byte[Longs.BYTES]).order(ByteOrder.nativeOrder());
+      buf = ByteBuffer.allocate(Longs.BYTES).order(ByteOrder.nativeOrder());
     }
 
     prevObject = objectToWrite;
@@ -210,7 +220,7 @@ public class GenericIndexedWriter<T> implements Closeable
         headerOutLong.getCount()
     );
     Preconditions.checkState(
-        headerOutLong.getCount() < (Integer.MAX_VALUE & ~4096),
+        headerOutLong.getCount() < (Integer.MAX_VALUE & ~PAGE_SIZE),
         "Wrote[%s] bytes in header file, which is too many.",
         headerOutLong.getCount()
     );
@@ -225,7 +235,7 @@ public class GenericIndexedWriter<T> implements Closeable
    */
   private int bagSizePower() throws IOException
   {
-    Long avgObjectSize = (valuesOut.getCount() + numWritten - 1) / numWritten;
+    long avgObjectSize = (valuesOut.getCount() + numWritten - 1) / numWritten;
 
     File f = ioPeon.getFile(makeFilename("headerLong"));
     Preconditions.checkNotNull(f, "header file missing.");
@@ -340,7 +350,6 @@ public class GenericIndexedWriter<T> implements Closeable
   {
     try (ReadableByteChannel from = Channels.newChannel(combineStreams().getInput())) {
       ByteStreams.copy(from, channel);
-      return;
     }
 
   }
@@ -350,8 +359,6 @@ public class GenericIndexedWriter<T> implements Closeable
     if (smoosher == null) {
       throw new IAE("version 2 GenericIndexedWriter requires FileSmoosher.");
     }
-    File f = ioPeon.getFile(makeFilename("headerLong"));
-    Preconditions.checkNotNull(f, "header file missing.");
 
     int bagSizePower = bagSizePower();
     OutputStream metaOut = Channels.newOutputStream(channel);
@@ -362,18 +369,16 @@ public class GenericIndexedWriter<T> implements Closeable
     metaOut.write(Ints.toByteArray(fileNameByteArray.length));
     metaOut.write(fileNameByteArray);
 
-    try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
+    try (RandomAccessFile headerFile = new RandomAccessFile(ioPeon.getFile(makeFilename("headerLong")), "r")) {
+      Preconditions.checkNotNull(headerFile, "header file missing.");
       long previousValuePosition = 0;
       int bagSize = 1 << bagSizePower;
 
-      int numberOfFilesRequired = (int) numWritten / bagSize;
-      if ((numWritten % bagSize) != 0) {
-        numberOfFilesRequired += 1;
-      }
+      int numberOfFilesRequired = GenericIndexed.getNumberOfFilesRequired(bagSize, numWritten);
+      byte[] buffer = new byte[1 << 16];
 
       try (InputStream is = new FileInputStream(ioPeon.getFile(makeFilename("values")))) {
         int counter = -1;
-        byte[] buffer = new byte[1 << 16];
 
         for (int i = 0; i < numberOfFilesRequired; i++) {
           if (i != numberOfFilesRequired - 1) {
@@ -393,7 +398,7 @@ public class GenericIndexedWriter<T> implements Closeable
           }
         }
       }
-      writeHeader(smoosher, headerFile, bagSizePower);
+      writeHeaderLong(smoosher, headerFile, bagSizePower, buffer);
     }
 
   }
@@ -407,9 +412,9 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
-  private void writeHeader(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower) throws IOException
+  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer) throws IOException
   {
-    ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[Ints.BYTES]).order(ByteOrder.nativeOrder());
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES).order(ByteOrder.nativeOrder());
 
     try (CountingOutputStream finalHeaderOut = new CountingOutputStream(
         ioPeon.makeOutputStream(makeFilename("header_final")))) {
@@ -420,22 +425,21 @@ public class GenericIndexedWriter<T> implements Closeable
       headerFile.seek(0);
 
       // following block converts long header indexes into int header indexes.
-      for (int pos = 0; pos < numWritten; pos++, --numberOfElementsPerValueFile) {
+      for (int pos = 0; pos < numWritten; pos++) {
         //conversion of header offset from long to int completed for one value file done, change relativeRefBytes
         // to current offset.
-        if (numberOfElementsPerValueFile == 0) {
+        if ((pos & (numberOfElementsPerValueFile - 1)) == 0) {
           relativeRefBytes = currentNumBytes;
           numberOfElementsPerValueFile = 1 << bagSizePower;
         }
         currentNumBytes = Long.reverseBytes(headerFile.readLong());
         relativeNumBytes = currentNumBytes - relativeRefBytes;
-        byteBuffer.asIntBuffer().put(0, Ints.checkedCast(relativeNumBytes));
-        finalHeaderOut.write(byteBuffer.array());
+        helperBuffer.putInt(0, Ints.checkedCast(relativeNumBytes));
+        finalHeaderOut.write(helperBuffer.array());
       }
 
       long numBytesToPutInFile = finalHeaderOut.getCount();
       finalHeaderOut.close();
-      byte[] buffer = new byte[1 << 16];
       try (InputStream is = new FileInputStream(ioPeon.getFile(makeFilename("header_final")))) {
         try (SmooshedWriter smooshChannel = smoosher
             .addWithSmooshedWriter(generateHeaderFileName(filenameBase), numBytesToPutInFile)) {
@@ -450,13 +454,12 @@ public class GenericIndexedWriter<T> implements Closeable
   {
     headerOut.close();
     headerOutLong = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("headerLong")));
-    File f = ioPeon.getFile(makeFilename("header"));
 
-    try (RandomAccessFile headerFile = new RandomAccessFile(f, "r")) {
-      ByteBuffer buf = ByteBuffer.wrap(new byte[Longs.BYTES]).order(ByteOrder.nativeOrder());
+    try (RandomAccessFile headerFile = new RandomAccessFile(ioPeon.getFile(makeFilename("header")), "r")) {
+      ByteBuffer buf = ByteBuffer.allocate(Longs.BYTES).order(ByteOrder.nativeOrder());
       for (int i = 0; i < numWritten; i++) {
         int count = headerFile.readInt();
-        writeLongValueToByteBuffer(buf, count, headerOutLong);
+        writeLongValueToOutputStream(buf, count, headerOutLong);
       }
     }
   }

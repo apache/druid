@@ -55,7 +55,7 @@ import java.util.List;
  * for value
  * <p>
  * V2 Storage Format
- * Meta, header and value files are separate.
+ * Meta, header and value files are separate and header file stored in native endian byte order.
  * Meta File:
  * byte 1: version (0x2)
  * byte 2 == 0x1 =>; allowReverseLookup
@@ -74,7 +74,8 @@ public class GenericIndexed<T> implements Indexed<T>
   public static final byte VERSION_ONE = 0x1;
   public static final byte VERSION_TWO = 0x2;
   private static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
-  private final static Ordering ORDERING = Ordering.natural().nullsFirst();
+  private final static Ordering<String> NATURAL_STRING_ORDERING = Ordering.natural().nullsFirst();
+  private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
   {
@@ -102,7 +103,7 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public int compare(String o1, String o2)
     {
-      return ORDERING.compare(o1, o2);
+      return NATURAL_STRING_ORDERING.compare(o1, o2);
     }
   };
 
@@ -114,8 +115,9 @@ public class GenericIndexed<T> implements Indexed<T>
   private final ByteBuffer headerBuffer;
   private int logBaseTwoOfElementsPerValueFile;
 
-  private volatile ByteBuffer theBuffer;
+  private ByteBuffer theBuffer;
 
+  // used for single file version, v1
   GenericIndexed(
       ByteBuffer buffer,
       ObjectStrategy<T> strategy,
@@ -150,14 +152,15 @@ public class GenericIndexed<T> implements Indexed<T>
           endOffset = headerBuffer.getInt(0);
         } else {
           int headerPosition = (index - 1) * Ints.BYTES;
-          startOffset = headerBuffer.getInt(headerPosition) + 4;
-          endOffset = headerBuffer.getInt(headerPosition + 4);
+          startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
+          endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
         }
         return _get(valueBuffer.asReadOnlyBuffer(), startOffset, endOffset);
       }
     };
   }
 
+  // used for multiple file version, v2.
   GenericIndexed(
       List<ByteBuffer> valueBuffs,
       ByteBuffer headerBuff,
@@ -199,6 +202,15 @@ public class GenericIndexed<T> implements Indexed<T>
         return _get(copyBuffer, startOffset, endOffset);
       }
     };
+  }
+
+  public static int getNumberOfFilesRequired(int bagSize, long numWritten)
+  {
+    int numberOfFilesRequired = (int) (numWritten / bagSize);
+    if ((numWritten % bagSize) != 0) {
+      numberOfFilesRequired += 1;
+    }
+    return numberOfFilesRequired;
   }
 
   /**
@@ -326,13 +338,10 @@ public class GenericIndexed<T> implements Indexed<T>
     List<ByteBuffer> valueBuffersToUse;
     ByteBuffer headerBuffer;
     try {
-      columnName = new SerializerUtils().readString(byteBuffer);
+      columnName = SERIALIZER_UTILS.readString(byteBuffer);
       valueBuffersToUse = Lists.newArrayList();
       int elementsPerValueFile = 1 << logBaseTwoOfElementsPerValueFile;
-      int numberOfFilesRequired = numElements / elementsPerValueFile;
-      if ((numElements % elementsPerValueFile) != 0) {
-        numberOfFilesRequired += 1;
-      }
+      int numberOfFilesRequired = getNumberOfFilesRequired(elementsPerValueFile, numElements);
       for (int i = 0; i < numberOfFilesRequired; i++) {
         valueBuffersToUse.add(
             fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i))
