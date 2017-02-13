@@ -129,6 +129,11 @@ public class DruidNode
     return port;
   }
 
+  public DruidNode withService(String service)
+  {
+    return new DruidNode(service, host, port);
+  }
+
   /**
    * Returns host and port together as something that can be used as part of a URI.
    */

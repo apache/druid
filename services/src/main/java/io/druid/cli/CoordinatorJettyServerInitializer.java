@@ -37,16 +37,20 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 
+import java.util.Properties;
+
 /**
  */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
   private final DruidCoordinatorConfig config;
+  private final boolean beOverlord;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties)
   {
     this.config = config;
+    this.beOverlord = CliCoordinator.isOverlord(properties);
   }
 
   @Override
@@ -59,10 +63,19 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(holderPwd, "/");
     if(config.getConsoleStatic() == null) {
-      ResourceCollection staticResources = new ResourceCollection(
-          Resource.newClassPathResource("io/druid/console"),
-          Resource.newClassPathResource("static")
-      );
+      ResourceCollection staticResources;
+      if (beOverlord) {
+        staticResources = new ResourceCollection(
+            Resource.newClassPathResource("io/druid/console"),
+            Resource.newClassPathResource("static"),
+            Resource.newClassPathResource("indexer_static")
+        );
+      } else {
+        staticResources = new ResourceCollection(
+            Resource.newClassPathResource("io/druid/console"),
+            Resource.newClassPathResource("static")
+        );
+      }
       root.setBaseResource(staticResources);
     } else {
       // used for console development
@@ -81,10 +94,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     // Can't use '/*' here because of Guice and Jetty static content conflicts
     root.addFilter(GuiceFilter.class, "/info/*", null);
     root.addFilter(GuiceFilter.class, "/druid/coordinator/*", null);
+    if (beOverlord) {
+      root.addFilter(GuiceFilter.class, "/druid/indexer/*", null);
+    }
     // this will be removed in the next major release
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
-    root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");
+    if (!beOverlord) {
+      root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");
+    }
 
     HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});

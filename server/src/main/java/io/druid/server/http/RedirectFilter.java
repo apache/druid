@@ -68,7 +68,7 @@ public class RedirectFilter implements Filter
       throw new ServletException("non-HTTP request or response");
     }
 
-    if (redirectInfo.doLocal()) {
+    if (redirectInfo.doLocal(request.getRequestURI())) {
       chain.doFilter(request, response);
     } else {
       URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());

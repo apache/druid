@@ -44,7 +44,7 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(taskMaster.isLeading()).andReturn(true).anyTimes();
     EasyMock.replay(taskMaster);
-    Assert.assertTrue(redirectInfo.doLocal());
+    Assert.assertTrue(redirectInfo.doLocal(null));
     EasyMock.verify(taskMaster);
   }
 
