@@ -1057,10 +1057,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                 ));
 
     if (result) {
-      log.makeAlert(
-          "Successfully sent the reset request for partitions [%s], waiting to be killed",
-          partitionOffsetMap.keySet()
-      ).emit();
+      log.makeAlert("Resetting Kafka offsets for datasource [%s]", getDataSource())
+         .addData("partitions", partitionOffsetMap.keySet())
+         .emit();
       // wait for being killed by supervisor
       try {
         Thread.sleep(Long.MAX_VALUE);
