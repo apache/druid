@@ -21,7 +21,6 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
@@ -37,8 +36,6 @@ import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -103,9 +100,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
               return jsonMapper.readValue(bytes, typeReference);
             }
             catch (IOException e) {
-              CharBuffer.wrap(StringUtils.fromUtf8(bytes).toCharArray());
-              CharBuffer charBuffer = Charsets.UTF_8.decode(ByteBuffer.wrap(bytes));
-              log.error(e, "Could not parse json: %s", charBuffer.toString());
+              log.error(e, "Could not parse json: %s", StringUtils.fromUtf8(bytes));
               throw Throwables.propagate(e);
             }
           }
