@@ -107,7 +107,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   public byte[] getCacheKey()
   {
     final byte[] exprBytes = StringUtils.toUtf8(format + "\u0001" + tz.getID() + "\u0001" + locale.toLanguageTag());
-    final byte[] granularityCacheKey = granularity.cacheKey();
+    final byte[] granularityCacheKey = granularity.getCacheKey();
     return ByteBuffer.allocate(4 + exprBytes.length + granularityCacheKey.length)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_FORMAT)
                      .put(exprBytes)

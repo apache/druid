@@ -21,8 +21,10 @@ package io.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -41,6 +43,7 @@ public class FieldAccessPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
+    Preconditions.checkNotNull(fieldName);
     this.name = name;
     this.fieldName = fieldName;
   }
@@ -70,6 +73,14 @@ public class FieldAccessPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.FIELD_ACCESS)
+        .appendString(fieldName)
+        .build();
+  }
+
   @JsonProperty
   public String getFieldName()
   {
@@ -97,7 +108,7 @@ public class FieldAccessPostAggregator implements PostAggregator
 
     FieldAccessPostAggregator that = (FieldAccessPostAggregator) o;
 
-    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
+    if (!fieldName.equals(that.fieldName)) {
       return false;
     }
     if (name != null ? !name.equals(that.name) : that.name != null) {
@@ -111,7 +122,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    result = 31 * result + fieldName.hashCode();
     return result;
   }
 }

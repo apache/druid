@@ -36,6 +36,10 @@ import io.druid.query.TableDataSource;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.ArithmeticPostAggregator;
+import io.druid.query.aggregation.post.ConstantPostAggregator;
+import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.IncrementalIndexSegment;
@@ -73,7 +77,7 @@ public class TopNQueryQueryToolChestTest
                 null,
                 QueryGranularities.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
-                null,
+                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
                 null
             )
         );
@@ -104,6 +108,75 @@ public class TopNQueryQueryToolChestTest
     Result<TopNResultValue> fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
+  }
+
+  @Test
+  public void testComputeCacheKeyWithDifferentPostAgg() throws Exception
+  {
+    final TopNQuery query1 = new TopNQuery(
+        new TableDataSource("dummy"),
+        new DefaultDimensionSpec("test", "test"),
+        new NumericTopNMetricSpec("post"),
+        3,
+        new MultipleIntervalSegmentSpec(
+            ImmutableList.of(
+                new Interval(
+                    "2015-01-01/2015-01-02"
+                )
+            )
+        ),
+        null,
+        QueryGranularities.ALL,
+        ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
+        ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+        null
+    );
+
+    final TopNQuery query2 = new TopNQuery(
+        new TableDataSource("dummy"),
+        new DefaultDimensionSpec("test", "test"),
+        new NumericTopNMetricSpec("post"),
+        3,
+        new MultipleIntervalSegmentSpec(
+            ImmutableList.of(
+                new Interval(
+                    "2015-01-01/2015-01-02"
+                )
+            )
+        ),
+        null,
+        QueryGranularities.ALL,
+        ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
+        ImmutableList.<PostAggregator>of(
+            new ArithmeticPostAggregator(
+                "post",
+                "+",
+                ImmutableList.<PostAggregator>of(
+                    new FieldAccessPostAggregator(
+                        null,
+                        "metric1"
+                    ),
+                    new FieldAccessPostAggregator(
+                        null,
+                        "metric1"
+                    )
+                )
+            )
+        ),
+        null
+    );
+
+    final CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy1 = new TopNQueryQueryToolChest(
+        null,
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy2 = new TopNQueryQueryToolChest(
+        null,
+        null
+    ).getCacheStrategy(query2);
+
+    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
   }
 
   @Test

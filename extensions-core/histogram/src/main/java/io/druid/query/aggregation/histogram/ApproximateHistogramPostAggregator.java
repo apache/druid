@@ -29,8 +29,8 @@ public abstract class ApproximateHistogramPostAggregator implements PostAggregat
 {
   private static final Comparator COMPARATOR = ApproximateHistogramAggregator.COMPARATOR;
 
-  private final String name;
-  private final String fieldName;
+  protected final String name;
+  protected final String fieldName;
 
   public ApproximateHistogramPostAggregator(
       String name,

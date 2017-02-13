@@ -188,7 +188,7 @@ public class LookupDimensionSpec implements DimensionSpec
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(replaceWithBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(retainMissingValue == true ? (byte) 1 : (byte) 0)
+                     .put(retainMissingValue ? (byte) 1 : (byte) 0)
                      .array();
   }
 
