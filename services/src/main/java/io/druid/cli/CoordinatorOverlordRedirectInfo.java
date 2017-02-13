@@ -17,47 +17,49 @@
  * under the License.
  */
 
-package io.druid.indexing.overlord.http;
+package io.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.indexing.overlord.TaskMaster;
+import io.druid.indexing.overlord.http.OverlordRedirectInfo;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.RedirectInfo;
 
-import java.net.URI;
 import java.net.URL;
 
 /**
  */
-public class OverlordRedirectInfo implements RedirectInfo
+public class CoordinatorOverlordRedirectInfo implements RedirectInfo
 {
-  private final TaskMaster taskMaster;
+  private final OverlordRedirectInfo overlordRedirectInfo;
+  private final CoordinatorRedirectInfo coordinatorRedirectInfo;
 
   @Inject
-  public OverlordRedirectInfo(TaskMaster taskMaster)
+  public CoordinatorOverlordRedirectInfo(TaskMaster taskMaster, DruidCoordinator druidCoordinator)
   {
-    this.taskMaster = taskMaster;
+    this.overlordRedirectInfo = new OverlordRedirectInfo(taskMaster);
+    this.coordinatorRedirectInfo = new CoordinatorRedirectInfo(druidCoordinator);
   }
 
   @Override
   public boolean doLocal(String requestURI)
   {
-    return taskMaster.isLeading();
+    return isOverlordRequest(requestURI) ?
+           overlordRedirectInfo.doLocal(requestURI) :
+           coordinatorRedirectInfo.doLocal(requestURI);
   }
 
   @Override
   public URL getRedirectURL(String queryString, String requestURI)
   {
-    try {
-      final String leader = taskMaster.getLeader();
-      if (leader == null || leader.isEmpty()) {
-        return null;
-      } else {
-        return new URI("http", leader, requestURI, queryString, null).toURL();
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    return isOverlordRequest(requestURI) ?
+           overlordRedirectInfo.getRedirectURL(queryString, requestURI) :
+           coordinatorRedirectInfo.getRedirectURL(queryString, requestURI);
+  }
+
+  private boolean isOverlordRequest(String requestURI)
+  {
+    return requestURI.startsWith("/druid/indexer");
   }
 }
