@@ -40,6 +40,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   private static final Logger log = new Logger(PostgreSQLConnector.class);
   private static final String PAYLOAD_TYPE = "BYTEA";
   private static final String SERIAL_TYPE = "BIGSERIAL";
+  private static final String QUOTE_STRING = "\\\"";
   public static final int DEFAULT_STREAMING_RESULT_SIZE = 100;
 
   private final DBI dbi;
@@ -71,6 +72,11 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   protected String getSerialType()
   {
     return SERIAL_TYPE;
+  }
+
+  @Override
+  public String getQuoteString() {
+    return QUOTE_STRING;
   }
 
   @Override

@@ -104,7 +104,7 @@ public class CustomStatementRewriterTest
         + "  dataSource VARCHAR(255) NOT NULL,\n"
         + "  created_date VARCHAR(255) NOT NULL,\n"
         + "  start VARCHAR(255) NOT NULL,\n"
-        + "  \"end\" VARCHAR(255) NOT NULL,\n"
+        + "  `end` VARCHAR(255) NOT NULL,\n"
         + "  partitioned BOOLEAN NOT NULL,\n"
         + "  version VARCHAR(255) NOT NULL,\n"
         + "  used BOOLEAN NOT NULL,\n"
@@ -117,7 +117,7 @@ public class CustomStatementRewriterTest
         "  dataSource VARCHAR(255) NOT NULL,\n" +
         "  created_date VARCHAR(255) NOT NULL,\n" +
         "  start VARCHAR(255) NOT NULL,\n" +
-        "  \"end\" VARCHAR(255) NOT NULL,\n" +
+        "  `end` VARCHAR(255) NOT NULL,\n" +
         "  partitioned BIT NOT NULL,\n" +
         "  version VARCHAR(255) NOT NULL,\n" +
         "  used BIT NOT NULL,\n" +
