@@ -17,11 +17,11 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.hyperloglog;
+package io.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -31,33 +31,19 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-/**
- */
-public class HyperUniqueFinalizingPostAggregator implements PostAggregator
+public class FinalizingFieldAccessPostAggregator implements PostAggregator
 {
-  private static final Comparator<Double> DOUBLE_COMPARATOR = Ordering.from(new Comparator<Double>()
-  {
-    @Override
-    public int compare(Double lhs, Double rhs)
-    {
-      return Double.compare(lhs, rhs);
-    }
-  }).nullsFirst();
-
   private final String name;
   private final String fieldName;
 
   @JsonCreator
-  public HyperUniqueFinalizingPostAggregator(
+  public FinalizingFieldAccessPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName
   )
   {
-    this.fieldName = Preconditions.checkNotNull(fieldName, "fieldName is null");
-    //Note that, in general, name shouldn't be null, we are defaulting
-    //to fieldName here just to be backward compatible with 0.7.x
-    this.name = name == null ? fieldName : name;
-
+    this.name = name;
+    this.fieldName = fieldName;
   }
 
   @Override
@@ -67,34 +53,66 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator<Double> getComparator()
+  public Comparator getComparator()
   {
-    return DOUBLE_COMPARATOR;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    return HyperUniquesAggregatorFactory.estimateCardinality(combinedAggregators.get(fieldName));
+    throw new UnsupportedOperationException("No decorated");
   }
 
   @Override
-  @JsonProperty("name")
+  @JsonProperty
   public String getName()
   {
     return name;
   }
 
   @Override
-  public HyperUniqueFinalizingPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  public FinalizingFieldAccessPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
-    return this;
+    return new FinalizingFieldAccessPostAggregator(name, fieldName) {
+
+      @Override
+      public Comparator getComparator()
+      {
+        if (aggregators != null && aggregators.containsKey(fieldName)) {
+          return aggregators.get(fieldName).getComparator();
+        } else {
+          return Ordering.natural().nullsFirst();
+        }
+      }
+
+      @Override
+      public Object compute(Map<String, Object> combinedAggregators)
+      {
+        if (aggregators != null && aggregators.containsKey(fieldName)) {
+          return aggregators.get(fieldName).finalizeComputation(
+              combinedAggregators.get(fieldName)
+          );
+        } else {
+          return combinedAggregators.get(fieldName);
+        }
+      }
+    };
   }
 
-  @JsonProperty("fieldName")
+  @JsonProperty
   public String getFieldName()
   {
     return fieldName;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FinalizingFieldAccessPostAggregator{" +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           '}';
   }
 
   @Override
@@ -107,12 +125,16 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
       return false;
     }
 
-    HyperUniqueFinalizingPostAggregator that = (HyperUniqueFinalizingPostAggregator) o;
+    FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator)o;
 
+    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
+      return false;
+    }
     if (name != null ? !name.equals(that.name) : that.name != null) {
       return false;
     }
-    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+
+    return true;
   }
 
   @Override
@@ -123,12 +145,12 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
     return result;
   }
 
-  @Override
-  public String toString()
+  @VisibleForTesting
+  static FinalizingFieldAccessPostAggregator buildDecorated(String name,
+                                                            String fieldName,
+                                                            Map<String, AggregatorFactory> aggregators)
   {
-    return "HyperUniqueFinalizingPostAggregator{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
-           '}';
+    FinalizingFieldAccessPostAggregator ret = new FinalizingFieldAccessPostAggregator(name, fieldName);
+    return ret.decorate(aggregators);
   }
 }

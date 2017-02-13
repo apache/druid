@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.IAE;
+import io.druid.query.Queries;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
@@ -52,6 +54,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   private final Ops op;
   private final Comparator comparator;
   private final String ordering;
+  private Map<String, AggregatorFactory> aggFactoryMap;
 
   public ArithmeticPostAggregator(
       String name,
@@ -121,6 +124,12 @@ public class ArithmeticPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ArithmeticPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return new ArithmeticPostAggregator(name, fnName, Queries.decoratePostAggregators(fields, aggregators), ordering);
   }
 
   @JsonProperty("fn")

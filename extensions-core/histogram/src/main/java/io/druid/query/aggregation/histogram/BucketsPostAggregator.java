@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Map;
 import java.util.Set;
@@ -65,6 +67,12 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
   {
     ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
     return ah.toHistogram(bucketSize, offset);
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty

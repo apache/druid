@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -78,6 +80,12 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   {
     final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
     return ah.getQuantiles(new float[]{this.getProbability()})[0];
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty
