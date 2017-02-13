@@ -22,7 +22,6 @@ package io.druid.benchmark.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -41,6 +40,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -174,19 +174,21 @@ public class IndexPersistBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void persist(Blackhole blackhole) throws Exception
   {
-    File tmpFile = Files.createTempDir();
-    log.info("Using temp dir: " + tmpFile.getAbsolutePath());
-    tmpFile.deleteOnExit();
+    File tmpDir = Files.createTempDir();
+    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
+    try {
+      File indexFile = INDEX_MERGER.persist(
+          incIndex,
+          tmpDir,
+          new IndexSpec()
+      );
 
-    File indexFile = INDEX_MERGER.persist(
-        incIndex,
-        tmpFile,
-        new IndexSpec()
-    );
+      blackhole.consume(indexFile);
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
 
-    blackhole.consume(indexFile);
-
-    tmpFile.delete();
   }
 
   @Benchmark
@@ -194,18 +196,20 @@ public class IndexPersistBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void persistV9(Blackhole blackhole) throws Exception
   {
-    File tmpFile = Files.createTempDir();
-    log.info("Using temp dir: " + tmpFile.getAbsolutePath());
-    tmpFile.deleteOnExit();;
+    File tmpDir = Files.createTempDir();
+    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
+    try {
+      File indexFile = INDEX_MERGER_V9.persist(
+          incIndex,
+          tmpDir,
+          new IndexSpec()
+      );
 
-    File indexFile = INDEX_MERGER_V9.persist(
-        incIndex,
-        tmpFile,
-        new IndexSpec()
-    );
+      blackhole.consume(indexFile);
 
-    blackhole.consume(indexFile);
-
-    tmpFile.delete();
+    }
+    finally {
+    FileUtils.deleteDirectory(tmpDir);
+    }
   }
 }

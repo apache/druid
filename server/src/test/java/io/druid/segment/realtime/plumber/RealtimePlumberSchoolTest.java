@@ -96,6 +96,7 @@ public class RealtimePlumberSchoolTest
   private DataSchema schema;
   private DataSchema schema2;
   private FireDepartmentMetrics metrics;
+  private File tmpDir;
 
   public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, boolean buildV9Directly)
   {
@@ -124,8 +125,7 @@ public class RealtimePlumberSchoolTest
   @Before
   public void setUp() throws Exception
   {
-    final File tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
+    tmpDir = Files.createTempDir();
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -237,6 +237,7 @@ public class RealtimePlumberSchoolTest
             schema.getDataSource()
         )
     );
+    FileUtils.deleteDirectory(tmpDir);
   }
 
   @Test(timeout = 60000)

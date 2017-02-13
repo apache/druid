@@ -50,7 +50,7 @@ public class VSizeIndexedIntsWriterTest
   @After
   public void tearDown() throws Exception
   {
-    ioPeon.cleanup();
+    ioPeon.close();
   }
 
   private void generateVals(final int totalSize, final int maxValue) throws IOException
