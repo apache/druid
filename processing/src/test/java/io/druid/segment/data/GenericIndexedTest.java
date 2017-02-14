@@ -99,7 +99,9 @@ public class GenericIndexedTest
   {
     Assert.assertEquals(strings.length, index.size());
     for (int i = 0; i < strings.length; i++) {
-      Assert.assertEquals(strings[i], index.get(i));
+      String actual = index.get(i);
+      Assert.assertSame(actual, index.get(i));  // return memoized
+      Assert.assertEquals(strings[i], actual);
     }
 
     if (allowReverseLookup) {
