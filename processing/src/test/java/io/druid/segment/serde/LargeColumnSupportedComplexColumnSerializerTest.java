@@ -83,7 +83,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
         serializer.writeToChannel(channel, v9Smoosher);
 
         channel.close();
-        peon.cleanup();
+        peon.close();
         v9Smoosher.close();
 
         SmooshedFileMapper mapper = Smoosh.map(tmpFile);
