@@ -91,6 +91,8 @@ public class JobHelper
   {
     return new Path(base, "classpath");
   }
+  public static final String INDEX_ZIP = "index.zip";
+  public static final String DESCRIPTOR_JSON = "descriptor.json";
 
   /**
    * Dose authenticate against a secured hadoop cluster
@@ -385,7 +387,6 @@ public class JobHelper
   {
     final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
 
-
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
         DataPusher.class, new DataPusher()
@@ -582,10 +583,11 @@ public class JobHelper
     return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme());
   }
 
-  public static Path makeIndexZipPath(
+  public static Path makeFileNamePath(
       final Path basePath,
       final FileSystem fs,
-      final DataSegment segmentTemplate
+      final DataSegment segmentTemplate,
+      final String baseFileName
   )
   {
     final Path finalIndexZipPath;
@@ -595,9 +597,10 @@ public class JobHelper
       finalIndexZipPath = new Path(
           prependFSIfNullScheme(fs, basePath),
           String.format(
-              "./%s/%d_index.zip",
+              "./%s/%d_%s",
               segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum()
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              baseFileName
           )
       );
     } else {
@@ -605,43 +608,13 @@ public class JobHelper
       finalIndexZipPath = new Path(
           prependFSIfNullScheme(fs, basePath),
           String.format(
-              "./%s/index.zip",
-              segmentDir
+              "./%s/%s",
+              segmentDir,
+              baseFileName
           )
       );
     }
     return finalIndexZipPath;
-  }
-
-  public static Path makeDescriptorPath(
-      final Path basePath,
-      final FileSystem fs,
-      final DataSegment segmentTemplate
-  )
-  {
-    final Path finalDescriptorPath;
-    final String segmentDir;
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      finalDescriptorPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_descriptor.json",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum()
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      finalDescriptorPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/descriptor.json",
-              segmentDir.toString()
-          )
-      );
-    }
-    return finalDescriptorPath;
   }
 
   public static Path makeTmpPath(

@@ -46,7 +46,7 @@ extensions.
 
 Example:
 
-Suppose your metadata storage is `mysql` and you've migrated some segments to a directory in `HDFS`, and that directory looks
+Suppose your metadata storage is `mysql` and you've migrated some segments to a directory in HDFS, and that directory looks
 like this,
 
 ```

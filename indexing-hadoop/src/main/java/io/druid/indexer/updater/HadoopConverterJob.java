@@ -554,15 +554,17 @@ public class HadoopConverterJob
           context.getConfiguration(),
           context,
           outDir,
-          JobHelper.makeIndexZipPath(
+          JobHelper.makeFileNamePath(
               baseOutputPath,
               outputFS,
-              finalSegmentTemplate
+              finalSegmentTemplate,
+              JobHelper.INDEX_ZIP
           ),
-          JobHelper.makeDescriptorPath(
+          JobHelper.makeFileNamePath(
               baseOutputPath,
               outputFS,
-              finalSegmentTemplate
+              finalSegmentTemplate,
+              JobHelper.DESCRIPTOR_JSON
           ),
           JobHelper.makeTmpPath(
               baseOutputPath,

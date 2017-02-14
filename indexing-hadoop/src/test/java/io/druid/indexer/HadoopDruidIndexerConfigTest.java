@@ -108,7 +108,7 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeIndexZipPath(
+    Path path = JobHelper.makeFileNamePath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new DistributedFileSystem(),
         new DataSegment(
@@ -121,7 +121,8 @@ public class HadoopDruidIndexerConfigTest
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
             -1
-        )
+        ),
+        JobHelper.INDEX_ZIP
     );
     Assert.assertEquals(
         "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
@@ -129,7 +130,7 @@ public class HadoopDruidIndexerConfigTest
         path.toString()
     );
 
-    path = JobHelper.makeDescriptorPath(
+    path = JobHelper.makeFileNamePath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new DistributedFileSystem(),
         new DataSegment(
@@ -142,7 +143,8 @@ public class HadoopDruidIndexerConfigTest
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
             -1
-        )
+        ),
+        JobHelper.DESCRIPTOR_JSON
     );
     Assert.assertEquals(
         "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
@@ -213,7 +215,7 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = JobHelper.makeIndexZipPath(
+    Path path = JobHelper.makeFileNamePath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new LocalFileSystem(),
         new DataSegment(
@@ -226,7 +228,8 @@ public class HadoopDruidIndexerConfigTest
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
             -1
-        )
+        ),
+        JobHelper.INDEX_ZIP
     );
     Assert.assertEquals(
         "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
@@ -234,7 +237,7 @@ public class HadoopDruidIndexerConfigTest
         path.toString()
     );
 
-    path = JobHelper.makeDescriptorPath(
+    path = JobHelper.makeFileNamePath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new LocalFileSystem(),
         new DataSegment(
@@ -247,7 +250,8 @@ public class HadoopDruidIndexerConfigTest
             new NumberedShardSpec(bucket.partitionNum, 5000),
             -1,
             -1
-        )
+        ),
+        JobHelper.DESCRIPTOR_JSON
     );
     Assert.assertEquals(
         "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
