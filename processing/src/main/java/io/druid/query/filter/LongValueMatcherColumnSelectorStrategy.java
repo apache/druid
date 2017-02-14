@@ -58,4 +58,17 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       }
     };
   }
+
+  @Override
+  public ValueGetter makeValueGetter(final LongColumnSelector selector)
+  {
+    return new ValueGetter()
+    {
+      @Override
+      public String[] get()
+      {
+        return new String[]{ Long.toString(selector.get()) };
+      }
+    };
+  }
 }

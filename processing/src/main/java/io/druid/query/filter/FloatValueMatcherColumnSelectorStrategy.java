@@ -59,4 +59,17 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       }
     };
   }
+
+  @Override
+  public ValueGetter makeValueGetter(final FloatColumnSelector selector)
+  {
+    return new ValueGetter()
+    {
+      @Override
+      public String[] get()
+      {
+        return new String[]{ Float.toString(selector.get()) };
+      }
+    };
+  }
 }
