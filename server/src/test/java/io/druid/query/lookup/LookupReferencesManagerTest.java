@@ -22,7 +22,6 @@ package io.druid.query.lookup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -68,7 +67,7 @@ public class LookupReferencesManagerTest
 
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(Files.createTempDir().getAbsolutePath()),
+        new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()),
         mapper,
         true
     );

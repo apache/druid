@@ -110,17 +110,12 @@ public class LookupReferencesManager
         if (lookupSnapshotTaker != null) {
           final List<LookupBean> lookupBeanList = lookupSnapshotTaker.pullExistingSnapshot();
           for (LookupBean lookupBean : lookupBeanList) {
-            LookupExtractorFactoryContainer container = lookupBean.container;
-
-            //for backward compatibility with druid ver <= 0.9.2 persisted snapshots
-            if (lookupBean.container == null) {
-              container = new LookupExtractorFactoryContainer(null, lookupBean.factory);
-            }
+            LookupExtractorFactoryContainer container = lookupBean.getContainer();
 
             if (container.getLookupExtractorFactory().start()) {
-              lookupMap.put(lookupBean.name, container);
+              lookupMap.put(lookupBean.getName(), container);
             } else {
-              throw new ISE("Failed to start lookup [%s]:[%s]", lookupBean.name, container);
+              throw new ISE("Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
             }
           }
         }
@@ -295,9 +290,7 @@ public class LookupReferencesManager
                       Map.Entry<String, LookupExtractorFactoryContainer> input
                   )
                   {
-                    final LookupBean lookupBean = new LookupBean();
-                    lookupBean.container = input.getValue();
-                    lookupBean.name = input.getKey();
+                    final LookupBean lookupBean = new LookupBean(input.getKey(), null, input.getValue());
                     return lookupBean;
                   }
                 }

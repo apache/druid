@@ -22,6 +22,7 @@ package io.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,9 +41,9 @@ public class LookupsState
       @JsonProperty("toDrop") Set<String> toDrop
   )
   {
-    this.current = current;
-    this.toLoad = toLoad;
-    this.toDrop = toDrop;
+    this.current = current == null ? Collections.EMPTY_MAP : current;
+    this.toLoad = toLoad == null ? Collections.EMPTY_MAP : toLoad;
+    this.toDrop = toDrop == null ? Collections.EMPTY_SET : toDrop;
   }
 
   @JsonProperty
@@ -71,5 +72,36 @@ public class LookupsState
            ", toLoad=" + toLoad +
            ", toDrop=" + toDrop +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    LookupsState that = (LookupsState) o;
+
+    if (!current.equals(that.current)) {
+      return false;
+    }
+    if (!toLoad.equals(that.toLoad)) {
+      return false;
+    }
+    return toDrop.equals(that.toDrop);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = current.hashCode();
+    result = 31 * result + toLoad.hashCode();
+    result = 31 * result + toDrop.hashCode();
+    return result;
   }
 }

@@ -19,21 +19,52 @@
 
 package io.druid.query.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 //TODO merge this code to the same definition when pr/1576 is merged
 class LookupBean
 {
-  //kept for backward compatibility with druid ver <= 0.9.2 persisted snapshots
-  @Deprecated
   @JsonProperty
-  LookupExtractorFactory factory;
+  private final LookupExtractorFactoryContainer container;
 
   @JsonProperty
-  LookupExtractorFactoryContainer container;
+  private final String name;
 
-  @JsonProperty
-  String name;
+  @JsonCreator
+  public LookupBean(
+      @JsonProperty("name") String name,
+      //kept for backward compatibility with druid ver <= 0.9.2 persisted snapshots
+      @Deprecated @JsonProperty("factory") LookupExtractorFactory factory,
+      @JsonProperty("container") LookupExtractorFactoryContainer container
+  )
+  {
+    Preconditions.checkArgument(factory == null || container == null, "only one of factory or container should exist");
+    Preconditions.checkArgument(factory != null || container != null, "one of factory or container must exist");
+
+    this.name = name;
+    this.container = container != null ? container : new LookupExtractorFactoryContainer(null, factory);
+  }
+
+  public String getName()
+  {
+    return name;
+  }
+
+  public LookupExtractorFactoryContainer getContainer()
+  {
+    return container;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LookupBean{" +
+           "container=" + container +
+           ", name='" + name + '\'' +
+           '}';
+  }
 
   @Override
   public boolean equals(Object o)
@@ -41,16 +72,24 @@ class LookupBean
     if (this == o) {
       return true;
     }
-    if (!(o instanceof LookupBean)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
     LookupBean that = (LookupBean) o;
 
-    if (!factory.equals(that.factory)) {
+    if (!container.equals(that.container)) {
       return false;
     }
     return name.equals(that.name);
 
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = container.hashCode();
+    result = 31 * result + name.hashCode();
+    return result;
   }
 }

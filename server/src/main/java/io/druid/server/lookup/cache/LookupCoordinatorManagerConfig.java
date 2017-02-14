@@ -26,8 +26,8 @@ import javax.validation.constraints.Min;
 
 public class LookupCoordinatorManagerConfig
 {
-  public static final Duration DEFAULT_HOST_TIMEOUT = Duration.millis(10_000L);
-  public static final Duration DEFAULT_ALL_HOST_TIMEOUT = Duration.millis(300_000L);
+  public static final Duration DEFAULT_HOST_TIMEOUT = Duration.millis(2_000L);
+  public static final Duration DEFAULT_ALL_HOST_TIMEOUT = Duration.millis(900_000L);
 
   @JsonProperty
   private Duration hostTimeout = null;

@@ -840,13 +840,19 @@ public class LookupCoordinatorManagerTest
     };
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
-    EasyMock.expect(configManager.set(
-        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-        EasyMock.eq(ImmutableMap.of(LOOKUP_TIER, ImmutableMap.of(
-            "ignore", ignore
-        ))),
-        EasyMock.eq(auditInfo)
-    )).andReturn(true).once();
+    EasyMock.expect(
+        configManager.set(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(
+                ImmutableMap.of(
+                    LOOKUP_TIER, ImmutableMap.of(
+                        "ignore", ignore
+                    )
+                )
+            ),
+            EasyMock.eq(auditInfo)
+        )
+    ).andReturn(true).once();
     EasyMock.replay(configManager);
     Assert.assertTrue(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
     EasyMock.verify(configManager);
@@ -982,14 +988,20 @@ public class LookupCoordinatorManagerTest
   @Test
   public void testStart() throws Exception
   {
-    final AtomicReference<List<Map<String, Object>>> lookupRef = new AtomicReference<>(null);
-
     EasyMock.reset(configManager);
+
     EasyMock.expect(configManager.watch(
         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
         EasyMock.<TypeReference>anyObject(),
         EasyMock.<AtomicReference>isNull()
-    )).andReturn(lookupRef).once();
+    )).andReturn(new AtomicReference<List<LookupExtractorFactoryMapContainer>>(null)).once();
+
+    EasyMock.expect(configManager.watch(
+                        EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(new AtomicReference<List<Map<String, Object>>>(null)).once();
+
     EasyMock.replay(configManager);
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
@@ -1015,14 +1027,20 @@ public class LookupCoordinatorManagerTest
   @Test
   public void testStop() throws Exception
   {
-    final AtomicReference<List<Map<String, Object>>> lookupRef = new AtomicReference<>(null);
-
     EasyMock.reset(configManager);
+
     EasyMock.expect(configManager.watch(
-        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-        EasyMock.<TypeReference>anyObject(),
-        EasyMock.<AtomicReference>isNull()
-    )).andReturn(lookupRef).once();
+                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(new AtomicReference<List<LookupExtractorFactoryMapContainer>>(null)).once();
+
+    EasyMock.expect(configManager.watch(
+                        EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(new AtomicReference<List<Map<String, Object>>>(null)).once();
+
     EasyMock.replay(configManager);
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
@@ -1045,14 +1063,20 @@ public class LookupCoordinatorManagerTest
   @Test
   public void testStartTooMuch() throws Exception
   {
-    final AtomicReference<List<Map<String, Object>>> lookupRef = new AtomicReference<>(null);
-
     EasyMock.reset(configManager);
+
     EasyMock.expect(configManager.watch(
-        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-        EasyMock.<TypeReference>anyObject(),
-        EasyMock.<AtomicReference>isNull()
-    )).andReturn(lookupRef).once();
+                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(new AtomicReference<List<LookupExtractorFactoryMapContainer>>(null)).once();
+
+    EasyMock.expect(configManager.watch(
+                        EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(new AtomicReference<List<Map<String, Object>>>(null)).once();
+
     EasyMock.replay(configManager);
 
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
@@ -1144,5 +1168,64 @@ public class LookupCoordinatorManagerTest
     finally {
       EasyMock.verify(discoverer);
     }
+  }
+
+  //tests that lookups stored in db from 0.9.x are converted and restored.
+  @Test
+  public void testBackwardCompatibilityMigration() throws Exception
+  {
+    EasyMock.reset(configManager);
+
+    EasyMock.expect(configManager.watch(
+                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(
+        new AtomicReference<Map<String, Map<String, Map<String, Object>>>>(null)).once();
+
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
+            EasyMock.<TypeReference>anyObject(),
+            EasyMock.<AtomicReference>isNull()
+        )
+    ).andReturn(
+        new AtomicReference<Map<String, Map<String, Map<String, Object>>>>(
+            ImmutableMap.<String, Map<String, Map<String, Object>>>of(
+                "tier1",
+                ImmutableMap.<String, Map<String, Object>>of("lookup1", ImmutableMap.<String, Object>of("k", "v"))
+            )
+        )
+    ).once();
+
+    EasyMock.expect(
+        configManager.set(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(
+                ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
+                    "tier1",
+                    ImmutableMap.of("lookup1", new LookupExtractorFactoryMapContainer(null, ImmutableMap.<String, Object>of("k", "v")))
+                )
+            ),
+            EasyMock.anyObject(AuditInfo.class)
+        )
+    ).andReturn(true).once();
+
+    EasyMock.replay(configManager);
+
+    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        client,
+        discoverer,
+        mapper,
+        configManager,
+        new LookupCoordinatorManagerConfig(){
+          @Override
+          public long getPeriod(){
+            return 1;
+          }
+        }
+    );
+    manager.start();
+    EasyMock.verify(configManager);
   }
 }

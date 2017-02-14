@@ -89,6 +89,9 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class LookupCoordinatorManager
 {
+  //key used in druid-0.9.x with config manager
+  public static final String OLD_LOOKUP_CONFIG_KEY = "lookups";
+
   public static final String LOOKUP_CONFIG_KEY = "lookupsConfig";
   public static final String LOOKUP_LISTEN_ANNOUNCE_KEY = "lookups";
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
@@ -317,7 +320,7 @@ public class LookupCoordinatorManager
       // backward compatibility with 0.9.x
       if (lookupMapConfigRef.get() == null) {
         Map<String, Map<String, Map<String, Object>>> oldLookups = configManager.watch(
-            "lookups",
+            OLD_LOOKUP_CONFIG_KEY,
             new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
             {
             },
@@ -333,6 +336,7 @@ public class LookupCoordinatorManager
               for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
                 convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
               }
+              converted.put(tier, convertedTierLookups);
             }
           }
           configManager.set(LOOKUP_CONFIG_KEY, converted, new AuditInfo("autoConversion", "autoConversion", "127.0.0.1"));

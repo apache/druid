@@ -289,10 +289,9 @@ To configure the behavior of the dynamic configuration manager, use the followin
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.lookups.hostDeleteTimeout`|Timeout (in ms) PER HOST for processing DELETE requests for dropping lookups|`1000`(1 second)|
-|`druid.manager.lookups.hostUpdateTimeout`|Timeout (in ms) PER HOST for processing an update/add (POST) for new or updated lookups|`10000`(10 seconds)|
-|`druid.manager.lookups.updateAllTimeout`|Timeout (in ms) TOTAL for processing update/adds on ALL hosts. Safety valve in case too many hosts timeout on their update|`60000`(1 minute)|
-|`druid.manager.lookups.period`|How long to pause between management cycles|`30000`(30 seconds)|
+|`druid.manager.lookups.hostTimeout`|Timeout (in ms) PER HOST for processing request|`2000`(s second)|
+|`druid.manager.lookups.allHostTimeout`|Timeout (in ms) to finish lookup management on all the nodes.|`900000`(15 mins)|
+|`druid.manager.lookups.period`|How long to pause between management cycles|`120000`(2 mins)|
 |`druid.manager.lookups.threadPoolSize`|Number of service nodes that can be managed concurrently|`10`|
 
 ## Saving configuration across restarts

@@ -22,6 +22,7 @@ package io.druid.server.lookup.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,9 +43,9 @@ public class LookupsStateWithMap
       @JsonProperty("toDrop") Set<String> toDrop
   )
   {
-    this.current = current;
-    this.toLoad = toLoad;
-    this.toDrop = toDrop;
+    this.current = current == null ? Collections.EMPTY_MAP : current;
+    this.toLoad = toLoad == null ? Collections.EMPTY_MAP : toLoad;
+    this.toDrop = toDrop == null ? Collections.EMPTY_SET : toDrop;
   }
 
   @JsonProperty

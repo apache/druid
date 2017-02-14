@@ -51,12 +51,17 @@ public class LookupExtractorFactoryContainerTest
         LookupExtractorFactoryContainer.class
     );
 
-    Assert.assertEquals("v1", actual.getVersion());
-    Assert.assertTrue(actual.getLookupExtractorFactory() instanceof TestLookupExtractorFactory);
+    Assert.assertEquals(
+        new LookupExtractorFactoryContainer(
+            "v1",
+            new TestLookupExtractorFactory()
+        ),
+        actual
+    );
   }
 
   @JsonTypeName("test")
-  private static class TestLookupExtractorFactory implements LookupExtractorFactory
+  static class TestLookupExtractorFactory implements LookupExtractorFactory
   {
 
     @Override
@@ -88,6 +93,11 @@ public class LookupExtractorFactoryContainerTest
     public LookupExtractor get()
     {
       return null;
+    }
+
+    public boolean equals(Object other)
+    {
+      return other instanceof TestLookupExtractorFactory;
     }
   }
 }
