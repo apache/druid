@@ -75,7 +75,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
           @Override
           public ScheduledExecutorService get()
           {
-            return ScheduledExecutors.fixed(1, "PendingTaskBasedResourceManagement-manager--%d");
+            return ScheduledExecutors.fixed(1, "PendingTaskBasedWorkerProvisioning-manager--%d");
           }
         }
     );
