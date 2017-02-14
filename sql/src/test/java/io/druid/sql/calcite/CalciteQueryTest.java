@@ -1814,29 +1814,39 @@ public class CalciteQueryTest
         + "  ) t1\n"
         + "  GROUP BY dim2\n"
         + ") t2",
-        null,
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(
+                                            GroupByQuery.builder()
+                                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                                        .setInterval(QSS(Filtration.eternity()))
+                                                        .setGranularity(QueryGranularities.ALL)
+                                                        .setDimensions(DIMS(
+                                                            new DefaultDimensionSpec("dim1", "d0"),
+                                                            new DefaultDimensionSpec("dim2", "d1")
+                                                        ))
+                                                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                                                        .build()
+                                        )
+                                        .setInterval(QSS(Filtration.eternity()))
+                                        .setGranularity(QueryGranularities.ALL)
+                                        .setDimensions(DIMS(new DefaultDimensionSpec("d1", "d0")))
+                                        .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "a0")))
+                                        .build()
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(QueryGranularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("a0", "a0"),
+                            new CountAggregatorFactory("a1")
+                        ))
+                        .build()
+        ),
         ImmutableList.of(
             new Object[]{6L, 3L}
         )
-    );
-  }
-
-  @Test
-  public void testDoubleNestedGroupByForbiddenByConfig() throws Exception
-  {
-    assertQueryIsUnplannable(
-        PLANNER_CONFIG_SINGLE_NESTING_ONLY,
-        "SELECT SUM(cnt), COUNT(*) FROM (\n"
-        + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
-        + "    SELECT\n"
-        + "      dim1,\n"
-        + "      dim2,\n"
-        + "      COUNT(*) cnt\n"
-        + "    FROM druid.foo\n"
-        + "    GROUP BY dim1, dim2\n"
-        + "  ) t1\n"
-        + "  GROUP BY dim2\n"
-        + ") t2"
     );
   }
 
