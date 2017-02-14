@@ -51,18 +51,15 @@ public class PreComputedHyperUniquesSerde extends HyperUniquesSerde
       {
         Object rawValue = inputRow.getRaw(metricName);
 
-        if (rawValue == null)
-        {
+        if (rawValue == null) {
           return HyperLogLogCollector.makeLatestCollector();
-        } else if (rawValue instanceof HyperLogLogCollector)
-        {
+        } else if (rawValue instanceof HyperLogLogCollector) {
           return (HyperLogLogCollector) rawValue;
-        } else if (rawValue instanceof byte[])
-        {
+        } else if (rawValue instanceof byte[]) {
           return HyperLogLogCollector.makeLatestCollector().fold(ByteBuffer.wrap((byte[]) rawValue));
-        } else if (rawValue instanceof String)
-        {
-          return HyperLogLogCollector.makeLatestCollector().fold(ByteBuffer.wrap(Base64.decodeBase64((String) rawValue)));
+        } else if (rawValue instanceof String) {
+          return HyperLogLogCollector.makeLatestCollector()
+                                     .fold(ByteBuffer.wrap(Base64.decodeBase64((String) rawValue)));
         }
 
         throw new ISE("Object is not of a type[%s] that can be deserialized to HyperLogLog.", rawValue.getClass());
