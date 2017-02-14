@@ -63,7 +63,7 @@
         <calcite.version>1.11.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.2.5.v20141112</jetty.version>
+        <jetty.version>9.3.16.v20170120</jetty.version>
         <jersey.version>1.19</jersey.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
@@ -95,6 +95,7 @@
         <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
+        <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
@@ -835,6 +836,9 @@
                         </goals>
                         <configuration>
                             <rules>
+                                <requireJavaVersion>
+                                    <version>1.8.0</version>
+                                </requireJavaVersion>
                                 <bannedDependencies>
                                     <excludes>
                                         <!--LGPL licenced library-->
@@ -1006,17 +1010,6 @@
             <id>java8</id>
             <activation>
                 <jdk>1.8</jdk>
-            </activation>
-            <modules>
-                <module>extensions-core/caffeine-cache</module>
-                <!-- distribution packaging -->
-                <module>distribution</module>
-            </modules>
-        </profile>
-        <profile>
-            <id>java7</id>
-            <activation>
-                <jdk>1.7</jdk>
             </activation>
             <modules>
                 <!-- distribution packaging -->

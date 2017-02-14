@@ -249,13 +249,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addServlet(holder, "/proxy/*");
       root.addServlet(holder, "/druid/v2/*");
       JettyServerInitUtils.addExtensionFilters(root, injector);
-      root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
       server.setHandler(handlerList);
     }
   }

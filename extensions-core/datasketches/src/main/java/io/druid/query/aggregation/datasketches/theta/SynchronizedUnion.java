@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.memory.Memory;
+import com.yahoo.memory.Memory;
 import com.yahoo.sketches.theta.CompactSketch;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
@@ -75,6 +75,12 @@ public class SynchronizedUnion implements Union
   public synchronized void update(int[] data)
   {
     delegate.update(data);
+  }
+
+  @Override
+  public void update(char[] chars)
+  {
+    delegate.update(chars);
   }
 
   @Override

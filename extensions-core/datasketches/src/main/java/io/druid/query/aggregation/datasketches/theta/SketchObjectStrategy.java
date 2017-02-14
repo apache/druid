@@ -19,8 +19,8 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.memory.MemoryRegion;
-import com.yahoo.sketches.memory.NativeMemory;
+import com.yahoo.memory.MemoryRegion;
+import com.yahoo.memory.NativeMemory;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.java.util.common.IAE;
 import io.druid.segment.data.ObjectStrategy;
