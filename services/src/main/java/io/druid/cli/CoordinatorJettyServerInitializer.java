@@ -82,7 +82,6 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       root.setResourceBase(config.getConsoleStatic());
     }
     JettyServerInitUtils.addExtensionFilters(root, injector);
-    root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
 
     // /status should not redirect, so add first
     root.addFilter(GuiceFilter.class, "/status/*", null);
@@ -105,7 +104,12 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     }
 
     HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
+    handlerList.setHandlers(
+        new Handler[]{
+            JettyServerInitUtils.getJettyRequestLogHandler(),
+            JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+        }
+    );
 
     server.setHandler(handlerList);
   }
