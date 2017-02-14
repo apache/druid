@@ -32,7 +32,7 @@ import java.util.Iterator;
  * Groupers aggregate metrics from rows that they typically get from a ColumnSelectorFactory, under
  * grouping keys that some outside driver is passing in. They can also iterate over the grouped
  * rows after the aggregation is done.
- *
+ * <p>
  * They work sort of like a map of KeyType to aggregated values, except they don't support
  * random lookups.
  *
@@ -40,6 +40,19 @@ import java.util.Iterator;
  */
 public interface Grouper<KeyType> extends Closeable
 {
+  /**
+   * Initialize the grouper.
+   * This method needs to be called before calling {@link #aggregate(Object)} and {@link #aggregate(Object, int)}.
+   */
+  void init();
+
+  /**
+   * Check this grouper is initialized or not.
+   *
+   * @return true if the grouper is already initialized, otherwise false.
+   */
+  boolean isInitialized();
+
   /**
    * Aggregate the current row with the provided key. Some implementations are thread-safe and
    * some are not.
@@ -74,11 +87,11 @@ public interface Grouper<KeyType> extends Closeable
 
   /**
    * Iterate through entries. If a comparator is provided, do a sorted iteration.
-   *
+   * <p>
    * Once this method is called, writes are no longer safe. After you are done with the iterator returned by this
    * method, you should either call {@link #close()} (if you are done with the Grouper), {@link #reset()} (if you
    * want to reuse it), or {@link #iterator(boolean)} again if you want another iterator.
-   *
+   * <p>
    * If "sorted" is true then the iterator will return sorted results. It will use KeyType's natural ordering on
    * deserialized objects, and will use the {@link KeySerde#comparator()} on serialized objects. Woe be unto you
    * if these comparators are not equivalent.
@@ -188,7 +201,7 @@ public interface Grouper<KeyType> extends Closeable
     /**
      * Serialize a key. This will be called by the {@link #aggregate(Comparable)} method. The buffer will not
      * be retained after the aggregate method returns, so reusing buffers is OK.
-     *
+     * <p>
      * This method may return null, which indicates that some internal resource limit has been reached and
      * no more keys can be generated. In this situation you can call {@link #reset()} and try again, although
      * beware the caveats on that method.
