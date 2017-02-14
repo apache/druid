@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -52,6 +53,22 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class CompressedIntsIndexedWriterTest
 {
+  private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
+  private static final int[] CHUNK_FACTORS = new int[]{1, 2, 100, CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER};
+  private final IOPeon ioPeon = new TmpFileIOPeon();
+  private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
+  private final ByteOrder byteOrder;
+  private final Random rand = new Random(0);
+  private int[] vals;
+  public CompressedIntsIndexedWriterTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      ByteOrder byteOrder
+  )
+  {
+    this.compressionStrategy = compressionStrategy;
+    this.byteOrder = byteOrder;
+  }
+
   @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}")
   public static Iterable<Object[]> compressionStrategiesAndByteOrders()
   {
@@ -70,24 +87,6 @@ public class CompressedIntsIndexedWriterTest
           }
         }
     );
-  }
-
-  private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
-  private static final int[] CHUNK_FACTORS = new int[]{1, 2, 100, CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER};
-
-  private final IOPeon ioPeon = new TmpFileIOPeon();
-  private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
-  private final ByteOrder byteOrder;
-  private final Random rand = new Random(0);
-  private int[] vals;
-
-  public CompressedIntsIndexedWriterTest(
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      ByteOrder byteOrder
-  )
-  {
-    this.compressionStrategy = compressionStrategy;
-    this.byteOrder = byteOrder;
   }
 
   @Before
@@ -181,47 +180,57 @@ public class CompressedIntsIndexedWriterTest
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
-    File tmpDirectory = FileUtils.getTempDirectory();
+    File tmpDirectory = Files.createTempDirectory(String.format(
+        "CompressedIntsIndexedWriterTest_%d",
+        chunkFactor
+    )).toFile();
+
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
+    final IOPeon ioPeon = new TmpFileIOPeon();
+    try {
 
-    CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
-        chunkFactor,
-        compressionStrategy,
-        new GenericIndexedWriter<>(
-            ioPeon, "test",
-            CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compressionStrategy,
-                                                                chunkFactor
-            ), Longs.BYTES * 10000
-        )
-    );
+      CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
+          chunkFactor,
+          compressionStrategy,
+          new GenericIndexedWriter<>(
+              ioPeon, "test",
+              CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compressionStrategy,
+                                                                  chunkFactor
+              ), Longs.BYTES * 10000
+          )
+      );
 
-    writer.open();
-    for (int val : vals) {
-      writer.add(val);
+      writer.open();
+      for (int val : vals) {
+        writer.add(val);
+      }
+      writer.close();
+      final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
+          "test", writer.getSerializedSize()
+      );
+      writer.writeToChannel(channel, smoosher);
+      channel.close();
+      smoosher.close();
+
+      SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
+
+      // read from ByteBuffer and check values
+      CompressedIntsIndexedSupplier supplierFromByteBuffer = CompressedIntsIndexedSupplier.fromByteBuffer(
+          mapper.mapFile("test"),
+          byteOrder,
+          mapper
+      );
+      IndexedInts indexedInts = supplierFromByteBuffer.get();
+      assertEquals(vals.length, indexedInts.size());
+      for (int i = 0; i < vals.length; ++i) {
+        assertEquals(vals[i], indexedInts.get(i));
+      }
+      CloseQuietly.close(indexedInts);
+      mapper.close();
     }
-    writer.close();
-    final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
-        "test", writer.getSerializedSize()
-    );
-    writer.writeToChannel(channel, smoosher);
-    channel.close();
-    smoosher.close();
-
-    SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
-
-    // read from ByteBuffer and check values
-    CompressedIntsIndexedSupplier supplierFromByteBuffer = CompressedIntsIndexedSupplier.fromByteBuffer(
-        mapper.mapFile("test"),
-        byteOrder,
-        mapper
-    );
-    IndexedInts indexedInts = supplierFromByteBuffer.get();
-    assertEquals(vals.length, indexedInts.size());
-    for (int i = 0; i < vals.length; ++i) {
-      assertEquals(vals[i], indexedInts.get(i));
+    finally {
+      ioPeon.close();
     }
-    CloseQuietly.close(indexedInts);
-    mapper.close();
   }
 
   @Test

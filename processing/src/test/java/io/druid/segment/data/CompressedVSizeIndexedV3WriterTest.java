@@ -46,6 +46,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -238,7 +239,11 @@ public class CompressedVSizeIndexedV3WriterTest
 
   private void checkV2SerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    File tmpDirectory = FileUtils.getTempDirectory();
+    File tmpDirectory = Files.createTempDirectory(String.format(
+        "CompressedVSizeIndexedV3WriterTest_%d_%d",
+        offsetChunkFactor,
+        offsetChunkFactor
+    )).toFile();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
     final IOPeon ioPeon = new TmpFileIOPeon();
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
