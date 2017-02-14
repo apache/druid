@@ -119,7 +119,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       if (workerConfig == null || workerConfig.getAutoScaler() == null) {
-        log.warn("No workerConfig available, cannot provision new workers.");
+        log.error("No workerConfig available, cannot provision new workers.");
         return false;
       }
 
@@ -150,6 +150,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         final AutoScalingData provisioned = workerConfig.getAutoScaler().provision();
         final List<String> newNodes;
         if (provisioned == null || (newNodes = provisioned.getNodeIds()).isEmpty()) {
+          log.warn("NewNodes is empty, returning from provision loop");
           break;
         } else {
           currentlyProvisioning.addAll(newNodes);
@@ -162,9 +163,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
       if (!currentlyProvisioning.isEmpty()) {
         Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
-
         log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
-
         if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
           log.makeAlert("Worker node provisioning taking too long!")
              .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())

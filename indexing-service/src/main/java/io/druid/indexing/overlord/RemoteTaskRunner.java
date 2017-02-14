@@ -1250,7 +1250,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           throw Throwables.propagate(e);
         }
       }
-      return ImmutableList.copyOf(getWorkerFromZK(lazyWorkers.values()));
+      return getWorkerFromZK(lazyWorkers.values());
     }
   }
 
@@ -1279,7 +1279,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Collection<Worker> getLazyWorkers()
   {
-    return ImmutableList.copyOf(getWorkerFromZK(lazyWorkers.values()));
+    return getWorkerFromZK(lazyWorkers.values());
   }
 
   private static ImmutableList<ImmutableWorkerInfo> getImmutableWorkerFromZK(Collection<ZkWorker> workers)
@@ -1299,18 +1299,20 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     );
   }
 
-  public static Collection<Worker> getWorkerFromZK(Collection<ZkWorker> workers)
+  private static ImmutableList<Worker> getWorkerFromZK(Collection<ZkWorker> workers)
   {
-    return Collections2.transform(
-        workers,
-        new Function<ZkWorker, Worker>()
-        {
-          @Override
-          public Worker apply(ZkWorker input)
+    return ImmutableList.copyOf(
+        Collections2.transform(
+          workers,
+          new Function<ZkWorker, Worker>()
           {
-            return input.getWorker();
+            @Override
+            public Worker apply(ZkWorker input)
+            {
+              return input.getWorker();
+            }
           }
-        }
+        )
     );
   }
 

@@ -102,7 +102,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   private class PendingProvisioner implements Provisioner
   {
     private final WorkerTaskRunner runner;
-    private final ScalingStats scalingStats  = new ScalingStats(config.getNumEventsToTrack());
+    private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
     private final Set<String> currentlyProvisioning = Sets.newHashSet();
     private final Set<String> currentlyTerminating = Sets.newHashSet();
@@ -151,8 +151,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         );
         while (want > 0) {
           final AutoScalingData provisioned = workerConfig.getAutoScaler().provision();
-          final List<String> newNodes = provisioned == null ? ImmutableList.<String>of() : provisioned.getNodeIds();
-          if (newNodes.isEmpty()) {
+          final List<String> newNodes;
+          if (provisioned == null || (newNodes = provisioned.getNodeIds()).isEmpty()) {
             log.warn("NewNodes is empty, returning from provision loop");
             break;
           } else {
@@ -297,19 +297,17 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       if (currentlyTerminating.isEmpty()) {
         final int maxWorkersToTerminate = maxWorkersToTerminate(zkWorkers, workerConfig);
         final Predicate<ImmutableWorkerInfo> isLazyWorker = ProvisioningUtil.createLazyWorkerPredicate(config);
-        final List<String> laziestWorkerIps =
-            Lists.newArrayList(
-                Collections2.transform(
-                    runner.markWorkersLazy(isLazyWorker, maxWorkersToTerminate),
-                    new Function<Worker, String>()
-                    {
-                      @Override
-                      public String apply(Worker zkWorker)
-                      {
-                        return zkWorker.getIp();
-                      }
-                    }
-                )
+        final Collection<String> laziestWorkerIps =
+            Collections2.transform(
+                runner.markWorkersLazy(isLazyWorker, maxWorkersToTerminate),
+                new Function<Worker, String>()
+                {
+                  @Override
+                  public String apply(Worker zkWorker)
+                  {
+                    return zkWorker.getIp();
+                  }
+                }
             );
         if (laziestWorkerIps.isEmpty()) {
           log.debug("Found no lazy workers");
@@ -320,7 +318,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
               Joiner.on(", ").join(laziestWorkerIps)
           );
 
-          final AutoScalingData terminated = workerConfig.getAutoScaler().terminate(laziestWorkerIps);
+          final AutoScalingData terminated = workerConfig.getAutoScaler()
+                                                         .terminate(ImmutableList.copyOf(laziestWorkerIps));
           if (terminated != null) {
             currentlyTerminating.addAll(terminated.getNodeIds());
             lastTerminateTime = new DateTime();
