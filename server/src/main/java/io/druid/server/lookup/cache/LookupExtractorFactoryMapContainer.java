@@ -41,7 +41,7 @@ public class LookupExtractorFactoryMapContainer
       @JsonProperty("lookupExtractorFactory") Map<String, Object> lookupExtractorFactory
   )
   {
-    this.version = Preconditions.checkNotNull(version, "null version");
+    this.version = version;
     this.lookupExtractorFactory = Preconditions.checkNotNull(lookupExtractorFactory, "null factory");
   }
 
@@ -58,6 +58,18 @@ public class LookupExtractorFactoryMapContainer
   }
 
   public boolean replaces(LookupExtractorFactoryMapContainer other) {
+    if (version == null && other.getVersion() == null) {
+      return false;
+    }
+
+    if (version == null && other.getVersion() != null) {
+      return false;
+    }
+
+    if (version != null && other.getVersion() == null) {
+      return true;
+    }
+
     return version.compareTo(other.getVersion()) > 0;
   }
 
@@ -82,7 +94,7 @@ public class LookupExtractorFactoryMapContainer
 
     LookupExtractorFactoryMapContainer that = (LookupExtractorFactoryMapContainer) o;
 
-    if (!version.equals(that.version)) {
+    if (version != null ? !version.equals(that.version) : that.version != null) {
       return false;
     }
     return lookupExtractorFactory.equals(that.lookupExtractorFactory);
@@ -92,7 +104,7 @@ public class LookupExtractorFactoryMapContainer
   @Override
   public int hashCode()
   {
-    int result = version.hashCode();
+    int result = version != null ? version.hashCode() : 0;
     result = 31 * result + lookupExtractorFactory.hashCode();
     return result;
   }

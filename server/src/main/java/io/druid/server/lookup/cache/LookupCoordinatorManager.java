@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
@@ -88,9 +89,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class LookupCoordinatorManager
 {
-  public static final String LOOKUP_CONFIG_KEY = "lookups";
-  // Doesn't have to be the same, but it makes things easy to look at
-  public static final String LOOKUP_LISTEN_ANNOUNCE_KEY = LOOKUP_CONFIG_KEY;
+  public static final String LOOKUP_CONFIG_KEY = "lookupsConfig";
+  public static final String LOOKUP_LISTEN_ANNOUNCE_KEY = "lookups";
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
   private final static Function<HostAndPort, URL> HOST_TO_URL = new Function<HostAndPort, URL>()
@@ -167,6 +167,22 @@ public class LookupCoordinatorManager
 
   public boolean updateLookups(final Map<String, Map<String, LookupExtractorFactoryMapContainer>> updateSpec, AuditInfo auditInfo)
   {
+    if (updateSpec == null || updateSpec.isEmpty()) {
+      return true;
+    }
+
+    //ensure all the lookups specs have version specified. ideally this should be done in the LookupExtractorFactoryMapContainer
+    //constructor but that allows null to enable backward compatibility with 0.9.x lookup specs
+    for (final String tier : updateSpec.keySet()) {
+      Map<String, LookupExtractorFactoryMapContainer> lookups = updateSpec.get(tier);
+      for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : lookups.entrySet()) {
+        Preconditions.checkNotNull(
+            e.getValue().getVersion(),
+            String.format("lookup [%s]:[%s] does not have version.", tier, e.getKey())
+        );
+      }
+    }
+
     synchronized (startStopSync) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null && !updateSpec.isEmpty()) {
@@ -195,7 +211,8 @@ public class LookupCoordinatorManager
             for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : updateTierSpec.entrySet()) {
               if (updatedTierSpec.containsKey(e.getKey()) && !e.getValue().replaces(updatedTierSpec.get(e.getKey()))) {
                 throw new IAE(
-                    "given update for lookup [%s] can't replace existing spec [%s].",
+                    "given update for lookup [%s]:[%s] can't replace existing spec [%s].",
+                    tier,
                     e.getKey(),
                     updatedTierSpec.get(e.getKey())
                 );
@@ -296,6 +313,31 @@ public class LookupCoordinatorManager
           },
           null
       );
+
+      // backward compatibility with 0.9.x
+      if (lookupMapConfigRef.get() == null) {
+        Map<String, Map<String, Map<String, Object>>> oldLookups = configManager.watch(
+            "lookups",
+            new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
+            {
+            },
+            null
+        ).get();
+
+        if (oldLookups != null) {
+          Map<String, Map<String, LookupExtractorFactoryMapContainer>> converted = new HashMap<>();
+          for (String tier : oldLookups.keySet()) {
+            Map<String, Map<String, Object>> oldTierLookups = oldLookups.get(tier);
+            if (oldLookups != null && !oldLookups.isEmpty()) {
+              Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
+              for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
+                convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
+              }
+            }
+          }
+          configManager.set(LOOKUP_CONFIG_KEY, converted, new AuditInfo("autoConversion", "autoConversion", "127.0.0.1"));
+        }
+      }
 
       this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
           new Runnable()
