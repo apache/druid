@@ -23,6 +23,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 /**
@@ -66,6 +67,20 @@ public class NotFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return baseFilter.supportsBitmapIndex(selector);
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
+  }
+
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  {
+    return 1. - baseFilter.estimateSelectivity(indexSelector);
   }
 
   public Filter getBaseFilter()

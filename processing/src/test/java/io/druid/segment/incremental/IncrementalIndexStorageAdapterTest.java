@@ -49,9 +49,9 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.SelectorFilter;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -191,7 +191,7 @@ public class IncrementalIndexStorageAdapterTest
                             "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
                             "function() { return 0; }",
                             "function(a,b) { return a + b; }",
-                            JavaScriptConfig.getDefault()
+                            JavaScriptConfig.getEnabledInstance()
                         )
                     )
                     .build(),
@@ -265,7 +265,7 @@ public class IncrementalIndexStorageAdapterTest
       Sequence<Cursor> cursorSequence = adapter.makeCursors(
           new SelectorFilter("sally", "bo"),
           interval,
-          null,
+          VirtualColumns.EMPTY,
           Granularity.NONE,
           descending
       );

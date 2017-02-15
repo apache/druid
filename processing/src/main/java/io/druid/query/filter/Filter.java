@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 /**
@@ -30,18 +31,39 @@ public interface Filter
    * Get a bitmap index, indicating rows that match this filter.
    *
    * @param selector Object used to retrieve bitmap indexes
+   *
    * @return A bitmap indicating rows that match this filter.
+   *
+   * @see Filter#estimateSelectivity(BitmapIndexSelector)
    */
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+  ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+
+
+  /**
+   * Estimate selectivity of this filter.
+   * This method can be used for cost-based query planning like in {@link io.druid.query.search.search.AutoStrategy}.
+   * To avoid significant performance degradation for calculating the exact cost,
+   * implementation of this method targets to achieve rapid selectivity estimation
+   * with reasonable sacrifice of the accuracy.
+   * As a result, the estimated selectivity might be different from the exact value.
+   *
+   * @param indexSelector Object used to retrieve bitmap indexes
+   *
+   * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
+   *
+   * @see Filter#getBitmapIndex(BitmapIndexSelector)
+   */
+  double estimateSelectivity(BitmapIndexSelector indexSelector);
 
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
    *
    * @param factory Object used to create ValueMatchers
+   *
    * @return ValueMatcher that applies this filter to row values.
    */
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory);
+  ValueMatcher makeMatcher(ColumnSelectorFactory factory);
 
 
   /**
@@ -49,7 +71,21 @@ public interface Filter
    * the information provided by the input BitmapIndexSelector.
    *
    * @param selector Object used to retrieve bitmap indexes
-   * @return true if this Filter can provide a bitmap index using the selector, false otherwise
+   *
+   * @return true if this Filter can provide a bitmap index using the selector, false otherwise.
    */
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector);
+  boolean supportsBitmapIndex(BitmapIndexSelector selector);
+
+
+  /**
+   * Indicates whether this filter supports selectivity estimation.
+   * A filter supports selectivity estimation if it supports bitmap index and
+   * the dimension which the filter evaluates does not have multi values.
+   *
+   * @param columnSelector Object to check the dimension has multi values.
+   * @param indexSelector  Object used to retrieve bitmap indexes
+   *
+   * @return true if this Filter supports selectivity estimation, false otherwise.
+   */
+  boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector);
 }

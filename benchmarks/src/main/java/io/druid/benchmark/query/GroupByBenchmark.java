@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
@@ -39,6 +38,8 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.granularity.QueryGranularity;
+import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -72,6 +73,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -236,8 +238,90 @@ public class GroupByBenchmark
 
       basicQueries.put("nested", queryA);
     }
-
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
+
+    // simple one column schema, for testing performance difference between querying on numeric values as Strings and
+    // directly as longs
+    Map<String, GroupByQuery> simpleQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo simpleSchema = BenchmarkSchemas.SCHEMA_MAP.get("simple");
+
+    { // simple.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(simpleSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "rows",
+          "rows"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      simpleQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("simple", simpleQueries);
+
+
+    Map<String, GroupByQuery> simpleLongQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo simpleLongSchema = BenchmarkSchemas.SCHEMA_MAP.get("simpleLong");
+    { // simpleLong.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(simpleLongSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "rows",
+          "rows"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      simpleLongQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("simpleLong", simpleLongQueries);
+
+
+    Map<String, GroupByQuery> simpleFloatQueries = new LinkedHashMap<>();
+    BenchmarkSchemaInfo simpleFloatSchema = BenchmarkSchemas.SCHEMA_MAP.get("simpleFloat");
+    { // simpleFloat.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(simpleFloatSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "rows",
+          "rows"
+      ));
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(Granularity.fromString(queryGranularity))
+          .build();
+
+      simpleFloatQueries.put("A", queryA);
+    }
+    SCHEMA_QUERY_MAP.put("simpleFloat", simpleFloatQueries);
   }
 
   @Setup(Level.Trial)
@@ -246,7 +330,7 @@ public class GroupByBenchmark
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
     executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
 
@@ -277,7 +361,7 @@ public class GroupByBenchmark
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment %d/%d", i + 1, numSegments);
 
-      final IncrementalIndex index = makeIncIndex();
+      final IncrementalIndex index = makeIncIndex(schemaInfo.isWithRollup());
 
       for (int j = 0; j < rowsPerSegment; j++) {
         final InputRow row = dataGenerator.nextRow();
@@ -392,13 +476,14 @@ public class GroupByBenchmark
     );
   }
 
-  private IncrementalIndex makeIncIndex()
+  private IncrementalIndex makeIncIndex(boolean withRollup)
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularity.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(withRollup)
             .build(),
         true,
         false,

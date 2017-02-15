@@ -21,8 +21,10 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.cache.Cacheable;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 /**
  */
@@ -34,11 +36,13 @@ import io.druid.segment.DimensionSelector;
     @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupDimensionSpec.class)
 })
-public interface DimensionSpec
+public interface DimensionSpec extends Cacheable
 {
   String getDimension();
 
   String getOutputName();
+
+  ValueType getOutputType();
 
   //ExtractionFn can be implemented with decorate(..) fn
   @Deprecated
@@ -46,7 +50,10 @@ public interface DimensionSpec
 
   DimensionSelector decorate(DimensionSelector selector);
 
-  byte[] getCacheKey();
+  /**
+   * Does this DimensionSpec require that decorate() be called to produce correct results?
+   */
+  boolean mustDecorate();
 
   boolean preservesOrdering();
 }

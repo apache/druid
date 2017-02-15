@@ -172,4 +172,9 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public GranularitySpec withIntervals(List<Interval> inputIntervals) {
+    return new ArbitraryGranularitySpec(queryGranularity, rollup, inputIntervals, timezone);
+  }
 }

@@ -50,7 +50,7 @@ public class CascadeExtractionFnTest
   private final JavaScriptExtractionFn javascriptExtractionFn = new JavaScriptExtractionFn(
       function,
       true,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   private final SubstringDimExtractionFn substringDimExtractionFn = new SubstringDimExtractionFn(0, 7);
   private final String regexDimExtractionFnJson = "{ \"type\" : \"regex\", \"expr\" : \"/([^/]+)/\" , " +
@@ -172,7 +172,7 @@ public class CascadeExtractionFnTest
     objectMapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         )
     );
     final String json = "{\"type\" : \"cascade\", \"extractionFns\": ["

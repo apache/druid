@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
@@ -67,7 +68,8 @@ public class GroupByRowProcessor
       final Map<String, ValueType> rowSignature,
       final GroupByQueryConfig config,
       final BlockingPool<ByteBuffer> mergeBufferPool,
-      final ObjectMapper spillMapper
+      final ObjectMapper spillMapper,
+      final String processingTmpDir
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -78,8 +80,9 @@ public class GroupByRowProcessor
       aggregatorFactories[i] = query.getAggregatorSpecs().get(i);
     }
 
+
     final File temporaryStorageDirectory = new File(
-        System.getProperty("java.io.tmpdir"),
+        processingTmpDir,
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
@@ -97,7 +100,7 @@ public class GroupByRowProcessor
         rowSignature
     );
     final ValueMatcher filterMatcher = filter == null
-                                       ? new BooleanValueMatcher(true)
+                                       ? BooleanValueMatcher.of(true)
                                        : filter.makeMatcher(columnSelectorFactory);
 
     final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(
@@ -112,6 +115,7 @@ public class GroupByRowProcessor
             for (Interval queryInterval : queryIntervals) {
               if (queryInterval.contains(rowTime)) {
                 inInterval = true;
+                break;
               }
             }
             if (!inInterval) {
@@ -139,23 +143,33 @@ public class GroupByRowProcessor
 
               closeOnFailure.add(temporaryStorage);
 
-              final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
-              try {
-                // This will potentially block if there are no merge buffers left in the pool.
-                if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
-                  throw new QueryInterruptedException(new TimeoutException());
-                }
-                closeOnFailure.add(mergeBufferHolder);
-              }
-              catch (InterruptedException e) {
-                throw new QueryInterruptedException(e);
-              }
+              final SettableSupplier<ReferenceCountingResourceHolder<ByteBuffer>> bufferHolderSupplier = new SettableSupplier<>();
 
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   true,
+                  rowSignature,
                   querySpecificConfig,
-                  mergeBufferHolder.get(),
+                  new Supplier<ByteBuffer>()
+                  {
+                    @Override
+                    public ByteBuffer get()
+                    {
+                      final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
+                      try {
+                        if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
+                          throw new QueryInterruptedException(new TimeoutException());
+                        }
+                        bufferHolderSupplier.set(mergeBufferHolder);
+                        closeOnFailure.add(mergeBufferHolder);
+
+                        return mergeBufferHolder.get();
+                      }
+                      catch (InterruptedException e) {
+                        throw new QueryInterruptedException(e);
+                      }
+                    }
+                  },
                   -1,
                   temporaryStorage,
                   spillMapper,
@@ -165,7 +179,10 @@ public class GroupByRowProcessor
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
               closeOnFailure.add(grouper);
 
-              final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(grouper, accumulator);
+              final Grouper<RowBasedKey> retVal = filteredSequence.accumulate(
+                  grouper,
+                  accumulator
+              );
               if (retVal != grouper) {
                 throw new ResourceLimitExceededException("Grouping resources exhausted");
               }
@@ -179,7 +196,7 @@ public class GroupByRowProcessor
                     public void close() throws IOException
                     {
                       grouper.close();
-                      mergeBufferHolder.close();
+                      CloseQuietly.close(bufferHolderSupplier.get());
                       CloseQuietly.close(temporaryStorage);
                     }
                   }

@@ -243,7 +243,7 @@ public class GroupByQueryHelper
     final ImmutableMap.Builder<String, ValueType> types = ImmutableMap.builder();
 
     for (DimensionSpec dimensionSpec : query.getDimensions()) {
-      types.put(dimensionSpec.getOutputName(), ValueType.STRING);
+      types.put(dimensionSpec.getOutputName(), dimensionSpec.getOutputType());
     }
 
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {

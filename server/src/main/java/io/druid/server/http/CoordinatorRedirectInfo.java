@@ -37,7 +37,7 @@ public class CoordinatorRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public boolean doLocal()
+  public boolean doLocal(String requestURI)
   {
     return coordinator.isLeader();
   }

@@ -20,17 +20,22 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.Indexed;
+import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 
-import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class LikeFilter implements Filter
 {
@@ -52,81 +57,13 @@ public class LikeFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    if (extractionFn == null && likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_EMPTY) {
-      // dimension equals prefix
-      return selector.getBitmapIndex(dimension, likeMatcher.getPrefix());
-    } else if (extractionFn == null && !likeMatcher.getPrefix().isEmpty()) {
-      // dimension startsWith prefix and is accepted by likeMatcher.matchesSuffixOnly
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+    return selector.getBitmapFactory().union(getBitmapIterable(selector));
+  }
 
-      if (bitmapIndex == null) {
-        // Treat this as a column full of nulls
-        return likeMatcher.matches(null) ? Filters.allTrue(selector) : Filters.allFalse(selector);
-      }
-
-      // search for start, end indexes in the bitmaps; then include all matching bitmaps between those points
-      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
-
-      final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
-      final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
-      final int startIndex; // inclusive
-      final int endIndex; // exclusive
-
-      final int lowerFound = bitmapIndex.getIndex(lower);
-      startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
-
-      final int upperFound = bitmapIndex.getIndex(upper);
-      endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
-
-      // Union bitmaps for all matching dimension values in range.
-      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-      return selector.getBitmapFactory().union(
-          new Iterable<ImmutableBitmap>()
-          {
-            @Override
-            public Iterator<ImmutableBitmap> iterator()
-            {
-              return new Iterator<ImmutableBitmap>()
-              {
-                int currIndex = startIndex;
-
-                @Override
-                public boolean hasNext()
-                {
-                  return currIndex < endIndex;
-                }
-
-                @Override
-                public ImmutableBitmap next()
-                {
-                  while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues.get(currIndex))) {
-                    currIndex++;
-                  }
-
-                  if (currIndex == endIndex) {
-                    return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
-                  }
-
-                  return bitmapIndex.getBitmap(currIndex++);
-                }
-
-                @Override
-                public void remove()
-                {
-                  throw new UnsupportedOperationException();
-                }
-              };
-            }
-          }
-      );
-    } else {
-      // fallback
-      return Filters.matchPredicate(
-          dimension,
-          selector,
-          likeMatcher.predicateFactory(extractionFn).makeStringPredicate()
-      );
-    }
+  @Override
+  public double estimateSelectivity(BitmapIndexSelector selector)
+  {
+    return Filters.estimateSelectivity(getBitmapIterable(selector).iterator(), selector.getNumRows());
   }
 
   @Override
@@ -139,5 +76,128 @@ public class LikeFilter implements Filter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean supportsSelectivityEstimation(
+      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
+  )
+  {
+    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
+  }
+
+  private Iterable<ImmutableBitmap> getBitmapIterable(final BitmapIndexSelector selector)
+  {
+    if (isSimpleEquals()) {
+      // Verify that dimension equals prefix.
+      return ImmutableList.of(selector.getBitmapIndex(dimension, likeMatcher.getPrefix()));
+    } else if (isSimplePrefix()) {
+      // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+
+      if (bitmapIndex == null) {
+        // Treat this as a column full of nulls
+        return ImmutableList.of(likeMatcher.matches(null) ? Filters.allTrue(selector) : Filters.allFalse(selector));
+      }
+
+      // search for start, end indexes in the bitmaps; then include all matching bitmaps between those points
+      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+
+      // Union bitmaps for all matching dimension values in range.
+      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
+      return Filters.bitmapsFromIndexes(
+          getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues),
+          bitmapIndex
+      );
+    } else {
+      // fallback
+      return Filters.matchPredicateNoUnion(
+          dimension,
+          selector,
+          likeMatcher.predicateFactory(extractionFn).makeStringPredicate()
+      );
+    }
+  }
+
+  /**
+   * Returns true if this filter is a simple equals filter: dimension = 'value' with no extractionFn.
+   */
+  private boolean isSimpleEquals()
+  {
+    return extractionFn == null && likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_EMPTY;
+  }
+
+  /**
+   * Returns true if this filter is a simple prefix filter: dimension startsWith 'value' with no extractionFn.
+   */
+  private boolean isSimplePrefix()
+  {
+    return extractionFn == null && !likeMatcher.getPrefix().isEmpty();
+  }
+
+  private IntIterable getDimValueIndexIterableForPrefixMatch(
+      final BitmapIndex bitmapIndex,
+      final Indexed<String> dimValues
+  )
+  {
+    final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
+    final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+    final int startIndex; // inclusive
+    final int endIndex; // exclusive
+
+    final int lowerFound = bitmapIndex.getIndex(lower);
+    startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
+
+    final int upperFound = bitmapIndex.getIndex(upper);
+    endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
+
+    return new IntIterable()
+    {
+      @Override
+      public IntIterator iterator()
+      {
+        return new AbstractIntIterator()
+        {
+          int currIndex = startIndex;
+          int found = -1;
+
+          {
+            found = findNext();
+          }
+
+          private int findNext()
+          {
+            while (currIndex < endIndex && !likeMatcher.matchesSuffixOnly(dimValues, currIndex)) {
+              currIndex++;
+            }
+
+            if (currIndex < endIndex) {
+              return currIndex++;
+            } else {
+              return -1;
+            }
+          }
+
+          @Override
+          public boolean hasNext()
+          {
+            return found != -1;
+          }
+
+          @Override
+          public int nextInt()
+          {
+            int cur = found;
+
+            if (cur == -1) {
+              throw new NoSuchElementException();
+            }
+
+            found = findNext();
+            return cur;
+          }
+        };
+      }
+    };
   }
 }

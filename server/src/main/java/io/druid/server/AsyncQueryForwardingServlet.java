@@ -141,7 +141,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     try {
       broadcastClient.start();
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw new ServletException(e);
     }
   }
@@ -152,7 +153,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     super.destroy();
     try {
       broadcastClient.stop();
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       log.warn(e, "Error stopping servlet");
     }
   }
@@ -242,14 +244,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   @Override
-  protected void customizeProxyRequest(Request proxyRequest, HttpServletRequest request)
+  protected void sendProxyRequest(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
+  )
   {
     proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
     proxyRequest.idleTimeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
 
-    final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
+    final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
-      final ObjectMapper objectMapper = (ObjectMapper) request.getAttribute(OBJECTMAPPER_ATTRIBUTE);
+      final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
       try {
         proxyRequest.content(new BytesContentProvider(objectMapper.writeValueAsBytes(query)));
       }
@@ -257,6 +263,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         Throwables.propagate(e);
       }
     }
+
+    super.sendProxyRequest(
+        clientRequest,
+        proxyResponse,
+        proxyRequest
+    );
   }
 
   @Override
@@ -273,9 +285,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   @Override
-  protected URI rewriteURI(HttpServletRequest request)
+  protected String rewriteTarget(HttpServletRequest request)
   {
-    return rewriteURI(request, (String) request.getAttribute(HOST_ATTRIBUTE));
+    return rewriteURI(request, (String) request.getAttribute(HOST_ATTRIBUTE)).toString();
   }
 
   protected URI rewriteURI(HttpServletRequest request, String host)

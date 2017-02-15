@@ -53,6 +53,7 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -100,14 +101,25 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
       .build();
 
+  /**
+   * Column selector used at ingestion time for inputs to aggregators.
+   *
+   * @param agg                       the aggregator
+   * @param in                        ingestion-time input row supplier
+   * @param deserializeComplexMetrics whether complex objects should be deserialized by a {@link ComplexMetricExtractor}
+   *
+   * @return column selector factory
+   */
   public static ColumnSelectorFactory makeColumnSelectorFactory(
+      final VirtualColumns virtualColumns,
       final AggregatorFactory agg,
       final Supplier<InputRow> in,
       final boolean deserializeComplexMetrics
   )
   {
     final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in, null);
-    return new ColumnSelectorFactory()
+
+    class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {
       @Override
       public LongColumnSelector makeLongColumnSelector(final String columnName)
@@ -167,13 +179,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       {
         return baseSelectorFactory.getColumnCapabilities(columnName);
       }
-    };
+    }
+
+    return virtualColumns.wrap(new IncrementalIndexInputRowColumnSelectorFactory());
   }
 
   private final long minTimestamp;
   private final Granularity gran;
   private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
+  private final VirtualColumns virtualColumns;
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
@@ -217,6 +232,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
     this.rollup = incrementalIndexSchema.isRollup();
+    this.virtualColumns = incrementalIndexSchema.getVirtualColumns();
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
@@ -895,6 +911,15 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
       return hash;
     }
+  }
+
+  protected ColumnSelectorFactory makeColumnSelectorFactory(
+      final AggregatorFactory agg,
+      final Supplier<InputRow> in,
+      final boolean deserializeComplexMetrics
+  )
+  {
+    return makeColumnSelectorFactory(virtualColumns, agg, in, deserializeComplexMetrics);
   }
 
   protected final Comparator<TimeAndDims> dimsComparator()

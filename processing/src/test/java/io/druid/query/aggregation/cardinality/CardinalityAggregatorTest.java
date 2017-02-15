@@ -21,6 +21,7 @@ package io.druid.query.aggregation.cardinality;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -41,7 +42,10 @@ import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DimensionSelectorUtils;
+import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
@@ -158,6 +162,18 @@ public class CardinalityAggregatorTest
     }
 
     @Override
+    public ValueMatcher makeValueMatcher(String value)
+    {
+      return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
+    }
+
+    @Override
+    public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+    {
+      return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+    }
+
+    @Override
     public int getValueCardinality()
     {
       return 1;
@@ -171,9 +187,23 @@ public class CardinalityAggregatorTest
     }
 
     @Override
-    public int lookupId(String s)
+    public boolean nameLookupPossibleInAdvance()
     {
-      return ids.get(s);
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public IdLookup idLookup()
+    {
+      return new IdLookup()
+      {
+        @Override
+        public int lookupId(String s)
+        {
+          return ids.get(s);
+        }
+      };
     }
   }
 
@@ -310,7 +340,7 @@ public class CardinalityAggregatorTest
 
 
     String superJsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1WithExtraction = new TestDimensionSelector(values1, superFn);
     dim2WithExtraction = new TestDimensionSelector(values2, superFn);
     selectorListWithExtraction = Lists.newArrayList(
@@ -331,7 +361,7 @@ public class CardinalityAggregatorTest
     );
 
     String helloJsFn = "function(str) { return 'hello' }";
-    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1ConstantVal = new TestDimensionSelector(values1, helloFn);
     dim2ConstantVal = new TestDimensionSelector(values2, helloFn);
     selectorListConstantVal = Lists.newArrayList(

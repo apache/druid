@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -69,7 +70,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class GroupByMergingQueryRunnerV2 implements QueryRunner
+public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
 {
   private static final Logger log = new Logger(GroupByMergingQueryRunnerV2.class);
   private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
@@ -81,6 +82,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
   private final int concurrencyHint;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
+  private final String processingTmpDir;
 
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
@@ -89,7 +91,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
-      ObjectMapper spillMapper
+      ObjectMapper spillMapper,
+      String processingTmpDir
   )
   {
     this.config = config;
@@ -99,6 +102,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     this.concurrencyHint = concurrencyHint;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
+    this.processingTmpDir = processingTmpDir;
   }
 
   @Override
@@ -130,7 +134,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     }
 
     final File temporaryStorageDirectory = new File(
-        System.getProperty("java.io.tmpdir"),
+        processingTmpDir,
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
@@ -176,8 +180,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   false,
+                  null,
                   config,
-                  mergeBufferHolder.get(),
+                  Suppliers.ofInstance(mergeBufferHolder.get()),
                   concurrencyHint,
                   temporaryStorage,
                   spillMapper,
@@ -185,6 +190,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
+              grouper.init();
 
               final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder =
                   ReferenceCountingResourceHolder.fromCloseable(grouper);

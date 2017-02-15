@@ -22,8 +22,11 @@ package io.druid.segment;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.MergeIterator;
 import it.unimi.dsi.fastutil.ints.AbstractIntIterator;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.longs.LongHeaps;
 
 import java.util.List;
@@ -191,6 +194,15 @@ public final class IntIteratorUtils
     {
       return IntIteratorUtils.skip(this, n);
     }
+  }
+
+  public static IntList toIntList(IntIterator iterator)
+  {
+    final IntList integers = new IntArrayList();
+    while (iterator.hasNext()) {
+      integers.add(iterator.nextInt());
+    }
+    return IntLists.unmodifiable(integers);
   }
 
   private IntIteratorUtils() {}

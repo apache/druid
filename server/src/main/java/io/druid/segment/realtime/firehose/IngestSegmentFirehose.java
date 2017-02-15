@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -31,7 +30,7 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
-import io.druid.java.util.common.guava.YieldingAccumulator;
+import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.select.EventHolder;
@@ -171,18 +170,7 @@ public class IngestSegmentFirehose implements Firehose
             }
         )
     );
-    rowYielder = rows.toYielder(
-        null,
-        new YieldingAccumulator<InputRow, InputRow>()
-        {
-          @Override
-          public InputRow accumulate(InputRow accumulated, InputRow in)
-          {
-            yield();
-            return in;
-          }
-        }
-    );
+    rowYielder = Yielders.each(rows);
   }
 
   @Override

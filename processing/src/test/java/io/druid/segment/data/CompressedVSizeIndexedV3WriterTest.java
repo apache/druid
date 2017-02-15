@@ -123,7 +123,7 @@ public class CompressedVSizeIndexedV3WriterTest
               @Override
               public IndexedInts apply(@Nullable final int[] input)
               {
-                return new ArrayBasedIndexedInts(input);
+                return ArrayBasedIndexedInts.of(input);
               }
             }
         ), offsetChunkFactor, maxValue, byteOrder, compressionStrategy
@@ -182,7 +182,7 @@ public class CompressedVSizeIndexedV3WriterTest
   @After
   public void tearDown() throws Exception
   {
-    ioPeon.cleanup();
+    ioPeon.close();
   }
 
   @Test

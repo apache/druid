@@ -33,6 +33,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -45,6 +46,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.ExtractionFns;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollations;
@@ -95,13 +97,8 @@ public class DruidQueryBuilder
       final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
       final ValueType valueType;
 
-      if (SqlTypeName.APPROX_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.FLOAT;
-      } else if (SqlTypeName.DATETIME_TYPES.contains(sqlTypeName) || SqlTypeName.EXACT_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.LONG;
-      } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
-        valueType = ValueType.STRING;
-      } else {
+      valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      if (valueType == null) {
         throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
       }
 
@@ -114,10 +111,7 @@ public class DruidQueryBuilder
   public static DruidQueryBuilder fullScan(final RowSignature rowSignature, final RelDataTypeFactory relDataTypeFactory)
   {
     final RelDataType rowType = rowSignature.getRelDataType(relDataTypeFactory);
-    final List<String> rowOrder = Lists.newArrayListWithCapacity(rowType.getFieldCount());
-    for (RelDataTypeField field : rowType.getFieldList()) {
-      rowOrder.add(field.getName());
-    }
+    final List<String> rowOrder = rowSignature.getRowOrder();
     return new DruidQueryBuilder(null, null, null, null, null, rowType, rowOrder);
   }
 
@@ -368,18 +362,27 @@ public class DruidQueryBuilder
       final boolean useApproximateTopN
   )
   {
-    // Must have GROUP BY one column, ORDER BY one column, limit less than maxTopNLimit, and no HAVING.
-    if (grouping == null
-        || grouping.getDimensions().size() != 1
-        || limitSpec == null
-        || limitSpec.getColumns().size() != 1
-        || limitSpec.getLimit() > maxTopNLimit
-        || having != null) {
+    // Must have GROUP BY one column, ORDER BY zero or one column, limit less than maxTopNLimit, and no HAVING.
+    final boolean topNOk = grouping != null
+                           && grouping.getDimensions().size() == 1
+                           && limitSpec != null
+                           && (limitSpec.getColumns().size() <= 1 && limitSpec.getLimit() <= maxTopNLimit)
+                           && having == null;
+    if (!topNOk) {
       return null;
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions());
-    final OrderByColumnSpec limitColumn = Iterables.getOnlyElement(limitSpec.getColumns());
+    final OrderByColumnSpec limitColumn;
+    if (limitSpec.getColumns().isEmpty()) {
+      limitColumn = new OrderByColumnSpec(
+          dimensionSpec.getOutputName(),
+          OrderByColumnSpec.Direction.ASCENDING,
+          StringComparators.LEXICOGRAPHIC
+      );
+    } else {
+      limitColumn = Iterables.getOnlyElement(limitSpec.getColumns());
+    }
     final TopNMetricSpec topNMetricSpec;
 
     if (limitColumn.getDimension().equals(dimensionSpec.getOutputName())) {

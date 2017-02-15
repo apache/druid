@@ -39,11 +39,11 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -64,17 +64,21 @@ public class SelectQueryEngine
 {
   private static final SelectStrategyFactory STRATEGY_FACTORY = new SelectStrategyFactory();
 
-  private static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
+  public static class SelectStrategyFactory implements ColumnSelectorStrategyFactory<SelectColumnSelectorStrategy>
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities
+        ColumnCapabilities capabilities, ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
       switch(type) {
         case STRING:
           return new StringSelectColumnSelectorStrategy();
+        case LONG:
+          return new LongSelectColumnSelectorStrategy();
+        case FLOAT:
+          return new FloatSelectColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
@@ -123,6 +127,37 @@ public class SelectQueryEngine
     }
   }
 
+  public static class LongSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<LongColumnSelector>
+  {
+
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, LongColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
+  public static class FloatSelectColumnSelectorStrategy implements SelectColumnSelectorStrategy<FloatColumnSelector>
+  {
+    @Override
+    public void addRowValuesToSelectResult(
+        String outputName, FloatColumnSelector dimSelector, Map<String, Object> resultMap
+    )
+    {
+      if (dimSelector == null) {
+        resultMap.put(outputName, null);
+      } else {
+        resultMap.put(outputName, dimSelector.get());
+      }
+    }
+  }
+
   public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
@@ -161,7 +196,7 @@ public class SelectQueryEngine
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
         filter,
-        VirtualColumns.valueOf(query.getVirtualColumns()),
+        query.getVirtualColumns(),
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()
@@ -202,23 +237,12 @@ public class SelectQueryEngine
 
             int lastOffset = offset.startOffset();
             for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
-              final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-              theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
-
-              for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
-                selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);
-              }
-
-              for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
-                final String metric = metSelector.getKey();
-                final ObjectColumnSelector selector = metSelector.getValue();
-
-                if (selector == null) {
-                  theEvent.put(metric, null);
-                } else {
-                  theEvent.put(metric, selector.get());
-                }
-              }
+              final Map<String, Object> theEvent = singleEvent(
+                  EventHolder.timestampKey,
+                  timestampColumnSelector,
+                  selectorPlusList,
+                  metSelectors
+              );
 
               builder.addEntry(
                   new EventHolder(
@@ -235,5 +259,32 @@ public class SelectQueryEngine
           }
         }
     );
+  }
+
+  public static Map<String, Object> singleEvent(
+      String timestampKey,
+      LongColumnSelector timestampColumnSelector,
+      List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList,
+      Map<String, ObjectColumnSelector> metSelectors
+  )
+  {
+    final Map<String, Object> theEvent = Maps.newLinkedHashMap();
+    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.get()));
+
+    for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+      selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);
+    }
+
+    for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
+      final String metric = metSelector.getKey();
+      final ObjectColumnSelector selector = metSelector.getValue();
+
+      if (selector == null) {
+        theEvent.put(metric, null);
+      } else {
+        theEvent.put(metric, selector.get());
+      }
+    }
+    return theEvent;
   }
 }

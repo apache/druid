@@ -65,9 +65,11 @@ public interface GranularitySpec
    */
   public Optional<Interval> bucketInterval(DateTime dt);
 
-  public Granularity getSegmentGranularity();
+  Granularity getSegmentGranularity();
 
-  public boolean isRollup();
+  boolean isRollup();
 
   public Granularity getQueryGranularity();
+
+  GranularitySpec withIntervals(List<Interval> inputIntervals);
 }

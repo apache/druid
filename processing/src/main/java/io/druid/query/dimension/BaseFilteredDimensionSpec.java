@@ -22,13 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.ListBasedIndexedInts;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import io.druid.segment.column.ValueType;
 
 /**
  */
@@ -62,61 +56,26 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public ValueType getOutputType()
+  {
+    return delegate.getOutputType();
+  }
+
+  @Override
   public ExtractionFn getExtractionFn()
   {
     return delegate.getExtractionFn();
   }
 
   @Override
+  public boolean mustDecorate()
+  {
+    return true;
+  }
+
+  @Override
   public boolean preservesOrdering()
   {
     return delegate.preservesOrdering();
-  }
-
-  protected static DimensionSelector decorate(
-      final DimensionSelector selector,
-      final Map<Integer, Integer> forwardMapping,
-      final int[] reverseMapping
-  )
-  {
-    if (selector == null) {
-      return selector;
-    }
-
-    return new DimensionSelector()
-    {
-      @Override
-      public IndexedInts getRow()
-      {
-        IndexedInts baseRow = selector.getRow();
-        List<Integer> result = new ArrayList<>(baseRow.size());
-
-        for (int i : baseRow) {
-          if (forwardMapping.containsKey(i)) {
-            result.add(forwardMapping.get(i));
-          }
-        }
-
-        return new ListBasedIndexedInts(result);
-      }
-
-      @Override
-      public int getValueCardinality()
-      {
-        return forwardMapping.size();
-      }
-
-      @Override
-      public String lookupName(int id)
-      {
-        return selector.lookupName(reverseMapping[id]);
-      }
-
-      @Override
-      public int lookupId(String name)
-      {
-        return forwardMapping.get(selector.lookupId(name));
-      }
-    };
   }
 }

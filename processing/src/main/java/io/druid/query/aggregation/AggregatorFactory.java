@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.cache.Cacheable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;
@@ -37,7 +38,7 @@ import java.util.Map;
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
  * the data is actually stored and accessed.
  */
-public abstract class AggregatorFactory
+public abstract class AggregatorFactory implements Cacheable
 {
   private static final Logger log = new Logger(AggregatorFactory.class);
 
@@ -115,8 +116,6 @@ public abstract class AggregatorFactory
 
   public abstract List<String> requiredFields();
 
-  public abstract byte[] getCacheKey();
-
   public abstract String getTypeName();
 
   /**
@@ -125,15 +124,6 @@ public abstract class AggregatorFactory
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
-
-  /**
-   * Deprecated, to be removed in 0.10.0. See https://github.com/druid-io/druid/issues/3588.
-   */
-  @Deprecated
-  public Object getAggregatorStartValue()
-  {
-    throw new UnsupportedOperationException("getAggregatorStartValue is deprecated");
-  }
 
   /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and

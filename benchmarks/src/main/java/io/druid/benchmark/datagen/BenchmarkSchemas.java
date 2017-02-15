@@ -89,8 +89,71 @@ public class BenchmarkSchemas
     BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
         basicSchemaColumns,
         basicSchemaIngestAggs,
-        basicSchemaDataInterval
+        basicSchemaDataInterval,
+        true
     );
     SCHEMA_MAP.put("basic", basicSchema);
+  }
+
+  static { // simple single string column and count agg schema, no rollup
+    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+        // dims
+        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.STRING, false, 1, null, 0, 1000000)
+    );
+
+    List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
+    basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
+
+    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+
+    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+        basicSchemaColumns,
+        basicSchemaIngestAggs,
+        basicSchemaDataInterval,
+        false
+    );
+    SCHEMA_MAP.put("simple", basicSchema);
+  }
+
+  static { // simple single long column and count agg schema, no rollup
+    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+        // dims, ingest as a metric for now with rollup off, until numeric dims at ingestion are supported
+        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.LONG, true, 1, null, 0, 1000000)
+    );
+
+    List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
+    basicSchemaIngestAggs.add(new LongSumAggregatorFactory("dimSequential", "dimSequential"));
+    basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
+
+    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+
+    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+        basicSchemaColumns,
+        basicSchemaIngestAggs,
+        basicSchemaDataInterval,
+        false
+    );
+    SCHEMA_MAP.put("simpleLong", basicSchema);
+  }
+
+  static { // simple single float column and count agg schema, no rollup
+    List<BenchmarkColumnSchema> basicSchemaColumns = ImmutableList.of(
+        // dims, ingest as a metric for now with rollup off, until numeric dims at ingestion are supported
+        BenchmarkColumnSchema.makeSequential("dimSequential", ValueType.FLOAT, true, 1, null, 0, 1000000)
+    );
+
+    List<AggregatorFactory> basicSchemaIngestAggs = new ArrayList<>();
+    basicSchemaIngestAggs.add(new DoubleSumAggregatorFactory("dimSequential", "dimSequential"));
+    basicSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
+
+    Interval basicSchemaDataInterval = new Interval(0, 1000000);
+
+    BenchmarkSchemaInfo basicSchema = new BenchmarkSchemaInfo(
+        basicSchemaColumns,
+        basicSchemaIngestAggs,
+        basicSchemaDataInterval,
+        false
+    );
+    SCHEMA_MAP.put("simpleFloat", basicSchema);
   }
 }

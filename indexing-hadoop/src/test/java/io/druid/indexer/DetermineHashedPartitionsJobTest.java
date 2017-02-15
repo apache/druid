@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -94,13 +95,19 @@ public class DetermineHashedPartitionsJobTest
     );
   }
 
-  public DetermineHashedPartitionsJobTest(String dataFilePath, long targetPartitionSize, String interval, int errorMargin, int expectedNumTimeBuckets, int[] expectedNumOfShards) throws IOException
+  public DetermineHashedPartitionsJobTest(
+      String dataFilePath,
+      long targetPartitionSize,
+      String interval,
+      int errorMargin,
+      int expectedNumTimeBuckets,
+      int[] expectedNumOfShards
+  ) throws IOException
   {
     this.expectedNumOfShards = expectedNumOfShards;
     this.expectedNumTimeBuckets = expectedNumTimeBuckets;
     this.errorMargin = errorMargin;
     File tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
 
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
         new DataSchema(

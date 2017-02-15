@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.rel;
 
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitDef;
@@ -28,6 +29,7 @@ import org.apache.calcite.plan.RelTraitSet;
 public class DruidConvention implements Convention
 {
   private static final DruidConvention INSTANCE = new DruidConvention();
+  private static final String NAME = "DRUID";
 
   private DruidConvention()
   {
@@ -41,13 +43,13 @@ public class DruidConvention implements Convention
   @Override
   public Class getInterface()
   {
-    return null;
+    return DruidRel.class;
   }
 
   @Override
   public String getName()
   {
-    return null;
+    return NAME;
   }
 
   @Override
@@ -57,9 +59,7 @@ public class DruidConvention implements Convention
   }
 
   @Override
-  public boolean useAbstractConvertersForConversion(
-      RelTraitSet fromTraits, RelTraitSet toTraits
-  )
+  public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits)
   {
     return false;
   }
@@ -67,18 +67,23 @@ public class DruidConvention implements Convention
   @Override
   public RelTraitDef getTraitDef()
   {
-    return null;
+    return ConventionTraitDef.INSTANCE;
   }
 
   @Override
   public boolean satisfies(RelTrait trait)
   {
-    return false;
+    return trait == this;
   }
 
   @Override
   public void register(RelOptPlanner planner)
   {
+  }
 
+  @Override
+  public String toString()
+  {
+    return NAME;
   }
 }

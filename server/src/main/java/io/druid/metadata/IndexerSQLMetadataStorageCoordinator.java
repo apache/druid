@@ -181,8 +181,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
             String.format(
-                "SELECT payload FROM %s WHERE dataSource = :dataSource AND start <= :end and \"end\" >= :start",
-                dbTables.getPendingSegmentsTable()
+                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
+                dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
               .bind("dataSource", dataSource)
@@ -219,7 +219,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
-          "(start <= ? AND \"end\" >= ?)"
+          String.format("(start <= ? AND %1$send%1$s >= ?)", connector.getQuoteString())
       );
       if (i == intervals.size() - 1) {
         sb.append(")");
@@ -560,9 +560,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
             handle.createStatement(
                 String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
-                    dbTables.getPendingSegmentsTable()
+                    dbTables.getPendingSegmentsTable(), connector.getQuoteString()
                 )
             )
                   .bind("id", newIdentifier.getIdentifierAsString())
@@ -614,9 +614,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
       handle.createStatement(
           String.format(
-              "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable()
+              dbTables.getSegmentsTable(), connector.getQuoteString()
           )
       )
             .bind("id", segment.getIdentifier())
@@ -818,6 +818,41 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
+  public boolean resetDataSourceMetadata(
+      final String dataSource, final DataSourceMetadata dataSourceMetadata
+  ) throws IOException
+  {
+    final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(dataSourceMetadata);
+    final String newCommitMetadataSha1 = BaseEncoding.base16().encode(
+        Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
+    );
+
+    return connector.retryWithHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            final int numRows = handle.createStatement(
+                String.format(
+                    "UPDATE %s SET "
+                    + "commit_metadata_payload = :new_commit_metadata_payload, "
+                    + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+                    + "WHERE dataSource = :dataSource",
+                    dbTables.getDataSourceTable()
+                )
+            )
+                                      .bind("dataSource", dataSource)
+                                      .bind("new_commit_metadata_payload", newCommitMetadataBytes)
+                                      .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
+                                      .execute();
+            return numRows == 1;
+          }
+        }
+    );
+  }
+
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
     connector.getDBI().inTransaction(
@@ -891,8 +926,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             return handle
                 .createQuery(
                     String.format(
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
-                        dbTables.getSegmentsTable()
+                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false",
+                        dbTables.getSegmentsTable(), connector.getQuoteString()
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())

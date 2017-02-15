@@ -112,7 +112,7 @@ public class AppendTest
     // (1, 2) cover overlapping segments of the form
     // |------|
     //     |--------|
-    QueryableIndex appendedIndex = SchemalessIndex.getAppendedIncrementalIndex(
+    QueryableIndex appendedIndex = SchemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.1", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.2", METRIC_AGGS)
@@ -127,7 +127,7 @@ public class AppendTest
     // (3, 4) cover overlapping segments of the form
     // |------------|
     //     |-----|
-    QueryableIndex append2 = SchemalessIndex.getAppendedIncrementalIndex(
+    QueryableIndex append2 = SchemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.3", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.4", METRIC_AGGS)
@@ -143,7 +143,7 @@ public class AppendTest
     // |-------------|
     //   |---|
     //          |---|
-    QueryableIndex append3 = SchemalessIndex.getAppendedIncrementalIndex(
+    QueryableIndex append3 = SchemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.5", METRIC_AGGS),
             new Pair<String, AggregatorFactory[]>("append.json.6", METRIC_AGGS),

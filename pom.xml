@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.9.3-SNAPSHOT</version>
+    <version>0.10.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,7 +54,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.9.3-SNAPSHOT</tag>
+        <tag>0.10.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -63,7 +63,7 @@
         <calcite.version>1.11.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.2.5.v20141112</jetty.version>
+        <jetty.version>9.3.16.v20170120</jetty.version>
         <jersey.version>1.19</jersey.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
@@ -91,9 +91,13 @@
         <module>aws-common</module>
         <module>java-util</module>
         <module>bytebuffer-collections</module>
+        <module>extendedset</module>
+        <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
+        <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
+        <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
@@ -122,6 +126,8 @@
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
+        <module>extensions-contrib/scan-query</module>
+        <module>extensions-contrib/sqlserver-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
@@ -199,6 +205,13 @@
                 <groupId>io.airlift</groupId>
                 <artifactId>airline</artifactId>
                 <version>0.7</version>
+                <exclusions>
+                    <exclusion>
+                        <!--LGPL licenced library-->
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>annotations</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.skife.config</groupId>
@@ -621,6 +634,11 @@
                 <version>1.6.4</version>
             </dependency>
             <dependency>
+                <groupId>org.roaringbitmap</groupId>
+                <artifactId>RoaringBitmap</artifactId>
+                <version>0.5.18</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
@@ -806,6 +824,33 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.4.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-banned-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>1.8.0</version>
+                                </requireJavaVersion>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <!--LGPL licenced library-->
+                                        <exclude>com.google.code.findbugs:annotations</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -909,6 +954,9 @@
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
                         <additionalparam>-Xdoclint:none</additionalparam>
+
+                        <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
+                        <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -962,17 +1010,6 @@
             <id>java8</id>
             <activation>
                 <jdk>1.8</jdk>
-            </activation>
-            <modules>
-                <module>extensions-core/caffeine-cache</module>
-                <!-- distribution packaging -->
-                <module>distribution</module>
-            </modules>
-        </profile>
-        <profile>
-            <id>java7</id>
-            <activation>
-                <jdk>1.7</jdk>
             </activation>
             <modules>
                 <!-- distribution packaging -->

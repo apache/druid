@@ -145,6 +145,35 @@ public class DataSchemaTest
     schema.getParser();
   }
 
+  @Test(expected = IAE.class)
+  public void testDuplicateAggregators() throws Exception
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time")), ImmutableList.of("dimC"), null),
+                null,
+                null
+            ),
+            null
+        ), new TypeReference<Map<String, Object>>() {}
+    );
+
+    DataSchema schema = new DataSchema(
+        "test",
+        parser,
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+            new DoubleSumAggregatorFactory("metric1", "col3"),
+        },
+        new ArbitraryGranularitySpec(Granularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        jsonMapper
+    );
+    schema.getParser();
+  }
+
   @Test
   public void testSerdeWithInvalidParserMap() throws Exception
   {

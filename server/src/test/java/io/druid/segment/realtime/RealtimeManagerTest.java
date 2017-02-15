@@ -600,14 +600,14 @@ public class RealtimeManagerTest
         interval_26_28,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            "druid.sample.tsv.top",
+            "druid.sample.numeric.tsv.top",
             null
         )
         ,
         interval_28_29,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            "druid.sample.tsv.bottom",
+            "druid.sample.numeric.tsv.bottom",
             null
         )
     );

@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import io.druid.java.util.common.ISE;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -97,16 +97,12 @@ public class JavaScriptPostAggregator implements PostAggregator
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
     Preconditions.checkNotNull(fieldNames, "Must have a valid, non-null fieldNames");
     Preconditions.checkNotNull(function, "Must have a valid, non-null function");
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled.");
 
     this.name = name;
     this.fieldNames = fieldNames;
     this.function = function;
-
-    if (config.isDisabled()) {
-      this.fn = null;
-    } else {
-      this.fn = compile(function);
-    }
+    this.fn = compile(function);
   }
 
   @Override
@@ -124,16 +120,21 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    if (fn == null) {
-      throw new ISE("JavaScript is disabled");
-    }
-
     final Object[] args = new Object[fieldNames.size()];
     int i = 0;
     for (String field : fieldNames) {
       args[i++] = combinedAggregators.get(field);
     }
     return fn.apply(args);
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.JAVA_SCRIPT)
+        .appendStrings(fieldNames)
+        .appendString(function)
+        .build();
   }
 
   @JsonProperty
@@ -167,16 +168,16 @@ public class JavaScriptPostAggregator implements PostAggregator
 
     JavaScriptPostAggregator that = (JavaScriptPostAggregator) o;
 
-    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) {
+    if (!fieldNames.equals(that.fieldNames)) {
       return false;
     }
-    if (fn != null ? !fn.equals(that.fn) : that.fn != null) {
+    if (!fn.equals(that.fn)) {
       return false;
     }
-    if (function != null ? !function.equals(that.function) : that.function != null) {
+    if (!function.equals(that.function)) {
       return false;
     }
-    if (name != null ? !name.equals(that.name) : that.name != null) {
+    if (!name.equals(that.name)) {
       return false;
     }
 
@@ -186,10 +187,10 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public int hashCode()
   {
-    int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (fieldNames != null ? fieldNames.hashCode() : 0);
-    result = 31 * result + (function != null ? function.hashCode() : 0);
-    result = 31 * result + (fn != null ? fn.hashCode() : 0);
+    int result = name.hashCode();
+    result = 31 * result + fieldNames.hashCode();
+    result = 31 * result + function.hashCode();
+    result = 31 * result + fn.hashCode();
     return result;
   }
 }

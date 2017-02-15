@@ -20,12 +20,10 @@
 package io.druid.collections.bitmap;
 
 
-import java.nio.ByteBuffer;
-
+import io.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import it.uniroma3.mat.extendedset.intset.IntSet;
+import java.nio.ByteBuffer;
 
 public class WrappedImmutableConciseBitmap implements ImmutableBitmap
 {
@@ -81,27 +79,7 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
   @Override
   public IntIterator iterator()
   {
-    final IntSet.IntIterator i = bitmap.iterator();
-    return new IntIterator()
-    {
-      @Override
-      public IntIterator clone()
-      {
-        return new WrappedConciseIntIterator(i.clone());
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return i.hasNext();
-      }
-
-      @Override
-      public int next()
-      {
-        return i.next();
-      }
-    };
+    return bitmap.iterator();
   }
 
   @Override

@@ -104,7 +104,7 @@ public class DurationGranularity extends Granularity
   }
 
   @Override
-  public byte[] cacheKey()
+  public byte[] getCacheKey()
   {
     return ByteBuffer.allocate(2 * Longs.BYTES).putLong(length).putLong(origin).array();
   }

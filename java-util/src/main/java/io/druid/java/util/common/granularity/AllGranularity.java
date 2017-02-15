@@ -58,7 +58,7 @@ public final class AllGranularity extends Granularity
   }
 
   @Override
-  public byte[] cacheKey()
+  public byte[] getCacheKey()
   {
     return new byte[]{0x7f};
   }

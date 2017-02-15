@@ -96,7 +96,7 @@ public class RegexFilteredDimensionSpecTest
     Assert.assertEquals("c", selector.lookupName(0));
     Assert.assertEquals("g", selector.lookupName(1));
 
-    Assert.assertEquals(0, selector.lookupId("c"));
-    Assert.assertEquals(1, selector.lookupId("g"));
+    Assert.assertEquals(0, selector.idLookup().lookupId("c"));
+    Assert.assertEquals(1, selector.idLookup().lookupId("g"));
   }
 }

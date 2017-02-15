@@ -22,10 +22,10 @@ package io.druid.query.aggregation.cardinality;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
-import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 
 import java.util.List;
 
@@ -110,12 +110,6 @@ public class CardinalityAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("CardinalityAggregator does not support getLong()");
-  }
-
-  @Override
-  public String getName()
-  {
-    throw new UnsupportedOperationException("getName is deprecated");
   }
 
   @Override

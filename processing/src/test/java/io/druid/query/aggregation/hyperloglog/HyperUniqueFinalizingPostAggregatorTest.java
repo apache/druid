@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import io.druid.hll.HyperLogLogCollector;
 import org.junit.Assert;
 import org.junit.Test;
 

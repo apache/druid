@@ -24,6 +24,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.VirtualColumns;
 
 /**
  */
@@ -33,6 +34,7 @@ public class IncrementalIndexSchema
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
   private final Granularity gran;
+  private final VirtualColumns virtualColumns;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
   private final boolean rollup;
@@ -41,6 +43,7 @@ public class IncrementalIndexSchema
       long minTimestamp,
       TimestampSpec timestampSpec,
       Granularity gran,
+      VirtualColumns virtualColumns,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
       boolean rollup
@@ -49,6 +52,7 @@ public class IncrementalIndexSchema
     this.minTimestamp = minTimestamp;
     this.timestampSpec = timestampSpec;
     this.gran = gran;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
     this.rollup = rollup;
@@ -67,6 +71,11 @@ public class IncrementalIndexSchema
   public Granularity getGran()
   {
     return gran;
+  }
+
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   public DimensionsSpec getDimensionsSpec()
@@ -89,6 +98,7 @@ public class IncrementalIndexSchema
     private long minTimestamp;
     private TimestampSpec timestampSpec;
     private Granularity gran;
+    private VirtualColumns virtualColumns;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
     private boolean rollup;
@@ -97,6 +107,7 @@ public class IncrementalIndexSchema
     {
       this.minTimestamp = 0L;
       this.gran = Granularity.NONE;
+      this.virtualColumns = VirtualColumns.EMPTY;
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
       this.rollup = true;
@@ -129,6 +140,12 @@ public class IncrementalIndexSchema
     public Builder withQueryGranularity(Granularity gran)
     {
       this.gran = gran;
+      return this;
+    }
+
+    public Builder withVirtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
       return this;
     }
 
@@ -166,7 +183,7 @@ public class IncrementalIndexSchema
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics, rollup
+          minTimestamp, timestampSpec, gran, virtualColumns, dimensionsSpec, metrics, rollup
       );
     }
   }
