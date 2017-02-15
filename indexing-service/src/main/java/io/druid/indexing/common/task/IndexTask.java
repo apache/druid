@@ -385,7 +385,7 @@ public class IndexTask extends AbstractTask
 
     try (
         final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
+        final FiniteAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator, fireDepartmentMetrics);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser())
     ) {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
@@ -504,7 +504,8 @@ public class IndexTask extends AbstractTask
   private FiniteAppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
-      final SegmentAllocator segmentAllocator
+      final SegmentAllocator segmentAllocator,
+      final FireDepartmentMetrics metrics
   )
   {
     return new FiniteAppenderatorDriver(
@@ -514,7 +515,8 @@ public class IndexTask extends AbstractTask
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
         Integer.MAX_VALUE, // rows for a partition is already determined by the shardSpec
-        0
+        0,
+        metrics
     );
   }
 

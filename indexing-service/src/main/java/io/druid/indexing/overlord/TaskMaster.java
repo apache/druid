@@ -37,6 +37,7 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
@@ -73,11 +74,12 @@ public class TaskMaster
       final TaskLockbox taskLockbox,
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
-      @Self final DruidNode node,
+      @Self final DruidNode selfNode,
       final IndexerZkConfig zkPaths,
       final TaskRunnerFactory runnerFactory,
       final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
+      final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordHelperManager overlordHelperManager
@@ -85,6 +87,10 @@ public class TaskMaster
   {
     this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;
+
+    final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
+                           selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
+
     this.leaderSelector = new LeaderSelector(
         curator,
         zkPaths.getLeaderLatchPath(),

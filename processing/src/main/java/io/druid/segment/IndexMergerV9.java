@@ -135,7 +135,7 @@ public class IndexMergerV9 extends IndexMerger
       @Override
       public void close() throws IOException
       {
-        ioPeon.cleanup();
+        ioPeon.close();
       }
     });
     final FileSmoosher v9Smoosher = new FileSmoosher(outDir);

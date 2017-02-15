@@ -38,8 +38,8 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
       logger.debug(
           "%s %s %s",
           request.getMethod(),
-          request.getUri().toString(),
-          request.getProtocol().toString()
+          request.getHttpURI().toString(),
+          request.getProtocol()
       );
     }
   }

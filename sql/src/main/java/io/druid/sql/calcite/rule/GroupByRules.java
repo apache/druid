@@ -186,8 +186,7 @@ public class GroupByRules
           null,
           aggregate,
           operatorTable,
-          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct(),
-          druidRel.getPlannerContext().getPlannerConfig().getMaxQueryCount()
+          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -226,8 +225,7 @@ public class GroupByRules
           project,
           aggregate,
           operatorTable,
-          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct(),
-          druidRel.getPlannerContext().getPlannerConfig().getMaxQueryCount()
+          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -268,8 +266,7 @@ public class GroupByRules
           project,
           aggregate,
           operatorTable,
-          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct(),
-          druidRel.getPlannerContext().getPlannerConfig().getMaxQueryCount()
+          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -380,8 +377,7 @@ public class GroupByRules
       final Project project0,
       final Aggregate aggregate,
       final DruidOperatorTable operatorTable,
-      final boolean approximateCountDistinct,
-      final int maxQueryCount
+      final boolean approximateCountDistinct
   )
   {
     Preconditions.checkState(canApplyAggregate(druidRel, filter0, project0, aggregate), "Cannot applyAggregate.");
@@ -490,20 +486,13 @@ public class GroupByRules
 
     if (isNestedQuery) {
       // Nested groupBy.
-      final DruidNestedGroupBy retVal = DruidNestedGroupBy.from(
+      return DruidNestedGroupBy.from(
           druidRel,
           filter,
           Grouping.create(dimensions, aggregations),
           aggregate.getRowType(),
           rowOrder
       );
-
-      // Check maxQueryCount.
-      if (maxQueryCount > 0 && retVal.getQueryCount() > maxQueryCount) {
-        return null;
-      }
-
-      return retVal;
     } else {
       // groupBy on a base dataSource.
       return druidRel.withQueryBuilder(

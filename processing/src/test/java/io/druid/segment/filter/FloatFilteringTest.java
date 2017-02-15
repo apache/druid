@@ -192,13 +192,13 @@ public class FloatFilteringTest extends BaseFilterTest
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn, null, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "5")
     );
 
     String jsFn2 = "function(x) { return(x === 3.0 || x === 5.0) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn2, null, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn2, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "5")
     );
 
@@ -321,7 +321,7 @@ public class FloatFilteringTest extends BaseFilterTest
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
     assertFilterMatches(
-        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn, exfn, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(FLOAT_COLUMN, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "4")
     );
 

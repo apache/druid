@@ -24,6 +24,7 @@ import com.google.common.io.ByteStreams;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.storage.hdfs.HdfsDataSegmentPuller;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -62,7 +63,6 @@ public class HdfsDataSegmentPullerTest
   public static void setupStatic() throws IOException, ClassNotFoundException
   {
     hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
-    hdfsTmpDir.deleteOnExit();
     if (!hdfsTmpDir.delete()) {
       throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
     }
@@ -74,7 +74,6 @@ public class HdfsDataSegmentPullerTest
     final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
     tmpFile.delete();
     try {
-      tmpFile.deleteOnExit();
       Files.copy(new ByteArrayInputStream(pathByteContents), tmpFile.toPath());
       try (OutputStream stream = miniCluster.getFileSystem().create(filePath)) {
         Files.copy(tmpFile.toPath(), stream);
@@ -91,6 +90,7 @@ public class HdfsDataSegmentPullerTest
     if (miniCluster != null) {
       miniCluster.shutdown(true);
     }
+    FileUtils.deleteDirectory(hdfsTmpDir);
   }
 
 
@@ -112,18 +112,14 @@ public class HdfsDataSegmentPullerTest
   public void testZip() throws IOException, SegmentLoadingException
   {
     final File tmpDir = com.google.common.io.Files.createTempDir();
-    tmpDir.deleteOnExit();
     final File tmpFile = File.createTempFile("zipContents", ".txt", tmpDir);
-    tmpFile.deleteOnExit();
 
     final Path zipPath = new Path("/tmp/testZip.zip");
 
     final File outTmpDir = com.google.common.io.Files.createTempDir();
-    outTmpDir.deleteOnExit();
 
     final URI uri = URI.create(uriBase.toString() + zipPath.toString());
 
-    tmpFile.deleteOnExit();
     try (final OutputStream stream = new FileOutputStream(tmpFile)) {
       ByteStreams.copy(new ByteArrayInputStream(pathByteContents), stream);
     }
@@ -164,7 +160,6 @@ public class HdfsDataSegmentPullerTest
     final Path zipPath = new Path("/tmp/testZip.gz");
 
     final File outTmpDir = com.google.common.io.Files.createTempDir();
-    outTmpDir.deleteOnExit();
     final File outFile = new File(outTmpDir, "testZip");
     outFile.delete();
 
@@ -201,7 +196,6 @@ public class HdfsDataSegmentPullerTest
     final Path zipPath = new Path(perTestPath, "test.txt");
 
     final File outTmpDir = com.google.common.io.Files.createTempDir();
-    outTmpDir.deleteOnExit();
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 

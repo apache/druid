@@ -19,15 +19,12 @@
 
 package io.druid.collections.bitmap;
 
-import java.nio.ByteBuffer;
-
-import org.roaringbitmap.IntIterator;
-
 import com.google.common.primitives.Ints;
-
 import io.druid.extendedset.intset.ConciseSet;
 import io.druid.extendedset.intset.ImmutableConciseSet;
-import io.druid.extendedset.intset.IntSet;
+import org.roaringbitmap.IntIterator;
+
+import java.nio.ByteBuffer;
 
 public class WrappedConciseBitmap implements MutableBitmap
 {
@@ -148,28 +145,7 @@ public class WrappedConciseBitmap implements MutableBitmap
   @Override
   public IntIterator iterator()
   {
-    final IntSet.IntIterator i = bitmap.iterator();
-    return new IntIterator()
-    {
-      @Override
-      public IntIterator clone()
-      {
-        throw new UnsupportedOperationException("clone is not supported on ConciseSet iterator");
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return i.hasNext();
-      }
-
-      @Override
-      public int next()
-      {
-        return i.next();
-      }
-
-    };
+    return bitmap.iterator();
   }
 
   @Override

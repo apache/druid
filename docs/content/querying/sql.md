@@ -142,11 +142,10 @@ SELECT COUNT(*) FROM (SELECT DISTINCT col FROM data_source)
 ```
 
 Note that groupBys require a separate merge buffer on the broker for each layer beyond the first layer of the groupBy.
-With the v2 groupBy strategy, this can potentially lead to deadlocks for groupBys nested beyond two layers, since the
-merge buffers are limited in number and are acquired one-by-one and not as a complete set. At this time we recommend
-that you avoid deeply-nested groupBys with the v2 strategy. Doubly-nested groupBys (groupBy -> groupBy -> table) are
-safe and do not suffer from this issue. If you like, you can forbid deeper nesting by setting
-`druid.sql.planner.maxQueryCount = 2`.
+This merge buffer is immediately released once they are not used anymore during the query processing. However, deeply
+nested groupBys (there are two or more groupBy layers beyond the first one) can potentially lead to deadlocks since the
+merge buffers are limited in number and are acquired one-by-one instead of a complete set. At this time, we recommend
+that you avoid too many concurrent execution of deeply nested groupBys with the v2 strategy.
 
 #### Semi-joins
 
