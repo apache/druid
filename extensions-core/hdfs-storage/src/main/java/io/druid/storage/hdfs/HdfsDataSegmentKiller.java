@@ -53,17 +53,6 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
   }
 
-  // returns path up to data source for a segment
-  private static Path getDataSourcePath(DataSegment segment)
-  {
-    final String dataSource = segment.getDataSource();
-    final String segmentPath = getPath(segment).toUri().toString();
-
-    StringBuilder builder = new StringBuilder(segmentPath.split(dataSource)[0]);
-    builder.append(dataSource);
-    return new Path(builder.toString());
-  }
-
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
@@ -101,6 +90,10 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
                 descriptorPath.toString()
             );
           }
+          //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
+          // max depth to look is 2, i.e version directory and interval.
+          mayBeDeleteParentsUpto(fs, segmentPath, 2);
+
         } else { //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/
           // index.zip
           if (!fs.delete(segmentPath, false)) {
@@ -116,12 +109,10 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
                 descriptorPath.toString()
             );
           }
-
+          //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
+          //max depth to look is 3, i.e partition number directory,version directory and interval.
+          mayBeDeleteParentsUpto(fs, segmentPath, 3);
         }
-
-        Path dataSourcepath = getDataSourcePath(segment);
-
-        deleteEmptyParents(fs, segmentPath.getParent(), dataSourcepath);
       }
     }
     catch (IOException e) {
@@ -137,14 +128,15 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     fs.delete(storageDirectory, true);
   }
 
-  private void deleteEmptyParents(FileSystem fs, Path path, Path dataSourcepath)
+  private void mayBeDeleteParentsUpto(final FileSystem fs, final Path segmentPath, final int maxDepthTobeDeleted)
   {
-    if (fs.makeQualified(path).equals(fs.makeQualified(dataSourcepath))) {
-      return;
-    }
+    Path path = segmentPath;
     try {
-      if (fs.listStatus(path).length == 0 && fs.delete(path, false)) {
-        deleteEmptyParents(fs, path.getParent(), dataSourcepath);
+      for (int i = 1; i <= maxDepthTobeDeleted; i++) {
+        path = path.getParent();
+        if (fs.listStatus(path).length != 0 || !fs.delete(path, false)) {
+          break;
+        }
       }
     }
     catch (Exception e) {

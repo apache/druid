@@ -85,7 +85,7 @@ In this way, you can validate both push (at realtime node) and pull (at historic
 
 * DataSegmentPusher
 
-Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` (`partitionNum_descriptor.json` for `HDFS` data storage) and `index.zip` (`partitionNum_index.zip` for `HDFS` data storage) after your ingestion task ends.
+Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage) and `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
 
 * DataSegmentPuller
 

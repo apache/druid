@@ -25,7 +25,7 @@ or runtime.properties file. Specifically, this tool needs to know
 `druid.storage.type`
 
 Besides the properties above, you also need to specify the location where the segments are stored and whether you want to
-update descriptor.json (`partitionNum_descriptor.json` for `HDFS` data storage). These two can be provided through command line arguments.
+update descriptor.json (`partitionNum_descriptor.json` for HDFS data storage). These two can be provided through command line arguments.
 
 `--workingDir` (Required)
 
@@ -36,11 +36,11 @@ update descriptor.json (`partitionNum_descriptor.json` for `HDFS` data storage).
 
 `--updateDescriptor` (Optional)
 
-    if set to true, this tool will update `loadSpec` field in `descriptor.json` (`partitionNum_descriptor.json` for `HDFS` data storage) if the path in `loadSpec` is different from
-    where `desciptor.json` (`partitionNum_descriptor.json` for `HDFS` data storage) was found. Default value is `true`.
+    if set to true, this tool will update `loadSpec` field in `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage) if the path in `loadSpec` is different from
+    where `desciptor.json` (`partitionNum_descriptor.json` for HDFS data storage) was found. Default value is `true`.
 
 Note: you will also need to load different Druid extensions per the metadata and deep storage you use. For example, if you
-use `mysql` as metadata storage and `HDFS` as deep storage, you should load `mysql-metadata-storage` and `druid-hdfs-storage`
+use `mysql` as metadata storage and HDFS as deep storage, you should load `mysql-metadata-storage` and `druid-hdfs-storage`
 extensions.
 
 

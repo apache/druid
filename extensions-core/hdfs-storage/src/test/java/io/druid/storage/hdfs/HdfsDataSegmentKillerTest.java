@@ -103,6 +103,7 @@ public class HdfsDataSegmentKillerTest
     killer.kill(getSegmentWithPath(new Path(partition012Dir, "index.zip").toString()));
 
     Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.delete(dataSourceDir, false));
   }
 
   @Test
@@ -122,9 +123,9 @@ public class HdfsDataSegmentKillerTest
     );
 
     FileSystem fs = FileSystem.get(config);
-    Path dataSourceDir = new Path("/tmp/dataSource");
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
 
-    Path interval1Dir = new Path(dataSourceDir, "interval1");
+    Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
 
     makePartitionDirWithIndexWitNewFormat(fs, version11Dir, 3);
@@ -134,7 +135,8 @@ public class HdfsDataSegmentKillerTest
     Assert.assertFalse(fs.exists(interval1Dir));
     Assert.assertTrue(fs.exists(dataSourceDir));
     Assert.assertTrue(fs.exists(new Path("/tmp")));
-
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.delete(dataSourceDir, false));
   }
 
   @Test
