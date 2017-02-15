@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
  */
 public class DurationGranularity extends Granularity
 {
-  private final long length;
+  private final long duration;
   private final long origin;
 
   @JsonCreator
@@ -46,17 +46,17 @@ public class DurationGranularity extends Granularity
     this(duration, origin == null ? 0 : origin.getMillis());
   }
 
-  public DurationGranularity(long millis, long origin)
+  public DurationGranularity(long duration, long origin)
   {
-    Preconditions.checkArgument(millis > 0, "duration should be greater than 0!");
-    this.length = millis;
-    this.origin = origin % length;
+    Preconditions.checkArgument(duration > 0, "duration should be greater than 0!");
+    this.duration = duration;
+    this.origin = origin % duration;
   }
 
   @JsonProperty("duration")
   public long getDuration()
   {
-    return length;
+    return duration;
   }
 
   @JsonProperty("origin")
@@ -109,7 +109,7 @@ public class DurationGranularity extends Granularity
   @Override
   public byte[] getCacheKey()
   {
-    return ByteBuffer.allocate(2 * Longs.BYTES).putLong(length).putLong(origin).array();
+    return ByteBuffer.allocate(2 * Longs.BYTES).putLong(duration).putLong(origin).array();
   }
 
   @Override
@@ -120,7 +120,7 @@ public class DurationGranularity extends Granularity
 
   public long getDurationMillis()
   {
-    return length;
+    return duration;
   }
 
   @Override
@@ -135,7 +135,7 @@ public class DurationGranularity extends Granularity
 
     DurationGranularity that = (DurationGranularity) o;
 
-    if (length != that.length) {
+    if (duration != that.duration) {
       return false;
     }
     if (origin != that.origin) {
@@ -148,7 +148,7 @@ public class DurationGranularity extends Granularity
   @Override
   public int hashCode()
   {
-    int result = (int) (length ^ (length >>> 32));
+    int result = (int) (duration ^ (duration >>> 32));
     result = 31 * result + (int) (origin ^ (origin >>> 32));
     return result;
   }
@@ -157,7 +157,7 @@ public class DurationGranularity extends Granularity
   public String toString()
   {
     return "DurationGranularity{" +
-           "length=" + length +
+           "duration=" + duration +
            ", origin=" + origin +
            '}';
   }
