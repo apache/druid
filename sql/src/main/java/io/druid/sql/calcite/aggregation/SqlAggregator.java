@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.aggregation;
 
 import io.druid.query.filter.DimFilter;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
@@ -45,6 +46,7 @@ public interface SqlAggregator
    *
    * @param name                 desired output name of the aggregation
    * @param rowSignature         signature of the rows being aggregated
+   * @param plannerContext       SQL planner context
    * @param existingAggregations existing aggregations for this query; useful for re-using aggregations. May be safely
    *                             ignored if you do not want to re-use existing aggregations.
    * @param project              SQL projection to apply before the aggregate call, may be null
@@ -57,6 +59,7 @@ public interface SqlAggregator
   Aggregation toDruidAggregation(
       final String name,
       final RowSignature rowSignature,
+      final PlannerContext plannerContext,
       final List<Aggregation> existingAggregations,
       final Project project,
       final AggregateCall aggregateCall,
