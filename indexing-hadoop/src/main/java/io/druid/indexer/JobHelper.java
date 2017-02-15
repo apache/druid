@@ -75,8 +75,6 @@ import java.util.zip.ZipOutputStream;
 public class JobHelper
 {
   private static final Logger log = new Logger(JobHelper.class);
-
-
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
   private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KB
@@ -386,7 +384,6 @@ public class JobHelper
       throws IOException
   {
     final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
-
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
         DataPusher.class, new DataPusher()
