@@ -21,10 +21,13 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.ISE;
+import io.druid.sql.calcite.planner.PlannerContext;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.List;
 import java.util.Map;
@@ -72,12 +75,13 @@ public class ExpressionConverter
    * Translate a row-expression to a Druid row extraction. Note that this signature will probably need to change
    * once we support extractions from multiple columns.
    *
-   * @param rowOrder   order of fields in the Druid rows to be extracted from
-   * @param expression expression meant to be applied on top of the table
+   * @param plannerContext SQL planner context
+   * @param rowOrder       order of fields in the Druid rows to be extracted from
+   * @param expression     expression meant to be applied on top of the table
    *
    * @return (columnName, extractionFn) or null
    */
-  public RowExtraction convert(List<String> rowOrder, RexNode expression)
+  public RowExtraction convert(PlannerContext plannerContext, List<String> rowOrder, RexNode expression)
   {
     if (expression.getKind() == SqlKind.INPUT_REF) {
       final RexInputRef ref = (RexInputRef) expression;
@@ -88,18 +92,29 @@ public class ExpressionConverter
 
       return RowExtraction.of(columnName, null);
     } else if (expression.getKind() == SqlKind.CAST) {
-      // TODO(gianm): Probably not a good idea to ignore CAST like this.
-      return convert(rowOrder, ((RexCall) expression).getOperands().get(0));
+      final RexNode operand = ((RexCall) expression).getOperands().get(0);
+      if (expression.getType().getSqlTypeName() == SqlTypeName.DATE
+          && operand.getType().getSqlTypeName() == SqlTypeName.TIMESTAMP) {
+        // Handling casting TIMESTAMP to DATE by flooring to DAY.
+        return FloorExpressionConversion.applyTimestampFloor(
+            convert(plannerContext, rowOrder, operand),
+            TimeUnits.toQueryGranularity(TimeUnitRange.DAY, plannerContext.getTimeZone())
+        );
+      } else {
+        // Ignore other casts.
+        // TODO(gianm): Probably not a good idea to ignore other CASTs like this.
+        return convert(plannerContext, rowOrder, ((RexCall) expression).getOperands().get(0));
+      }
     } else {
       // Try conversion using an ExpressionConversion specific to this operator.
       final RowExtraction retVal;
 
       if (expression.getKind() == SqlKind.OTHER_FUNCTION) {
         final ExpressionConversion conversion = otherFunctionMap.get(((RexCall) expression).getOperator().getName());
-        retVal = conversion != null ? conversion.convert(this, rowOrder, expression) : null;
+        retVal = conversion != null ? conversion.convert(this, plannerContext, rowOrder, expression) : null;
       } else {
         final ExpressionConversion conversion = kindMap.get(expression.getKind());
-        retVal = conversion != null ? conversion.convert(this, rowOrder, expression) : null;
+        retVal = conversion != null ? conversion.convert(this, plannerContext, rowOrder, expression) : null;
       }
 
       return retVal;

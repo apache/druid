@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import io.druid.query.extraction.StrlenExtractionFn;
+import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
@@ -43,12 +44,13 @@ public class CharLengthExpressionConversion extends AbstractExpressionConversion
   @Override
   public RowExtraction convert(
       final ExpressionConverter converter,
+      final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
   )
   {
     final RexCall call = (RexCall) expression;
-    final RowExtraction arg = converter.convert(rowOrder, call.getOperands().get(0));
+    final RowExtraction arg = converter.convert(plannerContext, rowOrder, call.getOperands().get(0));
     if (arg == null) {
       return null;
     }

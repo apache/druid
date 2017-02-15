@@ -48,10 +48,10 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
-import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
 import io.druid.sql.calcite.util.CalciteTests;
@@ -61,7 +61,6 @@ import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.apache.calcite.tools.Planner;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -157,7 +156,6 @@ public class SqlBenchmark
     final Map<String, Table> tableMap = ImmutableMap.<String, Table>of(
         "foo",
         new DruidTable(
-            new QueryMaker(walker, plannerConfig),
             new TableDataSource("foo"),
             RowSignature.builder()
                         .add("__time", ValueType.LONG)
@@ -177,6 +175,7 @@ public class SqlBenchmark
     };
     plannerFactory = new PlannerFactory(
         Calcites.createRootSchema(druidSchema),
+        walker,
         CalciteTests.createOperatorTable(),
         plannerConfig
     );
@@ -233,8 +232,8 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    try (final Planner planner = plannerFactory.createPlanner()) {
-      final PlannerResult plannerResult = Calcites.plan(planner, sqlQuery);
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
+      final PlannerResult plannerResult = planner.plan(sqlQuery);
       final ArrayList<Object[]> results = Sequences.toList(plannerResult.run(), Lists.<Object[]>newArrayList());
       blackhole.consume(results);
     }

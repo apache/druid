@@ -20,6 +20,8 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.inject.Inject;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
@@ -33,28 +35,34 @@ import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.Planner;
+
+import java.util.Map;
 
 public class PlannerFactory
 {
   private final SchemaPlus rootSchema;
+  private final QuerySegmentWalker walker;
   private final DruidOperatorTable operatorTable;
   private final PlannerConfig plannerConfig;
 
   @Inject
   public PlannerFactory(
       final SchemaPlus rootSchema,
+      final QuerySegmentWalker walker,
       final DruidOperatorTable operatorTable,
       final PlannerConfig plannerConfig
   )
   {
     this.rootSchema = rootSchema;
+    this.walker = walker;
     this.operatorTable = operatorTable;
     this.plannerConfig = plannerConfig;
   }
 
-  public Planner createPlanner()
+  public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
+    final PlannerContext plannerContext = PlannerContext.create(plannerConfig, queryContext);
+    final QueryMaker queryMaker = new QueryMaker(walker, plannerContext);
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
         .parserConfig(
@@ -67,15 +75,15 @@ public class PlannerFactory
         )
         .defaultSchema(rootSchema)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
-        .convertletTable(DruidConvertletTable.instance())
+        .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)
-        .programs(Rules.programs(operatorTable, plannerConfig))
+        .programs(Rules.programs(queryMaker, operatorTable))
         .executor(new RexExecutorImpl(Schemas.createDataContext(null)))
         .context(Contexts.EMPTY_CONTEXT)
         .typeSystem(RelDataTypeSystem.DEFAULT)
         .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))
         .build();
 
-    return Frameworks.getPlanner(frameworkConfig);
+    return new DruidPlanner(Frameworks.getPlanner(frameworkConfig), plannerContext);
   }
 }

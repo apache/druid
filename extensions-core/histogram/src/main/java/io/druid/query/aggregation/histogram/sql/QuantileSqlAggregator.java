@@ -33,6 +33,7 @@ import io.druid.sql.calcite.aggregation.Aggregations;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
@@ -63,6 +64,7 @@ public class QuantileSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       final String name,
       final RowSignature rowSignature,
+      final PlannerContext plannerContext,
       final List<Aggregation> existingAggregations,
       final Project project,
       final AggregateCall aggregateCall,
@@ -70,6 +72,7 @@ public class QuantileSqlAggregator implements SqlAggregator
   )
   {
     final RowExtraction rex = Expressions.toRowExtraction(
+        plannerContext,
         rowSignature.getRowOrder(),
         Expressions.fromFieldAccess(
             rowSignature,

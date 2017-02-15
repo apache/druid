@@ -30,13 +30,14 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryInterruptedException;
 import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.Planner;
-import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -78,9 +79,11 @@ public class SqlResource
     // (Non-trivial since we don't know the dataSources up-front)
 
     final PlannerResult plannerResult;
+    final DateTimeZone timeZone;
 
-    try (final Planner planner = plannerFactory.createPlanner()) {
-      plannerResult = Calcites.plan(planner, sqlQuery.getQuery());
+    try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
+      plannerResult = planner.plan(sqlQuery.getQuery());
+      timeZone = planner.getPlannerContext().getTimeZone();
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
@@ -102,9 +105,11 @@ public class SqlResource
     // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
     final List<RelDataTypeField> fieldList = plannerResult.rowType().getFieldList();
     final boolean[] timeColumns = new boolean[fieldList.size()];
+    final boolean[] dateColumns = new boolean[fieldList.size()];
     for (int i = 0; i < fieldList.size(); i++) {
       final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
-      timeColumns[i] = SqlTypeName.DATETIME_TYPES.contains(sqlTypeName);
+      timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
+      dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
     }
 
     final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
@@ -127,7 +132,13 @@ public class SqlResource
                   final Object value;
 
                   if (timeColumns[i]) {
-                    value = new DateTime((long) row[i]);
+                    value = ISODateTimeFormat.dateTime().print(
+                        Calcites.calciteTimestampToJoda((long) row[i], timeZone)
+                    );
+                  } else if (dateColumns[i]) {
+                    value = ISODateTimeFormat.dateTime().print(
+                        Calcites.calciteDateToJoda((int) row[i], timeZone)
+                    );
                   } else {
                     value = row[i];
                   }

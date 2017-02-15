@@ -22,17 +22,23 @@ package io.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+
+import java.util.Map;
 
 public class SqlQuery
 {
   private final String query;
+  private final Map<String, Object> context;
 
   @JsonCreator
   public SqlQuery(
-      @JsonProperty("query") final String query
+      @JsonProperty("query") final String query,
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
+    this.context = context == null ? ImmutableMap.<String, Object>of() : context;
   }
 
   @JsonProperty
@@ -41,8 +47,14 @@ public class SqlQuery
     return query;
   }
 
+  @JsonProperty
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -51,15 +63,20 @@ public class SqlQuery
       return false;
     }
 
-    SqlQuery sqlQuery = (SqlQuery) o;
+    final SqlQuery sqlQuery = (SqlQuery) o;
 
-    return query != null ? query.equals(sqlQuery.query) : sqlQuery.query == null;
+    if (query != null ? !query.equals(sqlQuery.query) : sqlQuery.query != null) {
+      return false;
+    }
+    return context != null ? context.equals(sqlQuery.context) : sqlQuery.context == null;
   }
 
   @Override
   public int hashCode()
   {
-    return query != null ? query.hashCode() : 0;
+    int result = query != null ? query.hashCode() : 0;
+    result = 31 * result + (context != null ? context.hashCode() : 0);
+    return result;
   }
 
   @Override
@@ -67,6 +84,7 @@ public class SqlQuery
   {
     return "SqlQuery{" +
            "query='" + query + '\'' +
+           ", context=" + context +
            '}';
   }
 }

@@ -19,41 +19,86 @@
 
 package io.druid.sql.calcite.planner;
 
+import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.common.ISE;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql2rel.SqlRexContext;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
+import java.util.Locale;
+import java.util.Map;
+
 public class DruidConvertletTable implements SqlRexConvertletTable
 {
-  private static final DruidConvertletTable INSTANCE = new DruidConvertletTable();
-
-  private DruidConvertletTable()
+  private static final SqlRexConvertlet BYPASS_CONVERTLET = new SqlRexConvertlet()
   {
-  }
+    @Override
+    public RexNode convertCall(SqlRexContext cx, SqlCall call)
+    {
+      return StandardConvertletTable.INSTANCE.convertCall(cx, call);
+    }
+  };
 
-  public static DruidConvertletTable instance()
+  private final PlannerContext plannerContext;
+  private final Map<SqlOperator, SqlRexConvertlet> table;
+
+  public DruidConvertletTable(final PlannerContext plannerContext)
   {
-    return INSTANCE;
+    this.plannerContext = plannerContext;
+
+    final SqlRexConvertlet currentTimestampAndFriendsConvertlet = new CurrentTimestampAndFriendsConvertlet();
+    this.table = ImmutableMap.<SqlOperator, SqlRexConvertlet>builder()
+        .put(SqlStdOperatorTable.CURRENT_TIMESTAMP, currentTimestampAndFriendsConvertlet)
+        .put(SqlStdOperatorTable.CURRENT_TIME, currentTimestampAndFriendsConvertlet)
+        .put(SqlStdOperatorTable.CURRENT_DATE, currentTimestampAndFriendsConvertlet)
+        .put(SqlStdOperatorTable.LOCALTIMESTAMP, currentTimestampAndFriendsConvertlet)
+        .put(SqlStdOperatorTable.LOCALTIME, currentTimestampAndFriendsConvertlet)
+        .build();
   }
 
   @Override
   public SqlRexConvertlet get(SqlCall call)
   {
     if (call.getKind() == SqlKind.EXTRACT && call.getOperandList().get(1).getKind() != SqlKind.LITERAL) {
-      return new SqlRexConvertlet()
-      {
-        @Override
-        public RexNode convertCall(SqlRexContext cx, SqlCall call)
-        {
-          return StandardConvertletTable.INSTANCE.convertCall(cx, call);
-        }
-      };
+      // Avoid using the standard convertlet for EXTRACT(TIMEUNIT FROM col), since we want to handle it directly
+      // in ExtractExpressionConversion.
+      return BYPASS_CONVERTLET;
     } else {
-      return StandardConvertletTable.INSTANCE.get(call);
+      final SqlRexConvertlet convertlet = table.get(call.getOperator());
+      return convertlet != null ? convertlet : StandardConvertletTable.INSTANCE.get(call);
+    }
+  }
+
+  private class CurrentTimestampAndFriendsConvertlet implements SqlRexConvertlet
+  {
+    @Override
+    public RexNode convertCall(final SqlRexContext cx, final SqlCall call)
+    {
+      final SqlOperator operator = call.getOperator();
+      if (operator == SqlStdOperatorTable.CURRENT_TIMESTAMP || operator == SqlStdOperatorTable.LOCALTIMESTAMP) {
+        return cx.getRexBuilder().makeTimestampLiteral(
+            plannerContext.getLocalNow().toCalendar(Locale.getDefault()),
+            RelDataType.PRECISION_NOT_SPECIFIED
+        );
+      } else if (operator == SqlStdOperatorTable.CURRENT_TIME || operator == SqlStdOperatorTable.LOCALTIME) {
+        return cx.getRexBuilder().makeTimeLiteral(
+            plannerContext.getLocalNow().toCalendar(Locale.getDefault()),
+            RelDataType.PRECISION_NOT_SPECIFIED
+        );
+      } else if (operator == SqlStdOperatorTable.CURRENT_DATE) {
+        return cx.getRexBuilder().makeDateLiteral(
+            plannerContext.getLocalNow().hourOfDay().roundFloorCopy().toCalendar(Locale.getDefault())
+        );
+      } else {
+        throw new ISE("WTF?! Should not have got here, operator was: %s", operator);
+      }
     }
   }
 }

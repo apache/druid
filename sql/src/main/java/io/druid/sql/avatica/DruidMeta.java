@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Closer;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -45,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +55,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DruidMeta extends MetaImpl
 {
   private static final Logger log = new Logger(DruidMeta.class);
+  private static final Set<String> SKIP_PROPERTIES = ImmutableSet.of("user", "password");
 
   private final PlannerFactory plannerFactory;
   private final ScheduledExecutorService exec;
@@ -82,7 +85,14 @@ public class DruidMeta extends MetaImpl
   @Override
   public void openConnection(final ConnectionHandle ch, final Map<String, String> info)
   {
-    getDruidConnection(ch.id, true);
+    // Build connection context.
+    final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
+    for (Map.Entry<String, String> entry : info.entrySet()) {
+      if (!SKIP_PROPERTIES.contains(entry.getKey())) {
+        context.put(entry);
+      }
+    }
+    openDruidConnection(ch.id, context.build());
   }
 
   @Override
@@ -136,7 +146,7 @@ public class DruidMeta extends MetaImpl
         throw new ISE("Too many open statements, limit is[%,d]", config.getMaxStatementsPerConnection());
       }
 
-      connection.statements().put(statement.id, new DruidStatement(ch.id, statement.id));
+      connection.statements().put(statement.id, new DruidStatement(ch.id, statement.id, connection.context()));
       log.debug("Connection[%s] opened statement[%s].", ch.id, statement.id);
       return statement;
     }
@@ -483,35 +493,38 @@ public class DruidMeta extends MetaImpl
     return sqlResultSet(ch, sql);
   }
 
-  private DruidConnection getDruidConnection(final String connectionId)
+  private DruidConnection openDruidConnection(final String connectionId, final Map<String, Object> context)
   {
-    return getDruidConnection(connectionId, false);
+    synchronized (connections) {
+      if (connections.containsKey(connectionId)) {
+        throw new ISE("Connection[%s] already open.", connectionId);
+      }
+
+      if (connections.size() >= config.getMaxConnections()) {
+        throw new ISE("Too many connections, limit is[%,d]", config.getMaxConnections());
+      }
+
+      connections.put(connectionId, new DruidConnection(context));
+      log.debug("Connection[%s] opened.", connectionId);
+
+      // Call getDruidConnection to start the timeout timer.
+      return getDruidConnection(connectionId);
+    }
   }
 
-  private DruidConnection getDruidConnection(final String connectionId, final boolean createIfNotExists)
+  private DruidConnection getDruidConnection(final String connectionId)
   {
-    DruidConnection connection;
+    final DruidConnection connection;
 
     synchronized (connections) {
       connection = connections.get(connectionId);
-
-      if (connection == null && createIfNotExists) {
-        if (connections.size() >= config.getMaxConnections()) {
-          throw new ISE("Too many connections, limit is[%,d]", config.getMaxConnections());
-        }
-        connection = new DruidConnection();
-        connections.put(connectionId, connection);
-        log.debug("Connection[%s] opened.", connectionId);
-      }
 
       if (connection == null) {
         throw new ISE("Connection[%s] not open", connectionId);
       }
     }
 
-    final DruidConnection finalConnection = connection;
-
-    return finalConnection.sync(
+    return connection.sync(
         exec.schedule(
             new Runnable()
             {
@@ -521,8 +534,8 @@ public class DruidMeta extends MetaImpl
                 final List<DruidStatement> statements = new ArrayList<>();
 
                 synchronized (connections) {
-                  if (connections.remove(connectionId) == finalConnection) {
-                    statements.addAll(finalConnection.statements().values());
+                  if (connections.remove(connectionId) == connection) {
+                    statements.addAll(connection.statements().values());
                     log.debug("Connection[%s] timed out, closing %,d statements.", connectionId, statements.size());
                   }
                 }

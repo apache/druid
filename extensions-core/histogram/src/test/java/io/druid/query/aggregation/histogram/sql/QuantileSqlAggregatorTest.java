@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.histogram.sql;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.druid.granularity.QueryGranularities;
@@ -41,11 +42,11 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.sql.calcite.CalciteQueryTest;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
+import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
@@ -55,7 +56,6 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.tools.Planner;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -134,7 +134,7 @@ public class QuantileSqlAggregatorTest
             new QuantileSqlAggregator()
         )
     );
-    plannerFactory = new PlannerFactory(rootSchema, operatorTable, plannerConfig);
+    plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig);
   }
 
   @After
@@ -147,7 +147,7 @@ public class QuantileSqlAggregatorTest
   @Test
   public void testQuantileOnFloatAndLongs() throws Exception
   {
-    try (final Planner planner = plannerFactory.createPlanner()) {
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
       final String sql = "SELECT\n"
                          + "APPROX_QUANTILE(m1, 0.01),\n"
                          + "APPROX_QUANTILE(m1, 0.5, 50),\n"
@@ -159,7 +159,7 @@ public class QuantileSqlAggregatorTest
                          + "APPROX_QUANTILE(cnt, 0.5)\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = Calcites.plan(planner, sql);
+      final PlannerResult plannerResult = planner.plan(sql);
 
       // Verify results
       final List<Object[]> results = Sequences.toList(plannerResult.run(), new ArrayList<Object[]>());
@@ -200,7 +200,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f),
                     new QuantilePostAggregator("a7", "a7:agg", 0.50f)
                 ))
-                .context(CalciteQueryTest.TIMESERIES_CONTEXT)
+                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -210,7 +210,7 @@ public class QuantileSqlAggregatorTest
   @Test
   public void testQuantileOnComplexColumn() throws Exception
   {
-    try (final Planner planner = plannerFactory.createPlanner()) {
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
       final String sql = "SELECT\n"
                          + "APPROX_QUANTILE(hist_m1, 0.01),\n"
                          + "APPROX_QUANTILE(hist_m1, 0.5, 50),\n"
@@ -221,7 +221,7 @@ public class QuantileSqlAggregatorTest
                          + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = Calcites.plan(planner, sql);
+      final PlannerResult plannerResult = planner.plan(sql);
 
       // Verify results
       final List<Object[]> results = Sequences.toList(plannerResult.run(), new ArrayList<Object[]>());
@@ -260,7 +260,7 @@ public class QuantileSqlAggregatorTest
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 ))
-                .context(CalciteQueryTest.TIMESERIES_CONTEXT)
+                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

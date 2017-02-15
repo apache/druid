@@ -19,6 +19,8 @@
 
 package io.druid.sql.avatica;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -28,12 +30,19 @@ import java.util.concurrent.Future;
  */
 public class DruidConnection
 {
+  private final Map<String, Object> context;
   private final Map<Integer, DruidStatement> statements;
   private Future<?> timeoutFuture;
 
-  public DruidConnection()
+  public DruidConnection(final Map<String, Object> context)
   {
+    this.context = ImmutableMap.copyOf(context);
     this.statements = new HashMap<>();
+  }
+
+  public Map<String, Object> context()
+  {
+    return context;
   }
 
   public Map<Integer, DruidStatement> statements()

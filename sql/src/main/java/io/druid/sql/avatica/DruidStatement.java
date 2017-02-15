@@ -26,7 +26,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
-import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.rel.QueryMaker;
@@ -35,7 +35,6 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.tools.Planner;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
@@ -43,6 +42,7 @@ import java.io.IOException;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Statement handle for {@link DruidMeta}. Thread-safe.
@@ -61,6 +61,7 @@ public class DruidStatement implements Closeable
 
   private final String connectionId;
   private final int statementId;
+  private final Map<String, Object> queryContext;
   private final Object lock = new Object();
 
   private State state = State.NEW;
@@ -71,10 +72,11 @@ public class DruidStatement implements Closeable
   private Yielder<Object[]> yielder;
   private int offset = 0;
 
-  public DruidStatement(final String connectionId, final int statementId)
+  public DruidStatement(final String connectionId, final int statementId, final Map<String, Object> queryContext)
   {
     this.connectionId = connectionId;
     this.statementId = statementId;
+    this.queryContext = queryContext;
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -123,10 +125,10 @@ public class DruidStatement implements Closeable
 
   public DruidStatement prepare(final PlannerFactory plannerFactory, final String query, final long maxRowCount)
   {
-    try (final Planner planner = plannerFactory.createPlanner()) {
+    try (final DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       synchronized (lock) {
         ensure(State.NEW);
-        this.plannerResult = Calcites.plan(planner, query);
+        this.plannerResult = planner.plan(query);
         this.maxRowCount = maxRowCount;
         this.query = query;
         this.signature = Meta.Signature.create(

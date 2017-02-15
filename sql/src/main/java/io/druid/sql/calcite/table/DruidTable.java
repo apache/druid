@@ -21,11 +21,9 @@ package io.druid.sql.calcite.table;
 
 import com.google.common.base.Preconditions;
 import io.druid.query.DataSource;
-import io.druid.sql.calcite.rel.DruidQueryRel;
-import io.druid.sql.calcite.rel.QueryMaker;
-import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Schema;
@@ -35,24 +33,16 @@ import org.apache.calcite.schema.TranslatableTable;
 
 public class DruidTable implements TranslatableTable
 {
-  private final QueryMaker queryMaker;
   private final DataSource dataSource;
   private final RowSignature rowSignature;
 
   public DruidTable(
-      final QueryMaker queryMaker,
       final DataSource dataSource,
       final RowSignature rowSignature
   )
   {
-    this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
-  }
-
-  public QueryMaker getQueryMaker()
-  {
-    return queryMaker;
   }
 
   public DataSource getDataSource()
@@ -86,8 +76,7 @@ public class DruidTable implements TranslatableTable
   @Override
   public RelNode toRel(final RelOptTable.ToRelContext context, final RelOptTable table)
   {
-    final RelOptCluster cluster = context.getCluster();
-    return DruidQueryRel.fullScan(cluster, table, this);
+    return LogicalTableScan.create(context.getCluster(), table);
   }
 
   @Override
