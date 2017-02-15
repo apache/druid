@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -40,7 +41,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public abstract class Granularity
+public abstract class Granularity implements Cacheable
 {
 
   public static final Granularity SECOND = fromString("SECOND");
@@ -59,16 +60,23 @@ public abstract class Granularity
   public static final Granularity ALL = fromString("ALL");
   public static final Granularity NONE = fromString("NONE");
 
+  /**
+   * For a select subset of granularites, users can specify them directly as string.
+   * These are "predefined granularities".
+   * For all others, the users will have to use "Duration" or "Period" type granularities
+   */
   static final List<Granularity> PREDEFINED_GRANULARITIES = ImmutableList.of(
       SECOND, MINUTE, FIVE_MINUTE, TEN_MINUTE, FIFTEEN_MINUTE, THIRTY_MINUTE,
       HOUR, SIX_HOUR, DAY, WEEK, MONTH, QUARTER, YEAR);
 
-  // Default patterns for parsing paths.
-  final Pattern defaultPathPattern =
+  /**
+   * Default patterns for parsing paths.
+   */
+  static final Pattern defaultPathPattern =
       Pattern.compile(
           "^.*[Yy]=(\\d{4})/(?:[Mm]=(\\d{2})/(?:[Dd]=(\\d{2})/(?:[Hh]=(\\d{2})/(?:[Mm]=(\\d{2})/(?:[Ss]=(\\d{2})/)?)?)?)?)?.*$"
       );
-  final Pattern hivePathPattern =
+  static final Pattern hivePathPattern =
       Pattern.compile("^.*dt=(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})(?:-(\\d{2})?)?)?)?)?)?/.*$");
 
   @JsonCreator
@@ -78,8 +86,10 @@ public abstract class Granularity
     return GranularityType.createGranularity(name);
   }
 
-  //simple merge strategy on query granularity that checks if all are equal or else
-  //returns null. this can be improved in future but is good enough for most use-cases.
+  /**
+   * simple merge strategy on query granularity that checks if all are equal or else
+   * returns null. this can be improved in future but is good enough for most use-cases.
+   */
   public static Granularity mergeGranularities(List<Granularity> toMerge)
   {
     if (toMerge == null || toMerge.size() == 0) {
@@ -103,6 +113,11 @@ public abstract class Granularity
     final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
     final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
     for (GranularityType gran : GranularityType.values()) {
+      /**
+       * All and None are excluded b/c when asked to give all granularities finer
+       * than "TEN_MINUTE", you want the answer to be "FIVE_MINUTE, MINUTE and SECOND"
+       * it doesn't make sense to include ALL or None to be part of this.
+       */
       if (gran == GranularityType.ALL || gran == GranularityType.NONE) {
         continue;
       }
@@ -134,8 +149,6 @@ public abstract class Granularity
   public abstract DateTime truncate(DateTime time);
 
   public abstract DateTime toDate(String filePath, Formatter formatter);
-
-  public abstract byte[] cacheKey();
 
   public DateTime toDateTime(long offset)
   {
@@ -188,6 +201,10 @@ public abstract class Granularity
 
     Matcher matcher = pattern.matcher(filePath);
 
+    // The size is "7" b/c this array contains standard
+    // datetime field values namely:
+    // year, monthOfYear, dayOfMonth, hourOfDay,
+    // minuteOfHour, secondOfMinute and  millisOfSecond
     Integer[] vals = new Integer[7];
     if (matcher.matches()) {
       for (int i = 1; i <= matcher.groupCount(); i++) {
@@ -210,8 +227,10 @@ public abstract class Granularity
     LOWER_DEFAULT
   }
 
-  // Only to create a mapping of the granularity and all the supported file patterns
-  // namely: default, lowerDefault and hive.
+  /**
+   * Only to create a mapping of the granularity and all the supported file patterns
+   * namely: default, lowerDefault and hive.
+   */
   public enum GranularityType
   {
     SECOND(
@@ -265,7 +284,8 @@ public abstract class Granularity
 
     GranularityType(
         final String hiveFormat,
-        final String lowerDefaultFormat, final String defaultFormat
+        final String lowerDefaultFormat,
+        final String defaultFormat
     )
     {
       this.hiveFormat = hiveFormat;
@@ -319,16 +339,18 @@ public abstract class Granularity
         case YEAR:
           return new PeriodGranularity(new Period("P1Y"), origin, tz);
         case ALL:
-          return new AllGranularity();
+          return AllGranularity.getInstance();
         case NONE:
-          return new NoneGranularity();
+          return NoneGranularity.getInstance();
         default:
           throw new IAE("[%s] granularity not supported with strings. Try with Period instead", str);
       }
     }
 
-    // Note: This is only an estimate based on the values in period.
-    // This will not work for complicated periods that represent say 1 year 1 day
+    /**
+     * Note: This is only an estimate based on the values in period.
+     * This will not work for complicated periods that represent say 1 year 1 day
+     */
     public static GranularityType fromPeriod(Period period)
     {
       int[] vals = period.getValues();

@@ -20,41 +20,58 @@
 package io.druid.java.util.common.granularity;
 
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
+/**
+ * AllGranularty buckets everything into a single bucket
+ */
 public final class AllGranularity extends Granularity
 {
+  // These constants are from JodaUtils in druid-common.
+  // Creates circular dependency.
+  // Will be nice to move JodaUtils here sometime
+  public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
+  public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
+
+  private static final AllGranularity INSTANCE = new AllGranularity();
+
+  private AllGranularity() {}
+
+  public static AllGranularity getInstance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
   public DateTime increment(DateTime time)
   {
-    return new DateTime(Long.MAX_VALUE / 2);
+    return new DateTime(MAX_INSTANT);
   }
 
   @Override
   public DateTime decrement(DateTime time)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
   public DateTime truncate(DateTime time)
   {
-    return new DateTime(Long.MIN_VALUE / 2);
+    return new DateTime(MIN_INSTANT);
   }
 
   @Override
   public DateTime toDate(String filePath, Formatter formatter)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override

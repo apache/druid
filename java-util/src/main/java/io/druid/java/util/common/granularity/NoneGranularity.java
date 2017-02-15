@@ -19,16 +19,27 @@
 
 package io.druid.java.util.common.granularity;
 
-import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 
+/**
+ * NoneGranularity does not bucket data
+ */
 public final class NoneGranularity extends Granularity
 {
+  private static final NoneGranularity INSTANCE = new NoneGranularity();
+
+  private NoneGranularity() {}
+
+  public static NoneGranularity getInstance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
@@ -56,7 +67,7 @@ public final class NoneGranularity extends Granularity
   @Override
   public DateTime toDate(String filePath, Formatter formatter)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override

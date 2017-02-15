@@ -21,7 +21,7 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.query.cache.Cacheable;
+import io.druid.java.util.common.Cacheable;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;

@@ -29,6 +29,9 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.nio.ByteBuffer;
 
+/**
+ * DurationGranularity buckets data based on the length of a duration
+ */
 public class DurationGranularity extends Granularity
 {
   private final long length;

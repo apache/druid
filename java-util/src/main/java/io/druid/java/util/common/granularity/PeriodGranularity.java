@@ -39,6 +39,9 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
 
+/**
+ * PeriodGranularity buckets data based on any custom time period
+ */
 public class PeriodGranularity extends Granularity implements JsonSerializable
 {
   private final Period period;
@@ -138,7 +141,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @Override
-  public byte[] cacheKey()
+  public byte[] getCacheKey()
   {
     return StringUtils.toUtf8(getPeriod().toString() + ":" +
                               getTimeZone().toString() + ":" + getOrigin());
