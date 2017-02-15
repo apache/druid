@@ -31,6 +31,7 @@ import io.druid.query.QueryDataSource;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -113,7 +114,7 @@ public class GroupByQueryRunnerFailureTest
   }
 
   @Test(timeout = 10000)
-  public void testLackOfMergeBuffers() throws IOException
+  public void testNotEnoughMergeBuffersOnQueryable() throws IOException
   {
     expectedException.expect(QueryInterruptedException.class);
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(TimeoutException.class));
@@ -124,6 +125,44 @@ public class GroupByQueryRunnerFailureTest
             new QueryDataSource(
                 GroupByQuery.builder()
                             .setDataSource(QueryRunnerTestHelper.dataSource)
+                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setGranularity(QueryGranularities.ALL)
+                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .build()
+            )
+        )
+        .setGranularity(QueryGranularities.ALL)
+        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setContext(ImmutableMap.<String, Object>of(QueryContextKeys.TIMEOUT, Integers.valueOf(500)))
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test(timeout = 10000)
+  public void testNotEnoughMergeBuffersOnBroker()
+  {
+    expectedException.expect(ResourceLimitExceededException.class);
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(
+            new QueryDataSource(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(QueryRunnerTestHelper.dataSource)
+                                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                                            .setGranularity(QueryGranularities.ALL)
+                                            .setDimensions(Lists.<DimensionSpec>newArrayList(
+                                                new DefaultDimensionSpec("quality", "alias"),
+                                                new DefaultDimensionSpec("market", null)
+                                            ))
+                                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            .build()
+                            )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(QueryGranularities.ALL)
                             .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))

@@ -61,6 +61,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResourceInitializer;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -425,9 +426,8 @@ public class GroupByTypeInterfaceBenchmark
     factory = new GroupByQueryRunnerFactory(
         strategySelector,
         new GroupByQueryQueryToolChest(
-            configSupplier,
             strategySelector,
-            bufferPool,
+            new GroupByQueryBrokerResourceInitializer(strategySelector, mergePool),
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
         )
     );

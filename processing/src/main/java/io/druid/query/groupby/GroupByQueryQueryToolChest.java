@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -32,14 +31,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
@@ -57,11 +55,12 @@ import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResourceInitializer;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -84,22 +83,19 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   };
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
-  private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByStrategySelector strategySelector;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final GroupByQueryBrokerResourceInitializer brokerResourceInitializer;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
 
   @Inject
   public GroupByQueryQueryToolChest(
-      Supplier<GroupByQueryConfig> configSupplier,
       GroupByStrategySelector strategySelector,
-      @Global StupidPool<ByteBuffer> bufferPool,
+      GroupByQueryBrokerResourceInitializer brokerResourceInitializer,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this.configSupplier = configSupplier;
     this.strategySelector = strategySelector;
-    this.bufferPool = bufferPool;
+    this.brokerResourceInitializer = brokerResourceInitializer;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
@@ -116,7 +112,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
 
         if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
-          return mergeGroupByResults(
+          return initAndMergeGroupByResults(
               (GroupByQuery) query,
               runner,
               responseContext
@@ -127,8 +123,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     };
   }
 
+  private Sequence<Row> initAndMergeGroupByResults(
+      final GroupByQuery query,
+      QueryRunner<Row> runner,
+      Map<String, Object> context
+  )
+  {
+    final GroupByQueryBrokerResource resource = brokerResourceInitializer.prepare(query);
+
+    return Sequences.withBaggage(
+        mergeGroupByResults(
+            query,
+            resource,
+            runner,
+            context
+        ),
+        resource
+    );
+  }
+
   private Sequence<Row> mergeGroupByResults(
       final GroupByQuery query,
+      GroupByQueryBrokerResource brokerResource,
       QueryRunner<Row> runner,
       Map<String, Object> context
   )
@@ -169,6 +185,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   false
               )
           ),
+          brokerResource,
           runner,
           context
       );
@@ -186,7 +203,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         finalizingResults = subqueryResult;
       }
 
-      return strategySelector.strategize(query).processSubqueryResult(subquery, query, finalizingResults);
+      return strategySelector.strategize(query).processSubqueryResult(subquery, query, brokerResource, finalizingResults);
     } else {
       return strategySelector.strategize(query).mergeResults(runner, query, context);
     }

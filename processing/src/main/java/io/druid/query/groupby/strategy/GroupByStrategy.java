@@ -24,6 +24,7 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunner;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
 import io.druid.segment.StorageAdapter;
 
 import java.util.Map;
@@ -39,6 +40,7 @@ public interface GroupByStrategy
   Sequence<Row> processSubqueryResult(
       GroupByQuery subquery,
       GroupByQuery query,
+      GroupByQueryBrokerResource resource,
       Sequence<Row> subqueryResult
   );
 

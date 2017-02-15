@@ -49,6 +49,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
 import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
@@ -202,7 +203,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   @Override
   public Sequence<Row> processSubqueryResult(
-      GroupByQuery subquery, GroupByQuery query, Sequence<Row> subqueryResult
+      GroupByQuery subquery,
+      GroupByQuery query,
+      GroupByQueryBrokerResource resource,
+      Sequence<Row> subqueryResult
   )
   {
     final Sequence<Row> results = GroupByRowProcessor.process(
@@ -210,7 +214,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         subqueryResult,
         GroupByQueryHelper.rowSignatureFor(subquery),
         configSupplier.get(),
-        mergeBufferPool,
+        resource,
         spillMapper,
         processingConfig.getTmpDir()
     );

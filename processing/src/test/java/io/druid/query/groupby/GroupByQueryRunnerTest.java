@@ -107,6 +107,7 @@ import io.druid.query.groupby.having.OrHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.LimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResourceInitializer;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -141,6 +142,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
@@ -347,9 +350,8 @@ public class GroupByQueryRunnerTest
         )
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        configSupplier,
         strategySelector,
-        bufferPool,
+        new GroupByQueryBrokerResourceInitializer(strategySelector, mergeBufferPool),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     return new GroupByQueryRunnerFactory(
@@ -1793,7 +1795,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = ImmutableList.of();
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    Assert.assertEquals(expectedResults, results);
+    assertEquals(expectedResults, results);
   }
 
   @Test
@@ -3140,7 +3142,7 @@ public class GroupByQueryRunnerTest
 
     final Object next1 = resultsIter.next();
     Object expectedNext1 = expectedResultsIter.next();
-    Assert.assertEquals("order-limit", expectedNext1, next1);
+    assertEquals("order-limit", expectedNext1, next1);
 
     final Object next2 = resultsIter.next();
     Object expectedNext2 = expectedResultsIter.next();
@@ -6908,7 +6910,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Assert.assertEquals(
+    assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),
@@ -7172,7 +7174,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Assert.assertEquals(
+    assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),

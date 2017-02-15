@@ -22,11 +22,13 @@ package io.druid.collections;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +54,12 @@ public class BlockingPool<T>
     }
   }
 
+  @VisibleForTesting
+  public int getPoolSize()
+  {
+    return objects.size();
+  }
+
   /**
    * Take a resource from the pool.
    *
@@ -63,7 +71,7 @@ public class BlockingPool<T>
    */
   public ReferenceCountingResourceHolder<T> take(final long timeout) throws InterruptedException
   {
-    Preconditions.checkState(objects != null, "Pool was initialized with limit = 0, there are no objects to take.");
+    checkInitialized();
     final T theObject = timeout >= 0 ? objects.poll(timeout, TimeUnit.MILLISECONDS) : objects.take();
     return theObject == null ? null : new ReferenceCountingResourceHolder<>(
         theObject,
@@ -72,17 +80,53 @@ public class BlockingPool<T>
           @Override
           public void close() throws IOException
           {
-            if (!objects.offer(theObject)) {
-              log.error("WTF?! Queue offer failed, uh oh...");
+            offer(theObject);
+          }
+        }
+    );
+  }
+
+  /**
+   * Drains at most the given number of available resources from the pool.
+   *
+   * @param maxElements the maximum number of elements to drain
+   *
+   * @return a resource holder which contains the drained resources
+   */
+  public ReferenceCountingResourceHolder<List<T>> drain(final int maxElements)
+  {
+    checkInitialized();
+    final List<T> batch = Lists.newArrayListWithCapacity(maxElements);
+    final int n = objects.drainTo(batch, maxElements);
+    if (log.isDebugEnabled()) {
+      log.debug("Requested " + maxElements + " elements, but drained " + n + " elements");
+    }
+
+    final List<T> resources = ImmutableList.copyOf(batch);
+    return new ReferenceCountingResourceHolder<>(
+        resources,
+        new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            for (T obj : resources) {
+              offer(obj);
             }
           }
         }
     );
   }
 
-  @VisibleForTesting
-  protected int getQueueSize()
+  private void checkInitialized()
   {
-    return objects.size();
+    Preconditions.checkState(objects != null, "Pool was initialized with limit = 0, there are no objects to take.");
+  }
+
+  private void offer(T theObject)
+  {
+    if (!objects.offer(theObject)) {
+      log.error("WTF?! Queue offer failed, uh oh...");
+    }
   }
 }
