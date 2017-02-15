@@ -300,14 +300,12 @@ public class SegmentLoaderLocalCacheManagerTest
     final List<StorageLocationConfig> locations = Lists.newArrayList();
     final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
-    // mock can't write in first location
     localStorageFolder.setWritable(true);
     locationConfig.setPath(localStorageFolder);
     locationConfig.setMaxSize(10L);
     locations.add(locationConfig);
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig();
     final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder2");
-    // mock can't write in second location
     localStorageFolder2.setWritable(true);
     locationConfig2.setPath(localStorageFolder2);
     locationConfig2.setMaxSize(10L);
@@ -365,12 +363,12 @@ public class SegmentLoaderLocalCacheManagerTest
     final File indexZip2 = new File(localSegmentFile2, "index.zip");
     indexZip2.createNewFile();
 
-    segmentFile = manager.getSegmentFiles(segmentToDownload2);
-    Assert.assertTrue(segmentFile.getAbsolutePath().contains("/local_storage_folder2/"));
-    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload));
+    File segmentFile2 = manager.getSegmentFiles(segmentToDownload2);
+    Assert.assertTrue(segmentFile2.getAbsolutePath().contains("/local_storage_folder2/"));
+    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload2));
 
-    manager.cleanup(segmentToDownload);
-    Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload));
+    manager.cleanup(segmentToDownload2);
+    Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload2));
   }
 
   private DataSegment dataSegmentWithInterval(String intervalStr)

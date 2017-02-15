@@ -21,7 +21,6 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
@@ -34,9 +33,10 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 
 /**
  */
@@ -51,6 +51,14 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private final List<StorageLocation> locations;
 
   private final Object lock = new Object();
+
+  private static final Comparator<StorageLocation> COMPARATOR = new Comparator<StorageLocation>()
+  {
+    @Override public int compare(StorageLocation left, StorageLocation right)
+    {
+      return Longs.compare(right.available(), left.available());
+    }
+  };
 
   @Inject
   public SegmentLoaderLocalCacheManager(
@@ -82,7 +90,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
   public StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
   {
-    for (StorageLocation location : getSortedSet(locations)) {
+    for (StorageLocation location : getSortedList(locations)) {
       File localStorageDir = new File(location.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
       if (localStorageDir.exists()) {
         return location;
@@ -132,7 +140,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    for (StorageLocation loc : getSortedSet(locations)) {
+    for (StorageLocation loc : getSortedList(locations)) {
       // locIter is ordered from empty to full
       if (!loc.canHandle(segment.getSize())) {
         throw new ISE(
@@ -224,7 +232,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       // If storageDir.mkdirs() success, but downloadStartMarker.createNewFile() failed,
       // in this case, findStorageLocationIfLoaded() will think segment is located in the failed storageDir which is actually not.
       // So we should always clean all possible locations here
-      for (StorageLocation location : getSortedSet(locations)) {
+      for (StorageLocation location : getSortedList(locations)) {
         File localStorageDir = new File(location.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
         if (localStorageDir.exists()) {
           // Druid creates folders of the form dataSource/interval/version/partitionNum.
@@ -265,18 +273,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     }
   }
 
-  public Set<StorageLocation> getSortedSet(List<StorageLocation> locs)
+  public List<StorageLocation> getSortedList(List<StorageLocation> locs)
   {
-    Set<StorageLocation> sortedLocs = Sets.newTreeSet(new Comparator<StorageLocation>()
-    {
-      @Override
-      public int compare(StorageLocation left, StorageLocation right)
-      {
-        // sorted from empty to full
-        return Longs.compare(right.available(), left.available());
-      }
-    });
-    sortedLocs.addAll(locs);
-    return sortedLocs;
+    List<StorageLocation> locations = new ArrayList<>(locs);
+    Collections.sort(locations, COMPARATOR);
+
+    return locations;
   }
 }
