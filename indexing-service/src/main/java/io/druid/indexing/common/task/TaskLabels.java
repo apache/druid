@@ -16,9 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.indexing.overlord;
 
 
-public interface WorkerTaskRunner extends TaskRunner, TasksAndWorkers
+package io.druid.indexing.common.task;
+
+import com.google.common.base.Preconditions;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+
+public class TaskLabels
 {
+  public static final String TASK_LABEL_FIELD = "label";
+
+  @Nullable
+  public static String getTaskLabel(Task task) {
+    Preconditions.checkNotNull(task, "task");
+    Map<String, Object> context = task.getContext();
+    Object taskLabel = (context != null) ? context.get(TASK_LABEL_FIELD) : null;
+    return taskLabel == null ? null : (String) taskLabel;
+  }
 }

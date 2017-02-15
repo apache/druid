@@ -16,9 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.indexing.overlord;
 
+package io.druid.indexing.overlord.setup;
 
-public interface WorkerTaskRunner extends TaskRunner, TasksAndWorkers
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WorkerBehaviorConfig.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "oneCloud", value = WorkerBehaviorConfig.class),
+    @JsonSubTypes.Type(name = "twoCloud", value = TwoCloudConfig.class),
+})
+public interface BaseWorkerBehaviorConfig
 {
+  String CONFIG_KEY = "worker.config";
+  WorkerSelectStrategy DEFAULT_STRATEGY = new FillCapacityWorkerSelectStrategy();
+
+  WorkerSelectStrategy getSelectStrategy();
 }

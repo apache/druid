@@ -66,13 +66,14 @@ import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
+import io.druid.indexing.overlord.autoscaling.TwoCloudWorkerProvisioningStrategy;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.overlord.supervisor.SupervisorResource;
 import io.druid.indexing.worker.config.WorkerConfig;
@@ -224,7 +225,7 @@ public class CliOverlord extends ServerRunnable
             biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME).to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
-            JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
+            JacksonConfigProvider.bind(binder, BaseWorkerBehaviorConfig.CONFIG_KEY, BaseWorkerBehaviorConfig.class, null);
           }
 
           private void configureAutoscale(Binder binder)
@@ -249,6 +250,7 @@ public class CliOverlord extends ServerRunnable
             );
             biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
+            biddy.addBinding("twoCloudPendingTaskBased").to(TwoCloudWorkerProvisioningStrategy.class);
 
           }
 

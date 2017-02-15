@@ -33,12 +33,14 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
-import io.druid.indexing.overlord.WorkerTaskRunner;
+import io.druid.indexing.overlord.TasksAndWorkers;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -52,12 +54,12 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
   private static final EmittingLogger log = new EmittingLogger(SimpleWorkerProvisioningStrategy.class);
 
   private final SimpleWorkerProvisioningConfig config;
-  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
+  private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
 
   @Inject
   public SimpleWorkerProvisioningStrategy(
       SimpleWorkerProvisioningConfig config,
-      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
   )
   {
@@ -78,7 +80,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
   public SimpleWorkerProvisioningStrategy(
       SimpleWorkerProvisioningConfig config,
-      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
   )
@@ -89,14 +91,14 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
   }
 
   @Override
-  public Provisioner makeProvisioner(WorkerTaskRunner runner)
+  public Provisioner makeProvisioner(TasksAndWorkers runner)
   {
     return new SimpleProvisioner(runner);
   }
 
   private class SimpleProvisioner implements Provisioner
   {
-    private final WorkerTaskRunner runner;
+    private final TasksAndWorkers runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
     private final Set<String> currentlyProvisioning = Sets.newHashSet();
@@ -106,9 +108,30 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     private DateTime lastProvisionTime = new DateTime();
     private DateTime lastTerminateTime = new DateTime();
 
-    SimpleProvisioner(WorkerTaskRunner runner)
+    SimpleProvisioner(TasksAndWorkers runner)
     {
       this.runner = runner;
+    }
+
+    @Nullable
+    private WorkerBehaviorConfig getWorkerBehaviorConfig(String action)
+    {
+      final BaseWorkerBehaviorConfig baseWorkerBehaviorConfig = workerConfigRef.get();
+      if (baseWorkerBehaviorConfig == null) {
+        log.error("No workerConfig available, cannot %s workers.", action);
+        return null;
+      }
+      if (!(baseWorkerBehaviorConfig instanceof WorkerBehaviorConfig)) {
+        log.error("SimpleWorkerProvisioningStrategy accepts only WorkerBehaviorConfig as "
+                  + "BaseWorkerBehaviorConfig, [%s] given, cannot %s workers", baseWorkerBehaviorConfig, action);
+        return null;
+      }
+      final WorkerBehaviorConfig workerConfig = (WorkerBehaviorConfig) baseWorkerBehaviorConfig;
+      if (workerConfig.getAutoScaler() == null) {
+        log.error("No autoScaler available, cannot %s workers", action);
+        return null;
+      }
+      return workerConfig;
     }
 
     @Override
@@ -117,9 +140,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
-      if (workerConfig == null || workerConfig.getAutoScaler() == null) {
-        log.error("No workerConfig available, cannot provision new workers.");
+      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("provision");
+      if (workerConfig == null) {
         return false;
       }
 
@@ -182,9 +204,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     public synchronized boolean doTerminate()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
+      final WorkerBehaviorConfig workerConfig = getWorkerBehaviorConfig("terminate");
       if (workerConfig == null) {
-        log.warn("No workerConfig available, cannot terminate workers.");
         return false;
       }
 
@@ -207,14 +228,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           )
       );
 
-      final Set<String> stillExisting = Sets.newHashSet();
-      for (String s : currentlyTerminating) {
-        if (workerNodeIds.contains(s)) {
-          stillExisting.add(s);
-        }
-      }
-      currentlyTerminating.clear();
-      currentlyTerminating.addAll(stillExisting);
+      currentlyTerminating.retainAll(workerNodeIds);
 
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       updateTargetWorkerCount(workerConfig, pendingTasks, workers);

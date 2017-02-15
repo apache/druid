@@ -30,7 +30,7 @@ import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -99,7 +99,7 @@ public class RemoteTaskRunnerFactoryTest
     );
 
     HttpClient httpClient = EasyMock.createMock(HttpClient.class);
-    Supplier<WorkerBehaviorConfig> workerBehaviorConfig = EasyMock.createMock(Supplier.class);
+    Supplier<BaseWorkerBehaviorConfig> workerBehaviorConfig = EasyMock.createMock(Supplier.class);
     ScheduledExecutorFactory executorFactory = new ScheduledExecutorFactory()
     {
       @Override

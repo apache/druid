@@ -65,6 +65,15 @@ public class ScalingStats
     }
   }
 
+  public void addAll(ScalingStats stats)
+  {
+    synchronized (lock) {
+      synchronized (stats.lock) {
+        recentEvents.addAll(stats.recentEvents);
+      }
+    }
+  }
+
   public void addProvisionEvent(AutoScalingData data)
   {
     synchronized (lock) {

@@ -60,7 +60,7 @@ import io.druid.indexing.overlord.autoscaling.ProvisioningService;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -140,7 +140,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private final ExecutorService workerStatusPathChildrenCacheExecutor;
   private final PathChildrenCache workerPathCache;
   private final HttpClient httpClient;
-  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
+  private final Supplier<BaseWorkerBehaviorConfig> workerConfigRef;
 
   // all workers that exist in ZK
   private final ConcurrentMap<String, ZkWorker> zkWorkers = new ConcurrentHashMap<>();
@@ -187,7 +187,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       CuratorFramework cf,
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
-      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      Supplier<BaseWorkerBehaviorConfig> workerConfigRef,
       ScheduledExecutorService cleanupExec,
       ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
   )
@@ -739,11 +739,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return true;
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
-      WorkerBehaviorConfig workerConfig = workerConfigRef.get();
+      BaseWorkerBehaviorConfig workerConfig = workerConfigRef.get();
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
         log.warn("No worker selections strategy set. Using default.");
-        strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
+        strategy = BaseWorkerBehaviorConfig.DEFAULT_STRATEGY;
       } else {
         strategy = workerConfig.getSelectStrategy();
       }

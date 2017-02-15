@@ -33,6 +33,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -128,7 +129,7 @@ public class RemoteTaskRunnerTestUtils
         cf,
         new PathChildrenCacheFactory.Builder(),
         null,
-        DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
+        DSuppliers.of(new AtomicReference<BaseWorkerBehaviorConfig>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
         provisioningStrategy
     );

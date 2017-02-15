@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
+import io.druid.indexing.overlord.setup.BaseWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.joda.time.Period;
 import org.junit.After;
@@ -34,7 +35,7 @@ public class OverlordBlinkLeadershipTest
   private RemoteTaskRunnerTestUtils rtrUtils;
   private final TestRemoteTaskRunnerConfig remoteTaskRunnerConfig = new TestRemoteTaskRunnerConfig(new Period("PT5M"));
   private final WorkerBehaviorConfig defaultWorkerBehaviourConfig = WorkerBehaviorConfig.defaultConfig();
-  private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier = new Supplier<WorkerBehaviorConfig>()
+  private final Supplier<BaseWorkerBehaviorConfig> workerBehaviorConfigSupplier = new Supplier<BaseWorkerBehaviorConfig>()
   {
     @Override
     public WorkerBehaviorConfig get()

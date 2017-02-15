@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -40,10 +41,13 @@ public interface AutoScaler<T>
 
   T getEnvConfig();
 
+  @Nullable
   AutoScalingData provision();
 
+  @Nullable
   AutoScalingData terminate(List<String> ips);
 
+  @Nullable
   AutoScalingData terminateWithIds(List<String> ids);
 
   /**

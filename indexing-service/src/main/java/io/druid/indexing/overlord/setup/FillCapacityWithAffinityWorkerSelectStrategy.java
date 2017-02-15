@@ -29,6 +29,7 @@ import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -66,9 +67,9 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
   {
     // don't run other datasources on affinity workers; we only want our configured datasources to run on them
     ImmutableMap.Builder<String, ImmutableWorkerInfo> builder = new ImmutableMap.Builder<>();
-    for (String workerHost : zkWorkers.keySet()) {
-      if (!affinityWorkerHosts.contains(workerHost)) {
-        builder.put(workerHost, zkWorkers.get(workerHost));
+    for (Map.Entry<String, ImmutableWorkerInfo> worker : zkWorkers.entrySet()) {
+      if (!affinityWorkerHosts.contains(worker.getKey())) {
+        builder.put(worker);
       }
     }
     ImmutableMap<String, ImmutableWorkerInfo> eligibleWorkers = builder.build();

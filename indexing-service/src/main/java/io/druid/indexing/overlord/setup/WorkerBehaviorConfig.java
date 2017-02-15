@@ -26,11 +26,9 @@ import io.druid.indexing.overlord.autoscaling.NoopAutoScaler;
 
 /**
  */
-public class WorkerBehaviorConfig
+public class WorkerBehaviorConfig implements BaseWorkerBehaviorConfig
 {
-  public static final String CONFIG_KEY = "worker.config";
-  public static WorkerSelectStrategy DEFAULT_STRATEGY = new FillCapacityWorkerSelectStrategy();
-  public static AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler();
+  private static AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler();
 
   public static WorkerBehaviorConfig defaultConfig()
   {
@@ -50,6 +48,7 @@ public class WorkerBehaviorConfig
     this.autoScaler = autoScaler;
   }
 
+  @Override
   @JsonProperty
   public WorkerSelectStrategy getSelectStrategy()
   {
