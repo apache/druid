@@ -418,6 +418,7 @@ public class JobHelper
       case "hdfs":
       case "viewfs":
       case "maprfs":
+      case "s3a":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
