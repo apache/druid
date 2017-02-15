@@ -91,7 +91,8 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(
         druidTable.getDataSource(),
-        druidTable.getRowSignature()
+        druidTable.getRowSignature(),
+        getPlannerContext().getQueryContext()
     );
 
     if (groupByQuery == null) {

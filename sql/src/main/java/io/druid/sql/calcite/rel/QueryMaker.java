@@ -90,7 +90,12 @@ public class QueryMaker
   )
   {
     if (dataSource instanceof QueryDataSource) {
-      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(dataSource, sourceRowSignature);
+      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(
+          dataSource,
+          sourceRowSignature,
+          plannerContext.getQueryContext()
+      );
+
       if (outerQuery == null) {
         // Bug in the planner rules. They shouldn't allow this to happen.
         throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
@@ -99,7 +104,11 @@ public class QueryMaker
       return executeGroupBy(queryBuilder, outerQuery);
     }
 
-    final TimeseriesQuery timeseriesQuery = queryBuilder.toTimeseriesQuery(dataSource, sourceRowSignature);
+    final TimeseriesQuery timeseriesQuery = queryBuilder.toTimeseriesQuery(
+        dataSource,
+        sourceRowSignature,
+        plannerContext.getQueryContext()
+    );
     if (timeseriesQuery != null) {
       return executeTimeseries(queryBuilder, timeseriesQuery);
     }
@@ -107,6 +116,7 @@ public class QueryMaker
     final TopNQuery topNQuery = queryBuilder.toTopNQuery(
         dataSource,
         sourceRowSignature,
+        plannerContext.getQueryContext(),
         plannerContext.getPlannerConfig().getMaxTopNLimit(),
         plannerContext.getPlannerConfig().isUseApproximateTopN()
     );
@@ -114,12 +124,20 @@ public class QueryMaker
       return executeTopN(queryBuilder, topNQuery);
     }
 
-    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, sourceRowSignature);
+    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(
+        dataSource,
+        sourceRowSignature,
+        plannerContext.getQueryContext()
+    );
     if (groupByQuery != null) {
       return executeGroupBy(queryBuilder, groupByQuery);
     }
 
-    final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, sourceRowSignature);
+    final SelectQuery selectQuery = queryBuilder.toSelectQuery(
+        dataSource,
+        sourceRowSignature,
+        plannerContext.getQueryContext()
+    );
     if (selectQuery != null) {
       return executeSelect(queryBuilder, selectQuery);
     }
@@ -160,22 +178,22 @@ public class QueryMaker
               @Override
               public Sequence<Object[]> next()
               {
-                final SelectQuery queryWithContextAndPagination = baseQuery.withPagingSpec(
+                final SelectQuery queryWithPagination = baseQuery.withPagingSpec(
                     new PagingSpec(
                         pagingIdentifiers.get(),
                         plannerContext.getPlannerConfig().getSelectThreshold(),
                         true
                     )
-                ).withOverriddenContext(plannerContext.getQueryContext());
+                );
 
-                Hook.QUERY_PLAN.run(queryWithContextAndPagination);
+                Hook.QUERY_PLAN.run(queryWithPagination);
 
                 morePages.set(false);
                 final AtomicBoolean gotResult = new AtomicBoolean();
 
                 return Sequences.concat(
                     Sequences.map(
-                        queryWithContextAndPagination.run(walker, Maps.<String, Object>newHashMap()),
+                        queryWithPagination.run(walker, Maps.<String, Object>newHashMap()),
                         new Function<Result<SelectResultValue>, Sequence<Object[]>>()
                         {
                           @Override
@@ -243,11 +261,10 @@ public class QueryMaker
     final List<DimensionSpec> dimensions = queryBuilder.getGrouping().getDimensions();
     final String timeOutputName = dimensions.isEmpty() ? null : Iterables.getOnlyElement(dimensions).getOutputName();
 
-    final TimeseriesQuery queryWithContext = query.withOverriddenContext(plannerContext.getQueryContext());
-    Hook.QUERY_PLAN.run(queryWithContext);
+    Hook.QUERY_PLAN.run(query);
 
     return Sequences.map(
-        queryWithContext.run(walker, Maps.<String, Object>newHashMap()),
+        query.run(walker, Maps.<String, Object>newHashMap()),
         new Function<Result<TimeseriesResultValue>, Object[]>()
         {
           @Override
@@ -278,12 +295,11 @@ public class QueryMaker
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
-    final TopNQuery queryWithContext = query.withOverriddenContext(plannerContext.getQueryContext());
-    Hook.QUERY_PLAN.run(queryWithContext);
+    Hook.QUERY_PLAN.run(query);
 
     return Sequences.concat(
         Sequences.map(
-            queryWithContext.run(walker, Maps.<String, Object>newHashMap()),
+            query.run(walker, Maps.<String, Object>newHashMap()),
             new Function<Result<TopNResultValue>, Sequence<Object[]>>()
             {
               @Override
@@ -316,11 +332,10 @@ public class QueryMaker
   {
     final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
 
-    final GroupByQuery queryWithContext = query.withOverriddenContext(plannerContext.getQueryContext());
-    Hook.QUERY_PLAN.run(queryWithContext);
+    Hook.QUERY_PLAN.run(query);
 
     return Sequences.map(
-        queryWithContext.run(walker, Maps.<String, Object>newHashMap()),
+        query.run(walker, Maps.<String, Object>newHashMap()),
         new Function<io.druid.data.input.Row, Object[]>()
         {
           @Override
