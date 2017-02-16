@@ -184,7 +184,7 @@ public class FloatCompressionBenchmarkFileGenerator
           output.write(ByteBuffer.wrap(baos.toByteArray()));
         }
         finally {
-          iopeon.cleanup();
+          iopeon.close();
           br.close();
         }
         System.out.print(compFile.length() / 1024 + "\n");

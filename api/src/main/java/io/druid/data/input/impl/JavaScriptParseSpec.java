@@ -65,7 +65,7 @@ public class JavaScriptParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    if (config.isDisabled()) {
+    if (!config.isEnabled()) {
       throw new ISE("JavaScript is disabled");
     }
 

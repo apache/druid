@@ -19,6 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import java.io.Closeable;
+
 /**
  * An Aggregator is an object that can aggregate metrics.  Its aggregation-related methods (namely, aggregate() and get())
  * do not take any arguments as the assumption is that the Aggregator was given something in its constructor that
@@ -32,7 +34,8 @@ package io.druid.query.aggregation;
  *
  * This interface is old and going away.  It is being replaced by BufferAggregator
  */
-public interface Aggregator {
+public interface Aggregator extends Closeable
+{
   void aggregate();
   void reset();
   Object get();

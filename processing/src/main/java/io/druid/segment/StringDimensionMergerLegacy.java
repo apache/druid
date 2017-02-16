@@ -210,7 +210,7 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
       spatialWriter.close();
       serializerUtils.writeString(spatialIndexFile, dimensionName);
       ByteStreams.copy(spatialWriter.combineStreams(), spatialIndexFile);
-      spatialIoPeon.cleanup();
+      spatialIoPeon.close();
     }
   }
 

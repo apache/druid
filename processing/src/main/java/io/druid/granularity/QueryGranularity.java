@@ -21,19 +21,18 @@ package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.java.util.common.IAE;
+import io.druid.query.cache.Cacheable;
 import org.joda.time.DateTime;
 import org.joda.time.ReadableDuration;
 
 import java.util.List;
 import java.util.Objects;
 
-public abstract class QueryGranularity
+public abstract class QueryGranularity implements Cacheable
 {
   public abstract long next(long offset);
 
   public abstract long truncate(long offset);
-
-  public abstract byte[] cacheKey();
 
   public abstract DateTime toDateTime(long offset);
 
