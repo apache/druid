@@ -46,7 +46,12 @@ public class DimensionConverter
     metricMap = readMap(mapper, dimensionMapPath);
   }
 
-  public StatsDMetric.Type addFilteredUserDims(String service, String metric, Map<String, Object> userDims, ImmutableList.Builder<String> builder)
+  public StatsDMetric addFilteredUserDims(
+      String service,
+      String metric,
+      Map<String, Object> userDims,
+      ImmutableList.Builder<String> builder
+  )
   {
      /*
         Find the metric in the map. If we cant find it try to look it up prefixed by the service name.
@@ -64,7 +69,7 @@ public class DimensionConverter
           builder.add(userDims.get(dim).toString());
         }
       }
-      return statsDMetric.type;
+      return statsDMetric;
     } else {
       return null;
     }

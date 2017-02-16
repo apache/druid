@@ -15,7 +15,7 @@
   "query/cache/delta/hits" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/misses" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/evictions" : { "dimensions" : [], "type" : "count" },
-  "query/cache/delta/hitRate" : { "dimensions" : [], "type" : "count" },
+  "query/cache/delta/hitRate" : { "dimensions" : [], "type" : "count", "convertRange" : true },
   "query/cache/delta/averageBytes" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/timeouts" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/errors" : { "dimensions" : [], "type" : "count" },
@@ -25,7 +25,7 @@
   "query/cache/total/hits" : { "dimensions" : [], "type" : "gauge" },
   "query/cache/total/misses" : { "dimensions" : [], "type" : "gauge" },
   "query/cache/total/evictions" : { "dimensions" : [], "type" : "gauge" },
-  "query/cache/total/hitRate" : { "dimensions" : [], "type" : "gauge" },
+  "query/cache/total/hitRate" : { "dimensions" : [], "type" : "gauge", "convertRange" : true },
   "query/cache/total/averageBytes" : { "dimensions" : [], "type" : "gauge" },
   "query/cache/total/timeouts" : { "dimensions" : [], "type" : "gauge" },
   "query/cache/total/errors" : { "dimensions" : [], "type" : "gauge" },
@@ -65,7 +65,7 @@
 
   "segment/max" : { "dimensions" : [], "type" : "gauge"},
   "segment/used" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
-  "segment/usedPercent" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
+  "segment/usedPercent" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "convertRange" : true },
 
   "jvm/pool/committed" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
   "jvm/pool/init" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },

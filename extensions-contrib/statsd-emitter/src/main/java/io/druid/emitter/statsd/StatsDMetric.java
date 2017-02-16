@@ -25,20 +25,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.SortedSet;
 
 /**
-*/
-public class StatsDMetric {
+ */
+public class StatsDMetric
+{
   public final SortedSet<String> dimensions;
   public final Type type;
+  public final boolean convertRange;
+
   @JsonCreator
   public StatsDMetric(
       @JsonProperty("dimensions") SortedSet<String> dimensions,
-      @JsonProperty("type") Type type)
+      @JsonProperty("type") Type type,
+      @JsonProperty("convertRange") boolean convertRange
+  )
   {
     this.dimensions = dimensions;
     this.type = type;
+    this.convertRange = convertRange;
   }
 
-   public enum Type {
+  public enum Type
+  {
     count, gauge, timer
   }
 }

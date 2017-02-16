@@ -37,8 +37,10 @@ import java.util.List;
 public class StatsDEmitterModule implements DruidModule
 {
   private static final String EMITTER_TYPE = "statsd";
+
   @Override
-  public List<? extends Module> getJacksonModules() {
+  public List<? extends Module> getJacksonModules()
+  {
     return Collections.EMPTY_LIST;
   }
 
@@ -51,7 +53,8 @@ public class StatsDEmitterModule implements DruidModule
   @Provides
   @ManageLifecycle
   @Named(EMITTER_TYPE)
-  public Emitter getEmitter(StatsDEmitterConfig config, ObjectMapper mapper){
+  public Emitter getEmitter(StatsDEmitterConfig config, ObjectMapper mapper)
+  {
     return new StatsDEmitter(config, mapper);
   }
 }

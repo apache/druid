@@ -28,7 +28,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
-
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
@@ -47,28 +46,36 @@ public class StatsDEmitter implements Emitter
   private final StatsDEmitterConfig config;
   private final DimensionConverter converter;
 
-  public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper) {
-    this.config = config;
-    this.converter = new DimensionConverter(mapper, config.getDimensionMapPath());
-    statsd = new NonBlockingStatsDClient(
-        config.getPrefix(),
-        config.getHostname(),
-        config.getPort(),
-        new StatsDClientErrorHandler()
-        {
-          private int exceptionCount = 0;
-          @Override
-          public void handle(Exception exception)
-          {
-            if (exceptionCount % 1000 == 0) {
-              log.error(exception, "Error sending metric to StatsD.");
-            }
-            exceptionCount += 1;
-          }
-        }
+  public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper)
+  {
+    this(config, mapper,
+         new NonBlockingStatsDClient(
+             config.getPrefix(),
+             config.getHostname(),
+             config.getPort(),
+             new StatsDClientErrorHandler()
+             {
+               private int exceptionCount = 0;
+
+               @Override
+               public void handle(Exception exception)
+               {
+                 if (exceptionCount % 1000 == 0) {
+                   log.error(exception, "Error sending metric to StatsD.");
+                 }
+                 exceptionCount += 1;
+               }
+             }
+         )
     );
   }
 
+  public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper, StatsDClient client)
+  {
+    this.config = config;
+    this.converter = new DimensionConverter(mapper, config.getDimensionMapPath());
+    this.statsd = client;
+  }
 
   @Override
   public void start() {}
@@ -91,28 +98,29 @@ public class StatsDEmitter implements Emitter
       nameBuilder.add(service);
       nameBuilder.add(metric);
 
-      StatsDMetric.Type metricType = converter.addFilteredUserDims(service, metric, userDims, nameBuilder);
+      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, nameBuilder);
 
-      if (metricType != null) {
+      if (statsDMetric != null) {
 
         String fullName = Joiner.on(config.getSeparator())
                                 .join(nameBuilder.build())
                                 .replaceAll(DRUID_METRIC_SEPARATOR, config.getSeparator())
                                 .replaceAll(STATSD_SEPARATOR, config.getSeparator());
 
-        switch (metricType) {
+        long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
+        switch (statsDMetric.type) {
           case count:
-            statsd.count(fullName, value.longValue());
+            statsd.count(fullName, val);
             break;
           case timer:
-            statsd.time(fullName, value.longValue());
+            statsd.time(fullName, val);
             break;
           case gauge:
-            statsd.gauge(fullName, value.longValue());
+            statsd.gauge(fullName, val);
             break;
         }
       } else {
-        log.error("Metric=[%s] has no StatsD type mapping", metric);
+        log.error("Metric=[%s] has no StatsD type mapping", statsDMetric);
       }
     }
   }
