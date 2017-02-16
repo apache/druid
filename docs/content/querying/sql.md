@@ -63,8 +63,8 @@ Metadata is only available over the HTTP API by querying the "INFORMATION_SCHEMA
 
 ### Metadata
 
-Druid brokers cache column type metadata for each dataSource and use it to plan SQL queries. This cache is updated
-on broker startup and also periodically in the background through
+Druid brokers infer table and column metadata for each dataSource from segments loaded in the cluster, and use this to
+plan SQL queries. This metadata is cached on broker startup and also updated periodically in the background through
 [SegmentMetadata queries](../querying/segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 

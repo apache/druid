@@ -54,7 +54,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
