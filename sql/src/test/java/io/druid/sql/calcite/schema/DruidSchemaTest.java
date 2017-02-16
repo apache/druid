@@ -79,7 +79,6 @@ public class DruidSchemaTest
 
   private SpecificSegmentsQuerySegmentWalker walker = null;
   private DruidSchema schema = null;
-  private Connection connection = null;
 
   @Before
   public void setUp() throws Exception

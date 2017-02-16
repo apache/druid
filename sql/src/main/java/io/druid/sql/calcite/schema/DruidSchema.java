@@ -33,6 +33,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
+import io.druid.common.utils.JodaUtils;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
@@ -284,7 +285,7 @@ public class DruidSchema extends AbstractSchema
         null,
         false,
         ImmutableMap.<String, Object>of("useCache", false, "populateCache", false),
-        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        EnumSet.of(SegmentMetadataQuery.AnalysisType.INTERVAL),
         null,
         true
     );
@@ -298,16 +299,24 @@ public class DruidSchema extends AbstractSchema
     final Map<String, ValueType> columnTypes = Maps.newLinkedHashMap();
 
     // Resolve conflicts by taking the latest metadata. This aids in gradual schema evolution.
-    String maxSegmentId = "";
+    long maxTimestamp = JodaUtils.MIN_INSTANT;
 
     for (SegmentAnalysis analysis : results) {
+      final long timestamp;
+
+      if (analysis.getIntervals() != null && analysis.getIntervals().size() > 0) {
+        timestamp = analysis.getIntervals().get(analysis.getIntervals().size() - 1).getEndMillis();
+      } else {
+        timestamp = JodaUtils.MIN_INSTANT;
+      }
+
       for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
         if (entry.getValue().isError()) {
           // Skip columns with analysis errors.
           continue;
         }
 
-        if (!columnTypes.containsKey(entry.getKey()) || analysis.getId().compareTo(maxSegmentId) > 0) {
+        if (!columnTypes.containsKey(entry.getKey()) || timestamp >= maxTimestamp) {
           ValueType valueType;
           try {
             valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
@@ -319,10 +328,10 @@ public class DruidSchema extends AbstractSchema
           }
 
           columnTypes.put(entry.getKey(), valueType);
+
+          maxTimestamp = timestamp;
         }
       }
-
-      maxSegmentId = analysis.getId();
     }
 
     final RowSignature.Builder rowSignature = RowSignature.builder();
