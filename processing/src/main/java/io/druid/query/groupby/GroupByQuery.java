@@ -662,6 +662,12 @@ public class GroupByQuery extends BaseQuery<Row>
       return setQuerySegmentSpec(new LegacySegmentSpec(interval));
     }
 
+    public Builder setVirtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
+      return this;
+    }
+
     public Builder setVirtualColumns(List<VirtualColumn> virtualColumns)
     {
       this.virtualColumns = VirtualColumns.create(virtualColumns);
@@ -670,7 +676,8 @@ public class GroupByQuery extends BaseQuery<Row>
 
     public Builder setVirtualColumns(VirtualColumn... virtualColumns)
     {
-      return setVirtualColumns(Arrays.asList(virtualColumns));
+      this.virtualColumns = VirtualColumns.create(Arrays.asList(virtualColumns));
+      return this;
     }
 
     public Builder limit(int limit)
