@@ -156,12 +156,6 @@ indexing mechanism, and runs the outer query on these materialized results. "v2"
 inner query's results stream with off-heap fact map and on-heap string dictionary that can spill to disk. Both
 strategy perform the outer query on the broker in a single-threaded fashion.
 
-Currently, concurrent execution of multiple deeply nested groupBys (there are two or more groupBy layers beyond the
-first one) can potentially lead to invalid results. Note that groupBys require a separate merge buffer on the broker for
-each layer beyond the first layer of the groupBy. The merge buffer storing the inner groupBy result should be held until
-the outer groupBy is completed, but this is currently not guaranteed. At this time, we recommend that you avoid too many
-concurrent execution of deeply nested groupBys with the v2 strategy.
-
 #### Server configuration
 
 When using the "v1" strategy, the following runtime properties apply:

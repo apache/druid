@@ -116,12 +116,6 @@ exact distinct count using a nested groupBy.
 SELECT COUNT(*) FROM (SELECT DISTINCT col FROM data_source)
 ```
 
-Currently, concurrent execution of multiple deeply nested groupBys (there are two or more groupBy layers beyond the
-first one) can potentially lead to invalid results. Note that groupBys require a separate merge buffer on the broker for
-each layer beyond the first layer of the groupBy. The merge buffer storing the inner groupBy result should be held until
-the outer groupBy is completed, but this is currently not guaranteed. At this time, we recommend that you avoid too many
-concurrent execution of deeply nested groupBys with the v2 strategy.
-
 #### Semi-joins
 
 Semi-join subqueries involving `WHERE ... IN (SELECT ...)`, like the following, are executed with a special process.
