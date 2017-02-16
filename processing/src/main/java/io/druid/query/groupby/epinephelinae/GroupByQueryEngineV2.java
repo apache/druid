@@ -52,7 +52,6 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -106,7 +105,7 @@ public class GroupByQueryEngineV2
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         Filters.toFilter(query.getDimFilter()),
         intervals.get(0),
-         VirtualColumns.EMPTY,
+        query.getVirtualColumns(),
         query.getGranularity(),
         false
     );

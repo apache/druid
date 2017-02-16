@@ -136,6 +136,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
             .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
             .build();
       }
 
