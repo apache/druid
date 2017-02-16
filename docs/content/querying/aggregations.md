@@ -76,6 +76,20 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 { "type" : "longMax", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
+### Average aggregator
+
+Computes the average of values as 64-bit floating point value
+
+```json
+{ "type" : "avg", "name" : <output_name>, "fieldName" : <metric_name>, "inputType" : <inputType> }
+```
+
+`name` – output name for the averaged value  
+`fieldName` – name of the metric column to average over  
+`inputType` is one of `float`/`long`/`avg`, by default it is `float` 
+
+If `fieldName` column is pre-averaged in ingestion phase, the `inputType` should be `avg` in query
+
 ### First / Last aggregator
 
 First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.

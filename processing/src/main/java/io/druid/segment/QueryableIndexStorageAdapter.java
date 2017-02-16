@@ -32,6 +32,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.aggregation.avg.AvgAggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
@@ -678,6 +679,17 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(columnName);
+                        if (holder!= null) {
+                          boolean isAvg = holder.getCapabilities().getType() == ValueType.COMPLEX
+                                          && "avg".equals(holder.getComplexColumn().getTypeName());
+                          if (isAvg) {
+                            final ObjectColumnSelector objectColumnSelector = makeObjectColumnSelector(columnName);
+                            return AvgAggregatorFactory.asFloatColumnSelector(objectColumnSelector);
+                          }
+                        }
+                      }
+                      if (cachedMetricVals == null) {
                         return ZeroFloatColumnSelector.instance();
                       }
 
@@ -711,6 +723,17 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
                       }
 
+                      if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(columnName);
+                        if (holder != null) {
+                          boolean isAvg = holder.getCapabilities().getType() == ValueType.COMPLEX
+                                          && "avg".equals(holder.getComplexColumn().getTypeName());
+                          if (isAvg) {
+                            final ObjectColumnSelector objectColumnSelector = makeObjectColumnSelector(columnName);
+                            return AvgAggregatorFactory.asLongColumnSelector(objectColumnSelector);
+                          }
+                        }
+                      }
                       if (cachedMetricVals == null) {
                         return ZeroLongColumnSelector.instance();
                       }
