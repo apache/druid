@@ -56,6 +56,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -64,10 +66,18 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@RunWith(Parameterized.class)
 public class CachingQueryRunnerTest
 {
+  @Parameterized.Parameters(name="numBackgroundThreads={0}")
+  public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    return QueryRunnerTestHelper.cartesian(Arrays.asList(5, 1, 0));
+  }
 
   private static final List<AggregatorFactory> AGGS = Arrays.asList(
       new CountAggregatorFactory("rows"),
@@ -82,6 +92,16 @@ public class CachingQueryRunnerTest
       new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
       new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
   };
+
+  private ExecutorService backgroundExecutorService;
+  public CachingQueryRunnerTest(int numBackgroundThreads)
+  {
+    if (numBackgroundThreads > 0) {
+      backgroundExecutorService = Executors.newFixedThreadPool(numBackgroundThreads);
+    } else {
+      backgroundExecutorService = MoreExecutors.sameThreadExecutor();
+    }
+  }
 
   @Test
   public void testCloseAndPopulate() throws Exception
@@ -203,7 +223,7 @@ public class CachingQueryRunnerTest
             return resultSeq;
           }
         },
-        MoreExecutors.sameThreadExecutor(),
+        backgroundExecutorService,
         new CacheConfig()
         {
           @Override
@@ -237,6 +257,8 @@ public class CachingQueryRunnerTest
     Assert.assertTrue(closable.isClosed());
     Assert.assertEquals(expectedRes.toString(), results.toString());
 
+    // wait for background caching finish
+    Thread.sleep(500);
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
@@ -293,7 +315,7 @@ public class CachingQueryRunnerTest
             return Sequences.empty();
           }
         },
-        MoreExecutors.sameThreadExecutor(),
+        backgroundExecutorService,
         new CacheConfig()
         {
           @Override

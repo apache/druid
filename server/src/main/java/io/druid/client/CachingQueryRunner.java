@@ -23,13 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-
+import com.google.common.util.concurrent.SettableFuture;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -47,7 +47,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -152,7 +151,6 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.<ListenableFuture<?>>newLinkedList());
     if (populateCache) {
       final Function cacheFn = strategy.prepareForCache();
-      final List<Object> cacheResults = Lists.newLinkedList();
 
       return Sequences.withEffect(
           Sequences.map(
@@ -162,17 +160,23 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
                 @Override
                 public T apply(final T input)
                 {
-                  cacheFutures.add(
-                      backgroundExecutorService.submit(
-                          new Runnable()
-                          {
-                            @Override
-                            public void run()
-                            {
-                              cacheResults.add(cacheFn.apply(input));
-                            }
+                  final SettableFuture<Object> future = SettableFuture.create();
+                  cacheFutures.add(future);
+                  backgroundExecutorService.submit(
+                      new Runnable()
+                      {
+                        @Override
+                        public void run()
+                        {
+                          try {
+                            future.set(cacheFn.apply(input));
                           }
-                      )
+                          catch (Exception e) {
+                            // if there is exception, should setException to quit the caching processing
+                            future.setException(e);
+                          }
+                        }
+                      }
                   );
                   return input;
                 }
@@ -184,8 +188,22 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
             public void run()
             {
               try {
-                Futures.allAsList(cacheFutures).get();
-                CacheUtil.populate(cache, mapper, key, cacheResults);
+                CacheUtil.populate(cache, mapper, key, Iterables.transform(
+                    cacheFutures,
+                    new Function<ListenableFuture<?>, Object>()
+                    {
+                      @Override
+                      public Object apply(ListenableFuture<?> input)
+                      {
+                        try {
+                          return input.get();
+                        }
+                        catch (Exception e) {
+                          throw Throwables.propagate(e);
+                        }
+                      }
+                    }
+                ));
               }
               catch (Exception e) {
                 log.error(e, "Error while getting future for cache task");
