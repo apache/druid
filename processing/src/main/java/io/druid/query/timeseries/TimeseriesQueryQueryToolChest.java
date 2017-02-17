@@ -128,6 +128,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
       @Override
+      public boolean isCacheable(TimeseriesQuery query, boolean willSortCachedData)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
       {
         return new CacheKeyBuilder(TIMESERIES_QUERY)

@@ -160,6 +160,12 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           Collections.<String>emptyList();
 
       @Override
+      public boolean isCacheable(SelectQuery query, boolean willSortCachedData)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(SelectQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();

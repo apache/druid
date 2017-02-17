@@ -351,6 +351,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<DimensionSpec> dims = query.getDimensions();
 
+      @Override
+      public boolean isCacheable(GroupByQuery query, boolean willSortCachedData)
+      {
+        return willSortCachedData || !strategySelector.useStrategyV2(query);
+      }
 
       @Override
       public byte[] computeCacheKey(GroupByQuery query)

@@ -303,6 +303,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       );
 
       @Override
+      public boolean isCacheable(TopNQuery query, boolean willSortCachedData)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(TopNQuery query)
       {
         final CacheKeyBuilder builder = new CacheKeyBuilder(TOPN_QUERY)

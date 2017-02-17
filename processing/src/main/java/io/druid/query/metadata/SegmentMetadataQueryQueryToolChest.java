@@ -172,6 +172,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
       @Override
+      public boolean isCacheable(SegmentMetadataQuery query, boolean willSortCachedData)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();

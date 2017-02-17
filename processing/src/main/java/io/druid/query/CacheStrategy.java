@@ -27,6 +27,15 @@ import com.google.common.base.Function;
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
   /**
+   * Returns the given query is cacheable or not.
+   *
+   * @param query              the query to be cached
+   * @param willSortCachedData indicates the query requires sorting after pulling cached data
+   * @return true if the query is cacheable, otherwise false.
+   */
+  boolean isCacheable(QueryType query, boolean willSortCachedData);
+
+  /**
    * Computes the cache key for the given query
    *
    * @param query the query to compute a cache key for

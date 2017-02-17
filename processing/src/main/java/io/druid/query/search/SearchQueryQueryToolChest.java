@@ -154,6 +154,12 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           Collections.<String>emptyList();
 
       @Override
+      public boolean isCacheable(SearchQuery query, boolean willSortCachedData)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(SearchQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();

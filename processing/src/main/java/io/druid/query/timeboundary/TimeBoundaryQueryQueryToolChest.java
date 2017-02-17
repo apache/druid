@@ -134,6 +134,12 @@ public class TimeBoundaryQueryQueryToolChest
     return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
     {
       @Override
+      public boolean isCacheable(TimeBoundaryQuery query, boolean willSortCachedData)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
         final byte[] cacheKey = query.getCacheKey();
