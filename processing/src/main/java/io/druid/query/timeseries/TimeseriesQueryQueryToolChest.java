@@ -128,7 +128,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
       @Override
-      public boolean isCacheable(TimeseriesQuery query, boolean willSortCachedData)
+      public boolean isCacheable(TimeseriesQuery query, boolean willMergeRunners)
       {
         return true;
       }

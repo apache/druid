@@ -145,8 +145,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
     final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
 
-    log.info("useCache: " + useCache);
-
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
     final int priority = BaseQuery.getContextPriority(query, 0);

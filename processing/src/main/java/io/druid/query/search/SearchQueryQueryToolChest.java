@@ -154,7 +154,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           Collections.<String>emptyList();
 
       @Override
-      public boolean isCacheable(SearchQuery query, boolean willSortCachedData)
+      public boolean isCacheable(SearchQuery query, boolean willMergeRunners)
       {
         return true;
       }

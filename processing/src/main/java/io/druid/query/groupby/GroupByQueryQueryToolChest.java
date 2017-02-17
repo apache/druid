@@ -352,9 +352,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       private final List<DimensionSpec> dims = query.getDimensions();
 
       @Override
-      public boolean isCacheable(GroupByQuery query, boolean willSortCachedData)
+      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners)
       {
-        return willSortCachedData || !strategySelector.useStrategyV2(query);
+        return willMergeRunners || !strategySelector.useStrategyV2(query);
       }
 
       @Override
