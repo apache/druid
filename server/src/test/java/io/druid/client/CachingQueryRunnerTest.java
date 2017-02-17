@@ -25,8 +25,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.MapCache;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
@@ -66,8 +68,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @RunWith(Parameterized.class)
@@ -203,7 +208,51 @@ public class CachingQueryRunnerTest
         }
     );
 
-    Cache cache = MapCache.create(1024 * 1024);
+    final CountDownLatch cacheMustBePutOnce = new CountDownLatch(1);
+    Cache cache = new Cache() {
+      private final Map<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
+
+      @Override
+      public byte[] get(NamedKey key)
+      {
+        return baseMap.get(key);
+      }
+
+      @Override
+      public void put(NamedKey key, byte[] value)
+      {
+        baseMap.put(key, value);
+        cacheMustBePutOnce.countDown();
+      }
+
+      @Override
+      public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
+      {
+        return null;
+      }
+
+      @Override
+      public void close(String namespace)
+      {
+      }
+
+      @Override
+      public CacheStats getStats()
+      {
+        return null;
+      }
+
+      @Override
+      public boolean isLocal()
+      {
+        return true;
+      }
+
+      @Override
+      public void doMonitor(ServiceEmitter emitter)
+      {
+      }
+    };
 
     String segmentIdentifier = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
@@ -258,7 +307,8 @@ public class CachingQueryRunnerTest
     Assert.assertEquals(expectedRes.toString(), results.toString());
 
     // wait for background caching finish
-    Thread.sleep(500);
+    // wait at most 10 seconds to fail the test to avoid block overall tests
+    cacheMustBePutOnce.await(10, TimeUnit.SECONDS);
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 

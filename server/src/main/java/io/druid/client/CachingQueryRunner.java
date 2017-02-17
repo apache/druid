@@ -23,9 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -188,22 +188,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
             public void run()
             {
               try {
-                CacheUtil.populate(cache, mapper, key, Iterables.transform(
-                    cacheFutures,
-                    new Function<ListenableFuture<?>, Object>()
-                    {
-                      @Override
-                      public Object apply(ListenableFuture<?> input)
-                      {
-                        try {
-                          return input.get();
-                        }
-                        catch (Exception e) {
-                          throw Throwables.propagate(e);
-                        }
-                      }
-                    }
-                ));
+                CacheUtil.populate(cache, mapper, key, Futures.allAsList(cacheFutures).get());
               }
               catch (Exception e) {
                 log.error(e, "Error while getting future for cache task");
