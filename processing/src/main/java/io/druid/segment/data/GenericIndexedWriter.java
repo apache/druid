@@ -129,11 +129,11 @@ public class GenericIndexedWriter<T> implements Closeable
     outLong.write(helperBuf.array());
   }
 
-  private static void writeIntValueToOutputStream(ByteBuffer helperBuf, int value, CountingOutputStream outLong)
+  static void writeIntValueToOutputStream(ByteBuffer helperBuf, int value, OutputStream out)
       throws IOException
   {
     helperBuf.putInt(0, value);
-    outLong.write(helperBuf.array());
+    out.write(helperBuf.array());
   }
 
   public void open() throws IOException
@@ -203,7 +203,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
     try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"))) {
       metaOut.write(GenericIndexed.VERSION_ONE);
-      metaOut.write(objectsSorted ? 0x1 : 0x0);
+      metaOut.write(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
       metaOut.write(Ints.toByteArray(Ints.checkedCast(numBytesWritten + 4)));
       metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
     }
@@ -363,7 +363,7 @@ public class GenericIndexedWriter<T> implements Closeable
     int bagSizePower = bagSizePower();
     OutputStream metaOut = Channels.newOutputStream(channel);
     metaOut.write(GenericIndexed.VERSION_TWO);
-    metaOut.write(objectsSorted ? 0x1 : 0x0);
+    metaOut.write(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
     metaOut.write(Ints.toByteArray(bagSizePower));
     metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
     metaOut.write(Ints.toByteArray(fileNameByteArray.length));

@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 
@@ -55,8 +56,8 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
       ++count;
     }
 
-    ByteArrayOutputStream headerBytes = new ByteArrayOutputStream(4 + (count * 4));
-    ByteArrayOutputStream valueBytes = new ByteArrayOutputStream();
+    ZeroCopyByteArrayOutputStream headerBytes = new ZeroCopyByteArrayOutputStream(4 + (count * 4));
+    ZeroCopyByteArrayOutputStream valueBytes = new ZeroCopyByteArrayOutputStream();
     int offset = 0;
 
     try {
@@ -78,8 +79,8 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     }
 
     ByteBuffer theBuffer = ByteBuffer.allocate(headerBytes.size() + valueBytes.size());
-    theBuffer.put(headerBytes.toByteArray());
-    theBuffer.put(valueBytes.toByteArray());
+    headerBytes.writeTo(theBuffer);
+    valueBytes.writeTo(theBuffer);
     theBuffer.flip();
 
     return new VSizeIndexed(theBuffer.asReadOnlyBuffer(), numBytes);
