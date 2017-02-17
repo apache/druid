@@ -92,6 +92,7 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -180,6 +181,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
+
+  // This Set will hold partitions from which the task should not consume any further
+  // and should not update dataSourceMetadata for while publishing even though it has consumed from these partitions
+  // generally it is used when "resetOffsetAutomatically" is set to true and thus task cannot consume next offset
+  // for these partitions as the offsets got deleted from kafka brokers
+  private final Set<Integer> stuckPartitions = Sets.newConcurrentHashSet();
 
   @JsonCreator
   public KafkaIndexTask(
@@ -497,9 +504,19 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           final SegmentTransactionalInsertAction action;
 
           if (ioConfig.isUseTransaction()) {
+            // remove partitions that are stuck so that publishing does not update DataSourceMetadata for those partitions
+            final Map<Integer, Long> nonStuckPartitionsOffsetMap = new HashMap<>(ioConfig.getStartPartitions()
+                                                                                .getPartitionOffsetMap());
+            for (Integer stuckPartition : stuckPartitions) {
+              nonStuckPartitionsOffsetMap.remove(stuckPartition);
+            }
+            final KafkaPartitions startPartitionsToUse = new KafkaPartitions(
+                ioConfig.getStartPartitions().getTopic(),
+                nonStuckPartitionsOffsetMap
+            );
             action = new SegmentTransactionalInsertAction(
                 segments,
-                new KafkaDataSourceMetadata(ioConfig.getStartPartitions()),
+                new KafkaDataSourceMetadata(startPartitionsToUse),
                 new KafkaDataSourceMetadata(finalPartitions)
             );
           } else {
@@ -702,6 +719,16 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         }
       }
 
+      // if offsets map contains subset of partitions that we are consuming from
+      // then assume that missing partitions are stuck and should not be consumed from
+      // next set of tasks will consume these stuck partitions by taking next offset from kafka broker
+      stuckPartitions.addAll(endOffsets.keySet());
+      stuckPartitions.removeAll(offsets.keySet());
+      for (Integer stuckPartition : stuckPartitions) {
+        log.warn("Stopping consumption of partition [%d]", stuckPartition);
+        endOffsets.remove(stuckPartition);
+        nextOffsets.remove(stuckPartition);
+      }
       endOffsets.putAll(offsets);
       log.info("endOffsets changed to %s", endOffsets);
     }
@@ -1060,12 +1087,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       log.makeAlert("Resetting Kafka offsets for datasource [%s]", getDataSource())
          .addData("partitions", partitionOffsetMap.keySet())
          .emit();
-      // wait for being killed by supervisor
+      // pausing until supervisor sets the new end offsets and resumes the task
       try {
-        Thread.sleep(Long.MAX_VALUE);
+        pause(-1L);
       }
       catch (InterruptedException e) {
-        throw new RuntimeException("Got interrupted while waiting to be killed");
+        throw new RuntimeException("Could not pause the task");
       }
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();

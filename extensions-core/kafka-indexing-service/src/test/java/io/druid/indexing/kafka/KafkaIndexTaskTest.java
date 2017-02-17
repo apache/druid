@@ -1291,6 +1291,196 @@ public class KafkaIndexTaskTest
     }
   }
 
+  @Test(timeout = 60_000L)
+  public void testRunWithPauseAndSetEndOffset() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 0L, 1, 0L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null
+        ),
+        null,
+        null
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : RECORDS) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    // wait till all events are consumed
+    while(!(task.getCurrentOffsets().get(0).equals(8L) && task.getCurrentOffsets().get(1).equals(2L))) {
+      Thread.sleep(50);
+    }
+
+    Assert.assertEquals(KafkaIndexTask.Status.READING, task.getStatus());
+
+    Map<Integer, Long> currentOffsets = objectMapper.readValue(
+        task.pause(0).getEntity().toString(),
+        new TypeReference<Map<Integer, Long>>()
+        {
+        }
+    );
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+
+    try {
+      future.get(10, TimeUnit.SECONDS);
+      Assert.fail("Task completed when it should have been paused");
+    }
+    catch (TimeoutException e) {
+      // carry on..
+    }
+
+    Assert.assertEquals(currentOffsets, task.getCurrentOffsets());
+
+    // set end offsets only for partition 0
+    // thus partition 1 should be considered as stuck partition and the task should stop consuming from this partition
+    // and should not update dataSourceMetadata for this partition
+    task.setEndOffsets(ImmutableMap.of(0, 8L), true);
+
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
+
+    // should only have partition 0
+    Assert.assertEquals(ImmutableMap.of(0, 8L), task.getEndOffsets());
+    Assert.assertEquals(task.getEndOffsets(), task.getCurrentOffsets());
+
+    // Check metrics
+    Assert.assertEquals(8, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(2, task.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc4 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc5 = SD(task, "2011/P1D", 1);
+    SegmentDescriptor desc6 = SD(task, "2012/P1D", 0);
+    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
+
+    // it should publish everything it has consumed irrespective of stuck partition
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+
+    // should only update dataSourceMetadata for partition 0
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new KafkaPartitions("topic0", ImmutableMap.of(0, 8L))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentDim1(desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentDim1(desc2));
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc3));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc4));
+    Assert.assertEquals(ImmutableList.of("h"), readSegmentDim1(desc5));
+    Assert.assertEquals(ImmutableList.of("g"), readSegmentDim1(desc6));
+    Assert.assertEquals(ImmutableList.of("f"), readSegmentDim1(desc7));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunWithPauseAndConsecutiveSetEndOffset() throws Exception
+  {
+    // this is similar to above test (testRunWithPauseAndSetEndOffset)
+    // however tests consecutive sendEndOffset requests which can happen
+    // replica tasks are handling multiple partitions and each replica gets
+    // OffsetOutOfRangeException for different partition and they send consecutive
+    // reset requests for these partitions
+    // it would help to read above test first to understand this test better
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 0L, 1, 0L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null
+        ),
+        null,
+        null
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : RECORDS) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    while(!(task.getCurrentOffsets().get(0).equals(8L) && task.getCurrentOffsets().get(1).equals(2L))) {
+      Thread.sleep(50);
+    }
+
+    Assert.assertEquals(KafkaIndexTask.Status.READING, task.getStatus());
+
+    Map<Integer, Long> currentOffsets = objectMapper.readValue(
+        task.pause(0).getEntity().toString(),
+        new TypeReference<Map<Integer, Long>>()
+        {
+        }
+    );
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+
+    try {
+      future.get(10, TimeUnit.SECONDS);
+      Assert.fail("Task completed when it should have been paused");
+    }
+    catch (TimeoutException e) {
+      // carry on..
+    }
+
+    Assert.assertEquals(currentOffsets, task.getCurrentOffsets());
+
+    // Ignore partition number 1
+    task.setEndOffsets(ImmutableMap.of(0, 8L), false);
+    // Ignore partition number 0 as well
+    task.setEndOffsets(ImmutableMap.<Integer, Long>of(), true);
+
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
+    Assert.assertEquals(ImmutableMap.<Integer, Long>of(), task.getEndOffsets());
+    Assert.assertEquals(task.getEndOffsets(), task.getCurrentOffsets());
+
+    // Check metrics
+    Assert.assertEquals(8, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(2, task.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc4 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc5 = SD(task, "2011/P1D", 1);
+    SegmentDescriptor desc6 = SD(task, "2012/P1D", 0);
+    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new KafkaPartitions("topic0", ImmutableMap.<Integer, Long>of())),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentDim1(desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentDim1(desc2));
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc3));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc4));
+    Assert.assertEquals(ImmutableList.of("h"), readSegmentDim1(desc5));
+    Assert.assertEquals(ImmutableList.of("g"), readSegmentDim1(desc6));
+    Assert.assertEquals(ImmutableList.of("f"), readSegmentDim1(desc7));
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {

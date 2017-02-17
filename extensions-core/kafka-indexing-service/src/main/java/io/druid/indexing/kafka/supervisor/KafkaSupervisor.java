@@ -31,9 +31,11 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -516,7 +518,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     @Override
-    public void handle()
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
       log.makeAlert("Resetting dataSource [%s]", dataSource).emit();
       resetInternal(dataSourceMetadata);
@@ -525,6 +527,7 @@ public class KafkaSupervisor implements Supervisor
 
   @VisibleForTesting
   void resetInternal(DataSourceMetadata dataSourceMetadata)
+      throws InterruptedException, ExecutionException, TimeoutException
   {
     if (dataSourceMetadata == null) {
       // Reset everything
@@ -569,6 +572,7 @@ public class KafkaSupervisor implements Supervisor
         }
 
         if (!doReset) {
+          log.warn("Reset Notice for reset metadata: [%s] already handled, not doing anything", resetKafkaMetadata);
           return;
         }
 
@@ -586,8 +590,8 @@ public class KafkaSupervisor implements Supervisor
           }
         }
         if (metadataUpdateSuccess) {
-          killTaskGroupForPartitions(JavaCompatUtils.keySet(resetKafkaMetadata.getKafkaPartitions()
-                                                                              .getPartitionOffsetMap()));
+          finishTasksForPartitions(JavaCompatUtils.keySet(resetKafkaMetadata.getKafkaPartitions()
+                                                                            .getPartitionOffsetMap()));
         } else {
           throw new ISE("Unable to reset metadata");
         }
@@ -611,20 +615,50 @@ public class KafkaSupervisor implements Supervisor
           log.info("Reset dataSource[%s] - killing task [%s]", dataSource, taskId);
           killTask(taskId);
         }
+      } else {
+        log.warn("Cannot shutdown task group [%d], it does not exist!", getTaskGroupIdForPartition(partition));
       }
       partitionGroups.remove(getTaskGroupIdForPartition(partition));
       taskGroups.remove(getTaskGroupIdForPartition(partition));
     }
   }
 
+  private void finishTasksForPartitions(Set<Integer> stuckPartitions)
+      throws ExecutionException, InterruptedException, TimeoutException
+  {
+    Set<Integer> taskGroupIds = Sets.newHashSet();
+    for (Integer stuckPartition : stuckPartitions) {
+      taskGroupIds.add(getTaskGroupIdForPartition(stuckPartition));
+    }
+
+    gracefulShutdownInternal(taskGroupIds, stuckPartitions);
+    for (Integer partition : stuckPartitions) {
+      // remove stuck partitions entry from partitionGroups so that new offsets are fetched from kafka
+      // see the logic in updatePartitionDataFromKafka() method
+      partitionGroups.get(getTaskGroupIdForPartition(partition)).remove(partition);
+      // taskGroups would already have been updated in checkTaskDuration() method
+    }
+  }
+
   @VisibleForTesting
   void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  {
+    gracefulShutdownInternal(JavaCompatUtils.keySet(taskGroups), ImmutableSet.<Integer>of());
+  }
+
+  void gracefulShutdownInternal(Set<Integer> taskGroupIds, Set<Integer> stuckPartitions)
+      throws ExecutionException, InterruptedException, TimeoutException
   {
     // Prepare for shutdown by 1) killing all tasks that haven't been assigned to a worker yet, and 2) causing all
     // running tasks to begin publishing by setting their startTime to a very long time ago so that the logic in
     // checkTaskDuration() will be triggered. This is better than just telling these tasks to publish whatever they
     // have, as replicas that are supposed to publish the same segment may not have read the same set of offsets.
-    for (TaskGroup taskGroup : taskGroups.values()) {
+    for (Integer taskGroupId : taskGroupIds) {
+      final TaskGroup taskGroup = taskGroups.get(taskGroupId);
+      if (taskGroup == null) {
+        log.warn("Cannot shutdown task group [%d], it does not exist!", taskGroupId);
+        continue;
+      }
       for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
         if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
           killTask(entry.getKey());
@@ -634,7 +668,7 @@ public class KafkaSupervisor implements Supervisor
       }
     }
 
-    checkTaskDuration();
+    checkTaskDuration(stuckPartitions);
   }
 
   @VisibleForTesting
@@ -644,7 +678,7 @@ public class KafkaSupervisor implements Supervisor
     updatePartitionDataFromKafka();
     discoverTasks();
     updateTaskStatus();
-    checkTaskDuration();
+    checkTaskDuration(ImmutableSet.<Integer>of());
     checkPendingCompletionTasks();
     checkCurrentTaskState();
     createNewTasks();
@@ -999,7 +1033,8 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private void checkTaskDuration() throws InterruptedException, ExecutionException, TimeoutException
+  private void checkTaskDuration(Set<Integer> stuckPartitions)
+      throws InterruptedException, ExecutionException, TimeoutException
   {
     final List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
     final List<Integer> futureGroupIds = Lists.newArrayList();
@@ -1020,7 +1055,7 @@ public class KafkaSupervisor implements Supervisor
       if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
         log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
         futureGroupIds.add(groupId);
-        futures.add(signalTasksToFinish(groupId));
+        futures.add(signalTasksToFinish(groupId, stuckPartitions));
       }
     }
 
@@ -1056,7 +1091,10 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private ListenableFuture<Map<Integer, Long>> signalTasksToFinish(final int groupId)
+  private ListenableFuture<Map<Integer, Long>> signalTasksToFinish(
+      final int groupId,
+      final Set<Integer> stuckPartitions
+  )
   {
     final TaskGroup taskGroup = taskGroups.get(groupId);
 
@@ -1101,6 +1139,15 @@ public class KafkaSupervisor implements Supervisor
       pauseFutures.add(taskClient.pauseAsync(taskId));
     }
 
+    final boolean doesGroupHasStuckTasks = Iterables.any(stuckPartitions, new Predicate<Integer>()
+    {
+      @Override
+      public boolean apply(Integer input)
+      {
+        return taskGroup.partitionOffsets.containsKey(input);
+      }
+    });
+
     return Futures.transform(
         Futures.successfulAsList(pauseFutures), new Function<List<Map<Integer, Long>>, Map<Integer, Long>>()
         {
@@ -1109,7 +1156,14 @@ public class KafkaSupervisor implements Supervisor
           public Map<Integer, Long> apply(List<Map<Integer, Long>> input)
           {
             // 3) Build a map of the highest offset read by any task in the group for each partition
+            // if there are stuck tasks then find the task which has consumed most data, use its offsets
+            // as the highest offset and kill other tasks in the group
             final Map<Integer, Long> endOffsets = new HashMap<>();
+            // taskWithMostData and mostConsumedOffsets used only when doesGroupHasStuckTasks is true
+            String taskWithMostData = null;
+            // set mostConsumedOffsets to be the start partitionOffsets for this task group
+            final Map<Integer, Long> mostConsumedOffsets = new HashMap<>(taskGroup.partitionOffsets);
+
             for (int i = 0; i < input.size(); i++) {
               Map<Integer, Long> result = input.get(i);
 
@@ -1119,14 +1173,71 @@ public class KafkaSupervisor implements Supervisor
                 killTask(taskId);
                 taskGroup.tasks.remove(taskId);
 
-              } else { // otherwise build a map of the highest offsets seen
-                for (Map.Entry<Integer, Long> offset : result.entrySet()) {
-                  if (!endOffsets.containsKey(offset.getKey())
-                      || endOffsets.get(offset.getKey()).compareTo(offset.getValue()) < 0) {
-                    endOffsets.put(offset.getKey(), offset.getValue());
+              } else {
+                if (doesGroupHasStuckTasks) {
+                  long compareValue = 0;
+                  for (Map.Entry<Integer, Long> offset : result.entrySet()) {
+                    compareValue += mostConsumedOffsets.get(offset.getKey()) - offset.getValue();
+                  }
+                  final String currTaskId = pauseTaskIds.get(i);
+                  if (compareValue < 0) {
+                    // currTaskId task has consumed more offsets than previous taskWithMostData task
+                    if (taskWithMostData != null) {
+                      // kill previous taskWithMostData
+                      log.warn(
+                          "Killing task [%s] as there is another task [%s] that has consumed more data",
+                          taskWithMostData,
+                          currTaskId
+                      );
+                      killTask(taskWithMostData);
+                      taskGroup.tasks.remove(taskWithMostData);
+                    }
+                    taskWithMostData = currTaskId;
+                    mostConsumedOffsets.clear();
+                    mostConsumedOffsets.putAll(result);
+                  } else {
+                    // kill currTaskId task as it has consumed less or equal amount of offsets as taskWithMostData
+                    // or it has not consumed any data and has offsets equal to starting offsets of the task group
+                    if (taskWithMostData == null) {
+                      log.warn(
+                          "Killing task [%s] as its current offsets [%s] are equal to start offsets [%s] of task group [%d]",
+                          currTaskId,
+                          result,
+                          taskGroup.partitionOffsets,
+                          groupId
+                      );
+                    } else {
+                      log.warn(
+                          "Killing task [%s] as there is another task [%s] that has consumed more data",
+                          currTaskId,
+                          taskWithMostData
+                      );
+                    }
+                    killTask(currTaskId);
+                    taskGroup.tasks.remove(currTaskId);
+                  }
+                } else {
+                  // otherwise build a map of the highest offsets seen
+                  for (Map.Entry<Integer, Long> offset : result.entrySet()) {
+                    if (!endOffsets.containsKey(offset.getKey())
+                        || endOffsets.get(offset.getKey()).compareTo(offset.getValue()) < 0) {
+                      endOffsets.put(offset.getKey(), offset.getValue());
+                    }
                   }
                 }
               }
+            }
+
+            if (doesGroupHasStuckTasks) {
+              if (!taskGroup.taskIds().isEmpty() && taskWithMostData == null) {
+                throw new ISE("Could not find task that has consumed most data");
+              }
+              endOffsets.clear();
+              // remove stuckPartitions from mostConsumedOffsets so that they are not sent with setEndOffsetsAsync call
+              for (int key : stuckPartitions) {
+                mostConsumedOffsets.remove(key);
+              }
+              endOffsets.putAll(mostConsumedOffsets);
             }
 
             // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should

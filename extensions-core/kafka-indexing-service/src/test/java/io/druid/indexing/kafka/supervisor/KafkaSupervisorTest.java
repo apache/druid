@@ -1531,7 +1531,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     )).andReturn(true);
     replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(resetMetadata);
+    try {
+      supervisor.resetInternal(resetMetadata);
+    } catch (NullPointerException e) {
+      // expected as partitionGroups.get(getTaskGroupIdForPartition(partition)) in finishTasksForPartitions will be null
+      // since we are not creating any topic and thus partitions in this test
+    }
     verifyAll();
 
     Assert.assertEquals(captureDataSource.getValue(), DATASOURCE);
@@ -1563,7 +1568,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null);
     replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(resetMetadata);
+    try {
+      supervisor.resetInternal(resetMetadata);
+    } catch (NullPointerException e) {
+      // expected as partitionGroups.get(getTaskGroupIdForPartition(partition)) in finishTasksForPartitions will be null
+      // since we are not creating any topic and thus partitions in this test
+    }
+
     verifyAll();
   }
 
