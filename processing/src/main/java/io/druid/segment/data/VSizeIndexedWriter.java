@@ -27,6 +27,7 @@ import com.google.common.io.Closeables;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -163,7 +164,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     try (final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput())) {
       ByteStreams.copy(from, channel);

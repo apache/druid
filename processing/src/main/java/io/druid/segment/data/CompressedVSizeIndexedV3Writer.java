@@ -22,6 +22,7 @@
  */
 package io.druid.segment.data;
 
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.IndexIO;
 
@@ -118,10 +119,10 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
-    offsetWriter.writeToChannel(channel);
-    valueWriter.writeToChannel(channel);
+    offsetWriter.writeToChannel(channel, smoosher);
+    valueWriter.writeToChannel(channel, smoosher);
   }
 }
