@@ -724,7 +724,7 @@ public class SelectQueryRunnerTest
   public void testFullOnSelectWithLongAndFloatWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
     List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
         new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", jsExtractionFn),

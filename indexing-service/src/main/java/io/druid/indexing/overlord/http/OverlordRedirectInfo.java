@@ -40,7 +40,7 @@ public class OverlordRedirectInfo implements RedirectInfo
   }
 
   @Override
-  public boolean doLocal()
+  public boolean doLocal(String requestURI)
   {
     return taskMaster.isLeading();
   }

@@ -25,7 +25,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -39,7 +38,6 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -49,13 +47,12 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -291,6 +288,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return TYPE_REFERENCE;
   }
 
+
+
   @Override
   public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
   {
@@ -306,27 +305,22 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public byte[] computeCacheKey(TopNQuery query)
       {
-        final byte[] dimensionSpecBytes = query.getDimensionSpec().getCacheKey();
-        final byte[] metricSpecBytes = query.getTopNMetricSpec().getCacheKey();
+        final CacheKeyBuilder builder = new CacheKeyBuilder(TOPN_QUERY)
+            .appendCacheable(query.getDimensionSpec())
+            .appendCacheable(query.getTopNMetricSpec())
+            .appendInt(query.getThreshold())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs());
 
-        final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final List<PostAggregator> postAggregators = prunePostAggregators(query);
+        if (!postAggregators.isEmpty()) {
+          // Append post aggregators only when they are used as sort keys.
+          // Note that appending an empty list produces a different cache key from not appending it.
+          builder.appendCacheablesIgnoringOrder(postAggregators);
+        }
 
-        return ByteBuffer
-            .allocate(
-                1 + dimensionSpecBytes.length + metricSpecBytes.length + 4 +
-                granularityBytes.length + filterBytes.length + aggregatorBytes.length
-            )
-            .put(TOPN_QUERY)
-            .put(dimensionSpecBytes)
-            .put(metricSpecBytes)
-            .put(Ints.toByteArray(query.getThreshold()))
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(aggregatorBytes)
-            .array();
+        return builder.build();
       }
 
       @Override

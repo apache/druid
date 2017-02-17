@@ -23,11 +23,11 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
@@ -51,8 +51,6 @@ import java.util.List;
  */
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
-  private static final Logger log = new Logger(SpillingGrouper.class);
-
   private final BufferGrouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
@@ -66,7 +64,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private boolean spillingAllowed = false;
 
   public SpillingGrouper(
-      final ByteBuffer buffer,
+      final Supplier<ByteBuffer> bufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
@@ -81,7 +79,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.keySerde = keySerdeFactory.factorize();
     this.keyObjComparator = keySerdeFactory.objectComparator();
     this.grouper = new BufferGrouper<>(
-        buffer,
+        bufferSupplier,
         keySerde,
         columnSelectorFactory,
         aggregatorFactories,
@@ -93,6 +91,18 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.temporaryStorage = temporaryStorage;
     this.spillMapper = spillMapper;
     this.spillingAllowed = spillingAllowed;
+  }
+
+  @Override
+  public void init()
+  {
+    grouper.init();
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return grouper.isInitialized();
   }
 
   @Override

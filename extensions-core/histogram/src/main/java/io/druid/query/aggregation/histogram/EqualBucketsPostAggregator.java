@@ -23,8 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Map;
 import java.util.Set;
@@ -33,7 +34,6 @@ import java.util.Set;
 public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregator
 {
   private final int numBuckets;
-  private String fieldName;
 
   @JsonCreator
   public EqualBucketsPostAggregator(
@@ -47,7 +47,6 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
     if (this.numBuckets <= 1) {
       throw new IAE("Illegal number of buckets[%s], must be > 1", this.numBuckets);
     }
-    this.fieldName = fieldName;
   }
 
   @Override
@@ -59,7 +58,7 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
   @Override
   public Object compute(Map<String, Object> values)
   {
-    ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.toHistogram(numBuckets);
   }
 
@@ -73,9 +72,18 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
   public String toString()
   {
     return "EqualBucketsPostAggregator{" +
-           "name='" + this.getName() + '\'' +
-           ", fieldName='" + this.getFieldName() + '\'' +
-           ", numBuckets=" + this.getNumBuckets() +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           ", numBuckets=" + numBuckets +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_EQUAL_BUCKETS)
+        .appendString(fieldName)
+        .appendInt(numBuckets)
+        .build();
   }
 }

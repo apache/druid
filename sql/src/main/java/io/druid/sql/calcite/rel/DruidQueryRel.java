@@ -56,10 +56,11 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
       final RelTraitSet traitSet,
       final RelOptTable table,
       final DruidTable druidTable,
+      final QueryMaker queryMaker,
       final DruidQueryBuilder queryBuilder
   )
   {
-    super(cluster, traitSet, druidTable.getQueryMaker());
+    super(cluster, traitSet, queryMaker);
     this.table = Preconditions.checkNotNull(table, "table");
     this.druidTable = Preconditions.checkNotNull(druidTable, "druidTable");
     this.queryBuilder = Preconditions.checkNotNull(queryBuilder, "queryBuilder");
@@ -71,7 +72,8 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   public static DruidQueryRel fullScan(
       final RelOptCluster cluster,
       final RelOptTable table,
-      final DruidTable druidTable
+      final DruidTable druidTable,
+      final QueryMaker queryMaker
   )
   {
     return new DruidQueryRel(
@@ -79,6 +81,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         cluster.traitSetOf(Convention.NONE),
         table,
         druidTable,
+        queryMaker,
         DruidQueryBuilder.fullScan(druidTable.getRowSignature(), cluster.getTypeFactory())
     );
   }
@@ -88,7 +91,8 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   {
     final GroupByQuery groupByQuery = getQueryBuilder().toGroupByQuery(
         druidTable.getDataSource(),
-        druidTable.getRowSignature()
+        druidTable.getRowSignature(),
+        getPlannerContext().getQueryContext()
     );
 
     if (groupByQuery == null) {
@@ -109,6 +113,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().plus(BindableConvention.INSTANCE),
         table,
         druidTable,
+        getQueryMaker(),
         queryBuilder
     );
   }
@@ -121,6 +126,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().replace(DruidConvention.instance()),
         table,
         druidTable,
+        getQueryMaker(),
         queryBuilder
     );
   }
@@ -145,6 +151,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
         table,
         druidTable,
+        getQueryMaker(),
         newQueryBuilder
     );
   }

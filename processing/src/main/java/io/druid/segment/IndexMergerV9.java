@@ -135,7 +135,7 @@ public class IndexMergerV9 extends IndexMerger
       @Override
       public void close() throws IOException
       {
-        ioPeon.cleanup();
+        ioPeon.close();
       }
     });
     final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
@@ -423,7 +423,7 @@ public class IndexMergerV9 extends IndexMerger
     );
     try {
       channel.write(ByteBuffer.wrap(specBytes));
-      serdeficator.write(channel);
+      serdeficator.write(channel, v9Smoosher);
     }
     finally {
       channel.close();
@@ -530,7 +530,7 @@ public class IndexMergerV9 extends IndexMerger
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }
-          writer = ComplexColumnSerializer.create(ioPeon, metric, serde);
+          writer = serde.getSerializer(ioPeon, metric);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);

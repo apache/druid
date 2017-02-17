@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import io.druid.query.extraction.SubstringDimExtractionFn;
+import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -44,12 +45,13 @@ public class SubstringExpressionConversion extends AbstractExpressionConversion
   @Override
   public RowExtraction convert(
       final ExpressionConverter converter,
+      final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
   )
   {
     final RexCall call = (RexCall) expression;
-    final RowExtraction arg = converter.convert(rowOrder, call.getOperands().get(0));
+    final RowExtraction arg = converter.convert(plannerContext, rowOrder, call.getOperands().get(0));
     if (arg == null) {
       return null;
     }
@@ -61,11 +63,12 @@ public class SubstringExpressionConversion extends AbstractExpressionConversion
       length = null;
     }
 
-    return RowExtraction.of(arg.getColumn(),
-                            ExtractionFns.compose(
-                                    new SubstringDimExtractionFn(index, length),
-                                    arg.getExtractionFn()
-                                )
+    return RowExtraction.of(
+        arg.getColumn(),
+        ExtractionFns.compose(
+            new SubstringDimExtractionFn(index, length),
+            arg.getExtractionFn()
+        )
     );
   }
 }

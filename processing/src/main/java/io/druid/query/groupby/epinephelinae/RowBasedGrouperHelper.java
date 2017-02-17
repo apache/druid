@@ -55,6 +55,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -76,7 +77,7 @@ public class RowBasedGrouperHelper
       final boolean isInputRaw,
       final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
-      final ByteBuffer buffer,
+      final Supplier<ByteBuffer> bufferSupplier,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -105,7 +106,7 @@ public class RowBasedGrouperHelper
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
-          buffer,
+          bufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
@@ -118,7 +119,7 @@ public class RowBasedGrouperHelper
       );
     } else {
       grouper = new ConcurrentGrouper<>(
-          buffer,
+          bufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
@@ -131,16 +132,15 @@ public class RowBasedGrouperHelper
       );
     }
 
-    final Supplier[] inputRawSuppliers;
-    if (isInputRaw) {
-      inputRawSuppliers = getValueSuppliersForDimensions(
-          columnSelectorFactory,
-          query.getDimensions(),
-          rawInputRowSignature
-      );
-    } else {
-      inputRawSuppliers = null;
-    }
+    final int keySize = includeTimestamp ? query.getDimensions().size() + 1 : query.getDimensions().size();
+    final ValueExtractFunction valueExtractFn = makeValueExtractFunction(
+        query,
+        isInputRaw,
+        includeTimestamp,
+        columnSelectorFactory,
+        rawInputRowSignature,
+        valueTypes
+    );
 
     final Accumulator<Grouper<RowBasedKey>, Row> accumulator = new Accumulator<Grouper<RowBasedKey>, Row>()
     {
@@ -157,62 +157,14 @@ public class RowBasedGrouperHelper
           return null;
         }
 
+        if (!theGrouper.isInitialized()) {
+          theGrouper.init();
+        }
+
         columnSelectorRow.set(row);
 
-        final int dimStart;
-        final Comparable[] key;
-
-        if (includeTimestamp) {
-          key = new Comparable[query.getDimensions().size() + 1];
-
-          final long timestamp;
-          if (isInputRaw) {
-            if (query.getGranularity() instanceof AllGranularity) {
-              timestamp = query.getIntervals().get(0).getStartMillis();
-            } else {
-              timestamp = query.getGranularity().truncate(row.getTimestampFromEpoch());
-            }
-          } else {
-            timestamp = row.getTimestampFromEpoch();
-          }
-
-          key[0] = timestamp;
-          dimStart = 1;
-        } else {
-          key = new Comparable[query.getDimensions().size()];
-          dimStart = 0;
-        }
-
-        for (int i = dimStart; i < key.length; i++) {
-          final ValueType type = valueTypes.get(i - dimStart);
-          Object valObj;
-          if (isInputRaw) {
-            valObj = inputRawSuppliers[i - dimStart].get();
-          } else {
-            valObj = row.getRaw(query.getDimensions().get(i - dimStart).getOutputName());
-          }
-          // convert values to the output type specified by the DimensionSpec, for merging purposes
-          switch (type) {
-            case STRING:
-              valObj = valObj == null ? "" : valObj.toString();
-              break;
-            case LONG:
-              valObj = DimensionHandlerUtils.convertObjectToLong(valObj);
-              if (valObj == null) {
-                valObj = 0L;
-              }
-              break;
-            case FLOAT:
-              valObj = DimensionHandlerUtils.convertObjectToFloat(valObj);
-              if (valObj == null) {
-                valObj = 0.0f;
-              }
-              break;
-            default:
-              throw new IAE("invalid type: [%s]", type);
-          }
-          key[i] = (Comparable) valObj;
-        }
+        final Comparable[] key = new Comparable[keySize];
+        valueExtractFn.apply(row, key);
 
         final boolean didAggregate = theGrouper.aggregate(new RowBasedKey(key));
         if (!didAggregate) {
@@ -226,6 +178,135 @@ public class RowBasedGrouperHelper
     };
 
     return new Pair<>(grouper, accumulator);
+  }
+
+  private interface TimestampExtractFunction
+  {
+    long apply(Row row);
+  }
+
+  private static TimestampExtractFunction makeTimestampExtractFunction(
+      final GroupByQuery query,
+      final boolean isInputRaw
+  )
+  {
+    if (isInputRaw) {
+      if (query.getGranularity() instanceof AllGranularity) {
+        return new TimestampExtractFunction()
+        {
+          @Override
+          public long apply(Row row)
+          {
+            return query.getIntervals().get(0).getStartMillis();
+          }
+        };
+      } else {
+        return new TimestampExtractFunction()
+        {
+          @Override
+          public long apply(Row row)
+          {
+            return query.getGranularity().truncate(row.getTimestampFromEpoch());
+          }
+        };
+      }
+    } else {
+      return new TimestampExtractFunction()
+      {
+        @Override
+        public long apply(Row row)
+        {
+          return row.getTimestampFromEpoch();
+        }
+      };
+    }
+  }
+
+  private interface ValueExtractFunction
+  {
+    Comparable[] apply(Row row, Comparable[] key);
+  }
+
+  private static ValueExtractFunction makeValueExtractFunction(
+      final GroupByQuery query,
+      final boolean isInputRaw,
+      final boolean includeTimestamp,
+      final ColumnSelectorFactory columnSelectorFactory,
+      final Map<String, ValueType> rawInputRowSignature,
+      final List<ValueType> valueTypes
+  )
+  {
+    final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
+                                                        makeTimestampExtractFunction(query, isInputRaw) :
+                                                        null;
+
+    final Function<Comparable, Comparable>[] valueConvertFns = makeValueConvertFunctions(valueTypes);
+
+    if (isInputRaw) {
+      final Supplier<Comparable>[] inputRawSuppliers = getValueSuppliersForDimensions(
+          columnSelectorFactory,
+          query.getDimensions(),
+          rawInputRowSignature
+      );
+
+      if (includeTimestamp) {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            key[0] = timestampExtractFn.apply(row);
+            for (int i = 1; i < key.length; i++) {
+              final Comparable val = inputRawSuppliers[i - 1].get();
+              key[i] = valueConvertFns[i - 1].apply(val);
+            }
+            return key;
+          }
+        };
+      } else {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            for (int i = 0; i < key.length; i++) {
+              final Comparable val = inputRawSuppliers[i].get();
+              key[i] = valueConvertFns[i].apply(val);
+            }
+            return key;
+          }
+        };
+      }
+    } else {
+      if (includeTimestamp) {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            key[0] = timestampExtractFn.apply(row);
+            for (int i = 1; i < key.length; i++) {
+              final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i - 1).getOutputName());
+              key[i] = valueConvertFns[i - 1].apply(val);
+            }
+            return key;
+          }
+        };
+      } else {
+        return new ValueExtractFunction()
+        {
+          @Override
+          public Comparable[] apply(Row row, Comparable[] key)
+          {
+            for (int i = 0; i < key.length; i++) {
+              final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i).getOutputName());
+              key[i] = valueConvertFns[i].apply(val);
+            }
+            return key;
+          }
+        };
+      }
+    }
   }
 
   public static CloseableGrouperIterator<RowBasedKey, Row> makeGrouperIterator(
@@ -338,7 +419,8 @@ public class RowBasedGrouperHelper
     }
   }
 
-  private static Supplier[] getValueSuppliersForDimensions(
+  @SuppressWarnings("unchecked")
+  private static Supplier<Comparable>[] getValueSuppliersForDimensions(
       final ColumnSelectorFactory columnSelectorFactory,
       final List<DimensionSpec> dimensions,
       final Map<String, ValueType> rawInputRowSignature
@@ -358,10 +440,10 @@ public class RowBasedGrouperHelper
       }
       switch (type) {
         case STRING:
-          inputRawSuppliers[i] = new Supplier()
+          inputRawSuppliers[i] = new Supplier<Comparable>()
           {
             @Override
-            public Object get()
+            public Comparable get()
             {
               final String value;
               IndexedInts index = ((DimensionSelector) selector).getRow();
@@ -373,20 +455,20 @@ public class RowBasedGrouperHelper
           };
           break;
         case LONG:
-          inputRawSuppliers[i] = new Supplier()
+          inputRawSuppliers[i] = new Supplier<Comparable>()
           {
             @Override
-            public Object get()
+            public Comparable get()
             {
               return ((LongColumnSelector) selector).get();
             }
           };
           break;
         case FLOAT:
-          inputRawSuppliers[i] = new Supplier()
+          inputRawSuppliers[i] = new Supplier<Comparable>()
           {
             @Override
-            public Object get()
+            public Comparable get()
             {
               return ((FloatColumnSelector) selector).get();
             }
@@ -397,6 +479,74 @@ public class RowBasedGrouperHelper
       }
     }
     return inputRawSuppliers;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Function<Comparable, Comparable>[] makeValueConvertFunctions(
+      final Map<String, ValueType> rawInputRowSignature,
+      final List<DimensionSpec> dimensions
+  )
+  {
+    final List<ValueType> valueTypes = Lists.newArrayListWithCapacity(dimensions.size());
+    for (DimensionSpec dimensionSpec : dimensions) {
+      final ValueType valueType = rawInputRowSignature.get(dimensionSpec);
+      valueTypes.add(valueType == null ? ValueType.STRING : valueType);
+    }
+    return makeValueConvertFunctions(valueTypes);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Function<Comparable, Comparable>[] makeValueConvertFunctions(
+      final List<ValueType> valueTypes
+  )
+  {
+    final Function<Comparable, Comparable>[] functions = new Function[valueTypes.size()];
+    for (int i = 0; i < functions.length; i++) {
+      ValueType type = valueTypes.get(i);
+      // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
+      // their types aren't known, so default to String handling.
+      type = type == null ? ValueType.STRING : type;
+      switch (type) {
+        case STRING:
+          functions[i] = new Function<Comparable, Comparable>()
+          {
+            @Override
+            public Comparable apply(@Nullable Comparable input)
+            {
+              return input == null ? "" : input.toString();
+            }
+          };
+          break;
+
+        case LONG:
+          functions[i] = new Function<Comparable, Comparable>()
+          {
+            @Override
+            public Comparable apply(@Nullable Comparable input)
+            {
+              final Long val = DimensionHandlerUtils.convertObjectToLong(input);
+              return val == null ? 0L : val;
+            }
+          };
+          break;
+
+        case FLOAT:
+          functions[i] = new Function<Comparable, Comparable>()
+          {
+            @Override
+            public Comparable apply(@Nullable Comparable input)
+            {
+              final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
+              return val == null ? 0.f : val;
+            }
+          };
+          break;
+
+        default:
+          throw new IAE("invalid type: [%s]", type);
+      }
+    }
+    return functions;
   }
 
   private static class RowBasedKeySerdeFactory implements Grouper.KeySerdeFactory<RowBasedKey>
