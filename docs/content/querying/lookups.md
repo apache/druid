@@ -289,7 +289,7 @@ To configure the behavior of the dynamic configuration manager, use the followin
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.lookups.hostTimeout`|Timeout (in ms) PER HOST for processing request|`2000`(s second)|
+|`druid.manager.lookups.hostTimeout`|Timeout (in ms) PER HOST for processing request|`2000`(2 seconds)|
 |`druid.manager.lookups.allHostTimeout`|Timeout (in ms) to finish lookup management on all the nodes.|`900000`(15 mins)|
 |`druid.manager.lookups.period`|How long to pause between management cycles|`120000`(2 mins)|
 |`druid.manager.lookups.threadPoolSize`|Number of service nodes that can be managed concurrently|`10`|

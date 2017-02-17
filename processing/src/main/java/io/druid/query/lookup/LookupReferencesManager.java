@@ -66,7 +66,7 @@ public class LookupReferencesManager
   private final ReadWriteLock startStopLock = new ReentrantReadWriteLock(true);
 
   @VisibleForTesting
-  volatile boolean started = false;
+  boolean started = false;
 
   @GuardedBy("startStopLock")
   private final Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
@@ -147,7 +147,7 @@ public class LookupReferencesManager
                     }
                   }
                   finally {
-                    LOG.info("Lookup Mgmt loop exited, Lookup notices are not handled anymore.");
+                    LOG.info("Lookup Management loop exited, Lookup notices are not handled anymore.");
                   }
                 }
               }
@@ -168,8 +168,8 @@ public class LookupReferencesManager
   {
     startStopLock.writeLock().lock();
 
-    if (started) {
-      try {
+    try {
+      if (started) {
         LOG.info("LookupReferencesManager is stopping.");
         started = false;
 
@@ -182,7 +182,7 @@ public class LookupReferencesManager
           try {
             LOG.info("Closing lookup [%s]", e.getKey());
             if (!e.getValue().getLookupExtractorFactory().close()) {
-              LOG.error("Failed to close lookup [%s].");
+              LOG.error("Failed to close lookup [%s].", e.getKey());
             }
           }
           catch (Exception ex) {
@@ -191,12 +191,11 @@ public class LookupReferencesManager
         }
 
         lookupMap.clear();
+
+        LOG.info("LookupReferencesManager is stopped.");
       }
-      finally {
-        startStopLock.writeLock().unlock();
-      }
-      LOG.info("LookupReferencesManager is stopped.");
-    } else {
+    }
+    finally {
       startStopLock.writeLock().unlock();
     }
   }
@@ -315,7 +314,7 @@ public class LookupReferencesManager
   @VisibleForTesting
   interface Notice
   {
-    void handle();
+    void handle() throws InterruptedException;
   }
 
   private class LoadNotice implements Notice
@@ -330,9 +329,9 @@ public class LookupReferencesManager
     }
 
     @Override
-    public void handle()
+    public void handle() throws InterruptedException
     {
-      startStopLock.readLock().lock();
+      startStopLock.readLock().lockInterruptibly();
 
       try {
         LookupExtractorFactoryContainer old = lookupMap.get(lookupName);
@@ -352,7 +351,7 @@ public class LookupReferencesManager
         throw new ISE("start method returned false for lookup [%s]:[%s]", lookupName, lookupExtractorFactoryContainer);
       }
 
-      startStopLock.writeLock().lock();
+      startStopLock.writeLock().lockInterruptibly();
       final LookupExtractorFactoryContainer old;
       try {
         assertStarted();
@@ -385,9 +384,9 @@ public class LookupReferencesManager
     }
 
     @Override
-    public void handle()
+    public void handle() throws InterruptedException
     {
-      startStopLock.writeLock().lock();
+      startStopLock.writeLock().lockInterruptibly();
 
       final LookupExtractorFactoryContainer lookupExtractorFactoryContainer;
 

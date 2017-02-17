@@ -26,10 +26,7 @@ import com.google.common.base.Preconditions;
 //TODO merge this code to the same definition when pr/1576 is merged
 class LookupBean
 {
-  @JsonProperty
   private final LookupExtractorFactoryContainer container;
-
-  @JsonProperty
   private final String name;
 
   @JsonCreator
@@ -47,11 +44,13 @@ class LookupBean
     this.container = container != null ? container : new LookupExtractorFactoryContainer(null, factory);
   }
 
+  @JsonProperty
   public String getName()
   {
     return name;
   }
 
+  @JsonProperty
   public LookupExtractorFactoryContainer getContainer()
   {
     return container;
