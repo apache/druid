@@ -318,6 +318,7 @@ public class RowBasedGrouperHelper
   )
   {
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
+    //final boolean includeTimestamp = true;
 
     return new CloseableGrouperIterator<>(
         grouper,

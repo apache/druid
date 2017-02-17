@@ -47,6 +47,7 @@ public class DruidProcessingConfigTest
     } else {
       Assert.assertTrue(config.getNumThreads() < Runtime.getRuntime().availableProcessors());
     }
+    Assert.assertEquals(Math.max(2, config.getNumThreads() / 4), config.getNumMergeBuffers());
     Assert.assertEquals(0, config.columnCacheSizeBytes());
     Assert.assertFalse(config.isFifo());
     Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
@@ -55,7 +56,7 @@ public class DruidProcessingConfigTest
     Properties props = new Properties();
     props.setProperty("druid.processing.buffer.sizeBytes", "1");
     props.setProperty("druid.processing.buffer.poolCacheMaxCount", "1");
-    props.setProperty("druid.processing.numThreads", "5");
+    props.setProperty("druid.processing.numThreads", "256");
     props.setProperty("druid.processing.columnCache.sizeBytes", "1");
     props.setProperty("druid.processing.fifo", "true");
     props.setProperty("druid.processing.tmpDir", "/test/path");
@@ -65,7 +66,8 @@ public class DruidProcessingConfigTest
 
     Assert.assertEquals(1, config.intermediateComputeSizeBytes());
     Assert.assertEquals(1, config.poolCacheMaxCount());
-    Assert.assertEquals(5, config.getNumThreads());
+    Assert.assertEquals(256, config.getNumThreads());
+    Assert.assertEquals(64, config.getNumMergeBuffers());
     Assert.assertEquals(1, config.columnCacheSizeBytes());
     Assert.assertTrue(config.isFifo());
     Assert.assertEquals("/test/path", config.getTmpDir());
