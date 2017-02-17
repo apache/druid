@@ -216,6 +216,11 @@ public class GenericIndexed<T> implements Indexed<T>
   @Override
   public int indexOf(T value)
   {
+    return indexOf(this, value);
+  }
+
+  private int indexOf(Indexed<T> indexed, T value)
+  {
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
@@ -227,7 +232,7 @@ public class GenericIndexed<T> implements Indexed<T>
     while (minIndex <= maxIndex) {
       int currIndex = (minIndex + maxIndex) >>> 1;
 
-      T currValue = get(currIndex);
+      T currValue = indexed.get(currIndex);
       int comparison = strategy.compare(currValue, value);
       if (comparison == 0) {
         return currIndex;
@@ -330,7 +335,7 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public int indexOf(T value)
     {
-      return GenericIndexed.this.indexOf(value);
+      return GenericIndexed.this.indexOf(this, value);
     }
 
     @Override
