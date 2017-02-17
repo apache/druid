@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -35,13 +36,23 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
   private final int sizePer;
 
   public BlockLayoutIndexedFloatSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy strategy
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy,
+      SmooshedFileMapper mapper
   )
   {
-    baseFloatBuffers = GenericIndexed.read(fromBuffer, VSizeCompressedObjectStrategy.getBufferForOrder(
-        order, strategy, sizePer * Floats.BYTES
-    ));
+    baseFloatBuffers = GenericIndexed.read(
+        fromBuffer,
+        VSizeCompressedObjectStrategy.getBufferForOrder(
+            order,
+            strategy,
+            sizePer * Floats.BYTES
+        ),
+        mapper
+    );
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }

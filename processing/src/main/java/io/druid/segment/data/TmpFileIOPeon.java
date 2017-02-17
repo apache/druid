@@ -31,7 +31,7 @@ import java.io.OutputStream;
 import java.util.Map;
 
 /**
-*/
+ */
 public class TmpFileIOPeon implements IOPeon
 {
   private final boolean allowOverwrite;
@@ -83,4 +83,11 @@ public class TmpFileIOPeon implements IOPeon
   {
     return allowOverwrite;
   }
+
+  @Override
+  public File getFile(String filename)
+  {
+    return createdFiles.get(filename);
+  }
+
 }

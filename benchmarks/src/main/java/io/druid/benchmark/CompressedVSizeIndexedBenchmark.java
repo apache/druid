@@ -99,7 +99,9 @@ public class CompressedVSizeIndexedBenchmark
         )
     );
     this.compressed = CompressedVSizeIndexedSupplier.fromByteBuffer(
-        bufferCompressed, ByteOrder.nativeOrder()
+        bufferCompressed,
+        ByteOrder.nativeOrder(),
+        null
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(

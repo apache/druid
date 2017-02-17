@@ -25,6 +25,7 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -144,8 +145,8 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     return delegate.getSerializedSize();
   }
 
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    delegate.writeToChannel(channel);
+    delegate.writeToChannel(channel, smoosher);
   }
 }

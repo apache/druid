@@ -21,6 +21,8 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.LongColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
@@ -93,9 +95,9 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
         }
 
         @Override
-        public void write(WritableByteChannel channel) throws IOException
+        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
-          delegate.writeToChannel(channel);
+          delegate.writeToChannel(channel, smoosher);
         }
       }
       );
@@ -136,7 +138,7 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
         }
 
         @Override
-        public void write(WritableByteChannel channel) throws IOException
+        public void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
         {
           delegate.writeToChannel(channel);
         }
@@ -161,7 +163,8 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
       {
         final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(
             buffer,
-            byteOrder
+            byteOrder,
+            builder.getFileMapper()
         );
         builder.setType(ValueType.LONG)
                .setHasMultipleValues(false)

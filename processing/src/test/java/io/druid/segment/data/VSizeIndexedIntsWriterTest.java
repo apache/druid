@@ -78,7 +78,7 @@ public class VSizeIndexedIntsWriterTest
     writer.close();
     long writtenLength = writer.getSerializedSize();
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-    writer.writeToChannel(outputChannel);
+    writer.writeToChannel(outputChannel, null);
     outputChannel.close();
 
     assertEquals(writtenLength, intsFromList.getSerializedSize());

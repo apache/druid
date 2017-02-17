@@ -36,12 +36,12 @@ import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -396,22 +396,28 @@ public class IndexIO
 
       indexBuffer.get(); // Skip the version byte
       final GenericIndexed<String> availableDimensions = GenericIndexed.read(
-          indexBuffer, GenericIndexed.STRING_STRATEGY
+          indexBuffer,
+          GenericIndexed.STRING_STRATEGY,
+          smooshedFiles
       );
       final GenericIndexed<String> availableMetrics = GenericIndexed.read(
-          indexBuffer, GenericIndexed.STRING_STRATEGY
+          indexBuffer,
+          GenericIndexed.STRING_STRATEGY,
+          smooshedFiles
       );
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
       final BitmapSerdeFactory bitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
 
       CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
-          smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()), BYTE_ORDER
+          smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()),
+          BYTE_ORDER,
+          smooshedFiles
       );
 
       Map<String, MetricHolder> metrics = Maps.newLinkedHashMap();
       for (String metric : availableMetrics) {
         final String metricFilename = makeMetricFile(inDir, metric, BYTE_ORDER).getName();
-        final MetricHolder holder = MetricHolder.fromByteBuffer(smooshedFiles.mapFile(metricFilename));
+        final MetricHolder holder = MetricHolder.fromByteBuffer(smooshedFiles.mapFile(metricFilename), smooshedFiles);
 
         if (!metric.equals(holder.getName())) {
           throw new ISE("Metric[%s] loaded up metric[%s] from disk.  File names do matter.", metric, holder.getName());
@@ -509,7 +515,7 @@ public class IndexIO
           final String dimName = serializerUtils.readString(invertedBuffer);
           bitmapIndexes.put(
               dimName,
-              GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy())
+              GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy(), v8SmooshedFiles)
           );
         }
 
@@ -691,7 +697,7 @@ public class IndexIO
                 dimension, serdeficator.numBytes() + specBytes.length
             );
             channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel);
+            serdeficator.write(channel, v9Smoosher);
             channel.close();
           } else if (filename.startsWith("met_") || filename.startsWith("numeric_dim_")) {
             // NOTE: identifying numeric dimensions by using a different filename pattern is meant to allow the
@@ -702,7 +708,7 @@ public class IndexIO
               continue;
             }
 
-            MetricHolder holder = MetricHolder.fromByteBuffer(v8SmooshedFiles.mapFile(filename));
+            MetricHolder holder = MetricHolder.fromByteBuffer(v8SmooshedFiles.mapFile(filename), v8SmooshedFiles);
             final String metric = holder.getName();
 
             final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
@@ -753,11 +759,13 @@ public class IndexIO
                 metric, serdeficator.numBytes() + specBytes.length
             );
             channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel);
+            serdeficator.write(channel, v9Smoosher);
             channel.close();
           } else if (String.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
             CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
-                v8SmooshedFiles.mapFile(filename), BYTE_ORDER
+                v8SmooshedFiles.mapFile(filename),
+                BYTE_ORDER,
+                v8SmooshedFiles
             );
 
             final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
@@ -778,7 +786,7 @@ public class IndexIO
                 "__time", serdeficator.numBytes() + specBytes.length
             );
             channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel);
+            serdeficator.write(channel, v9Smoosher);
             channel.close();
           } else {
             skippedFiles.add(filename);
@@ -983,8 +991,16 @@ public class IndexIO
        * Index.drd should consist of the segment version, the columns and dimensions of the segment as generic
        * indexes, the interval start and end millis as longs (in 16 bytes), and a bitmap index type.
        */
-      final GenericIndexed<String> cols = GenericIndexed.read(indexBuffer, GenericIndexed.STRING_STRATEGY);
-      final GenericIndexed<String> dims = GenericIndexed.read(indexBuffer, GenericIndexed.STRING_STRATEGY);
+      final GenericIndexed<String> cols = GenericIndexed.read(
+          indexBuffer,
+          GenericIndexed.STRING_STRATEGY,
+          smooshedFiles
+      );
+      final GenericIndexed<String> dims = GenericIndexed.read(
+          indexBuffer,
+          GenericIndexed.STRING_STRATEGY,
+          smooshedFiles
+      );
       final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
 
@@ -1021,10 +1037,10 @@ public class IndexIO
       Map<String, Column> columns = Maps.newHashMap();
 
       for (String columnName : cols) {
-        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));
+        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName), smooshedFiles));
       }
 
-      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time")));
+      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
 
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
@@ -1035,12 +1051,13 @@ public class IndexIO
       return index;
     }
 
-    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException
+    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
+        throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
           serializerUtils.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer, columnConfig);
+      return serde.read(byteBuffer, columnConfig, smooshedFiles);
     }
   }
 

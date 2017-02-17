@@ -72,7 +72,7 @@ public class FloatCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy);
     rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
-    supplier = CompressedFloatsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedFloatsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
   }
 
   @Benchmark

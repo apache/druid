@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -263,16 +264,26 @@ public class CompressionFactory
   }
 
   public static Supplier<IndexedLongs> getLongSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
       LongEncodingFormat encodingFormat,
-      CompressedObjectStrategy.CompressionStrategy strategy
+      CompressedObjectStrategy.CompressionStrategy strategy,
+      SmooshedFileMapper fileMapper
   )
   {
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
     } else {
-      return new BlockLayoutIndexedLongSupplier(totalSize, sizePer, fromBuffer, order,
-                                                encodingFormat.getReader(fromBuffer, order), strategy
+      return new BlockLayoutIndexedLongSupplier(
+          totalSize,
+          sizePer,
+          fromBuffer,
+          order,
+          encodingFormat.getReader(fromBuffer, order),
+          strategy,
+          fileMapper
       );
     }
   }
@@ -303,14 +314,18 @@ public class CompressionFactory
   // Float currently does not support any encoding types, and stores values as 4 byte float
 
   public static Supplier<IndexedFloats> getFloatSupplier(
-      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy strategy
+      int totalSize,
+      int sizePer,
+      ByteBuffer fromBuffer,
+      ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy,
+      SmooshedFileMapper fileMapper
   )
   {
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutIndexedFloatSupplier(totalSize, fromBuffer, order);
     } else {
-      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy);
+      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy, fileMapper);
     }
   }
 
