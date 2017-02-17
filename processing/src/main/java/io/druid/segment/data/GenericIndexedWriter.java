@@ -155,7 +155,7 @@ public class GenericIndexedWriter<T> implements Closeable
     valuesOut.write(bytesToWrite);
 
     if (!requireMultipleFiles) {
-      writeIntValueToOutputStream(buf, (int) valuesOut.getCount(), headerOut);
+      writeIntValueToOutputStream(buf, Ints.checkedCast(valuesOut.getCount()), headerOut);
     } else {
       writeLongValueToOutputStream(buf, valuesOut.getCount(), headerOutLong);
     }
@@ -430,12 +430,10 @@ public class GenericIndexedWriter<T> implements Closeable
         // to current offset.
         if ((pos & (numberOfElementsPerValueFile - 1)) == 0) {
           relativeRefBytes = currentNumBytes;
-          numberOfElementsPerValueFile = 1 << bagSizePower;
         }
         currentNumBytes = Long.reverseBytes(headerFile.readLong());
         relativeNumBytes = currentNumBytes - relativeRefBytes;
-        helperBuffer.putInt(0, Ints.checkedCast(relativeNumBytes));
-        finalHeaderOut.write(helperBuffer.array());
+        writeIntValueToOutputStream(helperBuffer, Ints.checkedCast(relativeNumBytes), finalHeaderOut);
       }
 
       long numBytesToPutInFile = finalHeaderOut.getCount();
