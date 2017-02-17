@@ -78,7 +78,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RunWith(Parameterized.class)
 public class CachingQueryRunnerTest
 {
-  @Parameterized.Parameters(name="numBackgroundThreads={0}")
+  @Parameterized.Parameters(name = "numBackgroundThreads={0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(5, 1, 0));
@@ -99,6 +99,7 @@ public class CachingQueryRunnerTest
   };
 
   private ExecutorService backgroundExecutorService;
+
   public CachingQueryRunnerTest(int numBackgroundThreads)
   {
     if (numBackgroundThreads > 0) {
@@ -209,7 +210,8 @@ public class CachingQueryRunnerTest
     );
 
     final CountDownLatch cacheMustBePutOnce = new CountDownLatch(1);
-    Cache cache = new Cache() {
+    Cache cache = new Cache()
+    {
       private final Map<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
 
       @Override
@@ -308,7 +310,7 @@ public class CachingQueryRunnerTest
 
     // wait for background caching finish
     // wait at most 10 seconds to fail the test to avoid block overall tests
-    cacheMustBePutOnce.await(10, TimeUnit.SECONDS);
+    Assert.assertTrue("cache must be populated", cacheMustBePutOnce.await(10, TimeUnit.SECONDS));
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
