@@ -31,6 +31,14 @@ import java.util.Map;
 
 public interface GroupByStrategy
 {
+  /**
+   * Initializes resources required for a broker to process the given query.
+   *
+   * @param query a groupBy query to be processed
+   * @return broker resource
+   */
+  GroupByQueryBrokerResource prepareBrokerResource(GroupByQuery query);
+
   Sequence<Row> mergeResults(
       QueryRunner<Row> baseRunner,
       GroupByQuery query,

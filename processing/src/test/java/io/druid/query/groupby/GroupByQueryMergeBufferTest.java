@@ -40,7 +40,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResourceInitializer;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -72,7 +71,7 @@ public class GroupByQueryMergeBufferTest
     }
 
     @Override
-    public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout) throws InterruptedException
+    public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout)
     {
       final ReferenceCountingResourceHolder<ByteBuffer> holder = super.take(timeout);
       final int poolSize = getPoolSize();
@@ -83,9 +82,9 @@ public class GroupByQueryMergeBufferTest
     }
 
     @Override
-    public ReferenceCountingResourceHolder<List<ByteBuffer>> drain(final int maxElements)
+    public ReferenceCountingResourceHolder<List<ByteBuffer>> drain(final int maxElements, final long timeout)
     {
-      final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = super.drain(maxElements);
+      final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = super.drain(maxElements, timeout);
       final int poolSize = getPoolSize();
       if (minRemainBufferNum > poolSize) {
         minRemainBufferNum = poolSize;
@@ -168,7 +167,6 @@ public class GroupByQueryMergeBufferTest
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         strategySelector,
-        new GroupByQueryBrokerResourceInitializer(strategySelector, mergeBufferPool),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     return new GroupByQueryRunnerFactory(

@@ -56,7 +56,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResourceInitializer;
+import io.druid.query.groupby.strategy.GroupByStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.joda.time.DateTime;
 
@@ -84,18 +84,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
   private final GroupByStrategySelector strategySelector;
-  private final GroupByQueryBrokerResourceInitializer brokerResourceInitializer;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
-      GroupByQueryBrokerResourceInitializer brokerResourceInitializer,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
     this.strategySelector = strategySelector;
-    this.brokerResourceInitializer = brokerResourceInitializer;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
@@ -129,10 +126,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       Map<String, Object> context
   )
   {
-    final GroupByQueryBrokerResource resource = brokerResourceInitializer.prepare(query);
+    final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
+    final GroupByQueryBrokerResource resource = groupByStrategy.prepareBrokerResource(query);
 
     return Sequences.withBaggage(
         mergeGroupByResults(
+            groupByStrategy,
             query,
             resource,
             runner,
@@ -143,6 +142,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   private Sequence<Row> mergeGroupByResults(
+      GroupByStrategy groupByStrategy,
       final GroupByQuery query,
       GroupByQueryBrokerResource brokerResource,
       QueryRunner<Row> runner,
@@ -177,6 +177,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       final Sequence<Row> subqueryResult = mergeGroupByResults(
+          groupByStrategy,
           subquery.withOverriddenContext(
               ImmutableMap.<String, Object>of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
@@ -203,9 +204,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         finalizingResults = subqueryResult;
       }
 
-      return strategySelector.strategize(query).processSubqueryResult(subquery, query, brokerResource, finalizingResults);
+      return groupByStrategy.processSubqueryResult(subquery, query, brokerResource, finalizingResults);
     } else {
-      return strategySelector.strategize(query).mergeResults(runner, query, context);
+      return groupByStrategy.mergeResults(runner, query, context);
     }
   }
 

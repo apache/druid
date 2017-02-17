@@ -39,14 +39,29 @@ public class GroupByQueryBrokerResource implements Closeable
   private final ResourceHolder<List<ByteBuffer>> mergeBuffersHolder;
   private final List<ByteBuffer> mergeBuffers;
 
+  public GroupByQueryBrokerResource()
+  {
+    this.mergeBuffersHolder = null;
+    this.mergeBuffers = null;
+  }
+
   public GroupByQueryBrokerResource(ResourceHolder<List<ByteBuffer>> mergeBuffersHolder)
   {
     this.mergeBuffersHolder = mergeBuffersHolder;
     this.mergeBuffers = Lists.newArrayList(mergeBuffersHolder.get());
   }
 
+  /**
+   * Get a merge buffer from the pre-acquired broker resources.
+   *
+   * @return a resource holder containing a merge buffer
+   *
+   * @throws IllegalStateException if this resource is not initialized with available merge buffers, or
+   *                               there isn't any available merge buffers
+   */
   public ResourceHolder<ByteBuffer> getMergeBuffer()
   {
+    Preconditions.checkState(mergeBuffers != null);
     Preconditions.checkState(mergeBuffers.size() > 0);
     final ByteBuffer buffer = mergeBuffers.remove(mergeBuffers.size() - 1);
     return new ResourceHolder<ByteBuffer>()
@@ -68,9 +83,11 @@ public class GroupByQueryBrokerResource implements Closeable
   @Override
   public void close()
   {
-    if (mergeBuffers.size() != mergeBuffersHolder.get().size()) {
-      log.warn((mergeBuffersHolder.get().size() - mergeBuffers.size()) + " resources are not returned yet");
+    if (mergeBuffersHolder != null) {
+      if (mergeBuffers.size() != mergeBuffersHolder.get().size()) {
+        log.warn((mergeBuffersHolder.get().size() - mergeBuffers.size()) + " resources are not returned yet");
+      }
+      mergeBuffersHolder.close();
     }
-    mergeBuffersHolder.close();
   }
 }

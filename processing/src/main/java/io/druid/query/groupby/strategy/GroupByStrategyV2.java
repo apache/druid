@@ -29,7 +29,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
+import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
+import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularities;
@@ -40,25 +42,32 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
+import io.druid.query.DataSource;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryDataSource;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
 import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 public class GroupByStrategyV2 implements GroupByStrategy
 {
@@ -110,6 +119,55 @@ public class GroupByStrategyV2 implements GroupByStrategy
       return new DateTime(gran.iterable(timeStart, timeStart + 1).iterator().next());
     } else {
       return null;
+    }
+  }
+
+  @Override
+  public GroupByQueryBrokerResource prepareBrokerResource(GroupByQuery query)
+  {
+    final int groupByLayerNum = countGroupByLayers(query, 1);
+
+    // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
+    // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
+    // If the broker processes an outer groupBy which reads input from an inner groupBy,
+    // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
+    // until the outer groupBy processing completes.
+    // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
+    final int requiredMergeBufferNum = Math.min(2, groupByLayerNum - 1);
+
+    if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
+      throw new ResourceLimitExceededException(
+          "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
+          + mergeBufferPool.maxSize() + " is configured"
+      );
+    } else if (requiredMergeBufferNum == 0) {
+      return new GroupByQueryBrokerResource();
+    } else {
+      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
+      final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+
+      try {
+        mergeBufferHolders = mergeBufferPool.drain(requiredMergeBufferNum, timeout.longValue());
+        if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
+          mergeBufferHolders.close();
+          throw new TimeoutException("Cannot acquire enough merge buffers");
+        } else {
+          return new GroupByQueryBrokerResource(mergeBufferHolders);
+        }
+      }
+      catch (Exception e) {
+        throw new QueryInterruptedException(e);
+      }
+    }
+  }
+
+  private static int countGroupByLayers(Query query, int foundNum)
+  {
+    final DataSource dataSource = query.getDataSource();
+    if (dataSource instanceof QueryDataSource) {
+      return countGroupByLayers(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
+    } else {
+      return foundNum;
     }
   }
 

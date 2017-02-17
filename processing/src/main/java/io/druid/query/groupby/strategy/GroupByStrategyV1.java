@@ -79,6 +79,12 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
+  public GroupByQueryBrokerResource prepareBrokerResource(GroupByQuery query)
+  {
+    return new GroupByQueryBrokerResource();
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
