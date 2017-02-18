@@ -372,7 +372,7 @@ public class GenericIndexed<T> implements Indexed<T>
       }
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
       // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
-      // sets the limit to the maximum possible, the capacity. It is safe to resent the limit to capacity, because the
+      // sets the limit to the maximum possible, the capacity. It is safe to reset the limit to capacity, because the
       // value buffer(s) initial limit equals to capacity.
       copyValueBuffer.clear();
       copyValueBuffer.position(startOffset);
