@@ -188,6 +188,7 @@ public class GenericIndexed<T> implements Indexed<T>
     int valuesOffset = theBuffer.position() + size * Ints.BYTES;
 
     buffer.position(valuesOffset);
+    // Ensure the value buffer's limit equals to capacity.
     firstValueBuffer = buffer.slice();
     valueBuffers = new ByteBuffer[]{firstValueBuffer};
     buffer.position(indexOffset);
@@ -369,6 +370,10 @@ public class GenericIndexed<T> implements Indexed<T>
       if (size == 0) {
         return null;
       }
+      // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
+      // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
+      // sets the limit to the maximum possible, the capacity. It is safe to resent the limit to capacity, because the
+      // value buffer(s) initial limit equals to capacity.
       copyValueBuffer.clear();
       copyValueBuffer.position(startOffset);
       return strategy.fromByteBuffer(copyValueBuffer, size);
@@ -558,6 +563,7 @@ public class GenericIndexed<T> implements Indexed<T>
       int numberOfFilesRequired = getNumberOfFilesRequired(elementsPerValueFile, numElements);
       ByteBuffer[] valueBuffersToUse = new ByteBuffer[numberOfFilesRequired];
       for (int i = 0; i < numberOfFilesRequired; i++) {
+        // SmooshedFileMapper.mapFile() contract guarantees that the valueBuffer's limit equals to capacity.
         ByteBuffer valueBuffer = fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i));
         valueBuffersToUse[i] = valueBuffer.asReadOnlyBuffer();
       }
