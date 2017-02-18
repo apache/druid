@@ -21,7 +21,7 @@ package io.druid.query.groupby.resource;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
+import com.metamx.common.logger.Logger;
 import io.druid.collections.ResourceHolder;
 
 import java.io.Closeable;
@@ -34,7 +34,7 @@ import java.util.List;
  */
 public class GroupByQueryBrokerResource implements Closeable
 {
-  private static final EmittingLogger log = new EmittingLogger(GroupByQueryBrokerResource.class);
+  private static final Logger log = new Logger(GroupByQueryBrokerResource.class);
 
   private final ResourceHolder<List<ByteBuffer>> mergeBuffersHolder;
   private final List<ByteBuffer> mergeBuffers;

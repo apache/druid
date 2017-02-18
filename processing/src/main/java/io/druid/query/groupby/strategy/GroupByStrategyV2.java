@@ -125,20 +125,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public GroupByQueryBrokerResource prepareBrokerResource(GroupByQuery query)
   {
-    final int groupByLayerNum = countGroupByLayers(query, 1);
-
     // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
     // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
     // If the broker processes an outer groupBy which reads input from an inner groupBy,
     // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
     // until the outer groupBy processing completes.
     // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
-    final int requiredMergeBufferNum = Math.min(2, groupByLayerNum - 1);
+    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 2, 1);
 
     if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
       throw new ResourceLimitExceededException(
           "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
-          + mergeBufferPool.maxSize() + " is configured"
+          + mergeBufferPool.maxSize() + " merge buffers are configured"
       );
     } else if (requiredMergeBufferNum == 0) {
       return new GroupByQueryBrokerResource();
@@ -161,13 +159,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  private static int countGroupByLayers(Query query, int foundNum)
+  private static int countRequiredMergeBufferNum(Query query, int maxBufferNum, int foundNum)
   {
     final DataSource dataSource = query.getDataSource();
-    if (dataSource instanceof QueryDataSource) {
-      return countGroupByLayers(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
+    if (foundNum == maxBufferNum + 1 || !(dataSource instanceof QueryDataSource)) {
+      return foundNum - 1;
     } else {
-      return foundNum;
+      return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), maxBufferNum, foundNum + 1);
     }
   }
 
