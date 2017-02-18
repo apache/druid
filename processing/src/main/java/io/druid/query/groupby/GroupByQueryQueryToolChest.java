@@ -354,7 +354,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public boolean isCacheable(GroupByQuery query, boolean willMergeRunners)
       {
-        return willMergeRunners || !strategySelector.useStrategyV2(query);
+        return strategySelector.strategize(query).isCacheable(willMergeRunners);
       }
 
       @Override

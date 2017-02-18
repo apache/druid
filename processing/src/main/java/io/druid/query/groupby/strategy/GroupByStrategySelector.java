@@ -25,8 +25,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 
-import javax.validation.constraints.NotNull;
-
 public class GroupByStrategySelector
 {
   public static final String STRATEGY_V2 = "v2";
@@ -50,7 +48,7 @@ public class GroupByStrategySelector
 
   public GroupByStrategy strategize(GroupByQuery query)
   {
-    final String strategyString = getStrategy(query);
+    final String strategyString = config.withOverrides(query).getDefaultStrategy();
 
     switch (strategyString) {
       case STRATEGY_V2:
@@ -62,16 +60,5 @@ public class GroupByStrategySelector
       default:
         throw new ISE("No such strategy[%s]", strategyString);
     }
-  }
-
-  @NotNull
-  private String getStrategy(GroupByQuery query)
-  {
-    return config.withOverrides(query).getDefaultStrategy();
-  }
-
-  public boolean useStrategyV2(GroupByQuery query)
-  {
-    return getStrategy(query).equals(STRATEGY_V2);
   }
 }

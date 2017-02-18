@@ -113,7 +113,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY)) {
-      log.warn("Caching for groupBys is enabled, but they won't be cached if they are executed with the strategy v2!");
+      log.warn(
+          "Even though groupBy caching is enabled, v2 groupBys will not be cached. "
+          + "Consider disabling cache on your broker and enabling it on your data nodes to enable v2 groupBy caching."
+      );
     }
 
     serverView.registerSegmentCallback(
