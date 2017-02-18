@@ -169,6 +169,58 @@ public class GenericIndexed<T> implements Indexed<T>
   private ByteBuffer theBuffer;
 
   /**
+   * Constructor for version one.
+   */
+  GenericIndexed(
+      ByteBuffer buffer,
+      ObjectStrategy<T> strategy,
+      boolean allowReverseLookup
+  )
+  {
+    this.versionOne = true;
+
+    this.theBuffer = buffer;
+    this.strategy = strategy;
+    this.allowReverseLookup = allowReverseLookup;
+    size = theBuffer.getInt();
+
+    int indexOffset = theBuffer.position();
+    int valuesOffset = theBuffer.position() + size * Ints.BYTES;
+
+    buffer.position(valuesOffset);
+    firstValueBuffer = buffer.slice();
+    valueBuffers = new ByteBuffer[]{firstValueBuffer};
+    buffer.position(indexOffset);
+    headerBuffer = buffer.slice();
+  }
+
+
+  /**
+   * Constructor for version two.
+   */
+  GenericIndexed(
+      ByteBuffer[] valueBuffs,
+      ByteBuffer headerBuff,
+      ObjectStrategy<T> strategy,
+      boolean allowReverseLookup,
+      int logBaseTwoOfElementsPerValueFile,
+      int numWritten
+  )
+  {
+    this.versionOne = false;
+
+    this.strategy = strategy;
+    this.allowReverseLookup = allowReverseLookup;
+    this.valueBuffers = valueBuffs;
+    this.firstValueBuffer = valueBuffers[0];
+    this.headerBuffer = headerBuff;
+    this.size = numWritten;
+    this.logBaseTwoOfElementsPerValueFile = logBaseTwoOfElementsPerValueFile;
+    this.relativeIndexMask = (1 << logBaseTwoOfElementsPerValueFile) - 1;
+    headerBuffer.order(ByteOrder.nativeOrder());
+  }
+
+  /**
    * Checks  if {@code index} a valid `element index` in GenericIndexed.
    * Similar to Preconditions.checkElementIndex() except this method throws {@link IAE} with custom error message.
    * <p>
@@ -418,29 +470,6 @@ public class GenericIndexed<T> implements Indexed<T>
     return new GenericIndexed<>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
   }
 
-  GenericIndexed(
-      ByteBuffer buffer,
-      ObjectStrategy<T> strategy,
-      boolean allowReverseLookup
-  )
-  {
-    this.versionOne = true;
-
-    this.theBuffer = buffer;
-    this.strategy = strategy;
-    this.allowReverseLookup = allowReverseLookup;
-    size = theBuffer.getInt();
-
-    int indexOffset = theBuffer.position();
-    int valuesOffset = theBuffer.position() + size * Ints.BYTES;
-
-    buffer.position(valuesOffset);
-    firstValueBuffer = buffer.slice();
-    valueBuffers = new ByteBuffer[]{firstValueBuffer};
-    buffer.position(indexOffset);
-    headerBuffer = buffer.slice();
-  }
-
   private long getSerializedSizeVersionOne()
   {
     return theBuffer.remaining()
@@ -545,28 +574,6 @@ public class GenericIndexed<T> implements Indexed<T>
     catch (IOException e) {
       throw new RuntimeException("File mapping failed.", e);
     }
-  }
-
-  GenericIndexed(
-      ByteBuffer[] valueBuffs,
-      ByteBuffer headerBuff,
-      ObjectStrategy<T> strategy,
-      boolean allowReverseLookup,
-      int logBaseTwoOfElementsPerValueFile,
-      int numWritten
-  )
-  {
-    this.versionOne = false;
-
-    this.strategy = strategy;
-    this.allowReverseLookup = allowReverseLookup;
-    this.valueBuffers = valueBuffs;
-    this.firstValueBuffer = valueBuffers[0];
-    this.headerBuffer = headerBuff;
-    this.size = numWritten;
-    this.logBaseTwoOfElementsPerValueFile = logBaseTwoOfElementsPerValueFile;
-    this.relativeIndexMask = (1 << logBaseTwoOfElementsPerValueFile) - 1;
-    headerBuffer.order(ByteOrder.nativeOrder());
   }
 
   private T getVersionTwo(int index)
