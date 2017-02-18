@@ -27,6 +27,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Result;
+import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
 
@@ -136,6 +137,17 @@ public class TestHelper
         // HACK! Special casing for groupBy
         assertRow(failMsg, (Row) expectedNext, (Row) next);
         assertRow(failMsg, (Row) expectedNext, (Row) next2);
+      } else if (expectedNext instanceof Result
+                 && (((Result) expectedNext).getValue()) instanceof TimeseriesResultValue) {
+        // Special case for GroupByTimeseriesQueryRunnerTest to allow a floating point delta to be used
+        // in result comparison
+        assertTimeseriesResultValue(failMsg, (Result) expectedNext, (Result) next);
+        assertTimeseriesResultValue(
+            String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            (Result) expectedNext,
+            (Result) next2
+        );
+
       } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
@@ -220,6 +232,40 @@ public class TestHelper
   private static void assertResult(String msg, Result<?> expected, Result actual)
   {
     Assert.assertEquals(msg, expected, actual);
+  }
+
+  private static void assertTimeseriesResultValue(String msg, Result expected, Result actual)
+  {
+    // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
+    // always generate exactly the same results (different merge ordering / float vs double)
+    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
+
+    TimeseriesResultValue expectedVal = (TimeseriesResultValue) expected.getValue();
+    TimeseriesResultValue actualVal = (TimeseriesResultValue) actual.getValue();
+
+    final Map<String, Object> expectedMap = (Map<String, Object>) expectedVal.getBaseObject();
+    final Map<String, Object> actualMap = (Map<String, Object>) actualVal.getBaseObject();
+
+    Assert.assertEquals(String.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
+    for (final String key : expectedMap.keySet()) {
+      final Object expectedValue = expectedMap.get(key);
+      final Object actualValue = actualMap.get(key);
+
+      if (expectedValue instanceof Float || expectedValue instanceof Double) {
+        Assert.assertEquals(
+            String.format("%s: key[%s]", msg, key),
+            ((Number) expectedValue).doubleValue(),
+            ((Number) actualValue).doubleValue(),
+            ((Number) expectedValue).doubleValue() * 1e-6
+        );
+      } else {
+        Assert.assertEquals(
+            String.format("%s: key[%s]", msg, key),
+            expectedValue,
+            actualValue
+        );
+      }
+    }
   }
 
   private static void assertRow(String msg, Row expected, Row actual)

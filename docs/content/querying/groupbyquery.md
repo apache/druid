@@ -119,7 +119,7 @@ See [Multi-value dimensions](multi-value-dimensions.html) for more details.
 
 GroupBy queries can be executed using two different strategies. The default strategy for a cluster is determined by the
 "druid.query.groupBy.defaultStrategy" runtime property on the broker. This can be overridden using "groupByStrategy" in
-the query context. If neither the context field nor the property is set, the "v1" strategy will be used.
+the query context. If neither the context field nor the property is set, the "v2" strategy will be used.
 
 - "v1", the default, generates per-segment results on data nodes (historical, realtime, middleManager) using a map which
 is partially on-heap (dimension keys and the map itself) and partially off-heap (the aggregated values). Data nodes then
@@ -168,7 +168,7 @@ When using the "v1" strategy, the following runtime properties apply:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v1|
+|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows for the per-segment grouping engine. This is a tuning parameter that does not impose a hard limit; rather, it potentially shifts merging work from the per-segment engine to the overall merging index. Queries that exceed this limit will not fail.|50000|
 |`druid.query.groupBy.maxResults`|Maximum number of results. Queries that exceed this limit will fail.|500000|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
@@ -177,16 +177,11 @@ When using the "v2" strategy, the following runtime properties apply:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v1|
+|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.bufferGrouperInitialBuckets`|Initial number of buckets in the off-heap hash table used for grouping results. Set to 0 to use a reasonable default.|0|
 |`druid.query.groupBy.bufferGrouperMaxLoadFactor`|Maximum load factor of the off-heap hash table used for grouping results. When the load factor exceeds this size, the table will be grown or spilled to disk. Set to 0 to use a reasonable default.|0|
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
-
-Additionally, the "v2" strategy uses merging buffers for merging. It is currently the only query implementation that
-does so. By default, Druid is configured without any merging buffer pool, so to use the "v2" strategy you must also
-set `druid.processing.numMergeBuffers` to some non-zero number. Furthermore, if you want to execute deeply nested groupBys,
-you must set `druid.processing.numMergeBuffers` to at least 2.
 
 This may require allocating more direct memory. The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
