@@ -38,6 +38,32 @@ public class SerializerUtils
 {
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
+  /**
+   * Writes the given long value into the given OutputStream, using the helperBuffer. Faster alternative to
+   * out.write(Longs.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into {@link
+   * java.io.DataOutputStream}.
+   *
+   * @param helperBuffer must be a big-endian, heap ByteBuffer of capacity 8.
+   */
+  public static void writeLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer) throws IOException
+  {
+    helperBuffer.putLong(0, value);
+    out.write(helperBuffer.array());
+  }
+
+  /**
+   * Writes the given int value into the given OutputStream, using the helperBuffer. Faster alternative to
+   * out.write(Ints.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into {@link
+   * java.io.DataOutputStream}.
+   *
+   * @param helperBuffer must be a big-endian, heap ByteBuffer of capacity 4.
+   */
+  public static void writeIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer) throws IOException
+  {
+    helperBuffer.putInt(0, value);
+    out.write(helperBuffer.array());
+  }
+
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
     byte[] nameBytes = name.getBytes(UTF8);

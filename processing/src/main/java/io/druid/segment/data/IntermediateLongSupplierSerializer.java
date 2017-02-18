@@ -25,11 +25,13 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
@@ -42,6 +44,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
   private final ByteOrder order;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private CountingOutputStream tempOut = null;
+  private final ByteBuffer helperBuffer = ByteBuffer.allocate(Longs.BYTES);
 
   private int numInserted = 0;
 
@@ -77,7 +80,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
   public void add(long value) throws IOException
   {
-    tempOut.write(Longs.toByteArray(value));
+    SerializerUtils.writeLongToOutputStream(tempOut, value, helperBuffer);
     ++numInserted;
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
       uniqueValues.put(value, uniqueValues.size());
