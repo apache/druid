@@ -25,7 +25,11 @@ import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
 import io.druid.data.input.impl.DelimitedParseSpec;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
@@ -35,7 +39,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -50,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -75,12 +79,33 @@ public class TestIndex
   public static final String[] DIMENSIONS = new String[]{
       "market",
       "quality",
+      "qualityLong",
+      "qualityFloat",
       "qualityNumericString",
       "placement",
       "placementish",
       "partial_null_column",
-      "null_column",
-      };
+      "null_column"
+  };
+
+  public static final List<DimensionSchema> DIMENSION_SCHEMAS = Arrays.asList(
+      new StringDimensionSchema("market"),
+      new StringDimensionSchema("quality"),
+      new LongDimensionSchema("qualityLong"),
+      new FloatDimensionSchema("qualityFloat"),
+      new StringDimensionSchema("qualityNumericString"),
+      new StringDimensionSchema("placement"),
+      new StringDimensionSchema("placementish"),
+      new StringDimensionSchema("partial_null_column"),
+      new StringDimensionSchema("null_column")
+  );
+
+  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+      DIMENSION_SCHEMAS,
+      null,
+      null
+  );
+
   public static final String[] METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
@@ -93,9 +118,7 @@ public class TestIndex
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
       new DoubleMinAggregatorFactory(METRICS[1], METRICS[0]),
       new DoubleMaxAggregatorFactory(METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
-      new HyperUniquesAggregatorFactory("quality_uniques", "quality"),
-      new LongSumAggregatorFactory("qualityLong", "qualityLong"),
-      new DoubleSumAggregatorFactory("qualityFloat", "qualityFloat")
+      new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
@@ -237,6 +260,7 @@ public class TestIndex
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
         .withQueryGranularity(QueryGranularities.NONE)
+        .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)
@@ -264,7 +288,7 @@ public class TestIndex
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
             new TimestampSpec("ts", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)), null, null),
+            new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
             "\t",
             "\u0001",
             Arrays.asList(COLUMNS)

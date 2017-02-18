@@ -161,8 +161,6 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    * @param rhs array of row values
    * @param lhsEncodings encoding lookup from lhs's segment, null if not applicable for this dimension's type
    * @param rhsEncodings encoding lookup from rhs's segment, null if not applicable for this dimension's type
-   *
-   * @return integer indicating comparison result of arrays
    */
   void validateSortedEncodedArrays(
       EncodedTypeArray lhs,
