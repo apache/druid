@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -45,7 +46,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -105,7 +105,7 @@ public class GroupByQueryRunnerFactoryTest
                           )
                       );
                     } catch (Exception e) {
-                      Assert.fail(e.getMessage());
+                      Throwables.propagate(e);
                       return null;
                     }
                   }
