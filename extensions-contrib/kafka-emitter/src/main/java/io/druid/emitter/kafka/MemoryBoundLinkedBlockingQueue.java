@@ -74,13 +74,11 @@ public class MemoryBoundLinkedBlockingQueue<T> {
       this.size = size;
     }
 
-    public T getData()
-    {
+    public T getData() {
       return data;
     }
 
-    public long getSize()
-    {
+    public long getSize() {
       return size;
     }
   }

@@ -73,23 +73,32 @@ public class KafkaEmitterConfig {
   }
 
   @JsonProperty
-  public String getBootstrapServers() { return bootstrapServers; }
+  public String getBootstrapServers() {
+    return bootstrapServers;
+  }
 
   @JsonProperty
-  public String getMetricTopic() { return metricTopic; }
+  public String getMetricTopic() {
+    return metricTopic;
+  }
 
   @JsonProperty
-  public String getAlertTopic() { return alertTopic; }
+  public String getAlertTopic() {
+    return alertTopic;
+  }
 
   @JsonProperty
-  public String getClusterName() { return clusterName; }
+  public String getClusterName() {
+    return clusterName;
+  }
 
   @JsonProperty
-  public Map<String, String> getKafkaProducerConfig() { return kafkaProducerConfig; }
+  public Map<String, String> getKafkaProducerConfig() {
+    return kafkaProducerConfig;
+  }
 
   @Override
-  public String toString()
-  {
+  public String toString() {
     return "KafkaEmitterConfig{" +
         "bootstrap.servers='" + bootstrapServers +
         ", metric.topic=" + metricTopic +
