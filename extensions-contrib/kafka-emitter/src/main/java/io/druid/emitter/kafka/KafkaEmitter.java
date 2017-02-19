@@ -24,9 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
-
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
@@ -40,11 +40,10 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class KafkaEmitter implements Emitter {
   private static Logger log = new Logger(KafkaEmitter.class);
@@ -52,19 +51,28 @@ public class KafkaEmitter implements Emitter {
   private final static String DEFAULT_KEY_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer";
   private final static String DEFAULT_VALUE_SERIALIZER = "org.apache.kafka.common.serialization.StringSerializer";
   private final static int DEFAULT_RETRIES = 3;
+  private long queueMemoryBound = 33554432L; // same with default value of kafka producer's buffer.memory
+  private final AtomicLong metricLost;
+  private final AtomicLong alertLost;
+  private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
   private final ObjectMapper jsonMapper;
-  private final Queue<ProducerRecord<String, String>> metricQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final ScheduledExecutorService scheduler;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper) {
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.producer = getKafkaProducer(config);
-    this.metricQueue = new ConcurrentLinkedQueue<>();
-    this.scheduler = Executors.newScheduledThreadPool(1);
+    this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.scheduler = Executors.newScheduledThreadPool(2);
+    this.metricLost = new AtomicLong(0L);
+    this.alertLost = new AtomicLong(0L);
+    this.invalidLost = new AtomicLong(0L);
   }
 
   private Producer<String, String> getKafkaProducer(KafkaEmitterConfig config) {
@@ -74,6 +82,8 @@ public class KafkaEmitter implements Emitter {
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIALIZER);
     props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
     props.putAll(config.getKafkaProducerConfig());
+    queueMemoryBound = (props.containsKey(ProducerConfig.BUFFER_MEMORY_CONFIG) ?
+        Long.parseLong(props.getProperty(ProducerConfig.BUFFER_MEMORY_CONFIG)) : queueMemoryBound);
 
     return new KafkaProducer<>(props);
   }
@@ -83,25 +93,52 @@ public class KafkaEmitter implements Emitter {
   public void start() {
     scheduler.scheduleWithFixedDelay(new Runnable() {
       public void run() {
-        sendToKafka();
+        sendMetricToKafka();
+      }
+    }, 10, 10, TimeUnit.SECONDS);
+    scheduler.scheduleWithFixedDelay(new Runnable() {
+      public void run() {
+        sendAlertToKafka();
       }
     }, 10, 10, TimeUnit.SECONDS);
     log.info("Starting Kafka Emitter.");
   }
 
-  private void sendToKafka() {
-    ProducerRecord<String, String> recordToSend;
-    while((recordToSend = metricQueue.poll()) != null) {
-      final ProducerRecord<String, String> finalRecordToSend = recordToSend;
-      producer.send(recordToSend, new Callback() {
-        @Override
-        public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-          if(e != null) {
-            log.warn(e, "Exception occured!");
-            metricQueue.add(finalRecordToSend);
+  private void sendMetricToKafka() {
+    sendToKafka(config.getMetricTopic(), metricQueue);
+  }
+
+  private void sendAlertToKafka() {
+    sendToKafka(config.getAlertTopic(), alertQueue);
+  }
+
+  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue) {
+    ObjectContainer<String> objectToSend;
+    try {
+      while((objectToSend = recordQueue.take()) != null) {
+        final ObjectContainer<String> finalObjectToSend = objectToSend;
+        producer.send(new ProducerRecord<String, String>(topic, finalObjectToSend.getData()), new Callback() {
+          @Override
+          public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+            if(e != null) {
+              log.warn(e, "Exception occured!");
+              if(topic.equals(config.getMetricTopic())) {
+                if(!metricQueue.offer(finalObjectToSend)) {
+                  log.warn("metricQueue is now memory bounded! metricLost: " + metricLost.incrementAndGet());
+                }
+              } else if(topic.equals(config.getAlertTopic())) {
+                if(!alertQueue.offer(finalObjectToSend)) {
+                  log.warn("alertQueue is now memory bounded! alertLost: " + alertLost.incrementAndGet());
+                }
+              } else {
+                log.warn("Invalid topic name! invalidLost: " + invalidLost.incrementAndGet());
+              }
+            }
           }
-        }
-      });
+        });
+      }
+    } catch (InterruptedException e) {
+      log.warn(e, "Failed to take record from queue!");
     }
   }
 
@@ -116,13 +153,20 @@ public class KafkaEmitter implements Emitter {
 
       try {
         String resultJson = jsonMapper.writeValueAsString(result);
+        ObjectContainer<String> objectContainer = new ObjectContainer<>(resultJson, resultJson.getBytes().length);
         if(event instanceof ServiceMetricEvent) {
-          metricQueue.add(new ProducerRecord<String, String>(config.getMetricTopic(), resultJson));
+          if(!metricQueue.offer(objectContainer)) {
+            log.warn("metricQueue is now memory bounded! metricLost: " + metricLost.incrementAndGet());
+          }
         } else if(event instanceof AlertEvent) {
-          metricQueue.add(new ProducerRecord<String, String>(config.getAlertTopic(), resultJson));
+          if(!alertQueue.offer(objectContainer)) {
+            log.warn("alertQueue is now memory bounded! alertLost: " + alertLost.incrementAndGet());
+          }
+        } else {
+          log.warn("Unsupported event type! invalidLost: " + invalidLost.incrementAndGet());
         }
       } catch (JsonProcessingException e) {
-        log.warn(e, "Failed to generate json");
+        log.warn(e, "Failed to generate json! invalidLost: " + invalidLost.incrementAndGet());
       }
     }
   }

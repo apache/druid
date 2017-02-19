@@ -95,7 +95,7 @@ public class KafkaEmitterConfig {
         ", metric.topic=" + metricTopic +
         ", alert.topic=" + alertTopic +
         ", clusterName=" + clusterName +
-        ", producer.config=" + kafkaProducerConfig.toString() +
-        '}';
+        ", producer.config={" + kafkaProducerConfig.toString() +
+        "}}";
   }
 }
