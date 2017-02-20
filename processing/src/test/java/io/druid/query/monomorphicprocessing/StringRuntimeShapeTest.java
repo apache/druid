@@ -22,6 +22,7 @@ package io.druid.query.monomorphicprocessing;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
@@ -45,7 +46,7 @@ public class StringRuntimeShapeTest
       inspector.visit("flag2", false);
       inspector.visit("key", "value");
       inspector.visit("empty", new Empty());
-      inspector.visit("object", new HashSet<>());
+      inspector.visit("object", ByteBuffer.allocate(1));
       inspector.visit("array", new Set[] {new HashSet(), new TreeSet()});
       inspector.visit("emptyArray", new Set[] {});
     }
@@ -72,7 +73,7 @@ public class StringRuntimeShapeTest
         + "    flag2: false,\n"
         + "    key: value,\n"
         + "    empty: io.druid.query.monomorphicprocessing.StringRuntimeShapeTest$Empty,\n"
-        + "    object: java.util.HashSet,\n"
+        + "    object: java.nio.HeapByteBuffer {order: BIG_ENDIAN},\n"
         + "    array: [\n"
         + "      java.util.HashSet,\n"
         + "      java.util.TreeSet\n"
@@ -85,7 +86,7 @@ public class StringRuntimeShapeTest
         + "      flag2: false,\n"
         + "      key: value,\n"
         + "      empty: io.druid.query.monomorphicprocessing.StringRuntimeShapeTest$Empty,\n"
-        + "      object: java.util.HashSet,\n"
+        + "      object: java.nio.HeapByteBuffer {order: BIG_ENDIAN},\n"
         + "      array: [\n"
         + "        java.util.HashSet,\n"
         + "        java.util.TreeSet\n"
@@ -97,7 +98,7 @@ public class StringRuntimeShapeTest
         + "      flag2: false,\n"
         + "      key: value,\n"
         + "      empty: io.druid.query.monomorphicprocessing.StringRuntimeShapeTest$Empty,\n"
-        + "      object: java.util.HashSet,\n"
+        + "      object: java.nio.HeapByteBuffer {order: BIG_ENDIAN},\n"
         + "      array: [\n"
         + "        java.util.HashSet,\n"
         + "        java.util.TreeSet\n"

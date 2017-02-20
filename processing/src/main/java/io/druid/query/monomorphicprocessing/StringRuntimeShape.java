@@ -20,6 +20,7 @@
 package io.druid.query.monomorphicprocessing;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  * Class to be used to obtain String representation of runtime shape of one or several {@link HotLoopCallee}s.
@@ -91,20 +92,35 @@ public final class StringRuntimeShape
       }
       sb.append(value.getClass().getName());
       if (value instanceof HotLoopCallee) {
-        sb.append(" {\n");
-        int lengthBeforeInspection = sb.length();
-        incrementIndent();
-        ((HotLoopCallee) value).inspectRuntimeShape(this);
-        decrementIndent();
-        if (sb.length() == lengthBeforeInspection) {
-          // remove " {\n"
-          sb.setLength(lengthBeforeInspection - 3);
-        } else {
-          removeLastComma();
-          indent();
-          sb.append('}');
-        }
+        appendHotLoopCalleeShape((HotLoopCallee) value);
+      } else if (value instanceof ByteBuffer) {
+        // ByteBuffers are treated specially because the byte order is an important part of the runtime shape.
+        appendByteBufferShape((ByteBuffer) value);
       }
+    }
+
+    private void appendHotLoopCalleeShape(HotLoopCallee value)
+    {
+      sb.append(" {\n");
+      int lengthBeforeInspection = sb.length();
+      incrementIndent();
+      value.inspectRuntimeShape(this);
+      decrementIndent();
+      if (sb.length() == lengthBeforeInspection) {
+        // remove " {\n"
+        sb.setLength(lengthBeforeInspection - 3);
+      } else {
+        removeLastComma();
+        indent();
+        sb.append('}');
+      }
+    }
+
+    private void appendByteBufferShape(ByteBuffer byteBuffer)
+    {
+      sb.append(" {order: ");
+      sb.append(byteBuffer.order().toString());
+      sb.append('}');
     }
 
     private void removeLastComma()
