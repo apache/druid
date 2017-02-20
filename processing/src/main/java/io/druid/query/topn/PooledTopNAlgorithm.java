@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
@@ -28,6 +29,7 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.BaseQuery;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import io.druid.query.monomorphicprocessing.SpecializationService;
 import io.druid.query.monomorphicprocessing.SpecializationState;
 import io.druid.query.monomorphicprocessing.StringRuntimeShape;
@@ -36,6 +38,11 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.Offset;
+import io.druid.segment.historical.HistoricalCursor;
+import io.druid.segment.historical.HistoricalDimensionSelector;
+import io.druid.segment.historical.HistoricalFloatColumnSelector;
+import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -52,11 +59,20 @@ public class PooledTopNAlgorithm
   @VisibleForTesting
   static boolean specializeGeneric2AggPooledTopN =
       !Boolean.getBoolean("dontSpecializeGeneric2AggPooledTopN");
+  private static final boolean specializeHistorical1SimpleDoubleAggPooledTopN =
+      !Boolean.getBoolean("dontSpecializeHistorical1SimpleDoubleAggPooledTopN");
+  private static final boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN =
+      !Boolean.getBoolean("dontSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN");
 
   private static final Generic1AggPooledTopNScanner defaultGeneric1AggScanner =
       new Generic1AggPooledTopNScannerPrototype();
   private static final Generic2AggPooledTopNScanner defaultGeneric2AggScanner =
       new Generic2AggPooledTopNScannerPrototype();
+  private static final Historical1AggPooledTopNScanner defaultHistorical1SimpleDoubleAggScanner =
+      new Historical1SimpleDoubleAggPooledTopNScannerPrototype();
+  private static final
+  Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
+      new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
   private final Capabilities capabilities;
   private final TopNQuery query;
@@ -194,14 +210,79 @@ public class PooledTopNAlgorithm
   )
   {
     final Cursor cursor = params.getCursor();
-    if (specializeGeneric1AggPooledTopN && theAggregators.length == 1) {
-      scanAndAggregateGeneric1Agg(params, positions, theAggregators[0], cursor);
-    } else if (specializeGeneric2AggPooledTopN && theAggregators.length == 2) {
-      scanAndAggregateGeneric2Agg(params, positions, theAggregators, cursor);
-    } else {
-      scanAndAggregateDefault(params, positions, theAggregators);
+    if (theAggregators.length == 1) {
+      BufferAggregator aggregator = theAggregators[0];
+      if (cursor instanceof HistoricalCursor && aggregator instanceof SimpleDoubleBufferAggregator) {
+        if (specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN &&
+            params.getDimSelector() instanceof SingleValueHistoricalDimensionSelector &&
+            ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+          scanAndAggregateHistorical1SimpleDoubleAgg(
+              params,
+              positions,
+              (SimpleDoubleBufferAggregator) aggregator,
+              cursor,
+              defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner
+          );
+          BaseQuery.checkInterrupted();
+          return;
+        }
+        if (specializeHistorical1SimpleDoubleAggPooledTopN &&
+            params.getDimSelector() instanceof HistoricalDimensionSelector &&
+            ((SimpleDoubleBufferAggregator) aggregator).getSelector() instanceof HistoricalFloatColumnSelector) {
+          scanAndAggregateHistorical1SimpleDoubleAgg(
+              params,
+              positions,
+              (SimpleDoubleBufferAggregator) aggregator,
+              cursor,
+              defaultHistorical1SimpleDoubleAggScanner
+          );
+          BaseQuery.checkInterrupted();
+          return;
+        }
+      }
+      if (specializeGeneric1AggPooledTopN) {
+        scanAndAggregateGeneric1Agg(params, positions, aggregator, cursor);
+        BaseQuery.checkInterrupted();
+        return;
+      }
     }
+    if (specializeGeneric2AggPooledTopN && theAggregators.length == 2) {
+      scanAndAggregateGeneric2Agg(params, positions, theAggregators, cursor);
+      BaseQuery.checkInterrupted();
+      return;
+    }
+    scanAndAggregateDefault(params, positions, theAggregators);
     BaseQuery.checkInterrupted();
+  }
+
+  private static void scanAndAggregateHistorical1SimpleDoubleAgg(
+      PooledTopNParams params,
+      int[] positions,
+      SimpleDoubleBufferAggregator aggregator,
+      Cursor cursor,
+      Historical1AggPooledTopNScanner prototypeScanner
+  )
+  {
+    String runtimeShape = StringRuntimeShape.of(aggregator);
+    HistoricalCursor historicalCursor = (HistoricalCursor) cursor;
+    SpecializationState<Historical1AggPooledTopNScanner> specializationState =
+        SpecializationService.getSpecializationState(
+            prototypeScanner.getClass(),
+            runtimeShape,
+            ImmutableMap.<Class<?>, Class<?>>of(Offset.class, historicalCursor.getOffset().getClass())
+        );
+    Historical1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(prototypeScanner);
+
+    long scannedRows = scanner.scanAndAggregate(
+        (HistoricalDimensionSelector) params.getDimSelector(),
+        aggregator.getSelector(),
+        aggregator,
+        params.getAggregatorSizes()[0],
+        historicalCursor,
+        positions,
+        params.getResultsBuf()
+    );
+    specializationState.accountLoopIterations(scannedRows);
   }
 
   private static void scanAndAggregateGeneric1Agg(

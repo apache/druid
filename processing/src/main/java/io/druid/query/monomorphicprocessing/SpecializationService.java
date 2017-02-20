@@ -124,7 +124,7 @@ public final class SpecializationService
       String runtimeShape
   )
   {
-    return getSpecializationState(prototypeClass, runtimeShape, ImmutableMap.<Class<?>, Class<?>>of());
+    return getSpecializationState(prototypeClass, runtimeShape, ImmutableMap.of());
   }
 
   /**

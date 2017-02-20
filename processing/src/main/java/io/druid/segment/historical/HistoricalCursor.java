@@ -17,12 +17,10 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.segment.historical;
 
-import java.io.Closeable;
+import io.druid.segment.Cursor;
 
-public interface IndexedMultivalue<T extends IndexedInts> extends Indexed<T>, Closeable
+public interface HistoricalCursor extends Cursor, OffsetHolder
 {
-  @Override
-  T get(int index);
 }

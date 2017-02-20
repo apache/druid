@@ -27,6 +27,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.io.ByteArrayOutputStream;
@@ -525,6 +526,9 @@ public class GenericIndexed<T> implements Indexed<T>
       return size;
     }
 
+    @Override
+    public abstract T get(int index);
+
     protected T _get(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       final int size = endOffset - startOffset;
@@ -582,6 +586,19 @@ public class GenericIndexed<T> implements Indexed<T>
     {
       return IndexedIterable.create(this).iterator();
     }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("theBuffer", theBuffer);
+      inspector.visit("headerBuffer", headerBuffer);
+      inspector.visit("strategy", strategy);
+    }
   }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("bufferedIndexed", bufferIndexed);
+  }
 }

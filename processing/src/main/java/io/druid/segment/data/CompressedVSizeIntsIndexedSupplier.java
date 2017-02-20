@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
@@ -28,6 +29,7 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -141,9 +143,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     baseBuffers.writeToChannel(channel);
   }
 
-  /**
-   * For testing.  Do not use unless you like things breaking
-   */
+  @VisibleForTesting
   GenericIndexed<ResourceHolder<ByteBuffer>> getBaseBuffers()
   {
     return baseBuffers;
@@ -283,6 +283,12 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     {
       return intBuffer.get(intBuffer.position() + index);
     }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("intBuffer", intBuffer);
+    }
   }
 
   private class CompressedShortSizeIndexedInts extends CompressedVSizeIndexedInts
@@ -302,6 +308,12 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       // removes the need for padding
       return shortBuffer.get(shortBuffer.position() + index) & 0xFFFF;
     }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("shortBuffer", shortBuffer);
+    }
   }
 
   private class CompressedByteSizeIndexedInts extends CompressedVSizeIndexedInts
@@ -311,6 +323,12 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     {
       // removes the need for padding
       return buffer.get(buffer.position() + index) & 0xFF;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("buffer", buffer);
     }
   }
 
@@ -408,6 +426,13 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     public void close() throws IOException
     {
       Closeables.close(holder, false);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("buffer", buffer);
+      inspector.visit("bigEndian", bigEndian);
     }
   }
 }

@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -108,7 +109,13 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
     }
   }
 
-private static class SizedLRUMap<K, V> extends LinkedHashMap<K, Pair<Integer, V>>
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("delegate", delegate);
+  }
+
+  private static class SizedLRUMap<K, V> extends LinkedHashMap<K, Pair<Integer, V>>
   {
     private final int maxBytes;
     private int numBytes = 0;

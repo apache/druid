@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.segment.historical;
 
-import java.io.Closeable;
+import io.druid.segment.SingleValueDimensionSelector;
 
-public interface IndexedMultivalue<T extends IndexedInts> extends Indexed<T>, Closeable
+public interface SingleValueHistoricalDimensionSelector
+    extends HistoricalDimensionSelector, SingleValueDimensionSelector
 {
-  @Override
-  T get(int index);
+  int getRowValue(int offset);
 }

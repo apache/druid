@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
@@ -214,6 +215,12 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
         {
           return new IndexedIntsIterator(this);
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("values", values);
+        }
       };
     }
 
@@ -229,6 +236,12 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
       return IndexedIterable.create(this).iterator();
     }
 
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("offsets", offsets);
+      inspector.visit("values", values);
+    }
   }
 
 }

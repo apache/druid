@@ -26,10 +26,11 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
+import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
 
-public class NullDimensionSelector implements DimensionSelector, IdLookup
+public class NullDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup
 {
   private static final NullDimensionSelector INSTANCE = new NullDimensionSelector();
 
@@ -47,6 +48,24 @@ public class NullDimensionSelector implements DimensionSelector, IdLookup
   public IndexedInts getRow()
   {
     return ZeroIndexedInts.instance();
+  }
+
+  @Override
+  public int getRowValue()
+  {
+    return 0;
+  }
+
+  @Override
+  public int getRowValue(int offset)
+  {
+    return 0;
+  }
+
+  @Override
+  public IndexedInts getRow(int offset)
+  {
+    return getRow();
   }
 
   @Override

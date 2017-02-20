@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -187,6 +188,12 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
   public void close() throws IOException
   {
     // no-op
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("theBuffer", theBuffer);
   }
 
   public WritableSupplier<IndexedMultivalue<IndexedInts>> asWritableSupplier() {

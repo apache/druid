@@ -46,15 +46,13 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
+import io.druid.segment.data.ZeroIndexedInts;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -280,38 +278,7 @@ public class VirtualColumnsTest
         @Override
         public IndexedInts getRow()
         {
-          return new IndexedInts()
-          {
-            @Override
-            public int size()
-            {
-              return 1;
-            }
-
-            @Override
-            public int get(int index)
-            {
-              return 0;
-            }
-
-            @Override
-            public IntIterator iterator()
-            {
-              return IntIterators.singleton(0);
-            }
-
-            @Override
-            public void fill(int index, int[] toFill)
-            {
-              throw new UnsupportedOperationException("fill not supported");
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-
-            }
-          };
+          return ZeroIndexedInts.instance();
         }
 
         @Override

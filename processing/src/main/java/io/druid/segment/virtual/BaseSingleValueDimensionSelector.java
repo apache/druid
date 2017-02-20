@@ -24,13 +24,14 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
+import io.druid.segment.SingleValueDimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public abstract class BaseSingleValueDimensionSelector implements DimensionSelector
+public abstract class BaseSingleValueDimensionSelector implements SingleValueDimensionSelector
 {
   @CalledFromHotLoop
   protected abstract String getValue();
@@ -39,6 +40,12 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   public IndexedInts getRow()
   {
     return ZeroIndexedInts.instance();
+  }
+
+  @Override
+  public int getRowValue()
+  {
+    return 0;
   }
 
   @Override

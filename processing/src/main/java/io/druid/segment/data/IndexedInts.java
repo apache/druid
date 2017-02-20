@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 
 import java.io.Closeable;
@@ -26,9 +28,11 @@ import java.io.Closeable;
 /**
  * Get a int an index (array or list lookup abstraction without boxing).
  */
-public interface IndexedInts extends IntIterable, Closeable
+public interface IndexedInts extends IntIterable, Closeable, HotLoopCallee
 {
+  @CalledFromHotLoop
   int size();
+  @CalledFromHotLoop
   int get(int index);
   void fill(int index, int[] toFill);
 }
