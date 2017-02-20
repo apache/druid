@@ -101,8 +101,8 @@ public class TimeseriesQueryRunnerTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
-  private final QueryRunner runner;
-  private final boolean descending;
+  protected final QueryRunner runner;
+  protected final boolean descending;
 
   public TimeseriesQueryRunnerTest(
       QueryRunner runner, boolean descending

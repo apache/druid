@@ -21,7 +21,7 @@ package io.druid.sql.calcite.expression;
 
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.BucketExtractionFn;
-import io.druid.query.extraction.TimeFormatExtractionFn;
+import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -44,9 +44,28 @@ public class FloorExpressionConversion extends AbstractExpressionConversion
     return INSTANCE;
   }
 
+  public static RowExtraction applyTimestampFloor(
+      final RowExtraction rex,
+      final Granularity queryGranularity
+  )
+  {
+    if (rex == null || queryGranularity == null) {
+      return null;
+    }
+
+    return RowExtraction.of(
+        rex.getColumn(),
+        ExtractionFns.compose(
+            ExtractionFns.fromQueryGranularity(queryGranularity),
+            rex.getExtractionFn()
+        )
+    );
+  }
+
   @Override
   public RowExtraction convert(
       final ExpressionConverter converter,
+      final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
   )
@@ -54,7 +73,7 @@ public class FloorExpressionConversion extends AbstractExpressionConversion
     final RexCall call = (RexCall) expression;
     final RexNode arg = call.getOperands().get(0);
 
-    final RowExtraction rex = converter.convert(rowOrder, arg);
+    final RowExtraction rex = converter.convert(plannerContext, rowOrder, arg);
     if (rex == null) {
       return null;
     } else if (call.getOperands().size() == 1) {
@@ -67,20 +86,7 @@ public class FloorExpressionConversion extends AbstractExpressionConversion
       // FLOOR(expr TO timeUnit)
       final RexLiteral flag = (RexLiteral) call.getOperands().get(1);
       final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
-
-      final Granularity queryGranularity = TimeUnits.toQueryGranularity(timeUnit);
-      if (queryGranularity != null) {
-        return RowExtraction.of(
-            rex.getColumn(),
-            ExtractionFns.compose(
-                new TimeFormatExtractionFn(null, null, null, queryGranularity, true),
-                rex.getExtractionFn()
-            )
-        );
-      } else {
-        // We don't have a queryGranularity for this timeUnit.
-        return null;
-      }
+      return applyTimestampFloor(rex, TimeUnits.toQueryGranularity(timeUnit, plannerContext.getTimeZone()));
     } else {
       // WTF? FLOOR with 3 arguments?
       return null;

@@ -21,21 +21,24 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 
 import java.util.Map;
 
 public class TimeUnits
 {
-  private static final Map<TimeUnitRange, Granularity> QUERY_GRANULARITY_MAP = ImmutableMap.<TimeUnitRange, Granularity>builder()
-      .put(TimeUnitRange.SECOND, Granularity.SECOND)
-      .put(TimeUnitRange.MINUTE, Granularity.MINUTE)
-      .put(TimeUnitRange.HOUR, Granularity.HOUR)
-      .put(TimeUnitRange.DAY, Granularity.DAY)
-      .put(TimeUnitRange.WEEK, Granularity.WEEK)
-      .put(TimeUnitRange.MONTH, Granularity.MONTH)
-      .put(TimeUnitRange.QUARTER, Granularity.QUARTER)
-      .put(TimeUnitRange.YEAR, Granularity.YEAR)
+  private static final Map<TimeUnitRange, Period> PERIOD_MAP = ImmutableMap.<TimeUnitRange, Period>builder()
+      .put(TimeUnitRange.SECOND, Period.seconds(1))
+      .put(TimeUnitRange.MINUTE, Period.minutes(1))
+      .put(TimeUnitRange.HOUR, Period.hours(1))
+      .put(TimeUnitRange.DAY, Period.days(1))
+      .put(TimeUnitRange.WEEK, Period.weeks(1))
+      .put(TimeUnitRange.MONTH, Period.months(1))
+      .put(TimeUnitRange.QUARTER, Period.months(3))
+      .put(TimeUnitRange.YEAR, Period.years(1))
       .build();
 
   // Note that QUARTER is not supported here.
@@ -52,19 +55,25 @@ public class TimeUnits
   /**
    * Returns the Druid QueryGranularity corresponding to a Calcite TimeUnitRange, or null if there is none.
    *
-   * @param timeUnitRange timeUnit
+   * @param timeUnitRange time unit
+   * @param timeZone      session time zone
    *
    * @return queryGranularity, or null
    */
-  public static Granularity toQueryGranularity(final TimeUnitRange timeUnitRange)
+  public static Granularity toQueryGranularity(final TimeUnitRange timeUnitRange, final DateTimeZone timeZone)
   {
-    return QUERY_GRANULARITY_MAP.get(timeUnitRange);
+    final Period period = PERIOD_MAP.get(timeUnitRange);
+    if (period == null) {
+      return null;
+    }
+
+    return new PeriodGranularity(period, null, timeZone);
   }
 
   /**
    * Returns the Joda format string corresponding to extracting on a Calcite TimeUnitRange, or null if there is none.
    *
-   * @param timeUnitRange timeUnit
+   * @param timeUnitRange time unit
    *
    * @return queryGranularity, or null
    */

@@ -49,7 +49,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config("${base_path}.numMergeBuffers")
   public int getNumMergeBuffers()
   {
-    return 0;
+    return Math.max(2, getNumThreads() / 4);
   }
 
   @Config(value = "${base_path}.columnCache.sizeBytes")

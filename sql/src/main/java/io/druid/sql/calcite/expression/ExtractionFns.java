@@ -31,22 +31,41 @@ import java.util.List;
 public class ExtractionFns
 {
   /**
-   * Converts extractionFn to a QueryGranularity, if possible.
+   * Converts extractionFn to a QueryGranularity, if possible. This is the inverse of
+   * {@link #fromQueryGranularity(Granularity)}.
    *
    * @param extractionFn function
    *
-   * @return
+   * @return query granularity, or null if extractionFn cannot be translated
    */
   public static Granularity toQueryGranularity(final ExtractionFn extractionFn)
   {
     if (extractionFn instanceof TimeFormatExtractionFn) {
       final TimeFormatExtractionFn fn = (TimeFormatExtractionFn) extractionFn;
-      if (fn.getFormat() == null && fn.getTimeZone() == null && fn.getLocale() == null) {
+      if (fn.getFormat() == null && fn.getTimeZone() == null && fn.getLocale() == null && fn.isAsMillis()) {
         return fn.getGranularity();
       }
     }
 
     return null;
+  }
+
+  /**
+   * Converts a QueryGranularity to an extractionFn, if possible. This is the inverse of
+   * {@link #toQueryGranularity(ExtractionFn)}. This will always return a non-null extractionFn if
+   * queryGranularity is non-null.
+   *
+   * @param queryGranularity granularity
+   *
+   * @return extractionFn, or null if queryGranularity is null
+   */
+  public static ExtractionFn fromQueryGranularity(final Granularity queryGranularity)
+  {
+    if (queryGranularity == null) {
+      return null;
+    } else {
+      return new TimeFormatExtractionFn(null, null, null, queryGranularity, true);
+    }
   }
 
   /**

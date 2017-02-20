@@ -966,11 +966,26 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       if (retVal == 0) {
-        return Ints.compare(lhs.dims.length, rhs.dims.length);
+        int lengthDiff = Ints.compare(lhs.dims.length, rhs.dims.length);
+        if (lengthDiff == 0) {
+          return 0;
+        }
+        Object[] largerDims = lengthDiff > 0 ? lhs.dims : rhs.dims;
+        return allNull(largerDims, numComparisons) ? 0 : lengthDiff;
       }
 
       return retVal;
     }
+  }
+
+  private static boolean allNull(Object[] dims, int startPosition)
+  {
+    for (int i = startPosition; i < dims.length; i++) {
+      if (dims[i] != null) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static class FactsEntry implements Map.Entry<TimeAndDims, Integer>
