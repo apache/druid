@@ -261,14 +261,14 @@ public class QueryResource implements QueryCountStatsProvider
                           req.getRemoteAddr()
                       );
                       queryMetrics.success(true);
-                      queryMetrics.queryTime(emitter, queryTimeNs);
+                      queryMetrics.queryTime(queryTimeNs).emit(emitter);
 
                       DruidMetrics.makeRequestMetrics(
                           queryMetricsFactory,
                           theToolChest,
                           theQuery,
                           req.getRemoteAddr()
-                      ).queryBytes(emitter, os.getCount());
+                      ).queryBytes(os.getCount()).emit(emitter);
 
                       requestLogger.log(
                           new RequestLogLine(
@@ -329,7 +329,7 @@ public class QueryResource implements QueryCountStatsProvider
             req.getRemoteAddr()
         );
         queryMetrics.success(false);
-        queryMetrics.queryTime(emitter, queryTimeNs);
+        queryMetrics.queryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
@@ -374,7 +374,7 @@ public class QueryResource implements QueryCountStatsProvider
             req.getRemoteAddr()
         );
         queryMetrics.success(false);
-        queryMetrics.queryTime(emitter, queryTimeNs);
+        queryMetrics.queryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),

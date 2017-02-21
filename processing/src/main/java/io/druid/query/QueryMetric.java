@@ -19,8 +19,6 @@
 
 package io.druid.query;
 
-import com.metamx.emitter.service.ServiceEmitter;
-
 /**
  * Used in {@link MetricsEmittingQueryRunner} as a binder to a particular metric emitting method of {@link QueryMetrics}
  */
@@ -28,25 +26,25 @@ public enum QueryMetric
 {
   SEGMENT_TIME {
     @Override
-    public void emit(QueryMetrics<?> metrics, ServiceEmitter emitter, long timeNs)
+    public void apply(QueryMetrics<?> metrics, long timeNs)
     {
-      metrics.segmentTime(emitter, timeNs);
+      metrics.segmentTime(timeNs);
     }
   },
   SEGMENT_AND_CACHE_TIME {
     @Override
-    public void emit(QueryMetrics<?> metrics, ServiceEmitter emitter, long timeNs)
+    public void apply(QueryMetrics<?> metrics, long timeNs)
     {
-      metrics.segmentAndCacheTime(emitter, timeNs);
+      metrics.segmentAndCacheTime(timeNs);
     }
   },
   INTERVAL_CHUNK_TIME {
     @Override
-    public void emit(QueryMetrics<?> metrics, ServiceEmitter emitter, long timeNs)
+    public void apply(QueryMetrics<?> metrics, long timeNs)
     {
-      metrics.intervalChunkTime(emitter, timeNs);
+      metrics.intervalChunkTime(timeNs);
     }
   };
 
-  public abstract void emit(QueryMetrics<?> metrics, ServiceEmitter emitter, long value);
+  public abstract void apply(QueryMetrics<?> metrics, long value);
 }

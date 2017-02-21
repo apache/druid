@@ -53,10 +53,12 @@ import java.util.Map;
  * Types of methods in this interface
  * ----------------------------------
  *  1. Methods, pulling some dimensions from the query object. These methods are used to populate the metric before the
- *  query is run. These methods accept a single `QueryType query` parameter.
+ *  query is run. These methods accept a single `QueryType query` parameter. {@link #query(Query)} calls all methods
+ *  of this type, hence pulling all available information from the query object as dimensions.
  *  2. Methods for general dimensions, which become known in the process of the query execution or after the query is
  *  completed.
- *  3. Methods for emitting metrics, they accept {@link ServiceEmitter} as the first parameter.
+ *  3. Methods to register metrics to be emitted later in bulk via {@link #emit(ServiceEmitter)}. These methods
+ *  return this QueryMetrics object back for chaining.
  *
  *
  * Implementors expectations
@@ -66,6 +68,8 @@ import java.util.Map;
  * Broken builds of custom extensions, containing custom QueryMetrics is the way to notify users that Druid core "wants"
  * to emit new dimension or metric, and the user handles them manually: if the new dimension or metric is useful and not
  * very expensive to process and store then emit, skip (see above Goals, 1.) otherwise.
+ *
+ * <p>QueryMetrics is designed for use from a single thread, implementations shouldn't care about thread-safety.
  *
  *
  * Adding new methods to QueryMetrics
@@ -137,23 +141,58 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void success(boolean success);
 
-  void queryTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "query time" metric.
+   */
+  QueryMetrics<QueryType> queryTime(long timeNs);
 
-  void queryBytes(ServiceEmitter emitter, long byteCount);
+  /**
+   * Registers "query bytes" metric.
+   */
+  QueryMetrics<QueryType> queryBytes(long byteCount);
 
-  void waitTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "wait time" metric.
+   */
+  QueryMetrics<QueryType> waitTime(long timeNs);
 
-  void segmentTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "segment time" metric.
+   */
+  QueryMetrics<QueryType> segmentTime(long timeNs);
 
-  void segmentAndCacheTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "segmentAndCache time" metric.
+   */
+  QueryMetrics<QueryType> segmentAndCacheTime(long timeNs);
 
-  void intervalChunkTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "interval chunk time" metric.
+   */
+  QueryMetrics<QueryType> intervalChunkTime(long timeNs);
 
-  void cpuTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "cpu time" metric.
+   */
+  QueryMetrics<QueryType> cpuTime(long timeNs);
 
-  void nodeTimeToFirstByte(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "time to first byte" metric.
+   */
+  QueryMetrics<QueryType> nodeTimeToFirstByte(long timeNs);
 
-  void nodeTime(ServiceEmitter emitter, long timeNs);
+  /**
+   * Registers "node time" metric.
+   */
+  QueryMetrics<QueryType> nodeTime(long timeNs);
 
-  void nodeBytes(ServiceEmitter emitter, long byteCount);
+  /**
+   * Registers "node bytes" metric.
+   */
+  QueryMetrics<QueryType> nodeBytes(long byteCount);
+
+  /**
+   * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
+   */
+  void emit(ServiceEmitter emitter);
 }

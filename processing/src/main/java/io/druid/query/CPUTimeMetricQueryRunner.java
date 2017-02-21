@@ -84,7 +84,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
-                queryToolChest.makeMetrics(query).cpuTime(emitter, cpuTimeNs);
+                queryToolChest.makeMetrics(query).cpuTime(cpuTimeNs).emit(emitter);
               }
             }
           }

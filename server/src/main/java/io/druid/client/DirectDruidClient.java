@@ -178,7 +178,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
-          queryMetrics.nodeTimeToFirstByte(emitter, responseStartTimeNs - requestStartTimeNs);
+          queryMetrics.nodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
@@ -277,8 +277,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               TimeUnit.NANOSECONDS.toMillis(nodeTimeNs),
               byteCount.get() / TimeUnit.NANOSECONDS.toSeconds(nodeTimeNs)
           );
-          queryMetrics.nodeTime(emitter, nodeTimeNs);
-          queryMetrics.nodeBytes(emitter, byteCount.get());
+          queryMetrics.nodeTime(nodeTimeNs);
+          queryMetrics.nodeBytes(byteCount.get());
+          queryMetrics.emit(emitter);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out

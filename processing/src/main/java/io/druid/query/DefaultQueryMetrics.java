@@ -29,6 +29,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +37,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 {
   protected final ObjectMapper jsonMapper;
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+  protected final Map<String, Number> metrics = new HashMap<>();
 
   public DefaultQueryMetrics(ObjectMapper jsonMapper)
   {
@@ -153,67 +155,80 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void queryTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> queryTime(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/time", timeNs);
+    return defaultTimeMetric("query/time", timeNs);
   }
 
   @Override
-  public void queryBytes(ServiceEmitter emitter, long byteCount)
+  public QueryMetrics<QueryType> queryBytes(long byteCount)
   {
-    emitter.emit(builder.build("query/bytes", byteCount));
+    metrics.put("query/bytes", byteCount);
+    return this;
   }
 
   @Override
-  public void waitTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> waitTime(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/wait/time", timeNs);
+    return defaultTimeMetric("query/wait/time", timeNs);
   }
 
   @Override
-  public void segmentTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> segmentTime(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/segment/time", timeNs);
+    return defaultTimeMetric("query/segment/time", timeNs);
   }
 
   @Override
-  public void segmentAndCacheTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> segmentAndCacheTime(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/segmentAndCache/time", timeNs);
+    return defaultTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
   @Override
-  public void intervalChunkTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> intervalChunkTime(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/intervalChunk/time", timeNs);
+    return defaultTimeMetric("query/intervalChunk/time", timeNs);
   }
 
   @Override
-  public void cpuTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> cpuTime(long timeNs)
   {
-    emitter.emit(builder.build("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs)));
+    metrics.put("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
+    return this;
   }
 
   @Override
-  public void nodeTimeToFirstByte(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> nodeTimeToFirstByte(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/node/ttfb", timeNs);
+    return defaultTimeMetric("query/node/ttfb", timeNs);
   }
 
   @Override
-  public void nodeTime(ServiceEmitter emitter, long timeNs)
+  public QueryMetrics<QueryType> nodeTime(long timeNs)
   {
-    defaultTimeMetric(emitter, "query/node/time", timeNs);
+    return defaultTimeMetric("query/node/time", timeNs);
   }
 
-  private void defaultTimeMetric(ServiceEmitter emitter, String metricName, long timeNs)
+  private QueryMetrics<QueryType> defaultTimeMetric(String metricName, long timeNs)
   {
-    emitter.emit(builder.build(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs)));
+    metrics.put(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
+    return this;
   }
 
   @Override
-  public void nodeBytes(ServiceEmitter emitter, long byteCount)
+  public QueryMetrics<QueryType> nodeBytes(long byteCount)
   {
-    emitter.emit(builder.build("query/node/bytes", byteCount));
+    metrics.put("query/node/bytes", byteCount);
+    return this;
+  }
+
+  @Override
+  public void emit(ServiceEmitter emitter)
+  {
+    for (Map.Entry<String, Number> metric : metrics.entrySet()) {
+      emitter.emit(builder.build(metric.getKey(), metric.getValue()));
+    }
+    metrics.clear();
   }
 }

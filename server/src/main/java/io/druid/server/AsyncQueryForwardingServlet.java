@@ -400,7 +400,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
             query,
             req.getRemoteAddr()
         );
-        queryMetrics.queryTime(emitter, requestTimeNs);
+        queryMetrics.queryTime(requestTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
