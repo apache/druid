@@ -31,7 +31,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -43,10 +42,11 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -88,8 +88,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private final GroupByStrategySelector strategySelector;
   private final StupidPool<ByteBuffer> bufferPool;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final QueryMetricsFactory queryMetricsFactory;
 
-  @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
       GroupByStrategySelector strategySelector,
@@ -97,10 +97,29 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
+    this(
+        configSupplier,
+        strategySelector,
+        bufferPool,
+        intervalChunkingQueryRunnerDecorator,
+        DefaultQueryMetricsFactory.instance()
+    );
+  }
+
+  @Inject
+  public GroupByQueryQueryToolChest(
+      Supplier<GroupByQueryConfig> configSupplier,
+      GroupByStrategySelector strategySelector,
+      @Global StupidPool<ByteBuffer> bufferPool,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      QueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.configSupplier = configSupplier;
     this.strategySelector = strategySelector;
     this.bufferPool = bufferPool;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -193,15 +212,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(GroupByQuery query)
+  public GroupByQueryMetrics makeMetrics(GroupByQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-                       .setDimension("numDimensions", String.valueOf(query.getDimensions().size()))
-                       .setDimension("numMetrics", String.valueOf(query.getAggregatorSpecs().size()))
-                       .setDimension(
-                           "numComplexMetrics",
-                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                       );
+    GroupByQueryMetrics queryMetrics = queryMetricsFactory.makeGroupByQueryMetrics();
+    queryMetrics.query(query);
+    return queryMetrics;
   }
 
   @Override

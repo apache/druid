@@ -30,16 +30,17 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -77,15 +78,27 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       };
 
   private final ObjectMapper jsonMapper;
-
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final QueryMetricsFactory queryMetricsFactory;
+
+  public SelectQueryQueryToolChest(
+      ObjectMapper jsonMapper,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
+  )
+  {
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, new DefaultQueryMetricsFactory(jsonMapper));
+  }
 
   @Inject
-  public SelectQueryQueryToolChest(ObjectMapper jsonMapper,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
+  public SelectQueryQueryToolChest(
+      ObjectMapper jsonMapper,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      QueryMetricsFactory queryMetricsFactory
+  )
   {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -119,9 +132,9 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(SelectQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(SelectQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override

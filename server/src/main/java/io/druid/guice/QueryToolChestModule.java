@@ -23,8 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
+import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -77,6 +79,7 @@ public class QueryToolChestModule implements Module
     }
 
     binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
+    binder.bind(QueryMetricsFactory.class).to(DefaultQueryMetricsFactory.class);
 
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);

@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -35,9 +34,10 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -68,18 +68,29 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
   private final TopNQueryConfig config;
-
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final QueryMetricsFactory queryMetricsFactory;
 
-  @Inject
   public TopNQueryQueryToolChest(
       TopNQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
+    this(config, intervalChunkingQueryRunnerDecorator, DefaultQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public TopNQueryQueryToolChest(
+      TopNQueryConfig config,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      QueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.config = config;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories)
@@ -140,22 +151,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(TopNQuery query)
+  public TopNQueryMetrics makeMetrics(TopNQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-                       .setDimension(
-                           "threshold",
-                           String.valueOf(query.getThreshold())
-                       )
-                       .setDimension("dimension", query.getDimensionSpec().getDimension())
-                       .setDimension(
-                           "numMetrics",
-                           String.valueOf(query.getAggregatorSpecs().size())
-                       )
-                       .setDimension(
-                           "numComplexMetrics",
-                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                       );
+    TopNQueryMetrics queryMetrics = queryMetricsFactory.makeTopNQueryMetrics();
+    queryMetrics.query(query);
+    return queryMetrics;
   }
 
   @Override

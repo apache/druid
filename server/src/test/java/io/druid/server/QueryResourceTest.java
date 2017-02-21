@@ -29,6 +29,7 @@ import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -138,7 +139,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig()
+        new AuthConfig(),
+        new DefaultQueryMetricsFactory(jsonMapper)
     );
   }
 
@@ -212,7 +214,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true)
+        new AuthConfig(true),
+        new DefaultQueryMetricsFactory(jsonMapper)
     );
 
     Response response = queryResource.doPost(
@@ -282,7 +285,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true)
+        new AuthConfig(true),
+        new DefaultQueryMetricsFactory(jsonMapper)
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -378,7 +382,8 @@ public class QueryResourceTest
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
         queryManager,
-        new AuthConfig(true)
+        new AuthConfig(true),
+        new DefaultQueryMetricsFactory(jsonMapper)
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","

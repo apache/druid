@@ -25,14 +25,15 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import com.google.inject.Inject;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -57,6 +58,19 @@ public class TimeBoundaryQueryQueryToolChest
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
+  private final QueryMetricsFactory queryMetricsFactory;
+
+  public TimeBoundaryQueryQueryToolChest()
+  {
+    this(DefaultQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public TimeBoundaryQueryQueryToolChest(QueryMetricsFactory queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
@@ -107,11 +121,9 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(TimeBoundaryQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-            .setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
-            .setDimension(DruidMetrics.TYPE, query.getType());
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
