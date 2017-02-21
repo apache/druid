@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -142,7 +143,7 @@ public class IncrementalIndexTest
                               @Override
                               public ByteBuffer get()
                               {
-                                return ByteBuffer.allocate(256 * 1024);
+                                return ByteBuffer.allocate(512 * 1024);
                               }
                             }
                         )
@@ -527,7 +528,17 @@ public class IncrementalIndexTest
 
 
     final IncrementalIndex index = closer.closeLater(
-        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]))
+      indexCreator.createIndex(Lists.transform(
+        ingestAggregatorFactories,
+        new Function<AggregatorFactory, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(AggregatorFactory input)
+          {
+            return new ThreadSafetyAssertingAggregatorFactory(input);
+          }
+        }
+      ).toArray(new AggregatorFactory[dimensionCount]))
     );
     final int concurrentThreads = 2;
     final int elementsPerThread = 10_000;

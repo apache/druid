@@ -318,25 +318,36 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   @Override
   protected Object getAggVal(Aggregator agg, int rowOffset, int aggPosition)
   {
-    return agg.get();
+    synchronized (agg) {
+      return agg.get();
+    }
   }
 
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    Aggregator aggregator = concurrentGet(rowOffset)[aggOffset];
+    synchronized (aggregator) {
+      return aggregator.getFloat();
+    }
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    Aggregator aggregator = concurrentGet(rowOffset)[aggOffset];
+    synchronized (aggregator) {
+      return aggregator.getLong();
+    }
   }
 
   @Override
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    Aggregator aggregator = concurrentGet(rowOffset)[aggOffset];
+    synchronized (aggregator) {
+      return aggregator.get();
+    }
   }
 
   /**

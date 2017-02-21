@@ -303,7 +303,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
-    return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggPosition]);
+    synchronized (agg) {
+      return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggPosition]);
+    }
   }
 
   @Override
@@ -312,7 +314,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     BufferAggregator agg = getAggs()[aggOffset];
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
-    return agg.getFloat(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+    synchronized (agg) {
+      return agg.getFloat(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+    }
   }
 
   @Override
@@ -321,7 +325,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     BufferAggregator agg = getAggs()[aggOffset];
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
-    return agg.getLong(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+    synchronized (agg) {
+      return agg.getLong(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+    }
   }
 
   @Override
@@ -330,7 +336,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     BufferAggregator agg = getAggs()[aggOffset];
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
-    return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+    synchronized (agg) {
+      return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+    }
   }
 
   /**
