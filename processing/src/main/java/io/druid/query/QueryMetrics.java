@@ -31,7 +31,7 @@ import java.util.Map;
  * Goals of QueryMetrics
  * ---------------------
  *  1. Skipping or partial filtering of particular dimensions or metrics entirely. Implementation could leave the body
- *  of the corresponding empty, or implement random filtering like:
+ *  of the corresponding method empty, or implement random filtering like:
  *  public void cpuTime(ServiceEmitter emitter, long timeNs)
  *  {
  *    if (ThreadLocalRandom.current().nextDouble() < 0.1) {
@@ -88,7 +88,7 @@ import java.util.Map;
 public interface QueryMetrics<QueryType extends Query<?>>
 {
   /**
-   * Pulls all information for the query object into dimensions of future metrics events.
+   * Pulls all information from the query object into dimensions of future metrics.
    */
   void query(QueryType query);
 
