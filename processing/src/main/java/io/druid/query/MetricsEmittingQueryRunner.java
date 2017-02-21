@@ -117,7 +117,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               queryMetrics.status("short");
             }
             long timeTakenNs = System.nanoTime() - startTimeNs;
-            metric.apply(queryMetrics, timeTakenNs);
+            metric.register(queryMetrics, timeTakenNs);
 
             if (creationTimeNs > 0) {
               queryMetrics.waitTime(startTimeNs - creationTimeNs);

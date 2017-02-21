@@ -20,31 +20,32 @@
 package io.druid.query;
 
 /**
- * Used in {@link MetricsEmittingQueryRunner} as a binder to a particular metric emitting method of {@link QueryMetrics}
+ * Used in {@link MetricsEmittingQueryRunner} as a binder to a particular metric registering method of
+ * {@link QueryMetrics}.
  */
 public enum QueryMetric
 {
   SEGMENT_TIME {
     @Override
-    public void apply(QueryMetrics<?> metrics, long timeNs)
+    public void register(QueryMetrics<?> metrics, long timeNs)
     {
       metrics.segmentTime(timeNs);
     }
   },
   SEGMENT_AND_CACHE_TIME {
     @Override
-    public void apply(QueryMetrics<?> metrics, long timeNs)
+    public void register(QueryMetrics<?> metrics, long timeNs)
     {
       metrics.segmentAndCacheTime(timeNs);
     }
   },
   INTERVAL_CHUNK_TIME {
     @Override
-    public void apply(QueryMetrics<?> metrics, long timeNs)
+    public void register(QueryMetrics<?> metrics, long timeNs)
     {
       metrics.intervalChunkTime(timeNs);
     }
   };
 
-  public abstract void apply(QueryMetrics<?> metrics, long value);
+  public abstract void register(QueryMetrics<?> metrics, long value);
 }

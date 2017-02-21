@@ -83,7 +83,7 @@ import java.util.Map;
  * method, and as much work as possible is done in the implementations of this method, if they decide to emit this
  * dimension.
  *
- * 3. When adding a new method for emitting metrics, make it to accept the metric value in the smallest reasonable
+ * 3. When adding a new method for registering metrics, make it to accept the metric value in the smallest reasonable
  * unit (i. e. nanoseconds for time metrics, bytes for metrics of data size, etc.), allowing the implementations of
  * this method to round the value up to more coarse-grained units, if they don't need the maximum precision.
  *
