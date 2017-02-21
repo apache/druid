@@ -20,7 +20,6 @@
 package io.druid.server.coordination;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Throwables;
@@ -577,7 +576,7 @@ public class ServerManagerTest
     @Override
     public QueryMetrics<Query<?>> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>(new ObjectMapper());
+      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
     }
 
     @Override

@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.groupby.DefaultGroupByQueryMetrics;
 import io.druid.query.groupby.GroupByQueryMetrics;
 import io.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
@@ -30,7 +31,7 @@ import io.druid.query.topn.TopNQueryMetrics;
 
 public class DefaultQueryMetricsFactory implements QueryMetricsFactory
 {
-  private static final DefaultQueryMetricsFactory INSTANCE = new DefaultQueryMetricsFactory(new ObjectMapper());
+  private static final DefaultQueryMetricsFactory INSTANCE = new DefaultQueryMetricsFactory(new DefaultObjectMapper());
 
   public static DefaultQueryMetricsFactory instance()
   {
