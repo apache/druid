@@ -32,10 +32,10 @@ import java.util.Map;
  * ---------------------
  *  1. Skipping or partial filtering of particular dimensions or metrics entirely. Implementation could leave the body
  *  of the corresponding method empty, or implement random filtering like:
- *  public void cpuTime(ServiceEmitter emitter, long timeNs)
+ *  public void cpuTime(long timeNs)
  *  {
  *    if (ThreadLocalRandom.current().nextDouble() < 0.1) {
- *      super.cpuTime(emitter, timeNs);
+ *      super.cpuTime(timeNs);
  *    }
  *  }
  *
