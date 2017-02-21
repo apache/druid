@@ -92,6 +92,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
@@ -158,7 +159,12 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of(
+      "finalize", false,
+
+      // GroupBy v2 won't cache on the broker, so test with v1.
+      "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
+  );
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
   static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
