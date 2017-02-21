@@ -55,7 +55,7 @@ import java.util.Map;
  *  1. Methods, pulling some dimensions from the query object. These methods are used to populate the metric before the
  *  query is run. These methods accept a single `QueryType query` parameter. {@link #query(Query)} calls all methods
  *  of this type, hence pulling all available information from the query object as dimensions.
- *  2. Methods for general dimensions, which become known in the process of the query execution or after the query is
+ *  2. Methods for setting dimensions, which become known in the process of the query execution or after the query is
  *  completed.
  *  3. Methods to register metrics to be emitted later in bulk via {@link #emit(ServiceEmitter)}. These methods
  *  return this QueryMetrics object back for chaining.
@@ -74,14 +74,14 @@ import java.util.Map;
  *
  * Adding new methods to QueryMetrics
  * ----------------------------------
- * 1. When adding a new method for emitting a dimension, which could be pulled from the query object, always make them
+ * 1. When adding a new method for setting a dimension, which could be pulled from the query object, always make them
  * accept a single `QueryType query` parameter, letting the implementations to do all the work of carving the dimension
  * value out of the query object.
  *
- * 2. When adding a new method for emitting a dimension, which becomes known in the process of the query execution or
- * after the query is completed, design them so that as little work as possible is done for preparing arguments for this
- * method, and as much work as possible is done in the implementations of this method, if they decide to emit this
- * dimension.
+ * 2. When adding a new method for setting a dimension, which becomes known in the process of the query execution or
+ * after the query is completed, design it so that as little work as possible is done for preparing arguments for this
+ * method, and as much work as possible is done in the implementations of this method, if they decide to actually emit
+ * this dimension.
  *
  * 3. When adding a new method for registering metrics, make it to accept the metric value in the smallest reasonable
  * unit (i. e. nanoseconds for time metrics, bytes for metrics of data size, etc.), allowing the implementations of
