@@ -23,13 +23,26 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.StorageAdapter;
 
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 public interface GroupByStrategy
 {
+
+  /**
+   * Indicates this strategy is cacheable or not.
+   * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
+   *
+   * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} will be
+   *                         called on the cached by-segment results
+   * @return true if this strategy is cacheable, otherwise false.
+   */
+  boolean isCacheable(boolean willMergeRunners);
+
   Sequence<Row> mergeResults(
       QueryRunner<Row> baseRunner,
       GroupByQuery query,
