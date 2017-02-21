@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -42,8 +44,6 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
     }
   };
 
-  private String fieldName;
-
   @JsonCreator
   public MaxPostAggregator(
       @JsonProperty("name") String name,
@@ -51,7 +51,6 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   )
   {
     super(name, fieldName);
-    this.fieldName = fieldName;
   }
 
   @Override
@@ -69,7 +68,7 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.getMax();
   }
 
@@ -85,5 +84,13 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
     return "QuantilePostAggregator{" +
            "fieldName='" + fieldName + '\'' +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_MAX)
+        .appendString(fieldName)
+        .build();
   }
 }

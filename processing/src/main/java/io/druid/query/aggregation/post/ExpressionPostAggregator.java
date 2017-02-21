@@ -27,6 +27,7 @@ import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.List;
@@ -132,6 +133,15 @@ public class ExpressionPostAggregator implements PostAggregator
            ", expression='" + expression + '\'' +
            ", ordering=" + ordering +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
+        .appendString(expression)
+        .appendString(ordering)
+        .build();
   }
 
   public static enum Ordering implements Comparator<Number>

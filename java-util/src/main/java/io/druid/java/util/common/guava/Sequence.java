@@ -20,20 +20,41 @@
 package io.druid.java.util.common.guava;
 
 /**
- * A Sequence represents an iterable sequence of elements.  Unlike normal Iterators however, it doesn't expose
+ * A Sequence represents an iterable sequence of elements. Unlike normal Iterators however, it doesn't expose
  * a way for you to extract values from it, instead you provide it with a worker (an Accumulator) and that defines
  * what happens with the data.
- *
- * This inversion of control is in place to allow the Sequence to do resource management.  It can enforce that close()
- * methods get called and other resources get cleaned up whenever processing is complete.  Without this inversion
+ * <p>
+ * This inversion of control is in place to allow the Sequence to do resource management. It can enforce that close()
+ * methods get called and other resources get cleaned up whenever processing is complete. Without this inversion
  * it is very easy to unintentionally leak resources when iterating over something that is backed by a resource.
- *
+ * <p>
  * Sequences also expose {#see com.metamx.common.guava.Yielder} Yielder objects which allow you to implement a
- * continuation over the Sequence.  Yielder do not offer the same guarantees of automagic resource management
+ * continuation over the Sequence. Yielder do not offer the same guarantees of automatic resource management
  * as the accumulate method, but they are Closeable and will do the proper cleanup when close() is called on them.
  */
 public interface Sequence<T>
 {
-  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator);
-  public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator);
+  /**
+   * Accumulate this sequence using the given accumulator.
+   *
+   * @param initValue   the initial value to pass along to start the accumulation.
+   * @param accumulator the accumulator which is responsible for accumulating input values.
+   * @param <OutType>   the type of accumulated value.
+   *
+   * @return accumulated value.
+   */
+  <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator);
+
+ /**
+   * Return an Yielder for accumulated sequence.
+   *
+   * @param initValue   the initial value to pass along to start the accumulation.
+   * @param accumulator the accumulator which is responsible for accumulating input values.
+   * @param <OutType>   the type of accumulated value.
+   *
+   * @return an Yielder for accumulated sequence.
+   *
+   * @see Yielder
+   */
+  <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator);
 }

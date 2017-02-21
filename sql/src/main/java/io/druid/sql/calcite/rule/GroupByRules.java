@@ -54,7 +54,7 @@ import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
-import io.druid.sql.calcite.planner.PlannerConfig;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.rel.DruidNestedGroupBy;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.Grouping;
@@ -87,12 +87,12 @@ public class GroupByRules
     // No instantiation.
   }
 
-  public static List<RelOptRule> rules(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+  public static List<RelOptRule> rules(final DruidOperatorTable operatorTable)
   {
     return ImmutableList.of(
-        new DruidAggregateRule(operatorTable, plannerConfig),
-        new DruidAggregateProjectRule(operatorTable, plannerConfig),
-        new DruidAggregateProjectFilterRule(operatorTable, plannerConfig),
+        new DruidAggregateRule(operatorTable),
+        new DruidAggregateProjectRule(operatorTable),
+        new DruidAggregateProjectFilterRule(operatorTable),
         new DruidGroupByPostAggregationRule(),
         new DruidGroupByHavingRule(),
         new DruidGroupByLimitRule()
@@ -115,9 +115,13 @@ public class GroupByRules
       Preconditions.checkArgument(fieldName == null ^ expression == null, "must have either fieldName or expression");
     }
 
-    public static FieldOrExpression fromRexNode(final List<String> rowOrder, final RexNode rexNode)
+    public static FieldOrExpression fromRexNode(
+        final PlannerContext plannerContext,
+        final List<String> rowOrder,
+        final RexNode rexNode
+    )
     {
-      final RowExtraction rex = Expressions.toRowExtraction(rowOrder, rexNode);
+      final RowExtraction rex = Expressions.toRowExtraction(plannerContext, rowOrder, rexNode);
       if (rex != null && rex.getExtractionFn() == null) {
         // This was a simple field access.
         return fieldName(rex.getColumn());
@@ -156,13 +160,11 @@ public class GroupByRules
   public static class DruidAggregateRule extends RelOptRule
   {
     private final DruidOperatorTable operatorTable;
-    private final PlannerConfig plannerConfig;
 
-    private DruidAggregateRule(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+    private DruidAggregateRule(final DruidOperatorTable operatorTable)
     {
       super(operand(Aggregate.class, operand(DruidRel.class, none())));
       this.operatorTable = operatorTable;
-      this.plannerConfig = plannerConfig;
     }
 
     @Override
@@ -184,8 +186,7 @@ public class GroupByRules
           null,
           aggregate,
           operatorTable,
-          plannerConfig.isUseApproximateCountDistinct(),
-          plannerConfig.getMaxQueryCount()
+          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -196,13 +197,11 @@ public class GroupByRules
   public static class DruidAggregateProjectRule extends RelOptRule
   {
     private final DruidOperatorTable operatorTable;
-    private final PlannerConfig plannerConfig;
 
-    private DruidAggregateProjectRule(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+    private DruidAggregateProjectRule(final DruidOperatorTable operatorTable)
     {
       super(operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, none()))));
       this.operatorTable = operatorTable;
-      this.plannerConfig = plannerConfig;
     }
 
     @Override
@@ -226,8 +225,7 @@ public class GroupByRules
           project,
           aggregate,
           operatorTable,
-          plannerConfig.isUseApproximateCountDistinct(),
-          plannerConfig.getMaxQueryCount()
+          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -238,13 +236,11 @@ public class GroupByRules
   public static class DruidAggregateProjectFilterRule extends RelOptRule
   {
     private final DruidOperatorTable operatorTable;
-    private final PlannerConfig plannerConfig;
 
-    private DruidAggregateProjectFilterRule(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+    private DruidAggregateProjectFilterRule(final DruidOperatorTable operatorTable)
     {
       super(operand(Aggregate.class, operand(Project.class, operand(Filter.class, operand(DruidRel.class, none())))));
       this.operatorTable = operatorTable;
-      this.plannerConfig = plannerConfig;
     }
 
     @Override
@@ -270,8 +266,7 @@ public class GroupByRules
           project,
           aggregate,
           operatorTable,
-          plannerConfig.isUseApproximateCountDistinct(),
-          plannerConfig.getMaxQueryCount()
+          druidRel.getPlannerContext().getPlannerConfig().isUseApproximateCountDistinct()
       );
       if (newDruidRel != null) {
         call.transformTo(newDruidRel);
@@ -382,8 +377,7 @@ public class GroupByRules
       final Project project0,
       final Aggregate aggregate,
       final DruidOperatorTable operatorTable,
-      final boolean approximateCountDistinct,
-      final int maxQueryCount
+      final boolean approximateCountDistinct
   )
   {
     Preconditions.checkState(canApplyAggregate(druidRel, filter0, project0, aggregate), "Cannot applyAggregate.");
@@ -401,7 +395,7 @@ public class GroupByRules
     // Filter that should be applied before aggregating.
     final DimFilter filter;
     if (filter0 != null) {
-      filter = Expressions.toFilter(sourceRowSignature, filter0.getCondition());
+      filter = Expressions.toFilter(druidRel.getPlannerContext(), sourceRowSignature, filter0.getCondition());
       if (filter == null) {
         // Can't plan this filter.
         return null;
@@ -441,6 +435,7 @@ public class GroupByRules
       } else {
         final RexNode rexNode = Expressions.fromFieldAccess(sourceRowSignature, project, i);
         final RowExtraction rex = Expressions.toRowExtraction(
+            druidRel.getPlannerContext(),
             sourceRowSignature.getRowOrder(),
             rexNode
         );
@@ -471,6 +466,7 @@ public class GroupByRules
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
       final AggregateCall aggCall = aggregate.getAggCallList().get(i);
       final Aggregation aggregation = translateAggregateCall(
+          druidRel.getPlannerContext(),
           sourceRowSignature,
           project,
           aggCall,
@@ -490,20 +486,13 @@ public class GroupByRules
 
     if (isNestedQuery) {
       // Nested groupBy.
-      final DruidNestedGroupBy retVal = DruidNestedGroupBy.from(
+      return DruidNestedGroupBy.from(
           druidRel,
           filter,
           Grouping.create(dimensions, aggregations),
           aggregate.getRowType(),
           rowOrder
       );
-
-      // Check maxQueryCount.
-      if (maxQueryCount > 0 && retVal.getQueryCount() > maxQueryCount) {
-        return null;
-      }
-
-      return retVal;
     } else {
       // groupBy on a base dataSource.
       return druidRel.withQueryBuilder(
@@ -606,6 +595,7 @@ public class GroupByRules
     Preconditions.checkState(canApplyHaving(druidRel), "Cannot applyHaving.");
 
     final DimFilter dimFilter = Expressions.toFilter(
+        druidRel.getPlannerContext(),
         druidRel.getOutputRowSignature(),
         postFilter.getCondition()
     );
@@ -709,8 +699,10 @@ public class GroupByRules
         throw new ISE("WTF?! Don't know what to do with direction[%s]", collation.getDirection());
       }
 
-      if (SqlTypeName.NUMERIC_TYPES.contains(sortExpression.getType().getSqlTypeName())
-          || SqlTypeName.DATETIME_TYPES.contains(sortExpression.getType().getSqlTypeName())) {
+      final SqlTypeName sortExpressionType = sortExpression.getType().getSqlTypeName();
+      if (SqlTypeName.NUMERIC_TYPES.contains(sortExpressionType)
+          || SqlTypeName.TIMESTAMP == sortExpressionType
+          || SqlTypeName.DATE == sortExpressionType) {
         comparator = StringComparators.NUMERIC;
       } else {
         comparator = StringComparators.LEXICOGRAPHIC;
@@ -735,6 +727,7 @@ public class GroupByRules
    * @return translated aggregation, or null if translation failed.
    */
   private static Aggregation translateAggregateCall(
+      final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
       final Project project,
       final AggregateCall call,
@@ -758,7 +751,7 @@ public class GroupByRules
       }
 
       final RexNode expression = project.getChildExps().get(call.filterArg);
-      final DimFilter filter = Expressions.toFilter(sourceRowSignature, expression);
+      final DimFilter filter = Expressions.toFilter(plannerContext, sourceRowSignature, expression);
       if (filter == null) {
         return null;
       }
@@ -774,6 +767,7 @@ public class GroupByRules
       return approximateCountDistinct ? APPROX_COUNT_DISTINCT.toDruidAggregation(
           name,
           sourceRowSignature,
+          plannerContext,
           existingAggregations,
           project,
           call,
@@ -791,7 +785,7 @@ public class GroupByRules
 
       final int inputField = Iterables.getOnlyElement(call.getArgList());
       final RexNode rexNode = Expressions.fromFieldAccess(sourceRowSignature, project, inputField);
-      final FieldOrExpression foe = FieldOrExpression.fromRexNode(rowOrder, rexNode);
+      final FieldOrExpression foe = FieldOrExpression.fromRexNode(plannerContext, rowOrder, rexNode);
 
       if (foe != null) {
         input = foe;
@@ -810,6 +804,7 @@ public class GroupByRules
 
         // Operand 1: Filter
         final DimFilter filter = Expressions.toFilter(
+            plannerContext,
             sourceRowSignature,
             caseCall.getOperands().get(0)
         );
@@ -836,7 +831,7 @@ public class GroupByRules
           input = null;
         } else if (RexLiteral.isNullLiteral(arg2)) {
           // Maybe case A
-          input = FieldOrExpression.fromRexNode(rowOrder, arg1);
+          input = FieldOrExpression.fromRexNode(plannerContext, rowOrder, arg1);
           if (input == null) {
             return null;
           }
@@ -863,7 +858,8 @@ public class GroupByRules
         final String expression = input.getExpression();
 
         final boolean isLong = SqlTypeName.INT_TYPES.contains(outputType)
-                               || SqlTypeName.DATETIME_TYPES.contains(outputType);
+                               || SqlTypeName.TIMESTAMP == outputType
+                               || SqlTypeName.DATE == outputType;
 
         if (kind == SqlKind.SUM || kind == SqlKind.SUM0) {
           retVal = isLong
@@ -908,6 +904,7 @@ public class GroupByRules
       return sqlAggregator != null ? sqlAggregator.toDruidAggregation(
           name,
           sourceRowSignature,
+          plannerContext,
           existingAggregations,
           project,
           call,

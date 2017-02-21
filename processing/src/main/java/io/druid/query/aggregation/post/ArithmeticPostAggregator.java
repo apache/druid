@@ -28,6 +28,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -132,6 +133,22 @@ public class ArithmeticPostAggregator implements PostAggregator
     return new ArithmeticPostAggregator(name, fnName, Queries.decoratePostAggregators(fields, aggregators), ordering);
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.ARITHMETIC)
+        .appendString(fnName)
+        .appendString(ordering);
+
+    if (preserveFieldOrderInCacheKey(op)) {
+      builder.appendCacheables(fields);
+    } else {
+      builder.appendCacheablesIgnoringOrder(fields);
+    }
+
+    return builder.build();
+  }
+
   @JsonProperty("fn")
   public String getFnName()
   {
@@ -159,6 +176,21 @@ public class ArithmeticPostAggregator implements PostAggregator
            ", fields=" + fields +
            ", op=" + op +
            '}';
+  }
+
+  private static boolean preserveFieldOrderInCacheKey(Ops op)
+  {
+    switch (op) {
+      case PLUS:
+      case MULT:
+        return false;
+      case MINUS:
+      case DIV:
+      case QUOTIENT:
+        return true;
+      default:
+        throw new IAE(op.fn);
+    }
   }
 
   private static enum Ops

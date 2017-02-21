@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -31,5 +33,5 @@ public interface GenericColumnSerializer extends Closeable
 
   public long getSerializedSize();
 
-  public void writeToChannel(WritableByteChannel channel) throws IOException;
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

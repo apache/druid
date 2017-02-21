@@ -47,7 +47,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
 
   private final TieredBrokerSelectorStrategy STRATEGY = new JavaScriptTieredBrokerSelectorStrategy(
       "function (config, query) { if (query.getAggregatorSpecs && query.getDimensionSpec && query.getDimensionSpec().getDimension() == 'bigdim' && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }",
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
 
   @Test
@@ -57,7 +57,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            JavaScriptConfig.getDefault()
+            JavaScriptConfig.getEnabledInstance()
         )
     );
 
@@ -77,7 +77,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             JavaScriptConfig.class,
-            new JavaScriptConfig(true)
+            new JavaScriptConfig(false)
         )
     );
 

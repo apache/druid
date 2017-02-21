@@ -340,7 +340,7 @@ public class CardinalityAggregatorTest
 
 
     String superJsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1WithExtraction = new TestDimensionSelector(values1, superFn);
     dim2WithExtraction = new TestDimensionSelector(values2, superFn);
     selectorListWithExtraction = Lists.newArrayList(
@@ -361,7 +361,7 @@ public class CardinalityAggregatorTest
     );
 
     String helloJsFn = "function(str) { return 'hello' }";
-    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1ConstantVal = new TestDimensionSelector(values1, helloFn);
     dim2ConstantVal = new TestDimensionSelector(values2, helloFn);
     selectorListConstantVal = Lists.newArrayList(

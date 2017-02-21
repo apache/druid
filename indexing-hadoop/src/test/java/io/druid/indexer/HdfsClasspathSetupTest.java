@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.common.utils.UUIDUtils;
 import io.druid.java.util.common.StringUtils;
 import junit.framework.Assert;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -71,7 +72,6 @@ public class HdfsClasspathSetupTest
   public static void setupStatic() throws IOException, ClassNotFoundException
   {
     hdfsTmpDir = File.createTempFile("hdfsClasspathSetupTest", "dir");
-    hdfsTmpDir.deleteOnExit();
     if (!hdfsTmpDir.delete()) {
       throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
     }
@@ -100,6 +100,7 @@ public class HdfsClasspathSetupTest
     if (miniCluster != null) {
       miniCluster.shutdown(true);
     }
+    FileUtils.deleteDirectory(hdfsTmpDir);
   }
 
   @After

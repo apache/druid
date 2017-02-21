@@ -23,10 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   };
 
   private final float probability;
-  private String fieldName;
+  private final String fieldName;
 
   @JsonCreator
   public QuantilePostAggregator(
@@ -78,8 +79,8 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
-    return ah.getQuantiles(new float[]{this.getProbability()})[0];
+    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
+    return ah.getQuantiles(new float[]{probability})[0];
   }
 
   @Override
@@ -127,5 +128,14 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
            "probability=" + probability +
            ", fieldName='" + fieldName + '\'' +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_QUANTILE)
+        .appendString(fieldName)
+        .appendFloat(probability)
+        .build();
   }
 }

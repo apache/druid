@@ -27,6 +27,7 @@ import com.google.common.primitives.Longs;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -150,5 +151,13 @@ public class LongGreatestPostAggregator implements PostAggregator
     int result = name != null ? name.hashCode() : 0;
     result = 31 * result + fields.hashCode();
     return result;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.LONG_GREATEST)
+        .appendCacheablesIgnoringOrder(fields)
+        .build();
   }
 }

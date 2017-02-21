@@ -26,6 +26,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -74,8 +75,8 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   @Override
   public FinalizingFieldAccessPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
-    return new FinalizingFieldAccessPostAggregator(name, fieldName) {
-
+    return new FinalizingFieldAccessPostAggregator(name, fieldName)
+    {
       @Override
       public Comparator getComparator()
       {
@@ -107,6 +108,14 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.FINALIZING_FIELD_ACCESS)
+        .appendString(fieldName)
+        .build();
+  }
+
+  @Override
   public String toString()
   {
     return "FinalizingFieldAccessPostAggregator{" +
@@ -125,7 +134,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       return false;
     }
 
-    FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator)o;
+    FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator) o;
 
     if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
       return false;
@@ -146,9 +155,11 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   }
 
   @VisibleForTesting
-  static FinalizingFieldAccessPostAggregator buildDecorated(String name,
-                                                            String fieldName,
-                                                            Map<String, AggregatorFactory> aggregators)
+  static FinalizingFieldAccessPostAggregator buildDecorated(
+      String name,
+      String fieldName,
+      Map<String, AggregatorFactory> aggregators
+  )
   {
     FinalizingFieldAccessPostAggregator ret = new FinalizingFieldAccessPostAggregator(name, fieldName);
     return ret.decorate(aggregators);

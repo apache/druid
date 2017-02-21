@@ -137,6 +137,25 @@ public class TaskSerdeTest
 
     Assert.assertEquals(null, tuningConfig.getTargetPartitionSize());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":-1}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertEquals(null, tuningConfig.getNumShards());
+    Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertEquals(null, tuningConfig.getNumShards());
+    Assert.assertEquals(
+        IndexTask.IndexTuningConfig.DEFAULT_TARGET_PARTITION_SIZE,
+        (int) tuningConfig.getTargetPartitionSize()
+    );
   }
 
   @Test

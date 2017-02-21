@@ -17,38 +17,48 @@
  * under the License.
  */
 
-package io.druid.collections.bitmap;
+package io.druid.extendedset.intset;
 
-import org.roaringbitmap.IntIterator;
+import java.util.NoSuchElementException;
 
-import io.druid.extendedset.intset.IntSet;
-
-/**
- */
-public class WrappedConciseIntIterator implements IntIterator
+public final class EmptyIntIterator implements IntSet.IntIterator
 {
-  private final IntSet.IntIterator itr;
+  private static final EmptyIntIterator INSTANCE = new EmptyIntIterator();
 
-  public WrappedConciseIntIterator(IntSet.IntIterator itr)
+  public static EmptyIntIterator instance()
   {
-    this.itr = itr;
+    return INSTANCE;
   }
+
+  private EmptyIntIterator() {}
 
   @Override
   public boolean hasNext()
   {
-    return itr.hasNext();
+    return false;
   }
 
   @Override
   public int next()
   {
-    return itr.next();
+    throw new NoSuchElementException();
   }
 
   @Override
-  public IntIterator clone()
+  public void remove()
   {
-    return new WrappedConciseIntIterator(itr.clone());
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void skipAllBefore(int element)
+  {
+    // nothing to skip
+  }
+
+  @Override
+  public IntSet.IntIterator clone()
+  {
+    return new EmptyIntIterator();
   }
 }
