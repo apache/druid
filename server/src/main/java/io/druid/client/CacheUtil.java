@@ -23,6 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
+import io.druid.query.BaseQuery;
+import io.druid.query.CacheStrategy;
+import io.druid.query.Query;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
@@ -75,6 +79,66 @@ public class CacheUtil
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public static <T> boolean useCacheOnBrokers(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return useCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
+  }
+
+  public static <T> boolean populateCacheOnBrokers(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return populateCache(query, strategy, cacheConfig) && strategy.isCacheable(query, false);
+  }
+
+  public static <T> boolean useCacheOnDataNodes(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return useCache(query, strategy, cacheConfig) && strategy.isCacheable(query, true);
+  }
+
+  public static <T> boolean populateCacheOnDataNodes(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return populateCache(query, strategy, cacheConfig) && strategy.isCacheable(query, true);
+  }
+
+  private static <T> boolean useCache(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return BaseQuery.getContextUseCache(query, true)
+           && strategy != null
+           && cacheConfig.isUseCache()
+           && cacheConfig.isQueryCacheable(query);
+  }
+
+  private static <T> boolean populateCache(
+      Query<T> query,
+      CacheStrategy<T, Object, Query<T>> strategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return BaseQuery.getContextPopulateCache(query, true)
+           && strategy != null
+           && cacheConfig.isPopulateCache()
+           && cacheConfig.isQueryCacheable(query);
   }
 
 }
