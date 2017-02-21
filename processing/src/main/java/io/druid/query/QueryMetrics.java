@@ -133,7 +133,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void server(String host);
 
-  void remoteAddress(String removeAddress);
+  void remoteAddress(String remoteAddress);
 
   void userDimensions(Map<String, String> userDimensions);
 

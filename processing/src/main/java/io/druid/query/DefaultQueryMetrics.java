@@ -129,9 +129,9 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void remoteAddress(String removeAddress)
+  public void remoteAddress(String remoteAddress)
   {
-    builder.setDimension("removeAddress", removeAddress);
+    builder.setDimension("remoteAddress", remoteAddress);
   }
 
   @Override
