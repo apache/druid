@@ -139,11 +139,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
         return new GroupByQueryResource();
       } else {
         final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.drain(
+        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.takeBatch(
             requiredMergeBufferNum, timeout.longValue()
         );
-        if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
-          mergeBufferHolders.close();
+        if (mergeBufferHolders == null) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
           return new GroupByQueryResource(mergeBufferHolders);
