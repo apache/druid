@@ -38,6 +38,7 @@ import io.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -70,7 +71,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   )
   {
     super(dataSource, querySegmentSpec, false, context);
-    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;
@@ -318,7 +319,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -329,47 +330,30 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     if (!super.equals(o)) {
       return false;
     }
-
-    TopNQuery query = (TopNQuery) o;
-
-    if (threshold != query.threshold) {
-      return false;
-    }
-    if (!virtualColumns.equals(query.virtualColumns)) {
-      return false;
-    }
-    if (dimensionSpec != null ? !dimensionSpec.equals(query.dimensionSpec) : query.dimensionSpec != null) {
-      return false;
-    }
-    if (topNMetricSpec != null ? !topNMetricSpec.equals(query.topNMetricSpec) : query.topNMetricSpec != null) {
-      return false;
-    }
-    if (dimFilter != null ? !dimFilter.equals(query.dimFilter) : query.dimFilter != null) {
-      return false;
-    }
-    if (granularity != null ? !granularity.equals(query.granularity) : query.granularity != null) {
-      return false;
-    }
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(query.aggregatorSpecs) : query.aggregatorSpecs != null) {
-      return false;
-    }
-    return postAggregatorSpecs != null
-           ? postAggregatorSpecs.equals(query.postAggregatorSpecs)
-           : query.postAggregatorSpecs == null;
+    final TopNQuery topNQuery = (TopNQuery) o;
+    return threshold == topNQuery.threshold &&
+           Objects.equals(virtualColumns, topNQuery.virtualColumns) &&
+           Objects.equals(dimensionSpec, topNQuery.dimensionSpec) &&
+           Objects.equals(topNMetricSpec, topNQuery.topNMetricSpec) &&
+           Objects.equals(dimFilter, topNQuery.dimFilter) &&
+           Objects.equals(granularity, topNQuery.granularity) &&
+           Objects.equals(aggregatorSpecs, topNQuery.aggregatorSpecs) &&
+           Objects.equals(postAggregatorSpecs, topNQuery.postAggregatorSpecs);
   }
 
   @Override
   public int hashCode()
   {
-    int result = super.hashCode();
-    result = 31 * result + virtualColumns.hashCode();
-    result = 31 * result + (dimensionSpec != null ? dimensionSpec.hashCode() : 0);
-    result = 31 * result + (topNMetricSpec != null ? topNMetricSpec.hashCode() : 0);
-    result = 31 * result + threshold;
-    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
-    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
-    result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
-    result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
-    return result;
+    return Objects.hash(
+        super.hashCode(),
+        virtualColumns,
+        dimensionSpec,
+        topNMetricSpec,
+        threshold,
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs
+    );
   }
 }

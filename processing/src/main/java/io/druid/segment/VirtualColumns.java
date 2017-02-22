@@ -35,6 +35,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +93,11 @@ public class VirtualColumns implements Cacheable
       }
     }
     return new VirtualColumns(ImmutableList.copyOf(virtualColumns), withDotSupport, withoutDotSupport);
+  }
+
+  public static VirtualColumns nullToEmpty(@Nullable VirtualColumns virtualColumns)
+  {
+    return virtualColumns == null ? EMPTY : virtualColumns;
   }
 
   private VirtualColumns(

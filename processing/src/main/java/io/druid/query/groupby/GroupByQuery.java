@@ -64,6 +64,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -118,7 +119,7 @@ public class GroupByQuery extends BaseQuery<Row>
   )
   {
     super(dataSource, querySegmentSpec, false, context);
-    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
@@ -873,7 +874,7 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -884,45 +885,32 @@ public class GroupByQuery extends BaseQuery<Row>
     if (!super.equals(o)) {
       return false;
     }
-
-    GroupByQuery that = (GroupByQuery) o;
-
-    if (!virtualColumns.equals(that.virtualColumns)) {
-      return false;
-    }
-    if (!limitSpec.equals(that.limitSpec)) {
-      return false;
-    }
-    if (havingSpec != null ? !havingSpec.equals(that.havingSpec) : that.havingSpec != null) {
-      return false;
-    }
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
-      return false;
-    }
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
-      return false;
-    }
-    if (!dimensions.equals(that.dimensions)) {
-      return false;
-    }
-    if (!aggregatorSpecs.equals(that.aggregatorSpecs)) {
-      return false;
-    }
-    return postAggregatorSpecs.equals(that.postAggregatorSpecs);
+    final GroupByQuery that = (GroupByQuery) o;
+    return Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(limitSpec, that.limitSpec) &&
+           Objects.equals(havingSpec, that.havingSpec) &&
+           Objects.equals(dimFilter, that.dimFilter) &&
+           Objects.equals(granularity, that.granularity) &&
+           Objects.equals(dimensions, that.dimensions) &&
+           Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
+           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs) &&
+           Objects.equals(limitFn, that.limitFn);
   }
 
   @Override
   public int hashCode()
   {
-    int result = super.hashCode();
-    result = 31 * result + virtualColumns.hashCode();
-    result = 31 * result + limitSpec.hashCode();
-    result = 31 * result + (havingSpec != null ? havingSpec.hashCode() : 0);
-    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
-    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
-    result = 31 * result + dimensions.hashCode();
-    result = 31 * result + aggregatorSpecs.hashCode();
-    result = 31 * result + postAggregatorSpecs.hashCode();
-    return result;
+    return Objects.hash(
+        super.hashCode(),
+        virtualColumns,
+        limitSpec,
+        havingSpec,
+        dimFilter,
+        granularity,
+        dimensions,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        limitFn
+    );
   }
 }
