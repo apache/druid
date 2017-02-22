@@ -384,6 +384,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             .appendCacheable(query.getDimFilter())
             .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
             .appendCacheablesIgnoringOrder(query.getDimensions())
+            .appendCacheable(query.getVirtualColumns())
             .build();
       }
 

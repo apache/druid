@@ -210,6 +210,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                 new GroupByQuery(
                     query.getDataSource(),
                     query.getQuerySegmentSpec(),
+                    query.getVirtualColumns(),
                     query.getDimFilter(),
                     query.getGranularity(),
                     query.getDimensions(),

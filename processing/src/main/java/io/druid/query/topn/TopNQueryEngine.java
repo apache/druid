@@ -35,7 +35,6 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -77,7 +76,13 @@ public class TopNQueryEngine
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), VirtualColumns.EMPTY, granularity, query.isDescending()),
+            adapter.makeCursors(
+                filter,
+                queryIntervals.get(0),
+                query.getVirtualColumns(),
+                granularity,
+                query.isDescending()
+            ),
             new Function<Cursor, Result<TopNResultValue>>()
             {
               @Override
@@ -106,7 +111,8 @@ public class TopNQueryEngine
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(cardinality, numBytesPerRecord);
     query.initTopNAlgorithmSelector(selector);
 
-    final ColumnCapabilities columnCapabilities = adapter.getColumnCapabilities(dimension);
+    final ColumnCapabilities columnCapabilities = query.getVirtualColumns()
+                                                       .getColumnCapabilitiesWithFallback(adapter, dimension);
 
     final TopNAlgorithm topNAlgorithm;
     if (
