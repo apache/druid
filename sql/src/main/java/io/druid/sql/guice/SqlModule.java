@@ -37,6 +37,8 @@ import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.view.NoopViewManager;
+import io.druid.sql.calcite.view.ViewManager;
 import io.druid.sql.http.SqlResource;
 import org.apache.calcite.schema.SchemaPlus;
 
@@ -65,6 +67,7 @@ public class SqlModule implements Module
       JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
       LifecycleModule.register(binder, DruidSchema.class);
       SqlBindings.addAggregator(binder, ApproxCountDistinctSqlAggregator.class);
+      binder.bind(ViewManager.class).to(NoopViewManager.class);
 
       if (isJsonOverHttpEnabled()) {
         Jerseys.addResource(binder, SqlResource.class);

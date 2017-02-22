@@ -70,6 +70,9 @@ import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.view.InProcessViewManager;
+import io.druid.sql.calcite.view.NoopViewManager;
+import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
@@ -272,10 +275,20 @@ public class CalciteTests
       final PlannerConfig plannerConfig
   )
   {
+    return createMockSchema(walker, plannerConfig, new NoopViewManager());
+  }
+
+  public static DruidSchema createMockSchema(
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager
+  )
+  {
     final DruidSchema schema = new DruidSchema(
         walker,
         new TestServerInventoryView(walker.getSegments()),
-        plannerConfig
+        plannerConfig,
+        viewManager
     );
 
     schema.start();
