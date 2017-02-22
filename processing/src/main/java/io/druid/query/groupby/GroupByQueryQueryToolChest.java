@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -32,14 +31,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
@@ -57,11 +55,12 @@ import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.groupby.resource.GroupByQueryResource;
+import io.druid.query.groupby.strategy.GroupByStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -84,22 +83,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   };
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
-  private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByStrategySelector strategySelector;
-  private final StupidPool<ByteBuffer> bufferPool;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
 
   @Inject
   public GroupByQueryQueryToolChest(
-      Supplier<GroupByQueryConfig> configSupplier,
       GroupByStrategySelector strategySelector,
-      @Global StupidPool<ByteBuffer> bufferPool,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this.configSupplier = configSupplier;
     this.strategySelector = strategySelector;
-    this.bufferPool = bufferPool;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
@@ -116,7 +109,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
 
         if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
-          return mergeGroupByResults(
+          return initAndMergeGroupByResults(
               (GroupByQuery) query,
               runner,
               responseContext
@@ -127,8 +120,31 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(
+  private Sequence<Row> initAndMergeGroupByResults(
       final GroupByQuery query,
+      QueryRunner<Row> runner,
+      Map<String, Object> context
+  )
+  {
+    final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
+    final GroupByQueryResource resource = groupByStrategy.prepareResource(query, false);
+
+    return Sequences.withBaggage(
+        mergeGroupByResults(
+            groupByStrategy,
+            query,
+            resource,
+            runner,
+            context
+        ),
+        resource
+    );
+  }
+
+  private Sequence<Row> mergeGroupByResults(
+      GroupByStrategy groupByStrategy,
+      final GroupByQuery query,
+      GroupByQueryResource resource,
       QueryRunner<Row> runner,
       Map<String, Object> context
   )
@@ -161,6 +177,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       final Sequence<Row> subqueryResult = mergeGroupByResults(
+          groupByStrategy,
           subquery.withOverriddenContext(
               ImmutableMap.<String, Object>of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
@@ -169,6 +186,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   false
               )
           ),
+          resource,
           runner,
           context
       );
@@ -186,9 +204,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         finalizingResults = subqueryResult;
       }
 
-      return strategySelector.strategize(query).processSubqueryResult(subquery, query, finalizingResults);
+      return groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults);
     } else {
-      return strategySelector.strategize(query).mergeResults(runner, query, context);
+      return groupByStrategy.mergeResults(runner, query, context);
     }
   }
 

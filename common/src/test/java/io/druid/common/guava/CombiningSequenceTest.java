@@ -228,7 +228,7 @@ public class CombiningSequenceTest
     };
 
     Sequence<Pair<Integer, Integer>> seq = Sequences.limit(
-        new CombiningSequence<>(
+        CombiningSequence.create(
             Sequences.withBaggage(Sequences.simple(pairs), closeable),
             Ordering.natural().onResultOf(Pair.<Integer, Integer>lhsFn()),
             new BinaryFn<Pair<Integer, Integer>, Pair<Integer, Integer>, Pair<Integer, Integer>>()
