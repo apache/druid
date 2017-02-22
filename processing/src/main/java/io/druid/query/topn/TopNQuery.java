@@ -74,15 +74,17 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
-    this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
+    this.postAggregatorSpecs = Queries.prepareAggregations(this.aggregatorSpecs,
+                                                           postAggregatorSpecs == null
+                                                           ? ImmutableList.<PostAggregator>of()
+                                                           : postAggregatorSpecs
+    );
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
     Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
 
     Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
-
-    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
   @Override
@@ -316,7 +318,9 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     if (threshold != topNQuery.threshold) {
       return false;
     }
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null) {
+    if (aggregatorSpecs != null
+        ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs)
+        : topNQuery.aggregatorSpecs != null) {
       return false;
     }
     if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) {
@@ -328,7 +332,9 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) {
       return false;
     }
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs) : topNQuery.postAggregatorSpecs != null) {
+    if (postAggregatorSpecs != null
+        ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs)
+        : topNQuery.postAggregatorSpecs != null) {
       return false;
     }
     if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null) {

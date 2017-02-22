@@ -63,9 +63,11 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
-    this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
-
-    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
+    this.postAggregatorSpecs = Queries.prepareAggregations(this.aggregatorSpecs,
+                                                           postAggregatorSpecs == null
+                                                           ? ImmutableList.<PostAggregator>of()
+                                                           : postAggregatorSpecs
+    );
   }
 
   @Override
@@ -176,15 +178,15 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public String toString()
   {
     return "TimeseriesQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", descending=" + isDescending() +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", context=" + getContext() +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", descending=" + isDescending() +
+           ", dimFilter=" + dimFilter +
+           ", granularity='" + granularity + '\'' +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", context=" + getContext() +
+           '}';
   }
 
   @Override
@@ -211,7 +213,9 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
       return false;
     }
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null) {
+    if (postAggregatorSpecs != null
+        ? !postAggregatorSpecs.equals(that.postAggregatorSpecs)
+        : that.postAggregatorSpecs != null) {
       return false;
     }
 
