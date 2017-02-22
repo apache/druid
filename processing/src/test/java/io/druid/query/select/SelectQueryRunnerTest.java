@@ -42,13 +42,16 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -477,6 +480,59 @@ public class SelectQueryRunnerTest
       );
       verify(expectedResults, results);
     }
+  }
+
+  @Test
+  public void testFullOnSelectWithFilterOnVirtualColumn()
+  {
+    SelectQuery query = newTestQuery()
+        .intervals("2011-01-13/2011-01-14")
+        .filters(
+            new AndDimFilter(
+                Arrays.asList(
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
+                    new BoundDimFilter("expr", "11.1", null, false, false, null, null, StringComparators.NUMERIC)
+                )
+            )
+        )
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
+        .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
+        .pagingSpec(new PagingSpec(null, 10, true))
+        .virtualColumns(new ExpressionVirtualColumn("expr", "index / 10.0"))
+        .build();
+
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    final List<List<Map<String, Object>>> events = toEvents(
+        new String[]{
+            EventHolder.timestampKey + ":TIME",
+            null,
+            QueryRunnerTestHelper.qualityDimension + ":STRING",
+            null,
+            null,
+            QueryRunnerTestHelper.indexMetric + ":FLOAT"
+        },
+        // filtered values with all granularity
+        new String[]{
+            "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
+            "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672"
+        }
+    );
+
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        events,
+        Lists.newArrayList("quality"),
+        Lists.<String>newArrayList("index"),
+        offset.startOffset(),
+        offset.threshold()
+    );
+    verify(expectedResults, results);
   }
 
   @Test

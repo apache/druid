@@ -355,6 +355,20 @@ public class BoundFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testNumericMatchVirtualColumn()
+  {
+    assertFilterMatches(
+        new BoundDimFilter("expr", "1", "2", false, false, false, null, StringComparators.NUMERIC),
+        ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter("expr", "2", "3", false, false, false, null, StringComparators.NUMERIC),
+        ImmutableList.<String>of()
+    );
+  }
+
+  @Test
   public void testNumericMatchExactlySingleValue()
   {
     assertFilterMatches(
