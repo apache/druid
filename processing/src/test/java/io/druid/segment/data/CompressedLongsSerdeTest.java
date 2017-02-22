@@ -151,7 +151,7 @@ public class CompressedLongsSerdeTest
     );
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedLongsIndexedSupplier supplier = CompressedLongsIndexedSupplier
-        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
+        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     IndexedLongs longs = supplier.get();
 
     assertIndexMatchesVals(longs, values);
@@ -205,7 +205,9 @@ public class CompressedLongsSerdeTest
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
     CompressedLongsIndexedSupplier anotherSupplier = CompressedLongsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes), order
+        ByteBuffer.wrap(bytes),
+        order,
+        null
     );
     IndexedLongs indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);

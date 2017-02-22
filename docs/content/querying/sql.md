@@ -31,14 +31,24 @@ jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/
 Example code:
 
 ```java
-Connection connection = DriverManager.getConnection("jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/");
-ResultSet resultSet = connection.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM data_source");
-while (resultSet.next()) {
-  // Do something
+// Connect to /druid/v2/sql/avatica/ on your broker.
+String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
+
+// Set any connection context parameters you need here (see "Connection context" below).
+// Or leave empty for default behavior.
+Properties connectionProperties = new Properties();
+
+try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+  try (ResultSet resultSet = connection.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM data_source")) {
+    while (resultSet.next()) {
+      // Do something
+    }
+  }
 }
 ```
 
-Table metadata is available over JDBC using `connection.getMetaData()`.
+Table metadata is available over JDBC using `connection.getMetaData()` or by querying the "INFORMATION_SCHEMA" tables
+(see below).
 
 Parameterized queries don't work properly, so avoid those.
 
@@ -61,10 +71,21 @@ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ 
 
 Metadata is only available over the HTTP API by querying the "INFORMATION_SCHEMA" tables (see below).
 
+You can provide [connection context parameters](#connection-context) by adding a "context" map, like:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
+  "context" : {
+    "sqlTimeZone" : "America/Los_Angeles"
+  }
+}
+```
+
 ### Metadata
 
-Druid brokers cache column type metadata for each dataSource and use it to plan SQL queries. This cache is updated
-on broker startup and also periodically in the background through
+Druid brokers infer table and column metadata for each dataSource from segments loaded in the cluster, and use this to
+plan SQL queries. This metadata is cached on broker startup and also updated periodically in the background through
 [SegmentMetadata queries](../querying/segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
@@ -77,7 +98,7 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE SCHEMA_NAME = 'druid' AND TABLE_N
 
 See the [INFORMATION_SCHEMA tables](#information_schema-tables) section below for details on the available metadata.
 
-You can also access table and column metadata through JDBC using `connection.getMetaData()`.
+You can access table and column metadata through JDBC using `connection.getMetaData()`.
 
 ### Approximate queries
 
@@ -91,8 +112,8 @@ algorithm.
 - TopN-style queries with a single grouping column, like
 `SELECT col1, SUM(col2) FROM data_source GROUP BY col1 ORDER BY SUM(col2) DESC LIMIT 100`, by default will be executed
 as [TopN queries](topnquery.html), which use an approximate algorithm. To disable this behavior, and use exact
-algorithms for topN-style queries, set
-[druid.sql.planner.useApproximateTopN](../configuration/broker.html#sql-planner-configuration) to "false".
+algorithms for topN-style queries, set "useApproximateTopN" to "false", either through query context or through broker
+configuration.
 
 ### Time functions
 
@@ -101,6 +122,10 @@ Druid's SQL language supports a number of time operations, including:
 - `FLOOR(__time TO <granularity>)` for grouping or filtering on time buckets, like `SELECT FLOOR(__time TO MONTH), SUM(cnt) FROM data_source GROUP BY FLOOR(__time TO MONTH)`
 - `EXTRACT(<granularity> FROM __time)` for grouping or filtering on time parts, like `SELECT EXTRACT(HOUR FROM __time), SUM(cnt) FROM data_source GROUP BY EXTRACT(HOUR FROM __time)`
 - Comparisons to `TIMESTAMP '<time string>'` for time filters, like `SELECT COUNT(*) FROM data_source WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2001-01-01 00:00:00'`
+- `CURRENT_TIMESTAMP` for the current time, usable in filters like `SELECT COUNT(*) FROM data_source WHERE __time >= CURRENT_TIMESTAMP - INTERVAL '1' HOUR`
+
+By default, time operations use the UTC time zone. You can change the time zone for time operations by setting the
+connection context parameter "sqlTimeZone" to the name of the time zone, like "America/Los_Angeles".
 
 ### Subqueries
 
@@ -131,6 +156,21 @@ For this query, the broker will first translate the inner select on data_source_
 `x` values. Then it'll use those distinct values to build an "in" filter on data_source_1 for the outer query. The
 configuration parameter `druid.sql.planner.maxSemiJoinRowsInMemory` controls the maximum number of values that will be
 materialized for this kind of plan.
+
+### Connection context
+
+Druid's SQL layer supports a connection context that influences SQL query planning and Druid native query execution.
+The parameters in the table below affect SQL planning. All other context parameters you provide will be attached to
+Druid queries and can affect how they run. See [Query context](query-context.html) for details on the possible options.
+
+|Parameter|Description|Default value|
+|---------|-----------|-------------|
+|`sqlTimeZone`|Sets the time zone for this connection. Should be a time zone name like "America/Los_Angeles".|UTC|
+|`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the broker|
+|`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the broker|
+|`useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|druid.sql.planner.useFallback on the broker|
+
+Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
 
 ### Configuration
 

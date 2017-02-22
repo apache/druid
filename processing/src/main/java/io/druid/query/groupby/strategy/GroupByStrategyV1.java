@@ -79,9 +79,15 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public GroupByQueryBrokerResource prepareBrokerResource(GroupByQuery query)
+  public GroupByQueryBrokerResource prepareResource(GroupByQuery query, boolean willMergeRunners)
   {
     return new GroupByQueryBrokerResource();
+  }
+
+  @Override
+  public boolean isCacheable(boolean willMergeRunners)
+  {
+    return true;
   }
 
   @Override

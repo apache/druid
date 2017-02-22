@@ -123,39 +123,43 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public GroupByQueryBrokerResource prepareBrokerResource(GroupByQuery query)
+  public GroupByQueryBrokerResource prepareResource(GroupByQuery query, boolean willMergeRunners)
   {
-    // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
-    // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
-    // If the broker processes an outer groupBy which reads input from an inner groupBy,
-    // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
-    // until the outer groupBy processing completes.
-    // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
-    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 2, 1);
+    if (willMergeRunners) {
+      // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
+      // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
+      // If the broker processes an outer groupBy which reads input from an inner groupBy,
+      // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
+      // until the outer groupBy processing completes.
+      // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
+      final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 2, 1);
 
-    if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
-      throw new ResourceLimitExceededException(
-          "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
-          + mergeBufferPool.maxSize() + " merge buffers are configured"
-      );
-    } else if (requiredMergeBufferNum == 0) {
-      return new GroupByQueryBrokerResource();
-    } else {
-      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
-      final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+      if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
+        throw new ResourceLimitExceededException(
+            "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
+            + mergeBufferPool.maxSize() + " merge buffers are configured"
+        );
+      } else if (requiredMergeBufferNum == 0) {
+        return new GroupByQueryBrokerResource();
+      } else {
+        final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
+        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
 
-      try {
-        mergeBufferHolders = mergeBufferPool.drain(requiredMergeBufferNum, timeout.longValue());
-        if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
-          mergeBufferHolders.close();
-          throw new TimeoutException("Cannot acquire enough merge buffers");
-        } else {
-          return new GroupByQueryBrokerResource(mergeBufferHolders);
+        try {
+          mergeBufferHolders = mergeBufferPool.drain(requiredMergeBufferNum, timeout.longValue());
+          if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
+            mergeBufferHolders.close();
+            throw new TimeoutException("Cannot acquire enough merge buffers");
+          } else {
+            return new GroupByQueryBrokerResource(mergeBufferHolders);
+          }
+        }
+        catch (Exception e) {
+          throw new QueryInterruptedException(e);
         }
       }
-      catch (Exception e) {
-        throw new QueryInterruptedException(e);
-      }
+    } else {
+      return new GroupByQueryBrokerResource();
     }
   }
 
@@ -167,6 +171,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
     } else {
       return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), maxBufferNum, foundNum + 1);
     }
+  }
+
+  @Override
+  public boolean isCacheable(boolean willMergeRunners)
+  {
+    return willMergeRunners;
   }
 
   @Override

@@ -127,7 +127,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   )
   {
     final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
-    final GroupByQueryBrokerResource resource = groupByStrategy.prepareBrokerResource(query);
+    final GroupByQueryBrokerResource resource = groupByStrategy.prepareResource(query, false);
 
     return Sequences.withBaggage(
         mergeGroupByResults(
@@ -369,6 +369,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<DimensionSpec> dims = query.getDimensions();
 
+      @Override
+      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners)
+      {
+        return strategySelector.strategize(query).isCacheable(willMergeRunners);
+      }
 
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
