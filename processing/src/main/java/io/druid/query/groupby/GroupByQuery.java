@@ -127,12 +127,15 @@ public class GroupByQuery extends BaseQuery<Row>
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
-    this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
+    this.postAggregatorSpecs = Queries.prepareAggregations(
+        this.aggregatorSpecs,
+        postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs
+    );
     this.havingSpec = havingSpec;
     this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
-    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
+
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
@@ -893,8 +896,7 @@ public class GroupByQuery extends BaseQuery<Row>
            Objects.equals(granularity, that.granularity) &&
            Objects.equals(dimensions, that.dimensions) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
-           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs) &&
-           Objects.equals(limitFn, that.limitFn);
+           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
   }
 
   @Override
@@ -909,8 +911,7 @@ public class GroupByQuery extends BaseQuery<Row>
         granularity,
         dimensions,
         aggregatorSpecs,
-        postAggregatorSpecs,
-        limitFn
+        postAggregatorSpecs
     );
   }
 }

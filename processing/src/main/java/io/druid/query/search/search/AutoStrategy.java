@@ -25,6 +25,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 
@@ -54,6 +55,7 @@ public class AutoStrategy extends SearchStrategy
     if (index != null) {
       final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
           index.getBitmapFactoryForDimensions(),
+          VirtualColumns.EMPTY,
           index
       );
 

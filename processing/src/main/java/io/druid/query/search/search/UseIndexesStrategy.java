@@ -37,6 +37,7 @@ import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -80,6 +81,7 @@ public class UseIndexesStrategy extends SearchStrategy
       if (bitmapSuppDims.size() > 0) {
         final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
             index.getBitmapFactoryForDimensions(),
+            VirtualColumns.EMPTY,
             index
         );
 
@@ -153,6 +155,7 @@ public class UseIndexesStrategy extends SearchStrategy
     } else {
       final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
           index.getBitmapFactoryForDimensions(),
+          VirtualColumns.EMPTY,
           index
       );
       Preconditions.checkArgument(filter.supportsBitmapIndex(selector), "filter[%s] should support bitmap", filter);
