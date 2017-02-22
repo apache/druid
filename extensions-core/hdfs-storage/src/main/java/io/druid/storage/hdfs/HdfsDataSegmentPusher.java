@@ -94,8 +94,9 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     );
 
     Path tmpFile = new Path(String.format(
-        "%s/%s/index.zip",
+        "%s/%s/%s/index.zip",
         fullyQualifiedStorageDirectory,
+        segment.getDataSource(),
         UUIDUtils.generateUuid()
     ));
     FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
