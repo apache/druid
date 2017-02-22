@@ -129,7 +129,7 @@ public class CompressedFloatsSerdeTest
     );
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
-        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
+        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     IndexedFloats floats = supplier.get();
 
     assertIndexMatchesVals(floats, values);
@@ -183,7 +183,7 @@ public class CompressedFloatsSerdeTest
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
     CompressedFloatsIndexedSupplier anotherSupplier = CompressedFloatsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes), order
+        ByteBuffer.wrap(bytes), order, null
     );
     IndexedFloats indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);

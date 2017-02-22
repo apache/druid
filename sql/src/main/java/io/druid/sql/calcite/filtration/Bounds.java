@@ -24,7 +24,10 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
+import io.druid.java.util.common.ISE;
 import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.ordering.StringComparators;
+import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -109,6 +112,95 @@ public class Bounds
         range.hasUpperBound() ? range.upperEndpoint().getValue() : null,
         range.hasLowerBound() && range.lowerBoundType() == BoundType.OPEN,
         range.hasUpperBound() && range.upperBoundType() == BoundType.OPEN,
+        null,
+        boundRefKey.getExtractionFn(),
+        boundRefKey.getComparator()
+    );
+  }
+
+  public static BoundDimFilter equalTo(final BoundRefKey boundRefKey, final String value)
+  {
+    return new BoundDimFilter(
+        boundRefKey.getDimension(),
+        value,
+        value,
+        false,
+        false,
+        null,
+        boundRefKey.getExtractionFn(),
+        boundRefKey.getComparator()
+    );
+  }
+
+  public static BoundDimFilter greaterThan(final BoundRefKey boundRefKey, final String value)
+  {
+    return new BoundDimFilter(
+        boundRefKey.getDimension(),
+        value,
+        null,
+        true,
+        false,
+        null,
+        boundRefKey.getExtractionFn(),
+        boundRefKey.getComparator()
+    );
+  }
+
+  public static BoundDimFilter greaterThanOrEqualTo(final BoundRefKey boundRefKey, final String value)
+  {
+    return new BoundDimFilter(
+        boundRefKey.getDimension(),
+        value,
+        null,
+        false,
+        false,
+        null,
+        boundRefKey.getExtractionFn(),
+        boundRefKey.getComparator()
+    );
+  }
+
+  public static BoundDimFilter lessThan(final BoundRefKey boundRefKey, final String value)
+  {
+    return new BoundDimFilter(
+        boundRefKey.getDimension(),
+        null,
+        value,
+        false,
+        true,
+        null,
+        boundRefKey.getExtractionFn(),
+        boundRefKey.getComparator()
+    );
+  }
+
+  public static BoundDimFilter lessThanOrEqualTo(final BoundRefKey boundRefKey, final String value)
+  {
+    return new BoundDimFilter(
+        boundRefKey.getDimension(),
+        null,
+        value,
+        false,
+        false,
+        null,
+        boundRefKey.getExtractionFn(),
+        boundRefKey.getComparator()
+    );
+  }
+
+  public static BoundDimFilter interval(final BoundRefKey boundRefKey, final Interval interval)
+  {
+    if (!boundRefKey.getComparator().equals(StringComparators.NUMERIC)) {
+      // Interval comparison only works with NUMERIC comparator.
+      throw new ISE("Comparator must be NUMERIC but was[%s]", boundRefKey.getComparator());
+    }
+
+    return new BoundDimFilter(
+        boundRefKey.getDimension(),
+        String.valueOf(interval.getStartMillis()),
+        String.valueOf(interval.getEndMillis()),
+        false,
+        true,
         null,
         boundRefKey.getExtractionFn(),
         boundRefKey.getComparator()

@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.io.ByteSink;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -34,5 +35,5 @@ public interface LongSupplierSerializer extends Closeable
   void add(long value) throws IOException;
   void closeAndConsolidate(ByteSink consolidatedOut) throws IOException;
   long getSerializedSize();
-  void writeToChannel(WritableByteChannel channel) throws IOException;
+  void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

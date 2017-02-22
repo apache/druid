@@ -142,7 +142,9 @@ public class CompressedVSizeIndexedSupplierTest
   protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     return CompressedVSizeIndexedSupplier.fromByteBuffer(
-        buffer, ByteOrder.nativeOrder()
+        buffer,
+        ByteOrder.nativeOrder(),
+        null
     );
   }
 }

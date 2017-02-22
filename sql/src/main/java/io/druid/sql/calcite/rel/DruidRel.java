@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryDataSource;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableRel;
@@ -80,6 +81,11 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
   public QueryMaker getQueryMaker()
   {
     return queryMaker;
+  }
+
+  public PlannerContext getPlannerContext()
+  {
+    return queryMaker.getPlannerContext();
   }
 
   public abstract T asDruidConvention();

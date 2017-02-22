@@ -112,6 +112,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
 
+    if (cacheConfig.isQueryCacheable(Query.GROUP_BY)) {
+      log.warn(
+          "Even though groupBy caching is enabled, v2 groupBys will not be cached. "
+          + "Consider disabling cache on your broker and enabling it on your data nodes to enable v2 groupBy caching."
+      );
+    }
+
     serverView.registerSegmentCallback(
         Execs.singleThreaded("CCClient-ServerView-CB-%d"),
         new ServerView.BaseSegmentCallback()
@@ -137,16 +144,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<Interval, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = BaseQuery.getContextUseCache(query, true)
-                             && strategy != null
-                             && cacheConfig.isUseCache()
-                             && cacheConfig.isQueryCacheable(query);
-    final boolean populateCache = BaseQuery.getContextPopulateCache(query, true)
-                                  && strategy != null
-                                  && cacheConfig.isPopulateCache()
-                                  && cacheConfig.isQueryCacheable(query);
+    final boolean useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
+    final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
     final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
-
 
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 

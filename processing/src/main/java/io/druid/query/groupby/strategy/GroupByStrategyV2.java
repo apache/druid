@@ -113,6 +113,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
+  public boolean isCacheable(boolean willMergeRunners)
+  {
+    return willMergeRunners;
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,

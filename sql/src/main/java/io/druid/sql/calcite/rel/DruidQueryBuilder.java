@@ -282,12 +282,14 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    *
    * @return query or null
    */
   public TimeseriesQuery toTimeseriesQuery(
       final DataSource dataSource,
-      final RowSignature sourceRowSignature
+      final RowSignature sourceRowSignature,
+      final Map<String, Object> context
   )
   {
     if (grouping == null || having != null) {
@@ -332,8 +334,9 @@ public class DruidQueryBuilder
       descending = false;
     }
 
-    final Map<String, Object> context = Maps.newHashMap();
-    context.put("skipEmptyBuckets", true);
+    final Map<String, Object> theContext = Maps.newHashMap();
+    theContext.put("skipEmptyBuckets", true);
+    theContext.putAll(context);
 
     return new TimeseriesQuery(
         dataSource,
@@ -344,7 +347,7 @@ public class DruidQueryBuilder
         queryGranularity,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        context
+        theContext
     );
   }
 
@@ -353,6 +356,7 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    * @param maxTopNLimit       maxTopNLimit from a PlannerConfig
    * @param useApproximateTopN from a PlannerConfig
    *
@@ -361,6 +365,7 @@ public class DruidQueryBuilder
   public TopNQuery toTopNQuery(
       final DataSource dataSource,
       final RowSignature sourceRowSignature,
+      final Map<String, Object> context,
       final int maxTopNLimit,
       final boolean useApproximateTopN
   )
@@ -420,7 +425,7 @@ public class DruidQueryBuilder
         QueryGranularities.ALL,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
-        null
+        context
     );
   }
 
@@ -429,12 +434,14 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    *
    * @return query or null
    */
   public GroupByQuery toGroupByQuery(
       final DataSource dataSource,
-      final RowSignature sourceRowSignature
+      final RowSignature sourceRowSignature,
+      final Map<String, Object> context
   )
   {
     if (grouping == null) {
@@ -454,7 +461,7 @@ public class DruidQueryBuilder
         grouping.getPostAggregators(),
         having != null ? new DimFilterHavingSpec(having) : null,
         limitSpec,
-        null
+        context
     );
   }
 
@@ -463,12 +470,14 @@ public class DruidQueryBuilder
    *
    * @param dataSource         data source to query
    * @param sourceRowSignature row signature of the dataSource
+   * @param context            query context
    *
    * @return query or null
    */
   public SelectQuery toSelectQuery(
       final DataSource dataSource,
-      final RowSignature sourceRowSignature
+      final RowSignature sourceRowSignature,
+      final Map<String, Object> context
   )
   {
     if (grouping != null) {
@@ -503,7 +512,7 @@ public class DruidQueryBuilder
         selectProjection != null ? selectProjection.getMetrics() : ImmutableList.<String>of(),
         null,
         new PagingSpec(null, 0) /* dummy -- will be replaced */,
-        null
+        context
     );
   }
 

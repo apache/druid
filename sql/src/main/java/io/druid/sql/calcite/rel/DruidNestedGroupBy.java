@@ -131,7 +131,11 @@ public class DruidNestedGroupBy extends DruidRel<DruidNestedGroupBy>
       return null;
     } else {
       return new QueryDataSource(
-          queryBuilder.toGroupByQuery(queryDataSource, sourceRel.getOutputRowSignature())
+          queryBuilder.toGroupByQuery(
+              queryDataSource,
+              sourceRel.getOutputRowSignature(),
+              getPlannerContext().getQueryContext()
+          )
       );
     }
   }

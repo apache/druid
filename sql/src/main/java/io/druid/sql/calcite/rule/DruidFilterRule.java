@@ -53,6 +53,7 @@ public class DruidFilterRule extends RelOptRule
     }
 
     final DimFilter dimFilter = Expressions.toFilter(
+        druidRel.getPlannerContext(),
         druidRel.getSourceRowSignature(),
         filter.getCondition()
     );
