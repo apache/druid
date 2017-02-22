@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import com.google.inject.Provides;
+import com.google.inject.Provider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -68,6 +68,7 @@ public class SqlModule implements Module
       LifecycleModule.register(binder, DruidSchema.class);
       SqlBindings.addAggregator(binder, ApproxCountDistinctSqlAggregator.class);
       binder.bind(ViewManager.class).to(NoopViewManager.class);
+      binder.bind(SchemaPlus.class).toProvider(SchemaPlusProvider.class);
 
       if (isJsonOverHttpEnabled()) {
         Jerseys.addResource(binder, SqlResource.class);
@@ -81,13 +82,15 @@ public class SqlModule implements Module
     }
   }
 
-  @Provides
-  public SchemaPlus createRootSchema(final DruidSchema druidSchema)
+  public static class SchemaPlusProvider implements Provider<SchemaPlus>
   {
-    if (isEnabled()) {
+    @Inject
+    private DruidSchema druidSchema;
+
+    @Override
+    public SchemaPlus get()
+    {
       return Calcites.createRootSchema(druidSchema);
-    } else {
-      throw new IllegalStateException("Cannot provide SchemaPlus when SQL is disabled.");
     }
   }
 
