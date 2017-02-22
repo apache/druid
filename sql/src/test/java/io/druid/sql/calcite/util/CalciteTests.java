@@ -70,7 +70,6 @@ import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
-import io.druid.sql.calcite.view.InProcessViewManager;
 import io.druid.sql.calcite.view.NoopViewManager;
 import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;

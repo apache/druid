@@ -49,7 +49,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 
 public class InformationSchema extends AbstractSchema
 {
