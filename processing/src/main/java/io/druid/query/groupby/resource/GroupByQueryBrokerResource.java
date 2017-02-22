@@ -61,8 +61,8 @@ public class GroupByQueryBrokerResource implements Closeable
    */
   public ResourceHolder<ByteBuffer> getMergeBuffer()
   {
-    Preconditions.checkState(mergeBuffers != null);
-    Preconditions.checkState(mergeBuffers.size() > 0);
+    Preconditions.checkState(mergeBuffers != null, "Resource is initialized with empty merge buffers");
+    Preconditions.checkState(mergeBuffers.size() > 0, "No available merge buffers");
     final ByteBuffer buffer = mergeBuffers.remove(mergeBuffers.size() - 1);
     return new ResourceHolder<ByteBuffer>()
     {

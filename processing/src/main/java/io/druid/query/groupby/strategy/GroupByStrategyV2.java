@@ -125,7 +125,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public GroupByQueryBrokerResource prepareResource(GroupByQuery query, boolean willMergeRunners)
   {
-    if (willMergeRunners) {
+    if (!willMergeRunners) {
       // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
       // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
       // If the broker processes an outer groupBy which reads input from an inner groupBy,
