@@ -19,51 +19,49 @@
 
 package io.druid.query.groupby.resource;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.ResourceHolder;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 /**
- * This class contains all resources required by the Broker during executing a group-by query.
+ * This class contains resources required for a groupBy query execution.
  * Currently, it contains only merge buffers, but any additional resources can be added in the future.
  */
-public class GroupByQueryBrokerResource implements Closeable
+public class GroupByQueryResource implements Closeable
 {
-  private static final Logger log = new Logger(GroupByQueryBrokerResource.class);
+  private static final Logger log = new Logger(GroupByQueryResource.class);
 
   private final ResourceHolder<List<ByteBuffer>> mergeBuffersHolder;
-  private final List<ByteBuffer> mergeBuffers;
+  private final Deque<ByteBuffer> mergeBuffers;
 
-  public GroupByQueryBrokerResource()
+  public GroupByQueryResource()
   {
     this.mergeBuffersHolder = null;
-    this.mergeBuffers = null;
+    this.mergeBuffers = new ArrayDeque<>();
   }
 
-  public GroupByQueryBrokerResource(ResourceHolder<List<ByteBuffer>> mergeBuffersHolder)
+  public GroupByQueryResource(ResourceHolder<List<ByteBuffer>> mergeBuffersHolder)
   {
     this.mergeBuffersHolder = mergeBuffersHolder;
-    this.mergeBuffers = Lists.newArrayList(mergeBuffersHolder.get());
+    this.mergeBuffers = new ArrayDeque<>(mergeBuffersHolder.get());
   }
 
   /**
-   * Get a merge buffer from the pre-acquired broker resources.
+   * Get a merge buffer from the pre-acquired resources.
    *
    * @return a resource holder containing a merge buffer
    *
-   * @throws IllegalStateException if this resource is not initialized with available merge buffers, or
+   * @throws IllegalStateException if this resource is initialized with empty merge buffers, or
    *                               there isn't any available merge buffers
    */
   public ResourceHolder<ByteBuffer> getMergeBuffer()
   {
-    Preconditions.checkState(mergeBuffers != null, "Resource is initialized with empty merge buffers");
-    Preconditions.checkState(mergeBuffers.size() > 0, "No available merge buffers");
-    final ByteBuffer buffer = mergeBuffers.remove(mergeBuffers.size() - 1);
+    final ByteBuffer buffer = mergeBuffers.pop();
     return new ResourceHolder<ByteBuffer>()
     {
       @Override
@@ -85,7 +83,7 @@ public class GroupByQueryBrokerResource implements Closeable
   {
     if (mergeBuffersHolder != null) {
       if (mergeBuffers.size() != mergeBuffersHolder.get().size()) {
-        log.warn((mergeBuffersHolder.get().size() - mergeBuffers.size()) + " resources are not returned yet");
+        log.warn("%d resources are not returned yet", mergeBuffersHolder.get().size() - mergeBuffers.size());
       }
       mergeBuffersHolder.close();
     }

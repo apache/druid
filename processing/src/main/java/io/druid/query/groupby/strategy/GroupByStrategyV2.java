@@ -51,6 +51,7 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.query.InsufficientResourcesException;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
@@ -60,19 +61,20 @@ import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 public class GroupByStrategyV2 implements GroupByStrategy
 {
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
+
+  private static final int MAX_MERGE_BUFFER_NUM = 2;
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
@@ -123,16 +125,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public GroupByQueryBrokerResource prepareResource(GroupByQuery query, boolean willMergeRunners)
+  public GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners)
   {
     if (!willMergeRunners) {
-      // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
-      // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
-      // If the broker processes an outer groupBy which reads input from an inner groupBy,
-      // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
-      // until the outer groupBy processing completes.
-      // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
-      final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 2, 1);
+      final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1);
 
       if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
@@ -140,7 +136,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
             + mergeBufferPool.maxSize() + " merge buffers are configured"
         );
       } else if (requiredMergeBufferNum == 0) {
-        return new GroupByQueryBrokerResource();
+        return new GroupByQueryResource();
       } else {
         final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
         final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
@@ -149,9 +145,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
           mergeBufferHolders = mergeBufferPool.drain(requiredMergeBufferNum, timeout.longValue());
           if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
             mergeBufferHolders.close();
-            throw new TimeoutException("Cannot acquire enough merge buffers");
+            throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
           } else {
-            return new GroupByQueryBrokerResource(mergeBufferHolders);
+            return new GroupByQueryResource(mergeBufferHolders);
           }
         }
         catch (Exception e) {
@@ -159,17 +155,24 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
       }
     } else {
-      return new GroupByQueryBrokerResource();
+      return new GroupByQueryResource();
     }
   }
 
-  private static int countRequiredMergeBufferNum(Query query, int maxBufferNum, int foundNum)
+  private static int countRequiredMergeBufferNum(Query query, int foundNum)
   {
+    // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
+    // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
+    // If the broker processes an outer groupBy which reads input from an inner groupBy,
+    // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
+    // until the outer groupBy processing completes.
+    // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
+
     final DataSource dataSource = query.getDataSource();
-    if (foundNum == maxBufferNum + 1 || !(dataSource instanceof QueryDataSource)) {
+    if (foundNum == MAX_MERGE_BUFFER_NUM + 1 || !(dataSource instanceof QueryDataSource)) {
       return foundNum - 1;
     } else {
-      return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), maxBufferNum, foundNum + 1);
+      return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
     }
   }
 
@@ -271,7 +274,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public Sequence<Row> processSubqueryResult(
       GroupByQuery subquery,
       GroupByQuery query,
-      GroupByQueryBrokerResource resource,
+      GroupByQueryResource resource,
       Sequence<Row> subqueryResult
   )
   {

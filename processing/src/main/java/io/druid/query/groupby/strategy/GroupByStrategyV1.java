@@ -46,7 +46,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -79,9 +79,9 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public GroupByQueryBrokerResource prepareResource(GroupByQuery query, boolean willMergeRunners)
+  public GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners)
   {
-    return new GroupByQueryBrokerResource();
+    return new GroupByQueryResource();
   }
 
   @Override
@@ -137,7 +137,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
   @Override
   public Sequence<Row> processSubqueryResult(
-      GroupByQuery subquery, GroupByQuery query, GroupByQueryBrokerResource resource, Sequence<Row> subqueryResult
+      GroupByQuery subquery, GroupByQuery query, GroupByQueryResource resource, Sequence<Row> subqueryResult
   )
   {
     final Set<AggregatorFactory> aggs = Sets.newHashSet();

@@ -25,7 +25,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.groupby.GroupByQuery;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 
 import java.util.Map;
@@ -39,7 +39,7 @@ public interface GroupByStrategy
    * @param query a groupBy query to be processed
    * @return broker resource
    */
-  GroupByQueryBrokerResource prepareResource(GroupByQuery query, boolean willMergeRunners);
+  GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners);
 
   /**
    * Indicates this strategy is cacheable or not.
@@ -60,7 +60,7 @@ public interface GroupByStrategy
   Sequence<Row> processSubqueryResult(
       GroupByQuery subquery,
       GroupByQuery query,
-      GroupByQueryBrokerResource resource,
+      GroupByQueryResource resource,
       Sequence<Row> subqueryResult
   );
 

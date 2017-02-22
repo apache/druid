@@ -41,7 +41,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
@@ -63,7 +63,7 @@ public class GroupByRowProcessor
       final Sequence<Row> rows,
       final Map<String, ValueType> rowSignature,
       final GroupByQueryConfig config,
-      final GroupByQueryBrokerResource brokerResource,
+      final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir
   )
@@ -147,7 +147,7 @@ public class GroupByRowProcessor
                     @Override
                     public ByteBuffer get()
                     {
-                      final ResourceHolder<ByteBuffer> mergeBufferHolder = brokerResource.getMergeBuffer();
+                      final ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergeBuffer();
                       closeOnExit.add(mergeBufferHolder);
                       return mergeBufferHolder.get();
                     }

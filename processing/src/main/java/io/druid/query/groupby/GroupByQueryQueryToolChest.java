@@ -55,7 +55,7 @@ import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.groupby.resource.GroupByQueryBrokerResource;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.query.groupby.strategy.GroupByStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.joda.time.DateTime;
@@ -127,7 +127,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   )
   {
     final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
-    final GroupByQueryBrokerResource resource = groupByStrategy.prepareResource(query, false);
+    final GroupByQueryResource resource = groupByStrategy.prepareResource(query, false);
 
     return Sequences.withBaggage(
         mergeGroupByResults(
@@ -144,7 +144,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> mergeGroupByResults(
       GroupByStrategy groupByStrategy,
       final GroupByQuery query,
-      GroupByQueryBrokerResource brokerResource,
+      GroupByQueryResource resource,
       QueryRunner<Row> runner,
       Map<String, Object> context
   )
@@ -186,7 +186,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   false
               )
           ),
-          brokerResource,
+          resource,
           runner,
           context
       );
@@ -204,7 +204,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         finalizingResults = subqueryResult;
       }
 
-      return groupByStrategy.processSubqueryResult(subquery, query, brokerResource, finalizingResults);
+      return groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults);
     } else {
       return groupByStrategy.mergeResults(runner, query, context);
     }
