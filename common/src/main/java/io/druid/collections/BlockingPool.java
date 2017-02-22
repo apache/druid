@@ -81,7 +81,11 @@ public class BlockingPool<T>
     checkInitialized();
     final T theObject;
     try {
-      theObject = timeout >= 0 ? objects.poll(timeout, TimeUnit.MILLISECONDS) : objects.take();
+      if (timeout > -1) {
+        theObject = timeout > 0 ? objects.poll(timeout, TimeUnit.MILLISECONDS) : objects.poll();
+      } else {
+        theObject = objects.take();
+      }
       return theObject == null ? null : new ReferenceCountingResourceHolder<>(
           theObject,
           new Closeable()
@@ -113,13 +117,11 @@ public class BlockingPool<T>
     final List<T> batch = Lists.newArrayListWithCapacity(maxElements);
 
     try {
-      final int n = timeout >= 0 ?
+      final int n = timeout > 0 ?
                     Queues.drain(objects, batch, maxElements, timeout, TimeUnit.MILLISECONDS) :
                     objects.drainTo(batch, maxElements);
       if (n < maxElements) {
-        if (log.isDebugEnabled()) {
-          log.debug("Requested " + maxElements + " elements, but drained " + n + " elements");
-        }
+        log.debug("Requested %d elements, but drained %d elements", maxElements, n);
       }
     }
     catch (InterruptedException e) {

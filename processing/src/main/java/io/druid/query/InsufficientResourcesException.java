@@ -22,7 +22,7 @@ package io.druid.query;
 /**
  * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
  */
-public class InsufficientResourcesException extends Exception
+public class InsufficientResourcesException extends RuntimeException
 {
   public InsufficientResourcesException(String message)
   {

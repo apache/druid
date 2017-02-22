@@ -44,14 +44,13 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.DataSource;
 import io.druid.query.DruidProcessingConfig;
+import io.druid.query.InsufficientResourcesException;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryDataSource;
-import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.query.InsufficientResourcesException;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
@@ -74,6 +73,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
 
+  // see countRequiredMergeBufferNum() for explanation
   private static final int MAX_MERGE_BUFFER_NUM = 2;
 
   private final DruidProcessingConfig processingConfig;
@@ -139,19 +139,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
         return new GroupByQueryResource();
       } else {
         final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
-
-        try {
-          mergeBufferHolders = mergeBufferPool.drain(requiredMergeBufferNum, timeout.longValue());
-          if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
-            mergeBufferHolders.close();
-            throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
-          } else {
-            return new GroupByQueryResource(mergeBufferHolders);
-          }
-        }
-        catch (Exception e) {
-          throw new QueryInterruptedException(e);
+        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders = mergeBufferPool.drain(
+            requiredMergeBufferNum, timeout.longValue()
+        );
+        if (mergeBufferHolders.get().size() < requiredMergeBufferNum) {
+          mergeBufferHolders.close();
+          throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
+        } else {
+          return new GroupByQueryResource(mergeBufferHolders);
         }
       }
     } else {

@@ -127,6 +127,8 @@ public class GroupByRowProcessor
           @Override
           public CloseableGrouperIterator<RowBasedKey, Row> make()
           {
+            // This contains all closeable objects which are closed when the returned iterator iterates all the elements,
+            // or an exceptions is thrown. The objects are closed in their reverse order.
             final List<Closeable> closeOnExit = Lists.newArrayList();
 
             try {
