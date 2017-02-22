@@ -306,4 +306,11 @@ It is possible to save the configuration across restarts such that a node will n
 
 Lookup implementations can provide some introspection capabilities by implementing `LookupIntrospectHandler`. User will send request to `/druid/lookups/v1/introspect/{lookupId}` to enable introspection on a given lookup.
 
-For instance you can list all the keys/values of a map based lookup by issuing a `GET` request to `/druid/lookups/v1/introspect/{lookupId}/keys"` or `/druid/lookups/v1/introspect/{lookupId}/values"` 
+For instance you can list all the keys/values of a map based lookup by issuing a `GET` request to `/druid/lookups/v1/introspect/{lookupId}/keys"` or `/druid/lookups/v1/introspect/{lookupId}/values"`
+ 
+## Druid version 0.9.2 to 0.10.0 upgrade/downgrade
+Overall druid cluster lookups configuration is persisted in metadata store and also individual lookup nodes optionally persist a snapshot of loaded lookups on disk.
+If upgrading from druid version 0.9.2 to 0.10.0, then migration for all persisted metadata is handled automatically.
+If you wanna downgrade from 0.10.0 to 0.9.2, then "snapshot" directory on all lookup nodes needs to be deleted and coordinator will not see any lookup updates done after 0.10.0 upgrade.
+
+ 
