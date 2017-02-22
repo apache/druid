@@ -81,10 +81,10 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       throw new ISE("WTF! Can't find the metric to do topN over?");
     }
     // Run topN for only a single metric
-    TopNQuery singleMetricQuery = new TopNQueryBuilder().copy(query)
-                                                        .aggregators(condensedAggPostAggPair.lhs)
-                                                        .postAggregators(condensedAggPostAggPair.rhs)
-                                                        .build();
+    TopNQuery singleMetricQuery = new TopNQueryBuilder(query)
+        .aggregators(condensedAggPostAggPair.lhs)
+        .postAggregators(condensedAggPostAggPair.rhs)
+        .build();
     final TopNResultBuilder singleMetricResultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, singleMetricQuery);
 
     PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool);

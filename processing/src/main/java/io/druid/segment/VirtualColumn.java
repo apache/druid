@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.cache.Cacheable;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
@@ -39,7 +40,7 @@ import java.util.List;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class)
 })
-public interface VirtualColumn
+public interface VirtualColumn extends Cacheable
 {
   /**
    * Output name of this column.
@@ -130,11 +131,4 @@ public interface VirtualColumn
    * @return whether to use dot notation
    */
   boolean usesDotNotation();
-
-  /**
-   * Returns cache key
-   *
-   * @return cache key
-   */
-  byte[] getCacheKey();
 }

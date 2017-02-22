@@ -53,7 +53,7 @@ public class IncrementalIndexSchema
     this.minTimestamp = minTimestamp;
     this.timestampSpec = timestampSpec;
     this.gran = gran;
-    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
     this.rollup = rollup;

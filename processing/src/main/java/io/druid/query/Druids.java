@@ -331,18 +331,20 @@ public class Druids
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
+    private boolean descending;
+    private VirtualColumns virtualColumns;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
 
-    private boolean descending;
-
     private TimeseriesQueryBuilder()
     {
       dataSource = null;
       querySegmentSpec = null;
+      descending = false;
+      virtualColumns = null;
       dimFilter = null;
       granularity = QueryGranularities.ALL;
       aggregatorSpecs = Lists.newArrayList();
@@ -356,6 +358,7 @@ public class Druids
           dataSource,
           querySegmentSpec,
           descending,
+          virtualColumns,
           dimFilter,
           granularity,
           aggregatorSpecs,
@@ -458,6 +461,22 @@ public class Druids
     {
       querySegmentSpec = new LegacySegmentSpec(l);
       return this;
+    }
+
+    public TimeseriesQueryBuilder virtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder virtualColumns(List<VirtualColumn> virtualColumns)
+    {
+      return virtualColumns(VirtualColumns.create(virtualColumns));
+    }
+
+    public TimeseriesQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
+    {
+      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
     }
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value)

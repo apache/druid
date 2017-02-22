@@ -31,6 +31,7 @@ import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -73,6 +74,7 @@ public class TimeseriesQueryQueryToolChestTest
                     )
                 ),
                 descending,
+                VirtualColumns.EMPTY,
                 null,
                 QueryGranularities.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),

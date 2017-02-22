@@ -77,6 +77,7 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -3912,6 +3913,79 @@ public class TopNQueryRunnerTest
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1400L)
+                        .put(QueryRunnerTestHelper.indexMetric, 217725.42022705078D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 218005.42022705078D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 91.27055358886719D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1600L)
+                        .put(QueryRunnerTestHelper.indexMetric, 210865.67966461182D)
+                        .put("rows", 279L)
+                        .put("addRowsIndexConstant", 211145.67966461182D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 1862.7379150390625D)
+                        .put("minIndex", 99.2845230102539D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1000L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12270.807106018066D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12364.807106018066D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 71.31593322753906D)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("ql_alias", 1200L)
+                        .put(QueryRunnerTestHelper.indexMetric, 12086.472755432129D)
+                        .put("rows", 93L)
+                        .put("addRowsIndexConstant", 12180.472755432129D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_1)
+                        .put("maxIndex", 193.78756713867188D)
+                        .put("minIndex", 84.71052551269531D)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testFullOnTopNVirtualColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("ql_expr", "ql_alias", ValueType.LONG))
+        .metric("maxIndex")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong"))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(

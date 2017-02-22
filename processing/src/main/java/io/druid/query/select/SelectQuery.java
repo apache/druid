@@ -67,7 +67,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions;
-    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.metrics = metrics;
     this.pagingSpec = pagingSpec;
 

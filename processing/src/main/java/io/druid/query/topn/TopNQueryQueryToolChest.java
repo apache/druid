@@ -317,7 +317,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             .appendInt(query.getThreshold())
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
-            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs());
+            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns());
 
         final List<PostAggregator> postAggregators = prunePostAggregators(query);
         if (!postAggregators.isEmpty()) {
