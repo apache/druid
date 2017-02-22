@@ -66,8 +66,9 @@ public class HdfsTaskLogs implements TaskLogs
         final OutputStream out = fs.create(path, true)
     ) {
       ByteStreams.copy(in, out);
-      log.info("Wrote task log to: %s", path);
     }
+
+    log.info("Wrote task log to: %s", path);
   }
 
   @Override
