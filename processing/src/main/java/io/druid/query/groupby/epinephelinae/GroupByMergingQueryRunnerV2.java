@@ -169,11 +169,11 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                 // This will potentially block if there are no merge buffers left in the pool.
                 final long timeout = timeoutAt - System.currentTimeMillis();
                 if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
-                  throw new QueryInterruptedException(new TimeoutException());
+                  throw new TimeoutException();
                 }
                 resources.add(mergeBufferHolder);
               }
-              catch (InterruptedException e) {
+              catch (Exception e) {
                 throw new QueryInterruptedException(e);
               }
 
