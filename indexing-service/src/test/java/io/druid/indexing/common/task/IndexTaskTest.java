@@ -65,6 +65,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -421,6 +422,12 @@ public class IndexTaskTest
           {
             segments.add(segment);
             return segment;
+          }
+
+          @Override
+          public Map<String, Object> makeLoadSpec(URI uri)
+          {
+            throw new UnsupportedOperationException();
           }
         }, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
             indexMerger, indexIO, null, null, indexMergerV9

@@ -121,6 +121,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -475,6 +476,12 @@ public class TaskLifecycleTest
       {
         pushedSegments++;
         return segment;
+      }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
       }
     };
   }
@@ -1020,6 +1027,12 @@ public class TaskLifecycleTest
       public DataSegment push(File file, DataSegment dataSegment) throws IOException
       {
         throw new RuntimeException("FAILURE");
+      }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
       }
     };
 

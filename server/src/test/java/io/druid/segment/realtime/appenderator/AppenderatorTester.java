@@ -61,6 +61,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -185,6 +186,12 @@ public class AppenderatorTester implements AutoCloseable
       {
         pushedSegments.add(segment);
         return segment;
+      }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
       }
     };
     appenderator = Appenderators.createRealtime(

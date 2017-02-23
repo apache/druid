@@ -33,7 +33,9 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -86,7 +88,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       }
 
       return createDescriptorFile(
-          segment.withLoadSpec(makeLoadSpec(outDir))
+          segment.withLoadSpec(makeLoadSpec(outDir.toURI()))
                  .withSize(size)
                  .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
           outDir
@@ -98,7 +100,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     final long size = compressSegment(dataSegmentFile, tmpOutDir);
 
     final DataSegment dataSegment = createDescriptorFile(
-      segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip")))
+      segment.withLoadSpec(makeLoadSpec(new File(outDir, "index.zip").toURI()))
              .withSize(size)
              .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
       tmpOutDir
@@ -116,6 +118,12 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       return jsonMapper.readValue(new File(outDir, "descriptor.json"), DataSegment.class);
     }
     return dataSegment;
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+  {
+    return ImmutableMap.<String, Object>of("type", "local", "path", finalIndexZipFilePath.getPath());
   }
 
   private String intermediateDirFor(String storageDir)
@@ -137,10 +145,5 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     log.info("Creating descriptor file at[%s]", descriptorFile);
     Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(segment)), descriptorFile);
     return segment;
-  }
-
-  private ImmutableMap<String, Object> makeLoadSpec(File outFile)
-  {
-    return ImmutableMap.<String, Object>of("type", "local", "path", outFile.toString());
   }
 }

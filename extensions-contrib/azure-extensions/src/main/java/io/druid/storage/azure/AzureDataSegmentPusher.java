@@ -35,6 +35,7 @@ import io.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -173,5 +174,18 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         descriptorFile.delete();
       }
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        AzureStorageDruidModule.SCHEME,
+        "containerName",
+        config.getContainer(),
+        "blobPath",
+        uri.toString()
+    );
   }
 }

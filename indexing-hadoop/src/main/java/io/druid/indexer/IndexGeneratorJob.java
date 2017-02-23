@@ -753,7 +753,8 @@ public class IndexGeneratorJob implements Jobby
                 outputFS,
                 segmentTemplate,
                 context.getTaskAttemptID()
-            )
+            ),
+            config.DATA_SEGMENT_PUSHER
         );
 
         Path descriptorPath = config.makeDescriptorInfoPath(segment);
