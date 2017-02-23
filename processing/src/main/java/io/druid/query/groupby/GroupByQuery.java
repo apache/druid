@@ -58,6 +58,7 @@ import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.column.Column;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
@@ -571,6 +572,10 @@ public class GroupByQuery extends BaseQuery<Row>
       if (!outputNames.add(postAggregator.getName())) {
         throw new IAE("Duplicate output name[%s]", postAggregator.getName());
       }
+    }
+
+    if (outputNames.contains(Column.TIME_COLUMN_NAME)) {
+      throw new IAE("'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators.");
     }
   }
 
