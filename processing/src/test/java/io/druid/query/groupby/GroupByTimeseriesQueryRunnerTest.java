@@ -98,6 +98,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                         .setDimFilter(tsQuery.getDimensionsFilter())
                                         .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
                                         .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                                        .setVirtualColumns(tsQuery.getVirtualColumns())
                                         .build(),
                             responseContext
                         ),

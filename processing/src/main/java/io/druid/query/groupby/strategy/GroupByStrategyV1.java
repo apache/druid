@@ -46,6 +46,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
+import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -78,6 +79,18 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
+  public GroupByQueryResource prepareResource(GroupByQuery query, boolean willMergeRunners)
+  {
+    return new GroupByQueryResource();
+  }
+
+  @Override
+  public boolean isCacheable(boolean willMergeRunners)
+  {
+    return true;
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
@@ -92,6 +105,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
             new GroupByQuery(
                 query.getDataSource(),
                 query.getQuerySegmentSpec(),
+                query.getVirtualColumns(),
                 query.getDimFilter(),
                 query.getGranularity(),
                 query.getDimensions(),
@@ -124,7 +138,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
   @Override
   public Sequence<Row> processSubqueryResult(
-      GroupByQuery subquery, GroupByQuery query, Sequence<Row> subqueryResult
+      GroupByQuery subquery, GroupByQuery query, GroupByQueryResource resource, Sequence<Row> subqueryResult
   )
   {
     final Set<AggregatorFactory> aggs = Sets.newHashSet();

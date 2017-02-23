@@ -132,6 +132,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
       @Override
+      public boolean isCacheable(TimeseriesQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
       {
         return new CacheKeyBuilder(TIMESERIES_QUERY)
@@ -140,6 +146,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
             .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
             .build();
       }
 

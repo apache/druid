@@ -41,4 +41,5 @@ public class PostAggregatorIds
   public static final byte DATA_SKETCHES_SKETCH_ESTIMATE = 17;
   public static final byte DATA_SKETCHES_SKETCH_SET = 18;
   public static final byte VARIANCE_STANDARD_DEVIATION = 19;
+  public static final byte FINALIZING_FIELD_ACCESS = 20;
 }
