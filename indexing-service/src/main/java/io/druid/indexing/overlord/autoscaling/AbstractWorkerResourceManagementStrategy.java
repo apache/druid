@@ -100,7 +100,7 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
       lifecycleLock.started();
     }
     finally {
-      lifecycleLock.release();
+      lifecycleLock.exitStart();
     }
   }
 

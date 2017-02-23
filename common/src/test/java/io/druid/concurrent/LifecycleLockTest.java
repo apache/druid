@@ -104,7 +104,7 @@ public class LifecycleLockTest
       }.start();
     }
     startLatch.countDown();
-    lifecycleLock.release();
+    lifecycleLock.exitStart();
     finishLatch.await();
     Assert.assertEquals(1, successful.get());
   }
@@ -115,7 +115,7 @@ public class LifecycleLockTest
     LifecycleLock lifecycleLock = new LifecycleLock();
     Assert.assertTrue(lifecycleLock.canStart());
     lifecycleLock.started();
-    lifecycleLock.release();
+    lifecycleLock.exitStart();
     Assert.assertTrue(lifecycleLock.canStop());
     Assert.assertFalse(lifecycleLock.canStart());
   }
@@ -125,7 +125,7 @@ public class LifecycleLockTest
   {
     LifecycleLock lifecycleLock = new LifecycleLock();
     Assert.assertTrue(lifecycleLock.canStart());
-    lifecycleLock.release();
+    lifecycleLock.exitStart();
     Assert.assertFalse(lifecycleLock.isStarted());
     Assert.assertFalse(lifecycleLock.canStop());
   }

@@ -27,8 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * happens-before between start() and other methods and/or to check that the object was successfully started in other
  * methods.
  *
- * Guarantees in terms of JMM: happens-before between {@link #release()} and {@link #isStarted()},
- * release() and {@link #canStop()}.
+ * Guarantees in terms of JMM: happens-before between {@link #exitStart()} and {@link #isStarted()},
+ * exitStart() and {@link #canStop()}.
  *
  * Example:
  * class ExampleLifecycledClass
@@ -94,7 +94,7 @@ public final class LifecycleLock
   /**
    * Must be called before exit from start() on the lifecycled object, usually in a finally block
    */
-  public void release()
+  public void exitStart()
   {
     canStop.countDown();
   }
@@ -110,7 +110,7 @@ public final class LifecycleLock
   }
 
   /**
-   * Awaits until {@link #release()} is called, if needed, and returns {@code true} if {@link #started()} was called
+   * Awaits until {@link #exitStart()} is called, if needed, and returns {@code true} if {@link #started()} was called
    * before that.
    */
   public boolean isStarted()
@@ -121,7 +121,7 @@ public final class LifecycleLock
 
   /**
    * Stop latch, only one canStop() call in any thread on this LifecycleLock object could return {@code true}. Awaits
-   * until {@link #release()} is called, if needed.
+   * until {@link #exitStart()} is called, if needed.
    */
   public boolean canStop()
   {
