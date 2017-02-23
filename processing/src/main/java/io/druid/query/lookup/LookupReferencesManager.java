@@ -44,9 +44,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -74,9 +74,9 @@ public class LookupReferencesManager
   private final LookupSnapshotTaker lookupSnapshotTaker;
 
   @VisibleForTesting
-  final BlockingQueue<Notice> queue = new ArrayBlockingQueue<>(10000);
+  final BlockingQueue<Notice> queue = new LinkedBlockingDeque<>(10000);
 
-  private volatile ExecutorService exec;
+  private ExecutorService exec;
 
   //for unit testing only
   private final boolean testMode;

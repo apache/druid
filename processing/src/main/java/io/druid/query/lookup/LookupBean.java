@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-//TODO merge this code to the same definition when pr/1576 is merged
+import java.util.Objects;
+
 class LookupBean
 {
   private final LookupExtractorFactoryContainer container;
@@ -37,8 +38,7 @@ class LookupBean
       @JsonProperty("container") LookupExtractorFactoryContainer container
   )
   {
-    Preconditions.checkArgument(factory == null || container == null, "only one of factory or container should exist");
-    Preconditions.checkArgument(factory != null || container != null, "one of factory or container must exist");
+    Preconditions.checkArgument(factory == null ^ container == null, "only one of factory or container should exist");
 
     this.name = name;
     this.container = container != null ? container : new LookupExtractorFactoryContainer(null, factory);
@@ -74,21 +74,14 @@ class LookupBean
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     LookupBean that = (LookupBean) o;
-
-    if (!container.equals(that.container)) {
-      return false;
-    }
-    return name.equals(that.name);
-
+    return Objects.equals(container, that.container) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    int result = container.hashCode();
-    result = 31 * result + name.hashCode();
-    return result;
+    return Objects.hash(container, name);
   }
 }

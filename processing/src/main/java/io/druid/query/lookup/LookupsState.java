@@ -24,15 +24,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  */
 public class LookupsState
 {
-  private Map<String, LookupExtractorFactoryContainer> current;
-  private Map<String, LookupExtractorFactoryContainer> toLoad;
-  private Set<String> toDrop;
+  private final Map<String, LookupExtractorFactoryContainer> current;
+  private final Map<String, LookupExtractorFactoryContainer> toLoad;
+  private final Set<String> toDrop;
 
   @JsonCreator
   public LookupsState(
@@ -83,25 +84,15 @@ public class LookupsState
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     LookupsState that = (LookupsState) o;
-
-    if (!current.equals(that.current)) {
-      return false;
-    }
-    if (!toLoad.equals(that.toLoad)) {
-      return false;
-    }
-    return toDrop.equals(that.toDrop);
-
+    return Objects.equals(current, that.current) &&
+           Objects.equals(toLoad, that.toLoad) &&
+           Objects.equals(toDrop, that.toDrop);
   }
 
   @Override
   public int hashCode()
   {
-    int result = current.hashCode();
-    result = 31 * result + toLoad.hashCode();
-    result = 31 * result + toDrop.hashCode();
-    return result;
+    return Objects.hash(current, toLoad, toDrop);
   }
 }

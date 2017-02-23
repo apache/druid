@@ -22,13 +22,18 @@ package io.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
+
+import java.util.Objects;
 
 /**
  */
 public class LookupExtractorFactoryContainer
 {
-  private String version;
-  private LookupExtractorFactory lookupExtractorFactory;
+  private final static Ordering VERSION_COMPARATOR =  Ordering.natural().nullsFirst();
+
+  private final String version;
+  private final LookupExtractorFactory lookupExtractorFactory;
 
   @JsonCreator
   public LookupExtractorFactoryContainer(
@@ -57,15 +62,7 @@ public class LookupExtractorFactoryContainer
       return !this.lookupExtractorFactory.replaces(other.getLookupExtractorFactory());
     }
 
-    if (version == null && other.getVersion() != null) {
-      return false;
-    }
-
-    if (version != null && other.getVersion() == null) {
-      return true;
-    }
-
-    return version.compareTo(other.getVersion()) > 0;
+    return VERSION_COMPARATOR.compare(version, other.getVersion()) > 0;
   }
 
   @Override
@@ -86,21 +83,14 @@ public class LookupExtractorFactoryContainer
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     LookupExtractorFactoryContainer that = (LookupExtractorFactoryContainer) o;
-
-    if (version != null ? !version.equals(that.version) : that.version != null) {
-      return false;
-    }
-    return lookupExtractorFactory.equals(that.lookupExtractorFactory);
-
+    return Objects.equals(version, that.version) &&
+           Objects.equals(lookupExtractorFactory, that.lookupExtractorFactory);
   }
 
   @Override
   public int hashCode()
   {
-    int result = version != null ? version.hashCode() : 0;
-    result = 31 * result + lookupExtractorFactory.hashCode();
-    return result;
+    return Objects.hash(version, lookupExtractorFactory);
   }
 }

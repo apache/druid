@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -85,25 +86,15 @@ public class LookupsStateWithMap
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     LookupsStateWithMap that = (LookupsStateWithMap) o;
-
-    if (current != null ? !current.equals(that.current) : that.current != null) {
-      return false;
-    }
-    if (toLoad != null ? !toLoad.equals(that.toLoad) : that.toLoad != null) {
-      return false;
-    }
-    return !(toDrop != null ? !toDrop.equals(that.toDrop) : that.toDrop != null);
-
+    return Objects.equals(current, that.current) &&
+           Objects.equals(toLoad, that.toLoad) &&
+           Objects.equals(toDrop, that.toDrop);
   }
 
   @Override
   public int hashCode()
   {
-    int result = current != null ? current.hashCode() : 0;
-    result = 31 * result + (toLoad != null ? toLoad.hashCode() : 0);
-    result = 31 * result + (toDrop != null ? toDrop.hashCode() : 0);
-    return result;
+    return Objects.hash(current, toLoad, toDrop);
   }
 }

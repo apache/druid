@@ -22,8 +22,10 @@ package io.druid.server.lookup.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * This is same as LookupExtractorFactoryContainer except it uses Map<String, Object> instead of
@@ -32,8 +34,10 @@ import java.util.Map;
  */
 public class LookupExtractorFactoryMapContainer
 {
-  private String version;
-  private Map<String, Object> lookupExtractorFactory;
+  private final static Ordering VERSION_COMPARATOR =  Ordering.natural().nullsFirst();
+
+  private final String version;
+  private final Map<String, Object> lookupExtractorFactory;
 
   @JsonCreator
   public LookupExtractorFactoryMapContainer(
@@ -62,15 +66,7 @@ public class LookupExtractorFactoryMapContainer
       return false;
     }
 
-    if (version == null && other.getVersion() != null) {
-      return false;
-    }
-
-    if (version != null && other.getVersion() == null) {
-      return true;
-    }
-
-    return version.compareTo(other.getVersion()) > 0;
+    return VERSION_COMPARATOR.compare(version, other.getVersion()) > 0;
   }
 
   @Override
@@ -91,21 +87,14 @@ public class LookupExtractorFactoryMapContainer
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     LookupExtractorFactoryMapContainer that = (LookupExtractorFactoryMapContainer) o;
-
-    if (version != null ? !version.equals(that.version) : that.version != null) {
-      return false;
-    }
-    return lookupExtractorFactory.equals(that.lookupExtractorFactory);
-
+    return Objects.equals(version, that.version) &&
+           Objects.equals(lookupExtractorFactory, that.lookupExtractorFactory);
   }
 
   @Override
   public int hashCode()
   {
-    int result = version != null ? version.hashCode() : 0;
-    result = 31 * result + lookupExtractorFactory.hashCode();
-    return result;
+    return Objects.hash(version, lookupExtractorFactory);
   }
 }
