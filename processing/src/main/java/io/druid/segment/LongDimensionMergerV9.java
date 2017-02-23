@@ -72,6 +72,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
     this.serializer = LongColumnSerializer.create(ioPeon, dimensionName, metCompression, longEncoding);
+    serializer.open();
   }
 
   @Override
@@ -108,6 +109,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   @Override
   public ColumnDescriptor makeColumnDescriptor() throws IOException
   {
+    serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);
     builder.addSerde(
