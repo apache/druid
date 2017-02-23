@@ -87,6 +87,8 @@ public class QueryResource implements QueryCountStatsProvider
 
   protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
+  public static final String HDR_IF_NONE_MATCH = "If-None-Match";
+  public static final String HDR_ETAG = "ETag";
 
   protected final QueryToolChestWarehouse warehouse;
   protected final ServerConfig config;
@@ -217,8 +219,20 @@ public class QueryResource implements QueryCountStatsProvider
         }
       }
 
+      String prevEtag = req.getHeader(HDR_IF_NONE_MATCH);
+      if (prevEtag != null) {
+        query = query.withOverriddenContext(
+            ImmutableMap.of (HDR_IF_NONE_MATCH, prevEtag)
+        );
+      }
+
       final Map<String, Object> responseContext = new MapMaker().makeMap();
       final Sequence res = query.run(texasRanger, responseContext);
+
+      if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
+        return Response.notModified().build();
+      }
+
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -281,6 +295,11 @@ public class QueryResource implements QueryCountStatsProvider
                 context.getContentType()
             )
             .header("X-Druid-Query-Id", queryId);
+
+        if (responseContext.get(HDR_ETAG) != null) {
+          builder.header(HDR_ETAG, responseContext.get(HDR_ETAG));
+          responseContext.remove(HDR_ETAG);
+        }
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

@@ -127,6 +127,7 @@ public class QueryResourceTest
   public void setup()
   {
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.HDR_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryManager = new QueryManager();
     queryResource = new QueryResource(

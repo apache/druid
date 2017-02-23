@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
@@ -32,6 +33,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -64,12 +67,14 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.server.QueryResource;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
+import org.apache.commons.codec.binary.Base64;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -256,6 +261,30 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       queryCacheKey = strategy.computeCacheKey(query);
     } else {
       queryCacheKey = null;
+    }
+
+    if (query.getContext().get(QueryResource.HDR_IF_NONE_MATCH) != null) {
+      String prevEtag = (String) query.getContext().get(QueryResource.HDR_IF_NONE_MATCH);
+
+      //compute current Etag
+      Hasher hasher = Hashing.sha1().newHasher();
+      boolean hasOnlyHistoricalSegments = true;
+      for (Pair<ServerSelector, SegmentDescriptor> p : segments) {
+        if (!p.lhs.pick().getServer().isAssignable()) {
+          hasOnlyHistoricalSegments = false;
+          break;
+        }
+        hasher.putString(p.lhs.getSegment().getIdentifier(), Charsets.UTF_8);
+      }
+
+      if (hasOnlyHistoricalSegments) {
+        hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
+        String currEtag = Base64.encodeBase64String(hasher.hash().asBytes());
+        responseContext.put(QueryResource.HDR_ETAG, currEtag);
+        if (prevEtag.equals(currEtag)) {
+          return Sequences.empty();
+        }
+      }
     }
 
     if (queryCacheKey != null) {
