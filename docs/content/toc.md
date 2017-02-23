@@ -21,6 +21,7 @@ layout: toc
     * [Stream Push](/docs/VERSION/ingestion/stream-push.html)
     * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
   * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
+  * [Ingestion Tasks](/docs/VERSION/ingestion/tasks.html)
   * [FAQ](/docs/VERSION/ingestion/faq.html)
 
 ## Querying
