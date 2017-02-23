@@ -23,6 +23,8 @@ import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 
 public interface DataSegmentPusher
 {
@@ -30,4 +32,6 @@ public interface DataSegmentPusher
   String getPathForHadoop(String dataSource);
   String getPathForHadoop();
   DataSegment push(File file, DataSegment segment) throws IOException;
+  //use map instead of LoadSpec class to avoid dependency pollution.
+  Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath);
 }

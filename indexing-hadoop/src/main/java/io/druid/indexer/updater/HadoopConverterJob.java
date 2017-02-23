@@ -569,7 +569,8 @@ public class HadoopConverterJob
               outputFS,
               finalSegmentTemplate,
               context.getTaskAttemptID()
-              )
+              ),
+          config.DATA_SEGMENT_PUSHER
       );
       context.progress();
       context.setStatus("Finished PUSH");

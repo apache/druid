@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.Path;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
+import java.util.Map;
 
 /**
  */
@@ -115,7 +117,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           storageDir,
           segment.getShardSpec().getPartitionNum()
       ));
-
       final Path outDescriptorFile = new Path(String.format(
           "%s/%s/%d_descriptor.json",
           fullyQualifiedStorageDirectory,
@@ -123,7 +124,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
           segment.getShardSpec().getPartitionNum()
       ));
 
-      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile))
+      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
                            .withSize(size)
                            .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
 
@@ -176,11 +177,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     }
   }
 
-  private ImmutableMap<String, Object> makeLoadSpec(Path outFile)
-  {
-    return ImmutableMap.<String, Object>of("type", "hdfs", "path", outFile.toUri().toString());
-  }
-
   private static class HdfsOutputStreamSupplier extends ByteSink
   {
     private final FileSystem fs;
@@ -197,5 +193,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     {
       return fs.create(descriptorFile);
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+  {
+    return  ImmutableMap.<String, Object>of("type", "hdfs", "path", finalIndexZipFilePath.toString());
   }
 }
