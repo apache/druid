@@ -294,6 +294,83 @@ public class SegmentLoaderLocalCacheManagerTest
     manager.cleanup(segmentToDownload);
   }
 
+  @Test
+  public void testEmptyToFullOrder() throws Exception
+  {
+    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final StorageLocationConfig locationConfig = new StorageLocationConfig();
+    final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
+    localStorageFolder.setWritable(true);
+    locationConfig.setPath(localStorageFolder);
+    locationConfig.setMaxSize(10L);
+    locations.add(locationConfig);
+    final StorageLocationConfig locationConfig2 = new StorageLocationConfig();
+    final File localStorageFolder2 = tmpFolder.newFolder("local_storage_folder2");
+    localStorageFolder2.setWritable(true);
+    locationConfig2.setPath(localStorageFolder2);
+    locationConfig2.setMaxSize(10L);
+    locations.add(locationConfig2);
+
+    manager = new SegmentLoaderLocalCacheManager(
+        TestHelper.getTestIndexIO(),
+        new SegmentLoaderConfig().withLocations(locations),
+        jsonMapper
+    );
+    final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
+    final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
+        ImmutableMap.<String, Object>of(
+            "type",
+            "local",
+            "path",
+            segmentSrcFolder.getCanonicalPath()
+                + "/test_segment_loader"
+                + "/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z"
+                + "/0/index.zip"
+        )
+    );
+    // manually create a local segment under segmentSrcFolder
+    final File localSegmentFile = new File(
+        segmentSrcFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    localSegmentFile.mkdirs();
+    final File indexZip = new File(localSegmentFile, "index.zip");
+    indexZip.createNewFile();
+
+    Assert.assertFalse("Expect cache miss before downloading segment", manager.isSegmentLoaded(segmentToDownload));
+
+    File segmentFile = manager.getSegmentFiles(segmentToDownload);
+    Assert.assertTrue(segmentFile.getAbsolutePath().contains("/local_storage_folder/"));
+    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload));
+
+    final DataSegment segmentToDownload2 = dataSegmentWithInterval("2014-11-20T00:00:00Z/P1D").withLoadSpec(
+        ImmutableMap.<String, Object>of(
+            "type",
+            "local",
+            "path",
+            segmentSrcFolder.getCanonicalPath()
+                + "/test_segment_loader"
+                + "/2014-11-20T00:00:00.000Z_2014-11-21T00:00:00.000Z/2015-05-27T03:38:35.683Z"
+                + "/0/index.zip"
+        )
+    );
+    // manually create a local segment under segmentSrcFolder
+    final File localSegmentFile2 = new File(
+        segmentSrcFolder,
+        "test_segment_loader/2014-11-20T00:00:00.000Z_2014-11-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    localSegmentFile2.mkdirs();
+    final File indexZip2 = new File(localSegmentFile2, "index.zip");
+    indexZip2.createNewFile();
+
+    File segmentFile2 = manager.getSegmentFiles(segmentToDownload2);
+    Assert.assertTrue(segmentFile2.getAbsolutePath().contains("/local_storage_folder2/"));
+    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload2));
+
+    manager.cleanup(segmentToDownload2);
+    Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload2));
+  }
+
   private DataSegment dataSegmentWithInterval(String intervalStr)
   {
     return DataSegment.builder()
@@ -312,7 +389,7 @@ public class SegmentLoaderLocalCacheManagerTest
                       .metrics(ImmutableList.<String>of())
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
-                      .size(0)
+                      .size(10L)
                       .build();
   }
 }
