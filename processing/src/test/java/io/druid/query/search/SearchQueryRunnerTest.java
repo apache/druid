@@ -789,6 +789,22 @@ public class SearchQueryRunnerTest
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 
+  @Test
+  public void testSearchWithNotExistedDimension() throws Exception
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dimensions(
+                                        new DefaultDimensionSpec("asdf", "asdf")
+                                    )
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .build();
+
+    List<SearchHit> noHit = Lists.newLinkedList();
+    checkSearchQuery(searchQuery, noHit);
+  }
+
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {
     checkSearchQuery(searchQuery, runner, expectedResults);
