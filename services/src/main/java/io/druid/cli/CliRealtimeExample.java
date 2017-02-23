@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -40,7 +41,9 @@ import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
@@ -140,6 +143,12 @@ public class CliRealtimeExample extends ServerRunnable
     public DataSegment push(File file, DataSegment segment) throws IOException
     {
       return segment;
+    }
+
+    @Override
+    public Map<String, Object> makeLoadSpec(URI uri)
+    {
+      return ImmutableMap.of();
     }
   }
 

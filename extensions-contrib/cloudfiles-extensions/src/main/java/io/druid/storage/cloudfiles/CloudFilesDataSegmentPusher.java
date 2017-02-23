@@ -34,6 +34,8 @@ import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class CloudFilesDataSegmentPusher implements DataSegmentPusher
@@ -145,5 +147,20 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
         descriptorFile.delete();
       }
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        CloudFilesStorageDruidModule.SCHEME,
+        "region",
+        objectApi.getRegion(),
+        "container",
+        objectApi.getContainer(),
+        "path",
+        uri.toString()
+    );
   }
 }

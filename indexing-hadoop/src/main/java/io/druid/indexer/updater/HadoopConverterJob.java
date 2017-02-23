@@ -559,7 +559,8 @@ public class HadoopConverterJob
               baseOutputPath,
               outputFS,
               finalSegmentTemplate
-          )
+          ),
+          config.DATA_SEGMENT_PUSHER
       );
       context.progress();
       context.setStatus("Finished PUSH");
