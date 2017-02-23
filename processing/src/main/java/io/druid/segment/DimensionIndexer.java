@@ -68,9 +68,9 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
  * - getSortedEncodedValueFromUnsorted()
  * - getUnsortedEncodedValueFromSorted()
  * - getSortedIndexedValues()
- * - convertUnsortedEncodedArrayToSortedEncodedArray()
+ * - convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent()
  *
- * calling processRowValsToUnsortedEncodedArray() afterwards can invalidate previously read sorted encoding values
+ * calling processRowValsToUnsortedEncodedKeyComponent() afterwards can invalidate previously read sorted encoding values
  * (i.e., new values could be added that are inserted between existing values in the ordering).
  *
  *
@@ -78,7 +78,7 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
  * --------------------
  * Each DimensionIndexer exists within the context of a single IncrementalIndex. Before IndexMerger.persist() is
  * called on an IncrementalIndex, any associated DimensionIndexers should allow multiple threads to add data to the
- * indexer via processRowValsToUnsortedEncodedArray() and allow multiple threads to read data via methods that only
+ * indexer via processRowValsToUnsortedEncodedKeyComponent() and allow multiple threads to read data via methods that only
  * deal with unsorted encodings.
  *
  * As mentioned in the "Sorting and Ordering" section, writes and calls to the sorted encoding
@@ -97,11 +97,16 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
  * For example, in the RealtimePlumber and IndexGeneratorJob, the thread that performs index persist is started
  * by the same thread that handles the row adds on an index, ensuring the adds are visible to the persist thread.
  *
- * @param <EncodedType> class of the encoded values
- * @param <ActualType> class of the actual values
+ * @param <EncodedType> class of a single encoded value
+ * @param <EncodedKeyComponentType> A row key contains a component for each dimension, this param specifies the
+ *                                 class of this dimension's key component. A column type that supports multivalue rows
+ *                                 should use an array type (e.g., Strings would use int[]). Column types without
+ *                                 multivalue row support should use single objects (e.g., Long, Float).
+ * @param <ActualType> class of a single actual value
  *
  */
-public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, EncodedTypeArray, ActualType extends Comparable<ActualType>>
+public interface DimensionIndexer
+    <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
 {
   /**
    * Given a single row value or list of row values (for multi-valued dimensions), update any internal data structures
@@ -117,7 +122,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    *
    * @return An array containing an encoded representation of the input row value.
    */
-  EncodedTypeArray processRowValsToUnsortedEncodedArray(Object dimValues);
+  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(Object dimValues);
 
 
   /**
@@ -231,13 +236,13 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * them to their actual type (e.g., performing a dictionary lookup for a dict-encoded String dimension),
    * and comparing the actual values until a difference is found.
    *
-   * Refer to StringDimensionIndexer.compareUnsortedEncodedArrays() for a reference implementation.
+   * Refer to StringDimensionIndexer.compareUnsortedEncodedKeyComponents() for a reference implementation.
    *
    * @param lhs dimension value array from a TimeAndDims key
    * @param rhs dimension value array from a TimeAndDims key
    * @return comparison of the two arrays
    */
-  int compareUnsortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
+  int compareUnsortedEncodedKeyComponents(EncodedKeyComponentType lhs, EncodedKeyComponentType rhs);
 
 
   /**
@@ -247,7 +252,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param rhs dimension value array from a TimeAndDims key
    * @return true if the two arrays are equal
    */
-  boolean checkUnsortedEncodedArraysEqual(EncodedTypeArray lhs, EncodedTypeArray rhs);
+  boolean checkUnsortedEncodedKeyComponentsEqual(EncodedKeyComponentType lhs, EncodedKeyComponentType rhs);
 
 
   /**
@@ -255,33 +260,35 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param key dimension value array from a TimeAndDims key
    * @return hashcode of the array
    */
-  int getUnsortedEncodedArrayHashCode(EncodedTypeArray key);
+  int getUnsortedEncodedKeyComponentHashCode(EncodedKeyComponentType key);
 
   boolean LIST = true;
   boolean ARRAY = false;
 
   /**
-   * Given a row value array from a TimeAndDims key, as described in the documentation for compareUnsortedEncodedArrays(),
-   * convert the unsorted encoded values to a list or array of actual values.
+   * Given a row value array from a TimeAndDims key, as described in the documentation for
+   * compareUnsortedEncodedKeyComponents(), convert the unsorted encoded values to a list or array of actual values.
    *
    * If the key has one element, this method should return a single Object instead of an array or list, ignoring
    * the asList parameter.
    *
    * @param key dimension value array from a TimeAndDims key
    * @param asList if true, return an array; if false, return a list
-   * @return single value, array, or list containing the actual values corresponding to the encoded values in the input array
+   * @return single value, array, or list containing the actual values corresponding to the encoded values
+   *         in the input array
    */
-  Object convertUnsortedEncodedArrayToActualArrayOrList(EncodedTypeArray key, boolean asList);
+  Object convertUnsortedEncodedKeyComponentToActualArrayOrList(EncodedKeyComponentType key, boolean asList);
 
 
   /**
-   * Given a row value array from a TimeAndDims key, as described in the documentation for compareUnsortedEncodedArrays(),
-   * convert the unsorted encoded values to an array of sorted encoded values (i.e., sorted by their corresponding actual values)
+   * Given a row value array from a TimeAndDims key, as described in the documentation for
+   * compareUnsortedEncodedKeyComponents(), convert the unsorted encoded values to an array of sorted encoded values
+   * (i.e., sorted by their corresponding actual values)
    *
    * @param key dimension value array from a TimeAndDims key
    * @return array containing the sorted encoded values corresponding to the unsorted encoded values in the input array
    */
-  EncodedTypeArray convertUnsortedEncodedArrayToSortedEncodedArray(EncodedTypeArray key);
+  EncodedKeyComponentType convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(EncodedKeyComponentType key);
 
 
   /**
@@ -295,7 +302,7 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * For example, if key is an int[] array with values [1,3,4] for a dictionary-encoded String dimension,
    * and rowNum is 27, this function would set bit 27 in bitmapIndexes[1], bitmapIndexes[3], and bitmapIndexes[4]
    *
-   * See StringDimensionIndexer.fillBitmapsFromUnsortedEncodedArray() for a reference implementation.
+   * See StringDimensionIndexer.fillBitmapsFromUnsortedEncodedKeyComponent() for a reference implementation.
    *
    * If a dimension type does not support bitmap indexes, this function will not be called
    * and can be left unimplemented.
@@ -305,5 +312,10 @@ public interface DimensionIndexer<EncodedType extends Comparable<EncodedType>, E
    * @param bitmapIndexes array of bitmaps, indexed by integer dimension value
    * @param factory bitmap factory
    */
-  void fillBitmapsFromUnsortedEncodedArray(EncodedTypeArray key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory);
+  void fillBitmapsFromUnsortedEncodedKeyComponent(
+      EncodedKeyComponentType key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
+  );
 }

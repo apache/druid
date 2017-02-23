@@ -82,19 +82,19 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   }
 
   @Override
-  public int getLengthFromEncodedArray(Float dimVals)
+  public int getLengthOfEncodedKeyComponent(Float dimVals)
   {
     return FloatColumn.ROW_SIZE;
   }
 
   @Override
-  public int compareSortedEncodedArrays(Float lhs, Float rhs)
+  public int compareSortedEncodedKeyComponents(Float lhs, Float rhs)
   {
     return lhs.compareTo(rhs);
   }
 
   @Override
-  public void validateSortedEncodedArrays(
+  public void validateSortedEncodedKeyComponents(
       Float lhs, Float rhs, Indexed<Float> lhsEncodings, Indexed<Float> rhsEncodings
   ) throws SegmentValidationException
   {
@@ -110,7 +110,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   }
 
   @Override
-  public Object getRowValueArrayFromColumn(Closeable column, int currRow)
+  public Float getEncodedKeyComponentFromColumn(Closeable column, int currRow)
   {
     return ((GenericColumn) column).getFloatSingleValueRow(currRow);
   }

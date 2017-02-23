@@ -32,7 +32,7 @@ import java.util.List;
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
   @Override
-  public Long processRowValsToUnsortedEncodedArray(Object dimValues)
+  public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -104,37 +104,37 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public int compareUnsortedEncodedArrays(Long lhs, Long rhs)
+  public int compareUnsortedEncodedKeyComponents(Long lhs, Long rhs)
   {
     return lhs.compareTo(rhs);
   }
 
   @Override
-  public boolean checkUnsortedEncodedArraysEqual(Long lhs, Long rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(Long lhs, Long rhs)
   {
     return lhs.equals(rhs);
   }
 
   @Override
-  public int getUnsortedEncodedArrayHashCode(Long key)
+  public int getUnsortedEncodedKeyComponentHashCode(Long key)
   {
     return key.hashCode();
   }
 
   @Override
-  public Object convertUnsortedEncodedArrayToActualArrayOrList(Long key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Long key, boolean asList)
   {
     return Lists.newArrayList(key);
   }
 
   @Override
-  public Long convertUnsortedEncodedArrayToSortedEncodedArray(Long key)
+  public Long convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Long key)
   {
     return key;
   }
 
   @Override
-  public void fillBitmapsFromUnsortedEncodedArray(
+  public void fillBitmapsFromUnsortedEncodedKeyComponent(
       Long key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {

@@ -51,13 +51,13 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public int getLengthFromEncodedArray(int[] dimVals)
+  public int getLengthOfEncodedKeyComponent(int[] dimVals)
   {
     return dimVals.length;
   }
 
   @Override
-  public int compareSortedEncodedArrays(int[] lhs, int[] rhs)
+  public int compareSortedEncodedKeyComponents(int[] lhs, int[] rhs)
   {
     int lhsLen = lhs.length;
     int rhsLen = rhs.length;
@@ -73,7 +73,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public void validateSortedEncodedArrays(
+  public void validateSortedEncodedKeyComponents(
       int[] lhs,
       int[] rhs,
       Indexed<String> lhsEncodings,
@@ -166,7 +166,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public Object getRowValueArrayFromColumn(Closeable column, int currRow)
+  public int[] getEncodedKeyComponentFromColumn(Closeable column, int currRow)
   {
     DictionaryEncodedColumn dict = (DictionaryEncodedColumn) column;
     int[] theVals;

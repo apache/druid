@@ -124,7 +124,7 @@ public class StringDimensionHandlerTest
         String name1 = dimNames1.get(i);
         String name2 = dimNames2.get(i);
         DimensionHandler handler = handlers.get(name1);
-        handler.validateSortedEncodedArrays(
+        handler.validateSortedEncodedKeyComponents(
             val1,
             val2,
             adapter1.getDimValueLookup(name1),

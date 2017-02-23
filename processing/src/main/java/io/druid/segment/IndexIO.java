@@ -354,7 +354,7 @@ public class IndexIO
       }
 
       DimensionHandler dimHandler = dimHandlers.get(dim1Name);
-      dimHandler.validateSortedEncodedArrays(
+      dimHandler.validateSortedEncodedKeyComponents(
           dim1Vals,
           dim2Vals,
           adapter1.getDimValueLookup(dim1Name),

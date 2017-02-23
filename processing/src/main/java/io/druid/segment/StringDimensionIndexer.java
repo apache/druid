@@ -220,7 +220,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int[] processRowValsToUnsortedEncodedArray(Object dimValues)
+  public int[] processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
@@ -340,7 +340,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int compareUnsortedEncodedArrays(int[] lhs, int[] rhs)
+  public int compareUnsortedEncodedKeyComponents(int[] lhs, int[] rhs)
   {
     int lhsLen = lhs.length;
     int rhsLen = rhs.length;
@@ -365,13 +365,13 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public boolean checkUnsortedEncodedArraysEqual(int[] lhs, int[] rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(int[] lhs, int[] rhs)
   {
     return Arrays.equals(lhs, rhs);
   }
 
   @Override
-  public int getUnsortedEncodedArrayHashCode(int[] key)
+  public int getUnsortedEncodedKeyComponentHashCode(int[] key)
   {
     return Arrays.hashCode(key);
   }
@@ -539,7 +539,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public Object convertUnsortedEncodedArrayToActualArrayOrList(int[] key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(int[] key, boolean asList)
   {
     if (key == null || key.length == 0) {
       return null;
@@ -568,7 +568,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int[] convertUnsortedEncodedArrayToSortedEncodedArray(int[] key)
+  public int[] convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(int[] key)
   {
     int[] sortedDimVals = new int[key.length];
     for (int i = 0; i < key.length; ++i) {
@@ -579,7 +579,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public void fillBitmapsFromUnsortedEncodedArray(
+  public void fillBitmapsFromUnsortedEncodedKeyComponent(
       int[] key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {

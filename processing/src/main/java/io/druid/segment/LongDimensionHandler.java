@@ -82,19 +82,19 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public int getLengthFromEncodedArray(Long dimVals)
+  public int getLengthOfEncodedKeyComponent(Long dimVals)
   {
     return LongColumn.ROW_SIZE;
   }
 
   @Override
-  public int compareSortedEncodedArrays(Long lhs, Long rhs)
+  public int compareSortedEncodedKeyComponents(Long lhs, Long rhs)
   {
     return lhs.compareTo(rhs);
   }
 
   @Override
-  public void validateSortedEncodedArrays(
+  public void validateSortedEncodedKeyComponents(
       Long lhs, Long rhs, Indexed<Long> lhsEncodings, Indexed<Long> rhsEncodings
   ) throws SegmentValidationException
   {
@@ -110,7 +110,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public Object getRowValueArrayFromColumn(Closeable column, int currRow)
+  public Long getEncodedKeyComponentFromColumn(Closeable column, int currRow)
   {
     return ((GenericColumn) column).getLongSingleValueRow(currRow);
   }

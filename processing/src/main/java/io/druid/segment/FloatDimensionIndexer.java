@@ -32,7 +32,7 @@ import java.util.List;
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
   @Override
-  public Float processRowValsToUnsortedEncodedArray(Object dimValues)
+  public Float processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -104,37 +104,37 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public int compareUnsortedEncodedArrays(Float lhs, Float rhs)
+  public int compareUnsortedEncodedKeyComponents(Float lhs, Float rhs)
   {
     return lhs.compareTo(rhs);
   }
 
   @Override
-  public boolean checkUnsortedEncodedArraysEqual(Float lhs, Float rhs)
+  public boolean checkUnsortedEncodedKeyComponentsEqual(Float lhs, Float rhs)
   {
     return lhs.equals(rhs);
   }
 
   @Override
-  public int getUnsortedEncodedArrayHashCode(Float key)
+  public int getUnsortedEncodedKeyComponentHashCode(Float key)
   {
     return key.hashCode();
   }
 
   @Override
-  public Object convertUnsortedEncodedArrayToActualArrayOrList(Float key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Float key, boolean asList)
   {
     return Lists.newArrayList(key);
   }
 
   @Override
-  public Float convertUnsortedEncodedArrayToSortedEncodedArray(Float key)
+  public Float convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Float key)
   {
     return key;
   }
 
   @Override
-  public void fillBitmapsFromUnsortedEncodedArray(
+  public void fillBitmapsFromUnsortedEncodedKeyComponent(
       Float key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {
