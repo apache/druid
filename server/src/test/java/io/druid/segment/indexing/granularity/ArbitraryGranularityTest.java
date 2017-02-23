@@ -41,6 +41,21 @@ public class ArbitraryGranularityTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
+  public void testDefaultQueryGranularity()
+  {
+    final GranularitySpec spec = new ArbitraryGranularitySpec(
+        null,
+        Lists.newArrayList(
+            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+            new Interval("2012-02-01T00Z/2012-03-01T00Z"),
+            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        ));
+    Assert.assertNotNull(spec.getQueryGranularity());
+  }
+
+  @Test
   public void testSimple()
   {
     final GranularitySpec spec = new ArbitraryGranularitySpec(
