@@ -20,6 +20,7 @@
 package io.druid.query.search;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -41,6 +42,7 @@ import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -126,12 +128,12 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (selector != null) {
+      if (selector != null && !(selector instanceof NullDimensionSelector)) {
         final IndexedInts vals = selector.getRow();
         for (int i = 0; i < vals.size(); ++i) {
           final String dimVal = selector.lookupName(vals.get(i));
           if (searchQuerySpec.accept(dimVal)) {
-            set.addTo(new SearchHit(outputName, dimVal), 1);
+            set.addTo(new SearchHit(outputName, Strings.nullToEmpty(dimVal)), 1);
             if (set.size() >= limit) {
               return;
             }
