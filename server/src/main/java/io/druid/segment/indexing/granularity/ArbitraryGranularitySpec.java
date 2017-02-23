@@ -27,12 +27,11 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-
 import io.druid.common.utils.JodaUtils;
+import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.guava.Comparators;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -57,7 +56,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
 
   )
   {
-    this.queryGranularity = queryGranularity;
+    this.queryGranularity = queryGranularity == null ? QueryGranularities.NONE : queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
     this.timezone = timezone;
