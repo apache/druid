@@ -149,7 +149,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
   public void testSearchQueryWithExtractionFn()
   {
     String nullJsFn = "function(str) { if (str === null) { return 'NOT_NULL_ANYMORE'; } else { return str;} }";
-    ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("0"));
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ab"), changeNullFn), ImmutableList.<String>of("4", "5"));

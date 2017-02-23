@@ -226,6 +226,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
         index.getBitmapFactoryForDimensions(),
+        virtualColumns,
         index
     );
 
@@ -452,6 +453,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             extractionFn,
                             descending
                         );
+                      }
+
+                      if (columnDesc.getCapabilities().getType() == ValueType.LONG) {
+                        return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
+                      }
+
+                      if (columnDesc.getCapabilities().getType() == ValueType.FLOAT) {
+                        return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
                       }
 
                       DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);

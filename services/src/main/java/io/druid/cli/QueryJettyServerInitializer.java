@@ -53,14 +53,13 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     JettyServerInitUtils.addExtensionFilters(root, injector);
-    root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
 
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
     final Handler[] handlers = new Handler[extensionHandlers.size() + 2];
     handlers[0] = JettyServerInitUtils.getJettyRequestLogHandler();
-    handlers[handlers.length - 1] = root;
+    handlers[handlers.length - 1] = JettyServerInitUtils.wrapWithDefaultGzipHandler(root);
     for (int i = 0; i < extensionHandlers.size(); i++) {
       handlers[i + 1] = extensionHandlers.get(i);
     }

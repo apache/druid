@@ -31,8 +31,6 @@ public abstract class BaseQueryGranularity extends QueryGranularity
 
   public abstract long truncate(long offset);
 
-  public abstract byte[] cacheKey();
-
   public DateTime toDateTime(long offset)
   {
     return new DateTime(offset, DateTimeZone.UTC);

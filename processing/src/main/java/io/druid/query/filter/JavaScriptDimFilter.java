@@ -60,10 +60,10 @@ public class JavaScriptDimFilter implements DimFilter
     this.extractionFn = extractionFn;
     this.config = config;
 
-    if (config.isDisabled()) {
-      this.predicateFactory = null;
-    } else {
+    if (config.isEnabled()) {
       this.predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
+    } else {
+      this.predicateFactory = null;
     }
   }
 
@@ -111,7 +111,7 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    if (config.isDisabled()) {
+    if (!config.isEnabled()) {
       throw new ISE("JavaScript is disabled");
     }
 
@@ -210,6 +210,20 @@ public class JavaScriptDimFilter implements DimFilter
       {
         @Override
         public boolean applyLong(long input)
+        {
+          // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+          return applyObject(input);
+        }
+      };
+    }
+
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      return new DruidFloatPredicate()
+      {
+        @Override
+        public boolean applyFloat(float input)
         {
           // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
           return applyObject(input);

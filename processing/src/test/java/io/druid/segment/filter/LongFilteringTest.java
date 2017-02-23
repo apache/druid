@@ -155,8 +155,8 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InDimFilter.LONG_HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InDimFilter.LONG_HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
+    for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
@@ -166,7 +166,7 @@ public class LongFilteringTest extends BaseFilterTest
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(LONG_COLUMN, jsFn, null, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(LONG_COLUMN, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "5")
     );
 
@@ -274,7 +274,7 @@ public class LongFilteringTest extends BaseFilterTest
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
     assertFilterMatches(
-        new JavaScriptDimFilter(LONG_COLUMN, jsFn, exfn, JavaScriptConfig.getDefault()),
+        new JavaScriptDimFilter(LONG_COLUMN, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.<String>of("3", "4")
     );
 
@@ -303,8 +303,8 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InDimFilter.LONG_HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InDimFilter.LONG_HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
+    for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatchesMultithreaded(

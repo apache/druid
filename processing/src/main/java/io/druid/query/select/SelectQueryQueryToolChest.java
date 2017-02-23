@@ -160,11 +160,17 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           Collections.<String>emptyList();
 
       @Override
+      public boolean isCacheable(SelectQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(SelectQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final byte[] granularityBytes = query.getGranularity().getCacheKey();
 
         final List<DimensionSpec> dimensionSpecs =
             query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();

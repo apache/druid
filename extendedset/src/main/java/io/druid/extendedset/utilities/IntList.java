@@ -7,23 +7,11 @@ import java.util.ArrayList;
  */
 public class IntList
 {
-  private final ArrayList<int[]> baseLists = new ArrayList<int[]>();
+  private static final int ALLOCATION_SIZE = 1024;
 
-  private final int allocateSize;
+  private final ArrayList<int[]> baseLists = new ArrayList<>();
 
-  private int maxIndex;
-
-  public IntList()
-  {
-    this(1000);
-  }
-
-  public IntList(final int allocateSize)
-  {
-    this.allocateSize = allocateSize;
-
-    maxIndex = -1;
-  }
+  private int maxIndex = -1;
 
   public int length()
   {
@@ -42,7 +30,7 @@ public class IntList
 
   public void set(int index, int value)
   {
-    int subListIndex = index / allocateSize;
+    int subListIndex = index / ALLOCATION_SIZE;
 
     if (subListIndex >= baseLists.size()) {
       for (int i = baseLists.size(); i <= subListIndex; ++i) {
@@ -53,11 +41,11 @@ public class IntList
     int[] baseList = baseLists.get(subListIndex);
 
     if (baseList == null) {
-      baseList = new int[allocateSize];
+      baseList = new int[ALLOCATION_SIZE];
       baseLists.set(subListIndex, baseList);
     }
 
-    baseList[index % allocateSize] = value;
+    baseList[index % ALLOCATION_SIZE] = value;
 
     if (index > maxIndex) {
       maxIndex = index;
@@ -70,14 +58,14 @@ public class IntList
       throw new ArrayIndexOutOfBoundsException(index);
     }
 
-    int subListIndex = index / allocateSize;
+    int subListIndex = index / ALLOCATION_SIZE;
     int[] baseList = baseLists.get(subListIndex);
 
     if (baseList == null) {
       return 0;
     }
 
-    return baseList[index % allocateSize];
+    return baseList[index % ALLOCATION_SIZE];
   }
 
   public int baseListCount()
@@ -95,7 +83,7 @@ public class IntList
     final IntBuffer retVal = IntBuffer.wrap(array);
 
     if (index + 1 == baseListCount()) {
-      retVal.limit(maxIndex - (index * allocateSize));
+      retVal.limit(maxIndex - (index * ALLOCATION_SIZE));
     }
 
     return retVal.asReadOnlyBuffer();

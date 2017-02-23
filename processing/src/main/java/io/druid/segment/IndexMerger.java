@@ -642,7 +642,7 @@ public class IndexMerger
       @Override
       public void close() throws IOException
       {
-        ioPeon.cleanup();
+        ioPeon.close();
       }
     });
     try {

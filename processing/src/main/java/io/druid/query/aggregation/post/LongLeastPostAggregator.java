@@ -24,7 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
+import io.druid.query.Queries;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -99,6 +102,12 @@ public class LongLeastPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public LongLeastPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return new LongLeastPostAggregator(name, Queries.decoratePostAggregators(fields, aggregators));
+  }
+
   @JsonProperty
   public List<PostAggregator> getFields()
   {
@@ -142,5 +151,13 @@ public class LongLeastPostAggregator implements PostAggregator
     int result = name != null ? name.hashCode() : 0;
     result = 31 * result + fields.hashCode();
     return result;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.LONG_LEAST)
+        .appendCacheablesIgnoringOrder(fields)
+        .build();
   }
 }

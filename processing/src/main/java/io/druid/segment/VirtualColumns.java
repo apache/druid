@@ -26,15 +26,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
+import io.druid.query.cache.CacheKeyBuilder;
+import io.druid.query.cache.Cacheable;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +43,7 @@ import java.util.Set;
 /**
  * Class allowing lookup and usage of virtual columns.
  */
-public class VirtualColumns
+public class VirtualColumns implements Cacheable
 {
   public static final VirtualColumns EMPTY = new VirtualColumns(
       ImmutableList.<VirtualColumn>of(),
@@ -92,6 +93,11 @@ public class VirtualColumns
       }
     }
     return new VirtualColumns(ImmutableList.copyOf(virtualColumns), withDotSupport, withoutDotSupport);
+  }
+
+  public static VirtualColumns nullToEmpty(@Nullable VirtualColumns virtualColumns)
+  {
+    return virtualColumns == null ? EMPTY : virtualColumns;
   }
 
   private VirtualColumns(
@@ -193,6 +199,16 @@ public class VirtualColumns
     }
   }
 
+  public ColumnCapabilities getColumnCapabilitiesWithFallback(StorageAdapter adapter, String columnName)
+  {
+    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(columnName);
+    if (virtualColumnCapabilities != null) {
+      return virtualColumnCapabilities;
+    } else {
+      return adapter.getColumnCapabilities(columnName);
+    }
+  }
+
   public boolean isEmpty()
   {
     return withDotSupport.isEmpty() && withoutDotSupport.isEmpty();
@@ -212,18 +228,8 @@ public class VirtualColumns
 
   public byte[] getCacheKey()
   {
-    final byte[][] cacheKeys = new byte[virtualColumns.size()][];
-    int len = Ints.BYTES;
-    for (int i = 0; i < virtualColumns.size(); i++) {
-      cacheKeys[i] = virtualColumns.get(i).getCacheKey();
-      len += Ints.BYTES + cacheKeys[i].length;
-    }
-    final ByteBuffer buf = ByteBuffer.allocate(len).putInt(virtualColumns.size());
-    for (byte[] cacheKey : cacheKeys) {
-      buf.putInt(cacheKey.length);
-      buf.put(cacheKey);
-    }
-    return buf.array();
+    // id doesn't matter as there is only one kind of "VirtualColumns", so use 0.
+    return new CacheKeyBuilder((byte) 0).appendCacheablesIgnoringOrder(virtualColumns).build();
   }
 
   private void detectCycles(VirtualColumn virtualColumn, Set<String> columnNames)

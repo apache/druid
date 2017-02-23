@@ -23,8 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Map;
 import java.util.Set;
@@ -34,8 +37,6 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
 {
   private final float bucketSize;
   private final float offset;
-
-  private String fieldName;
 
   @JsonCreator
   public BucketsPostAggregator(
@@ -51,7 +52,6 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
       throw new IAE("Illegal bucketSize [%s], must be > 0", this.bucketSize);
     }
     this.offset = offset;
-    this.fieldName = fieldName;
   }
 
   @Override
@@ -63,8 +63,14 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
     return ah.toHistogram(bucketSize, offset);
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty
@@ -88,5 +94,15 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
            ", bucketSize=" + this.getBucketSize() +
            ", offset=" + this.getOffset() +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.HISTOGRAM_BUCKETS)
+        .appendString(fieldName)
+        .appendFloat(bucketSize)
+        .appendFloat(offset)
+        .build();
   }
 }

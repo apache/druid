@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -69,7 +70,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class GroupByMergingQueryRunnerV2 implements QueryRunner
+public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
 {
   private static final Logger log = new Logger(GroupByMergingQueryRunnerV2.class);
   private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
@@ -168,19 +169,20 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
                 // This will potentially block if there are no merge buffers left in the pool.
                 final long timeout = timeoutAt - System.currentTimeMillis();
                 if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
-                  throw new QueryInterruptedException(new TimeoutException());
+                  throw new TimeoutException();
                 }
                 resources.add(mergeBufferHolder);
               }
-              catch (InterruptedException e) {
+              catch (Exception e) {
                 throw new QueryInterruptedException(e);
               }
 
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
                   false,
+                  null,
                   config,
-                  mergeBufferHolder.get(),
+                  Suppliers.ofInstance(mergeBufferHolder.get()),
                   concurrencyHint,
                   temporaryStorage,
                   spillMapper,
@@ -188,6 +190,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
+              grouper.init();
 
               final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder =
                   ReferenceCountingResourceHolder.fromCloseable(grouper);

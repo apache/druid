@@ -19,6 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.cache.Cacheable;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -26,13 +28,22 @@ import java.util.Set;
 /**
  * Functionally similar to an Aggregator. See the Aggregator interface for more comments.
  */
-public interface PostAggregator
+public interface PostAggregator extends Cacheable
 {
-  public Set<String> getDependentFields();
+  Set<String> getDependentFields();
 
-  public Comparator getComparator();
+  Comparator getComparator();
 
-  public Object compute(Map<String, Object> combinedAggregators);
+  Object compute(Map<String, Object> combinedAggregators);
 
-  public String getName();
+  String getName();
+
+  /**
+   * Returns a richer post aggregator which are built from the given aggregators with their names and some accessible
+   * environmental variables such as ones in the object scope.
+   *
+   * @param aggregators A map of aggregator factories with their names.
+   *
+   */
+  PostAggregator decorate(Map<String, AggregatorFactory> aggregators);
 }

@@ -21,7 +21,6 @@ package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -79,6 +78,7 @@ import io.druid.server.router.TieredBrokerConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -94,6 +94,7 @@ public class CliCoordinator extends ServerRunnable
   private static final Logger log = new Logger(CliCoordinator.class);
 
   private Properties properties;
+  private boolean beOverlord;
 
   public CliCoordinator()
   {
@@ -104,12 +105,19 @@ public class CliCoordinator extends ServerRunnable
   public void configure(Properties properties)
   {
     this.properties = properties;
+    beOverlord = isOverlord(properties);
+
+    if (beOverlord) {
+      log.info("Coordinator is configured to act as Overlord as well.");
+    }
   }
 
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    List<Module> modules = new ArrayList<>();
+
+    modules.add(
         new Module()
         {
           @Override
@@ -131,7 +139,11 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
-            binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
+            if (beOverlord) {
+              binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
+            } else {
+              binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
+            }
 
             binder.bind(MetadataSegmentManager.class)
                   .toProvider(MetadataSegmentManagerProvider.class)
@@ -192,7 +204,6 @@ public class CliCoordinator extends ServerRunnable
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
             );
-
           }
 
           @Provides
@@ -211,5 +222,16 @@ public class CliCoordinator extends ServerRunnable
           }
         }
     );
+
+    if (beOverlord) {
+      modules.addAll(new CliOverlord().getModules(false));
+    }
+
+    return modules;
+  }
+
+  public static boolean isOverlord(Properties properties)
+  {
+    return Boolean.valueOf(properties.getProperty("druid.coordinator.asOverlord.enabled")).booleanValue();
   }
 }

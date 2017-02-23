@@ -24,8 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -80,6 +83,12 @@ public class StandardDeviationPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
+  }
+
   @JsonProperty("fieldName")
   public String getFieldName()
   {
@@ -100,5 +109,14 @@ public class StandardDeviationPostAggregator implements PostAggregator
            ", fieldName='" + fieldName + '\'' +
            ", isVariancePop='" + isVariancePop + '\'' +
            '}';
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.VARIANCE_STANDARD_DEVIATION)
+        .appendString(fieldName)
+        .appendBoolean(isVariancePop)
+        .build();
   }
 }

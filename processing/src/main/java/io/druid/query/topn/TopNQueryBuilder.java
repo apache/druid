@@ -33,19 +33,22 @@ import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.VirtualColumn;
+import io.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 /**
  * A Builder for TopNQuery.
- * 
+ *
  * Required: dataSource(), intervals(), metric() and threshold() must be called before build()
  * Additional requirement for numeric metric sorts: aggregators() must be called before build()
- * 
+ *
  * Optional: filters(), granularity(), postAggregators() and context() can be called before build()
- * 
+ *
  * Usage example:
  * <pre><code>
  *   TopNQuery query = new TopNQueryBuilder()
@@ -62,6 +65,7 @@ import java.util.Map;
 public class TopNQueryBuilder
 {
   private DataSource dataSource;
+  private VirtualColumns virtualColumns;
   private DimensionSpec dimensionSpec;
   private TopNMetricSpec topNMetricSpec;
   private int threshold;
@@ -75,6 +79,7 @@ public class TopNQueryBuilder
   public TopNQueryBuilder()
   {
     dataSource = null;
+    virtualColumns = null;
     dimensionSpec = null;
     topNMetricSpec = null;
     threshold = 0;
@@ -86,9 +91,29 @@ public class TopNQueryBuilder
     context = null;
   }
 
+  public TopNQueryBuilder(final TopNQuery query)
+  {
+      this.dataSource = query.getDataSource();
+      this.virtualColumns = query.getVirtualColumns();
+      this.dimensionSpec = query.getDimensionSpec();
+      this.topNMetricSpec = query.getTopNMetricSpec();
+      this.threshold = query.getThreshold();
+      this.querySegmentSpec = query.getQuerySegmentSpec();
+      this.dimFilter = query.getDimensionsFilter();
+      this.granularity = query.getGranularity();
+      this.aggregatorSpecs = query.getAggregatorSpecs();
+      this.postAggregatorSpecs = query.getPostAggregatorSpecs();
+      this.context = query.getContext();
+  }
+
   public DataSource getDataSource()
   {
     return dataSource;
+  }
+
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   public DimensionSpec getDimensionSpec()
@@ -140,6 +165,7 @@ public class TopNQueryBuilder
   {
     return new TopNQuery(
         dataSource,
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -152,25 +178,18 @@ public class TopNQueryBuilder
     );
   }
 
+  @Deprecated
   public TopNQueryBuilder copy(TopNQuery query)
   {
-    return new TopNQueryBuilder()
-        .dataSource(query.getDataSource().toString())
-        .dimension(query.getDimensionSpec())
-        .metric(query.getTopNMetricSpec())
-        .threshold(query.getThreshold())
-        .intervals(query.getIntervals())
-        .filters(query.getDimensionsFilter())
-        .granularity(query.getGranularity())
-        .aggregators(query.getAggregatorSpecs())
-        .postAggregators(query.getPostAggregatorSpecs())
-        .context(query.getContext());
+    return new TopNQueryBuilder(query);
   }
 
+  @Deprecated
   public TopNQueryBuilder copy(TopNQueryBuilder builder)
   {
     return new TopNQueryBuilder()
         .dataSource(builder.dataSource)
+        .virtualColumns(builder.virtualColumns)
         .dimension(builder.dimensionSpec)
         .metric(builder.topNMetricSpec)
         .threshold(builder.threshold)
@@ -186,6 +205,22 @@ public class TopNQueryBuilder
   {
     dataSource = new TableDataSource(d);
     return this;
+  }
+
+  public TopNQueryBuilder virtualColumns(VirtualColumns virtualColumns)
+  {
+    this.virtualColumns = virtualColumns;
+    return this;
+  }
+
+  public TopNQueryBuilder virtualColumns(List<VirtualColumn> virtualColumns)
+  {
+    return virtualColumns(VirtualColumns.create(virtualColumns));
+  }
+
+  public TopNQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
+  {
+    return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
   }
 
   public TopNQueryBuilder dataSource(DataSource d)

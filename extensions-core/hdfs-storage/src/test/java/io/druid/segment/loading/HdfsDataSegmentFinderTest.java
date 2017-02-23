@@ -27,6 +27,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -155,7 +156,6 @@ public class HdfsDataSegmentFinderTest
     mapper.registerSubtypes(new NamedType(NumberedShardSpec.class, "numbered"));
 
     hdfsTmpDir = File.createTempFile("hdfsDataSource", "dir");
-    hdfsTmpDir.deleteOnExit();
     if (!hdfsTmpDir.delete()) {
       throw new IOException(String.format("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath()));
     }
@@ -167,11 +167,12 @@ public class HdfsDataSegmentFinderTest
   }
 
   @AfterClass
-  public static void tearDownStatic()
+  public static void tearDownStatic() throws IOException
   {
     if (miniCluster != null) {
       miniCluster.shutdown(true);
     }
+    FileUtils.deleteDirectory(hdfsTmpDir);
   }
 
   @Before

@@ -41,14 +41,13 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     JettyServerInitUtils.addExtensionFilters(root, injector);
-    root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
         new Handler[]{
             JettyServerInitUtils.getJettyRequestLogHandler(),
-            root,
+            JettyServerInitUtils.wrapWithDefaultGzipHandler(root),
             new DefaultHandler()
         }
     );

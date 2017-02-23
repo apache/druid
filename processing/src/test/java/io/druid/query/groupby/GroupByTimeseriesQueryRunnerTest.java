@@ -20,23 +20,35 @@
 package io.druid.query.groupby;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import io.druid.query.timeseries.TimeseriesResultValue;
+import org.joda.time.DateTime;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -67,9 +79,18 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                   public Sequence run(Query query, Map responseContext)
                   {
                     TimeseriesQuery tsQuery = (TimeseriesQuery) query;
+                    QueryRunner<Row> newRunner = factory.mergeRunners(
+                        MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(input)
+                    );
+                    QueryToolChest toolChest = factory.getToolchest();
+
+                    newRunner = new FinalizeResultsQueryRunner<>(
+                        toolChest.mergeResults(toolChest.preMergeQueryDecoration(newRunner)),
+                        toolChest
+                    );
 
                     return Sequences.map(
-                        input.run(
+                        newRunner.run(
                             GroupByQuery.builder()
                                         .setDataSource(tsQuery.getDataSource())
                                         .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
@@ -77,6 +98,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                         .setDimFilter(tsQuery.getDimensionsFilter())
                                         .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
                                         .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                                        .setVirtualColumns(tsQuery.getVirtualColumns())
                                         .build(),
                             responseContext
                         ),
@@ -111,6 +133,45 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   {
     super(runner, false);
   }
+
+  // GroupBy handles timestamps differently when granularity is ALL
+  @Test
+  public void testFullOnTimeseriesMaxMin()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryGranularities.ALL)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                                          new DoubleMinAggregatorFactory("minIndex", "index")
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+    DateTime expectedEarliest = new DateTime("1970-01-01");
+    DateTime expectedLast = new DateTime("2011-04-15");
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    Result<TimeseriesResultValue> result = results.iterator().next();
+
+    Assert.assertEquals(expectedEarliest, result.getTimestamp());
+    Assert.assertFalse(
+        String.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        result.getTimestamp().isAfter(expectedLast)
+    );
+
+    final TimeseriesResultValue value = result.getValue();
+
+    Assert.assertEquals(result.toString(), 1870.06103515625, value.getDoubleMetric("maxIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 59.02102279663086, value.getDoubleMetric("minIndex"), 0.0);
+  }
+
 
   @Override
   public void testEmptyTimeseries()

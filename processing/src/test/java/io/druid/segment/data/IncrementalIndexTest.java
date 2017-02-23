@@ -781,4 +781,38 @@ public class IncrementalIndexTest
 
     Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
   }
+
+  @Test
+  public void testDynamicSchemaRollup() throws IndexSizeExceededException
+  {
+    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex(
+        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularities.NONE).build(),
+        true,
+        10
+    );
+    closer.closeLater(index);
+    index.add(
+        new MapBasedInputRow(
+            1481871600000L,
+            Arrays.asList("name", "host"),
+            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            1481871670000L,
+            Arrays.asList("name", "table"),
+            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            1481871600000L,
+            Arrays.asList("name", "host"),
+            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+        )
+    );
+
+    Assert.assertEquals(2, index.size());
+  }
 }

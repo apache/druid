@@ -22,6 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.ValueType;
 
 /**
  */
@@ -55,9 +56,21 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public ValueType getOutputType()
+  {
+    return delegate.getOutputType();
+  }
+
+  @Override
   public ExtractionFn getExtractionFn()
   {
     return delegate.getExtractionFn();
+  }
+
+  @Override
+  public boolean mustDecorate()
+  {
+    return true;
   }
 
   @Override
