@@ -38,6 +38,7 @@ import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -4237,6 +4238,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByTimeExtractionNamedUnderUnderTime()
   {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
+    );
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -4269,28 +4275,16 @@ public class GroupByQueryRunnerTest
         )
         .setLimitSpec(new DefaultLimitSpec(ImmutableList.<OrderByColumnSpec>of(), 1))
         .build();
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "1970-01-01",
-            "__time",
-            "Friday",
-            "market",
-            "spot",
-            "index",
-            13219.574157714844,
-            "rows",
-            117L,
-            "addRowsIndexConstant",
-            13337.574157714844
-        )
-    );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
   public void testGroupByWithUnderUnderTimeAsDimensionNameWithHavingAndLimit()
   {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
+    );
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -4318,16 +4312,6 @@ public class GroupByQueryRunnerTest
             )
         )
         .build();
-
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "__time", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "__time", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "__time", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "__time", "automotive", "rows", 1L, "idx", 147L)
-    );
-
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
