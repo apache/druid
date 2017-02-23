@@ -575,7 +575,10 @@ public class GroupByQuery extends BaseQuery<Row>
     }
 
     if (outputNames.contains(Column.TIME_COLUMN_NAME)) {
-      throw new IAE("'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators.");
+      throw new IAE(
+          "'%s' cannot be used as an output name for dimensions, aggregators, or post-aggregators.",
+          Column.TIME_COLUMN_NAME
+      );
     }
   }
 
