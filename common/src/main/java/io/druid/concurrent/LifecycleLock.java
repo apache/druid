@@ -19,8 +19,7 @@
 
 package io.druid.concurrent;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
  * A synchronization tool for lifecycled objects (see {@link io.druid.java.util.common.lifecycle.Lifecycle}, that need
@@ -28,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * methods.
  *
  * Guarantees in terms of JMM: happens-before between {@link #exitStart()} and {@link #isStarted()},
- * exitStart() and {@link #canStop()}.
+ * exitStart() and {@link #canStop()}, if it returns {@code true}.
  *
  * Example:
  * class ExampleLifecycledClass
@@ -68,45 +67,116 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class LifecycleLock
 {
-  private enum State { NOT_STARTED, STARTING, STARTED, STOPPED }
+  private static class Sync extends AbstractQueuedSynchronizer
+  {
+    private static final int NOT_STARTED = 0;
+    private static final int STARTING = 1;
+    private static final int STARTED = 2;
+    private static final int START_EXITED_SUCCESSFUL = 3;
+    private static final int START_EXITED_FAIL = 4;
+    private static final int STOPPING = 5;
 
-  private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
-  private final CountDownLatch canStop = new CountDownLatch(1);
+    boolean canStart()
+    {
+      return compareAndSetState(NOT_STARTED, STARTING);
+    }
+
+    void started()
+    {
+      if (!compareAndSetState(STARTING, STARTED)) {
+        throw new IllegalMonitorStateException("Called started() not in the context of start()");
+      }
+    }
+
+    void exitStart()
+    {
+      // see tryReleaseShared()
+      releaseShared(1);
+    }
+
+    @Override
+    protected boolean tryReleaseShared(int ignore)
+    {
+      while (true) {
+        int state = getState();
+        if (state == STARTING) {
+          if (compareAndSetState(STARTING, START_EXITED_FAIL)) {
+            return true;
+          }
+        } else if (state == STARTED) {
+          if (compareAndSetState(STARTED, START_EXITED_SUCCESSFUL)) {
+            return true;
+          }
+        } else {
+          throw new IllegalMonitorStateException("exitStart() called not in the end of the start() method");
+        }
+      }
+    }
+
+    boolean isStarted()
+    {
+      try {
+        // see tryAcquireShared()
+        acquireSharedInterruptibly(1);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return getState() == START_EXITED_SUCCESSFUL;
+    }
+
+    @Override
+    protected int tryAcquireShared(int ignore)
+    {
+      return getState() >= STARTED ? 1 : -1;
+    }
+
+    boolean canStop()
+    {
+      while (true) {
+        int state = getState();
+        if (state == START_EXITED_FAIL || state == STOPPING) {
+          return false;
+        } else if (state == START_EXITED_SUCCESSFUL) {
+          if (compareAndSetState(START_EXITED_SUCCESSFUL, STOPPING)) {
+            return true;
+          }
+        } else {
+          throw new IllegalMonitorStateException("Called stop() before start()");
+        }
+      }
+    }
+  }
+
+  private final Sync sync = new Sync();
 
   /**
    * Start latch, only one canStart() call in any thread on this LifecycleLock object could return true.
    */
   public boolean canStart()
   {
-    return state.compareAndSet(State.NOT_STARTED, State.STARTING);
+    return sync.canStart();
   }
 
   /**
    * Announce the start was successful.
+   *
+   * @throws IllegalMonitorStateException if {@link #canStart()} is not yet called or if {@link #exitStart()} is already
+   * called on this LifecycleLock
    */
   public void started()
   {
-    if (!state.compareAndSet(State.STARTING, State.STARTED)) {
-      throw new IllegalStateException("Called started() not in the context of start()");
-    }
+    sync.started();
   }
 
   /**
-   * Must be called before exit from start() on the lifecycled object, usually in a finally block
+   * Must be called before exit from start() on the lifecycled object, usually in a finally block.
+   *
+   * @throws IllegalMonitorStateException if {@link #canStart()} is not yet called on this LifecycleLock
    */
   public void exitStart()
   {
-    canStop.countDown();
-  }
-
-  private void awaitStarted()
-  {
-    try {
-      canStop.await();
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    sync.exitStart();
   }
 
   /**
@@ -115,17 +185,18 @@ public final class LifecycleLock
    */
   public boolean isStarted()
   {
-    awaitStarted();
-    return state.get() == State.STARTED;
+    return sync.isStarted();
   }
 
   /**
-   * Stop latch, only one canStop() call in any thread on this LifecycleLock object could return {@code true}. Awaits
-   * until {@link #exitStart()} is called, if needed.
+   * Stop latch, only one canStop() call in any thread on this LifecycleLock object could return {@code true}. If
+   * {@link #started()} wasn't called on this LifecycleLock object, always returns {@code false}.
+   *
+   * @throws IllegalMonitorStateException if {@link #canStart()} and {@link #exitStart()} are not yet called on this
+   * LifecycleLock
    */
   public boolean canStop()
   {
-    awaitStarted();
-    return state.compareAndSet(State.STARTED, State.STOPPED);
+    return sync.canStop();
   }
 }

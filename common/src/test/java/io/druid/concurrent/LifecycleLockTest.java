@@ -80,6 +80,7 @@ public class LifecycleLockTest
     final LifecycleLock lifecycleLock = new LifecycleLock();
     Assert.assertTrue(lifecycleLock.canStart());
     lifecycleLock.started();
+    lifecycleLock.exitStart();
     final CountDownLatch startLatch = new CountDownLatch(1);
     int numThreads = 100;
     final CountDownLatch finishLatch = new CountDownLatch(numThreads);
@@ -104,7 +105,6 @@ public class LifecycleLockTest
       }.start();
     }
     startLatch.countDown();
-    lifecycleLock.exitStart();
     finishLatch.await();
     Assert.assertEquals(1, successful.get());
   }
@@ -128,5 +128,33 @@ public class LifecycleLockTest
     lifecycleLock.exitStart();
     Assert.assertFalse(lifecycleLock.isStarted());
     Assert.assertFalse(lifecycleLock.canStop());
+  }
+
+  @Test(expected = IllegalMonitorStateException.class)
+  public void testDoubleStarted()
+  {
+    LifecycleLock lifecycleLock = new LifecycleLock();
+    lifecycleLock.canStart();
+    lifecycleLock.started();
+    lifecycleLock.started();
+  }
+
+  @Test(expected = IllegalMonitorStateException.class)
+  public void testDoubleExitStart()
+  {
+    LifecycleLock lifecycleLock = new LifecycleLock();
+    lifecycleLock.canStart();
+    lifecycleLock.started();
+    lifecycleLock.exitStart();
+    lifecycleLock.exitStart();
+  }
+
+  @Test(expected = IllegalMonitorStateException.class)
+  public void testCanStopNotExitedStart()
+  {
+    LifecycleLock lifecycleLock = new LifecycleLock();
+    lifecycleLock.canStart();
+    lifecycleLock.started();
+    lifecycleLock.canStop();
   }
 }
