@@ -91,6 +91,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
@@ -157,7 +158,12 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of(
+      "finalize", false,
+
+      // GroupBy v2 won't cache on the broker, so test with v1.
+      "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
+  );
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
   static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
@@ -3135,6 +3141,44 @@ public class CachingClusteredClientTest
         ),
         "renamed aggregators test"
     );
+  }
+
+  @Test
+  public void testIfNoneMatch() throws Exception
+  {
+    Interval interval = new Interval("2016/2017");
+    final DataSegment dataSegment = new DataSegment(
+        "dataSource",
+        interval,
+        "ver",
+        ImmutableMap.<String, Object>of(
+            "type", "hdfs",
+            "path", "/tmp"
+        ),
+        ImmutableList.of("product"),
+        ImmutableList.of("visited_sum"),
+        NoneShardSpec.instance(),
+        9,
+        12334
+    );
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                    .dataSource(DATA_SOURCE)
+                                    .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
+                                    .context(ImmutableMap.<String, Object>of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                    .build();
+
+
+    Map<String, String> responseContext = new HashMap<>();
+
+    client.run(query, responseContext);
+    Assert.assertEquals("Z/eS4rQz5v477iq7Aashr6JPZa0=", responseContext.get("ETag"));
   }
 
 }

@@ -21,7 +21,8 @@ package io.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -31,20 +32,17 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-/**
- */
-public class FieldAccessPostAggregator implements PostAggregator
+public class FinalizingFieldAccessPostAggregator implements PostAggregator
 {
   private final String name;
   private final String fieldName;
 
   @JsonCreator
-  public FieldAccessPostAggregator(
+  public FinalizingFieldAccessPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName
   )
   {
-    Preconditions.checkNotNull(fieldName);
     this.name = name;
     this.fieldName = fieldName;
   }
@@ -64,7 +62,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    return combinedAggregators.get(fieldName);
+    throw new UnsupportedOperationException("No decorated");
   }
 
   @Override
@@ -75,17 +73,32 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public FieldAccessPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  public FinalizingFieldAccessPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
-    return this;
-  }
+    return new FinalizingFieldAccessPostAggregator(name, fieldName)
+    {
+      @Override
+      public Comparator getComparator()
+      {
+        if (aggregators != null && aggregators.containsKey(fieldName)) {
+          return aggregators.get(fieldName).getComparator();
+        } else {
+          return Ordering.natural().nullsFirst();
+        }
+      }
 
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(PostAggregatorIds.FIELD_ACCESS)
-        .appendString(fieldName)
-        .build();
+      @Override
+      public Object compute(Map<String, Object> combinedAggregators)
+      {
+        if (aggregators != null && aggregators.containsKey(fieldName)) {
+          return aggregators.get(fieldName).finalizeComputation(
+              combinedAggregators.get(fieldName)
+          );
+        } else {
+          return combinedAggregators.get(fieldName);
+        }
+      }
+    };
   }
 
   @JsonProperty
@@ -95,9 +108,17 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.FINALIZING_FIELD_ACCESS)
+        .appendString(fieldName)
+        .build();
+  }
+
+  @Override
   public String toString()
   {
-    return "FieldAccessPostAggregator{" +
+    return "FinalizingFieldAccessPostAggregator{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            '}';
@@ -113,9 +134,9 @@ public class FieldAccessPostAggregator implements PostAggregator
       return false;
     }
 
-    FieldAccessPostAggregator that = (FieldAccessPostAggregator) o;
+    FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator) o;
 
-    if (!fieldName.equals(that.fieldName)) {
+    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
       return false;
     }
     if (name != null ? !name.equals(that.name) : that.name != null) {
@@ -129,7 +150,18 @@ public class FieldAccessPostAggregator implements PostAggregator
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + fieldName.hashCode();
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
     return result;
+  }
+
+  @VisibleForTesting
+  static FinalizingFieldAccessPostAggregator buildDecorated(
+      String name,
+      String fieldName,
+      Map<String, AggregatorFactory> aggregators
+  )
+  {
+    FinalizingFieldAccessPostAggregator ret = new FinalizingFieldAccessPostAggregator(name, fieldName);
+    return ret.decorate(aggregators);
   }
 }

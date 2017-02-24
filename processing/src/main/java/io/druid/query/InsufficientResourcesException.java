@@ -17,33 +17,15 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
-
-import io.druid.java.util.common.Cacheable;
-
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
+package io.druid.query;
 
 /**
- * Functionally similar to an Aggregator. See the Aggregator interface for more comments.
+ * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
  */
-public interface PostAggregator extends Cacheable
+public class InsufficientResourcesException extends RuntimeException
 {
-  Set<String> getDependentFields();
-
-  Comparator getComparator();
-
-  Object compute(Map<String, Object> combinedAggregators);
-
-  String getName();
-
-  /**
-   * Returns a richer post aggregator which are built from the given aggregators with their names and some accessible
-   * environmental variables such as ones in the object scope.
-   *
-   * @param aggregators A map of aggregator factories with their names.
-   *
-   */
-  PostAggregator decorate(Map<String, AggregatorFactory> aggregators);
+  public InsufficientResourcesException(String message)
+  {
+    super(message);
+  }
 }

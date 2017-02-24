@@ -71,12 +71,23 @@ public class GroupByQueryMergeBufferTest
     }
 
     @Override
-    public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout) throws InterruptedException
+    public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout)
     {
       final ReferenceCountingResourceHolder<ByteBuffer> holder = super.take(timeout);
-      final int queueSize = getQueueSize();
-      if (minRemainBufferNum > queueSize) {
-        minRemainBufferNum = queueSize;
+      final int poolSize = getPoolSize();
+      if (minRemainBufferNum > poolSize) {
+        minRemainBufferNum = poolSize;
+      }
+      return holder;
+    }
+
+    @Override
+    public ReferenceCountingResourceHolder<List<ByteBuffer>> takeBatch(final int maxElements, final long timeout)
+    {
+      final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = super.takeBatch(maxElements, timeout);
+      final int poolSize = getPoolSize();
+      if (minRemainBufferNum > poolSize) {
+        minRemainBufferNum = poolSize;
       }
       return holder;
     }
@@ -155,9 +166,7 @@ public class GroupByQueryMergeBufferTest
         )
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        configSupplier,
         strategySelector,
-        bufferPool,
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     return new GroupByQueryRunnerFactory(
@@ -227,6 +236,7 @@ public class GroupByQueryMergeBufferTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
     assertEquals(2, mergeBufferPool.getMinRemainBufferNum());
+    assertEquals(3, mergeBufferPool.getPoolSize());
   }
 
   @Test
@@ -254,6 +264,7 @@ public class GroupByQueryMergeBufferTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
     assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
+    assertEquals(3, mergeBufferPool.getPoolSize());
   }
 
   @Test
@@ -291,7 +302,9 @@ public class GroupByQueryMergeBufferTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
+    // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
+    assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
+    assertEquals(3, mergeBufferPool.getPoolSize());
   }
 
   @Test
@@ -341,6 +354,8 @@ public class GroupByQueryMergeBufferTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
+    // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
+    assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
+    assertEquals(3, mergeBufferPool.getPoolSize());
   }
 }

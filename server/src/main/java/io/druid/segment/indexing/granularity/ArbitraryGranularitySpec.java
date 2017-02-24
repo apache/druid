@@ -27,11 +27,9 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-
 import io.druid.common.utils.JodaUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -52,7 +50,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
   {
-    this.queryGranularity = queryGranularity;
+    this.queryGranularity = queryGranularity == null ? Granularity.NONE : queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
 

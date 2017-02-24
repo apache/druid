@@ -42,6 +42,7 @@ import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.ExtractionFns;
@@ -340,6 +341,7 @@ public class DruidQueryBuilder
         dataSource,
         filtration.getQuerySegmentSpec(),
         descending,
+        VirtualColumns.EMPTY,
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
@@ -413,6 +415,7 @@ public class DruidQueryBuilder
 
     return new TopNQuery(
         dataSource,
+        VirtualColumns.EMPTY,
         Iterables.getOnlyElement(grouping.getDimensions()),
         topNMetricSpec,
         limitSpec.getLimit(),
@@ -449,6 +452,7 @@ public class DruidQueryBuilder
     return new GroupByQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
+        VirtualColumns.EMPTY,
         filtration.getDimFilter(),
         Granularity.ALL,
         grouping.getDimensions(),

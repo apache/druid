@@ -59,7 +59,7 @@ public class QueriesTest
     boolean exceptionOccured = false;
 
     try {
-      Queries.verifyAggregations(aggFactories, postAggs);
+      Queries.prepareAggregations(aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
       exceptionOccured = true;
@@ -91,7 +91,7 @@ public class QueriesTest
     boolean exceptionOccured = false;
 
     try {
-      Queries.verifyAggregations(aggFactories, postAggs);
+      Queries.prepareAggregations(aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
       exceptionOccured = true;
@@ -145,7 +145,7 @@ public class QueriesTest
     boolean exceptionOccured = false;
 
     try {
-      Queries.verifyAggregations(aggFactories, postAggs);
+      Queries.prepareAggregations(aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
       exceptionOccured = true;
@@ -199,7 +199,7 @@ public class QueriesTest
     boolean exceptionOccured = false;
 
     try {
-      Queries.verifyAggregations(aggFactories, postAggs);
+      Queries.prepareAggregations(aggFactories, postAggs);
     }
     catch (IllegalArgumentException e) {
       exceptionOccured = true;

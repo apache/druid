@@ -30,8 +30,8 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.Aggregator;
@@ -54,6 +54,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.TestHelper;
+import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -62,6 +63,7 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -79,6 +81,12 @@ import java.util.Map;
 
 public abstract class BaseFilterTest
 {
+  private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
+      ImmutableList.<VirtualColumn>of(
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1")
+      )
+  );
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -291,15 +299,13 @@ public abstract class BaseFilterTest
 
   private Sequence<Cursor> makeCursorSequence(final Filter filter)
   {
-    final Sequence<Cursor> cursors = adapter.makeCursors(
+    return adapter.makeCursors(
         filter,
         new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
-        VirtualColumns.EMPTY,
+        VIRTUAL_COLUMNS,
         Granularity.ALL,
         false
     );
-
-    return cursors;
   }
 
   /**
@@ -444,7 +450,7 @@ public abstract class BaseFilterTest
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
-        RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature)
+        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature))
     );
     final List<String> values = Lists.newArrayList();
     for (InputRow row : rows) {

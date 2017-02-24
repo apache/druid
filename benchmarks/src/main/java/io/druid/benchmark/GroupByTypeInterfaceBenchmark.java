@@ -424,9 +424,7 @@ public class GroupByTypeInterfaceBenchmark
     factory = new GroupByQueryRunnerFactory(
         strategySelector,
         new GroupByQueryQueryToolChest(
-            configSupplier,
             strategySelector,
-            bufferPool,
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
