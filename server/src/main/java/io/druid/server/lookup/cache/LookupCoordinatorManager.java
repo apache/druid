@@ -404,6 +404,14 @@ public class LookupCoordinatorManager
       }
 
       executorService.shutdownNow();
+
+      //went in an stop error
+      try {
+        executorService.awaitTermination(1, TimeUnit.MINUTES);
+      } catch (InterruptedException ex) {
+
+      }
+
       final ListenableScheduledFuture backgroundManagerFuture = this.backgroundManagerFuture;
       this.backgroundManagerFuture = null;
       if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
@@ -417,12 +425,10 @@ public class LookupCoordinatorManager
   private void lookupMgmtLoop()
   {
     // Sanity check for if we are shutting down
-    if (Thread.currentThread().isInterrupted()) {
-      LOG.info("Not updating lookups because process was interrupted");
+    if (Thread.currentThread().isInterrupted() || !lifecycleLock.isStarted()) {
+      LOG.info("Not updating lookups because process was interrupted or not started.");
       return;
     }
-
-    final Map<HostAndPort, LookupsStateWithMap> currState = new HashMap<>();
 
     final Map<String, Map<String, LookupExtractorFactoryMapContainer>> allLookupTiers = lookupMapConfigRef.get();
 
@@ -438,6 +444,7 @@ public class LookupCoordinatorManager
       LOG.debug("Starting lookup sync for on all nodes.");
     }
 
+    final Map<HostAndPort, LookupsStateWithMap> currState = new HashMap<>();
     final Random rand = new Random();
 
     try {
