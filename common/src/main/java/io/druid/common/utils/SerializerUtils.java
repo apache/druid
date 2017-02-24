@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -47,8 +48,11 @@ public class SerializerUtils
    */
   public static void writeLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer) throws IOException
   {
+    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
+      throw new IllegalArgumentException("helperBuffer should be big-endian");
+    }
     helperBuffer.putLong(0, value);
-    out.write(helperBuffer.array());
+    out.write(helperBuffer.array(), 0, 8);
   }
 
   /**
@@ -60,8 +64,11 @@ public class SerializerUtils
    */
   public static void writeIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer) throws IOException
   {
+    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
+      throw new IllegalArgumentException("helperBuffer should be big-endian");
+    }
     helperBuffer.putInt(0, value);
-    out.write(helperBuffer.array());
+    out.write(helperBuffer.array(), 0, 4);
   }
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
