@@ -210,7 +210,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     long maxDataTimestamp = getMaxTime().getMillis();
     final Interval dataInterval = new Interval(
         minDataTimestamp,
-        gran.increment(gran.truncate(getMaxTime())).getMillis()
+        gran.nextRound(getMaxTime()).getMillis()
     );
 
     if (!actualInterval.overlaps(dataInterval)) {

@@ -205,7 +205,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval dataInterval = new Interval(
         getMinTime().getMillis(),
-        gran.increment(gran.truncate(getMaxTime())).getMillis()
+        gran.nextRound(getMaxTime()).getMillis()
     );
 
     if (!actualIntervalTmp.overlaps(dataInterval)) {

@@ -152,7 +152,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
 
       final Interval rowInterval = new Interval(
           queryGranularity.truncate(timestamp),
-          queryGranularity.increment(queryGranularity.truncate(timestamp))
+          queryGranularity.nextRound(timestamp)
       );
 
       final Set<DataSegment> usedSegmentsForRow = ImmutableSet.copyOf(

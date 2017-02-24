@@ -35,6 +35,9 @@ public final class AllGranularity extends Granularity
   public static final long MAX_INSTANT = Long.MAX_VALUE / 2;
   public static final long MIN_INSTANT = Long.MIN_VALUE / 2;
 
+  private final DateTime maxDateTime = new DateTime(MAX_INSTANT);
+  private final DateTime minDateTime = new DateTime(MIN_INSTANT);
+
   private static final AllGranularity INSTANCE = new AllGranularity();
 
   private AllGranularity() {}
@@ -53,7 +56,7 @@ public final class AllGranularity extends Granularity
   @Override
   public DateTime increment(DateTime time)
   {
-    return new DateTime(MAX_INSTANT);
+    return maxDateTime;
   }
 
   @Override
@@ -65,7 +68,7 @@ public final class AllGranularity extends Granularity
   @Override
   public DateTime truncate(DateTime time)
   {
-    return new DateTime(MIN_INSTANT);
+    return minDateTime;
   }
 
   @Override

@@ -244,7 +244,7 @@ public class HadoopDruidIndexerConfigTest
     );
     final long timestamp = new DateTime("2010-01-01T01:00:01").getMillis();
     final Bucket expectedBucket = config.getBucket(new MapBasedInputRow(timestamp, dims, values)).get();
-    final long nextBucketTimestamp = Granularity.MINUTE.increment(Granularity.MINUTE.truncate(new DateTime(timestamp))).getMillis();
+    final long nextBucketTimestamp = Granularity.MINUTE.nextRound(new DateTime(timestamp)).getMillis();
     // check that all rows having same set of dims and truncated timestamp hash to same bucket
     for (int i = 0; timestamp + i < nextBucketTimestamp; i++) {
       Assert.assertEquals(

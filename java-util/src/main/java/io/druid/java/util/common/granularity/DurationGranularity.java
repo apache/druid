@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import io.druid.java.util.common.RE;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -73,7 +72,7 @@ public class DurationGranularity extends Granularity
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
@@ -93,7 +92,7 @@ public class DurationGranularity extends Granularity
   {
     long t = time.getMillis();
     final long duration = getDurationMillis();
-    long offset = t % duration - origin % duration;
+    long offset = t % duration - origin;
     if (offset < 0) {
       offset += duration;
     }
@@ -103,7 +102,7 @@ public class DurationGranularity extends Granularity
   @Override
   public DateTime toDate(String filePath, Formatter formatter)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
@@ -115,7 +114,7 @@ public class DurationGranularity extends Granularity
   @Override
   public DateTime toDateTime(long offset)
   {
-    throw new RE("This method should not be invoked for this granularity type");
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   public long getDurationMillis()

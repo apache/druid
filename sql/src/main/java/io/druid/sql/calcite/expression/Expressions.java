@@ -480,7 +480,7 @@ public class Expressions
           final long rhsMillis = toMillisLiteral(rhs, plannerContext.getTimeZone());
           final Interval rhsInterval = new Interval(
               granularity.truncate(new DateTime(rhsMillis)),
-              granularity.increment(granularity.truncate(new DateTime(rhsMillis)))
+              granularity.nextRound(new DateTime(rhsMillis))
           );
 
           // Is rhs aligned on granularity boundaries?

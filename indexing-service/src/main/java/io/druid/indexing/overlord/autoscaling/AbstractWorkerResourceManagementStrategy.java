@@ -82,9 +82,7 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
           resourceManagementSchedulerConfig.getOriginTime(),
           null
       );
-      final long startTime = granularity.increment(
-              granularity.truncate(new DateTime())
-      ).getMillis();
+      final long startTime = granularity.nextRound(new DateTime()).getMillis();
 
       ScheduledExecutors.scheduleAtFixedRate(
           exec,

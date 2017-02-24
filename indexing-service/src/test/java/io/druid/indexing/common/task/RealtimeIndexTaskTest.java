@@ -806,7 +806,7 @@ public class RealtimeIndexTaskTest
             task1.getId(),
             task1.getDataSource(),
             Granularity.DAY.truncate(now),
-            Granularity.DAY.increment(Granularity.DAY.truncate(now))
+            Granularity.DAY.nextRound(now)
         )
     );
 
