@@ -20,16 +20,12 @@
 package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.ISE;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -40,11 +36,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.TimeUnit;
 
 public class LookupReferencesManagerTest
 {
@@ -71,41 +62,41 @@ public class LookupReferencesManagerTest
         mapper,
         true
     );
-    Assert.assertTrue("must be closed before start call", !lookupReferencesManager.started);
+    Assert.assertTrue("must be closed before start call", !lookupReferencesManager.lifecycleLock.isStarted());
     lookupReferencesManager.start();
-    Assert.assertTrue("must start after start call", lookupReferencesManager.started);
+    Assert.assertTrue("must start after start call", lookupReferencesManager.lifecycleLock.isStarted());
   }
 
   @After
   public void tearDown()
   {
     lookupReferencesManager.stop();
-    Assert.assertTrue("stop call should close it", !lookupReferencesManager.started);
+    Assert.assertTrue("stop call should close it", !lookupReferencesManager.lifecycleLock.isStarted());
     executorService.shutdownNow();
   }
 
-  @Test(expected = ISE.class)
+  @Test(expected = IllegalStateException.class)
   public void testGetExceptionWhenClosed()
   {
     lookupReferencesManager.stop();
     lookupReferencesManager.get("test");
   }
 
-  @Test(expected = ISE.class)
+  @Test(expected = IllegalStateException.class)
   public void testAddExceptionWhenClosed()
   {
     lookupReferencesManager.stop();
     lookupReferencesManager.add("test", EasyMock.createMock(LookupExtractorFactoryContainer.class));
   }
 
-  @Test(expected = ISE.class)
+  @Test(expected = IllegalStateException.class)
   public void testRemoveExceptionWhenClosed()
   {
     lookupReferencesManager.stop();
     lookupReferencesManager.remove("test");
   }
 
-  @Test(expected = ISE.class)
+  @Test(expected = IllegalStateException.class)
   public void testGetAllLookupsStateExceptionWhenClosed()
   {
     lookupReferencesManager.stop();
@@ -289,63 +280,17 @@ public class LookupReferencesManagerTest
   }
 
   @Test
-  public void testConcurrencyStaaaaaaaaartStop() throws Exception
+  public void testMainThreadStartStop()
   {
-    lookupReferencesManager.stop();
-    final CyclicBarrier cyclicBarrier = new CyclicBarrier(CONCURRENT_THREADS);
-    final Runnable start = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          cyclicBarrier.await();
-        }
-        catch (InterruptedException | BrokenBarrierException e) {
-          throw Throwables.propagate(e);
-        }
-        lookupReferencesManager.start();
-      }
-    };
-    final Collection<ListenableFuture<?>> futures = new ArrayList<>(CONCURRENT_THREADS);
-    for (int i = 0; i < CONCURRENT_THREADS; ++i) {
-      futures.add(executorService.submit(start));
-    }
-    lookupReferencesManager.stop();
-    Futures.allAsList(futures).get(100, TimeUnit.MILLISECONDS);
-    for (ListenableFuture future : futures) {
-      Assert.assertNull(future.get());
-    }
-  }
-
-  @Test
-  public void testConcurrencyStartStoooooooooop() throws Exception
-  {
-    lookupReferencesManager.stop();
+    lookupReferencesManager = new LookupReferencesManager(
+        new LookupConfig(null),
+        mapper,
+        false
+    );
     lookupReferencesManager.start();
-    final CyclicBarrier cyclicBarrier = new CyclicBarrier(CONCURRENT_THREADS);
-    final Runnable start = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          cyclicBarrier.await();
-        }
-        catch (InterruptedException | BrokenBarrierException e) {
-          throw Throwables.propagate(e);
-        }
-        lookupReferencesManager.stop();
-      }
-    };
-    final Collection<ListenableFuture<?>> futures = new ArrayList<>(CONCURRENT_THREADS);
-    for (int i = 0; i < CONCURRENT_THREADS; ++i) {
-      futures.add(executorService.submit(start));
-    }
-    Futures.allAsList(futures).get(100, TimeUnit.MILLISECONDS);
-    for (ListenableFuture future : futures) {
-      Assert.assertNull(future.get());
-    }
+    Assert.assertTrue(lookupReferencesManager.mainThread.isAlive());
+    lookupReferencesManager.stop();
+    Assert.assertFalse(lookupReferencesManager.mainThread.isAlive());
   }
 
   private void handleOneNotice(LookupReferencesManager mgr) throws Exception {
