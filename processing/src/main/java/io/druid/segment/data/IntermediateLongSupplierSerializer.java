@@ -35,6 +35,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Unsafe for concurrent use from multiple threads.
+ */
 public class IntermediateLongSupplierSerializer implements LongSupplierSerializer
 {
 

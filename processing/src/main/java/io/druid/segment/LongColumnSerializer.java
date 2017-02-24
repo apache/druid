@@ -29,6 +29,9 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Unsafe for concurrent use from multiple threads.
+ */
 public class LongColumnSerializer implements GenericColumnSerializer
 {
   public static LongColumnSerializer create(
