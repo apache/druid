@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -80,8 +81,9 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
     metaOut.write(CompressionFactory.LongEncodingFormat.TABLE.getId());
     metaOut.write(CompressionFactory.TABLE_ENCODING_VERSION);
     metaOut.write(Ints.toByteArray(table.size()));
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Longs.BYTES);
     for (int i = 0; i < valueAddedInOrder.size(); i++) {
-      metaOut.write(Longs.toByteArray(valueAddedInOrder.getLong(i)));
+      SerializerUtils.writeLongToOutputStream(metaOut, valueAddedInOrder.getLong(i), helperBuffer);
     }
   }
 
