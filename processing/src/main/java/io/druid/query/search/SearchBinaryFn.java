@@ -113,7 +113,7 @@ public class SearchBinaryFn
 
     final DateTime timestamp = gran instanceof AllGranularity
                                ? arg1.getTimestamp()
-                               : gran.truncate(arg1.getTimestamp());
+                               : gran.bucketStart(arg1.getTimestamp());
 
     return new Result<SearchResultValue>(timestamp, new SearchResultValue(results));
   }

@@ -478,10 +478,7 @@ public class Expressions
         if (granularity != null) {
           // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
           final long rhsMillis = toMillisLiteral(rhs, plannerContext.getTimeZone());
-          final Interval rhsInterval = new Interval(
-              granularity.truncate(new DateTime(rhsMillis)),
-              granularity.nextRound(new DateTime(rhsMillis))
-          );
+          final Interval rhsInterval = granularity.bucket(new DateTime(rhsMillis));
 
           // Is rhs aligned on granularity boundaries?
           final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;

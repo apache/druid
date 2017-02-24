@@ -272,7 +272,7 @@ public class DeterminePartitionsJob implements Jobby
     ) throws IOException, InterruptedException
     {
       final List<Object> groupKey = Rows.toGroupKey(
-          rollupGranularity.truncate(inputRow.getTimestamp()).getMillis(),
+          rollupGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
           inputRow
       );
       context.write(

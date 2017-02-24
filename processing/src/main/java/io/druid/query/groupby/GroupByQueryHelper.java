@@ -45,7 +45,7 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-import org.joda.time.Interval;
+import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -68,11 +68,9 @@ public class GroupByQueryHelper
     final Granularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
-    // use gran.iterable instead of gran.truncate so that
-    // AllGranularity returns timeStart instead of Long.MIN_VALUE
     long granTimeStart = timeStart;
     if (!(Granularity.ALL.equals(gran))) {
-      granTimeStart = gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStartMillis();
+      granTimeStart = gran.bucketStart(new DateTime(timeStart)).getMillis();
     }
 
     final List<AggregatorFactory> aggs;

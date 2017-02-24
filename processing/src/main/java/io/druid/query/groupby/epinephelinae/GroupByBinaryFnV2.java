@@ -78,7 +78,7 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
     if (query.getGranularity() instanceof AllGranularity) {
       return row.getTimestamp();
     } else {
-      return query.getGranularity().truncate(row.getTimestamp());
+      return query.getGranularity().bucketStart(row.getTimestamp());
     }
   }
 }

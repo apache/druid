@@ -208,7 +208,7 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> expected = new Result<TopNResultValue>(
-        Granularity.DAY.truncate(currTime),
+        Granularity.DAY.bucketStart(currTime),
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
                 ImmutableMap.<String, Object>of(

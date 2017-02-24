@@ -805,8 +805,8 @@ public class RealtimeIndexTaskTest
             directory,
             task1.getId(),
             task1.getDataSource(),
-            Granularity.DAY.truncate(now),
-            Granularity.DAY.nextRound(now)
+            Granularity.DAY.bucketStart(now),
+            Granularity.DAY.bucketEnd(now)
         )
     );
 

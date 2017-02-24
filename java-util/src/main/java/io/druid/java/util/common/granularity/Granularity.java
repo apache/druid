@@ -43,21 +43,21 @@ import java.util.regex.Pattern;
 public abstract class Granularity implements Cacheable
 {
 
-  public static final Granularity SECOND = GranularityType.SECOND.defaultPeriodGranularity;
-  public static final Granularity MINUTE = GranularityType.MINUTE.defaultPeriodGranularity;
-  public static final Granularity FIVE_MINUTE = GranularityType.FIVE_MINUTE.defaultPeriodGranularity;
-  public static final Granularity TEN_MINUTE = GranularityType.TEN_MINUTE.defaultPeriodGranularity;
-  public static final Granularity FIFTEEN_MINUTE = GranularityType.FIFTEEN_MINUTE.defaultPeriodGranularity;
-  public static final Granularity THIRTY_MINUTE = GranularityType.THIRTY_MINUTE.defaultPeriodGranularity;
-  public static final Granularity HOUR = GranularityType.HOUR.defaultPeriodGranularity;
-  public static final Granularity SIX_HOUR = GranularityType.SIX_HOUR.defaultPeriodGranularity;
-  public static final Granularity DAY = GranularityType.DAY.defaultPeriodGranularity;
-  public static final Granularity WEEK = GranularityType.WEEK.defaultPeriodGranularity;
-  public static final Granularity MONTH = GranularityType.MONTH.defaultPeriodGranularity;
-  public static final Granularity QUARTER = GranularityType.QUARTER.defaultPeriodGranularity;
-  public static final Granularity YEAR = GranularityType.YEAR.defaultPeriodGranularity;
-  public static final Granularity ALL = GranularityType.ALL.defaultPeriodGranularity;
-  public static final Granularity NONE = GranularityType.NONE.defaultPeriodGranularity;
+  public static final Granularity SECOND = GranularityType.SECOND.defaultGranularity;
+  public static final Granularity MINUTE = GranularityType.MINUTE.defaultGranularity;
+  public static final Granularity FIVE_MINUTE = GranularityType.FIVE_MINUTE.defaultGranularity;
+  public static final Granularity TEN_MINUTE = GranularityType.TEN_MINUTE.defaultGranularity;
+  public static final Granularity FIFTEEN_MINUTE = GranularityType.FIFTEEN_MINUTE.defaultGranularity;
+  public static final Granularity THIRTY_MINUTE = GranularityType.THIRTY_MINUTE.defaultGranularity;
+  public static final Granularity HOUR = GranularityType.HOUR.defaultGranularity;
+  public static final Granularity SIX_HOUR = GranularityType.SIX_HOUR.defaultGranularity;
+  public static final Granularity DAY = GranularityType.DAY.defaultGranularity;
+  public static final Granularity WEEK = GranularityType.WEEK.defaultGranularity;
+  public static final Granularity MONTH = GranularityType.MONTH.defaultGranularity;
+  public static final Granularity QUARTER = GranularityType.QUARTER.defaultGranularity;
+  public static final Granularity YEAR = GranularityType.YEAR.defaultGranularity;
+  public static final Granularity ALL = GranularityType.ALL.defaultGranularity;
+  public static final Granularity NONE = GranularityType.NONE.defaultGranularity;
 
   /**
    * For a select subset of granularites, users can specify them directly as string.
@@ -81,7 +81,7 @@ public abstract class Granularity implements Cacheable
   @JsonCreator
   public static Granularity fromString(String str)
   {
-    return GranularityType.valueOf(str.toUpperCase()).defaultPeriodGranularity;
+    return GranularityType.valueOf(str.toUpperCase()).defaultGranularity;
   }
 
   /**
@@ -144,12 +144,12 @@ public abstract class Granularity implements Cacheable
 
   public abstract DateTime decrement(DateTime time);
 
-  public abstract DateTime truncate(DateTime time);
+  public abstract DateTime bucketStart(DateTime time);
 
   public abstract DateTime toDate(String filePath, Formatter formatter);
 
-  public DateTime nextRound(DateTime time) {
-    return increment(truncate(time));
+  public DateTime bucketEnd(DateTime time) {
+    return increment(bucketStart(time));
   }
 
   public DateTime toDateTime(long offset)
@@ -172,7 +172,7 @@ public abstract class Granularity implements Cacheable
    */
   public final Interval bucket(DateTime t)
   {
-    DateTime start = truncate(t);
+    DateTime start = bucketStart(t);
     return new Interval(start, increment(start));
   }
 
@@ -282,7 +282,7 @@ public abstract class Granularity implements Cacheable
     private final String defaultFormat;
     private final int dateValuePositions;
     private final Period period;
-    private final Granularity defaultPeriodGranularity;
+    private final Granularity defaultGranularity;
 
     GranularityType(Granularity specialGranularity)
     {
@@ -291,7 +291,7 @@ public abstract class Granularity implements Cacheable
       this.defaultFormat = null;
       this.dateValuePositions = 0;
       this.period = null;
-      this.defaultPeriodGranularity = specialGranularity;
+      this.defaultGranularity = specialGranularity;
     }
 
     GranularityType(
@@ -307,7 +307,7 @@ public abstract class Granularity implements Cacheable
       this.defaultFormat = defaultFormat;
       this.dateValuePositions = dateValuePositions;
       this.period = new Period(period);
-      this.defaultPeriodGranularity = new PeriodGranularity(this.period, null, null);
+      this.defaultGranularity = new PeriodGranularity(this.period, null, null);
     }
 
     GranularityType(GranularityType granularityType, String period)
@@ -327,7 +327,7 @@ public abstract class Granularity implements Cacheable
         return new PeriodGranularity(period, origin, tz);
       } else {
         // If All or None granularity, or if origin and tz are both null, return the cached granularity
-        return defaultPeriodGranularity;
+        return defaultGranularity;
       }
     }
 
@@ -435,11 +435,11 @@ public abstract class Granularity implements Cacheable
     }
   }
 
-  public class IntervalIterable implements Iterable<Interval>
+  private class IntervalIterable implements Iterable<Interval>
   {
     private final Interval inputInterval;
 
-    public IntervalIterable(Interval inputInterval)
+    private IntervalIterable(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
     }
@@ -452,18 +452,18 @@ public abstract class Granularity implements Cacheable
 
   }
 
-  public class IntervalIterator implements Iterator<Interval>
+  private class IntervalIterator implements Iterator<Interval>
   {
     private final Interval inputInterval;
 
     private DateTime currStart;
     private DateTime currEnd;
 
-    public IntervalIterator(Interval inputInterval)
+    private IntervalIterator(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
 
-      currStart = truncate(inputInterval.getStart());
+      currStart = bucketStart(inputInterval.getStart());
       currEnd = increment(currStart);
     }
 

@@ -109,7 +109,7 @@ public class TimeseriesBinaryFnTest
     );
 
     Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
-        Granularity.DAY.truncate(currTime),
+        Granularity.DAY.bucketStart(currTime),
         new TimeseriesResultValue(
             ImmutableMap.<String, Object>of(
                 "rows", 3L,

@@ -120,7 +120,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     if (gran instanceof AllGranularity) {
       timestamp = arg1.getTimestamp();
     } else {
-      timestamp = gran.truncate(arg1.getTimestamp());
+      timestamp = gran.bucketStart(arg1.getTimestamp());
     }
 
     TopNResultBuilder bob = topNMetricSpec.getResultBuilder(

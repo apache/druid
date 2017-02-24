@@ -363,8 +363,8 @@ public class GroupByQuery extends BaseQuery<Row>
         public int compare(Row lhs, Row rhs)
         {
           return Longs.compare(
-              granularity.truncate(lhs.getTimestamp()).getMillis(),
-              granularity.truncate(rhs.getTimestamp()).getMillis()
+              granularity.bucketStart(lhs.getTimestamp()).getMillis(),
+              granularity.bucketStart(rhs.getTimestamp()).getMillis()
           );
         }
       };

@@ -75,7 +75,7 @@ public class SelectBinaryFn
 
     final DateTime timestamp = (gran instanceof AllGranularity)
                                ? arg1.getTimestamp()
-                               : gran.truncate(arg1.getTimestamp());
+                               : gran.bucketStart(arg1.getTimestamp());
 
     SelectResultValueBuilder builder = new SelectResultValueBuilder.MergeBuilder(timestamp, pagingSpec, descending);
 

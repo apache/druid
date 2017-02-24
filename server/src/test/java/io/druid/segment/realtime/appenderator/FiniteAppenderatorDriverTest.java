@@ -249,7 +249,7 @@ public class FiniteAppenderatorDriverTest
     ) throws IOException
     {
       synchronized (counters) {
-        final long timestampTruncated = granularity.truncate(timestamp).getMillis();
+        final long timestampTruncated = granularity.bucketStart(timestamp).getMillis();
         if (!counters.containsKey(timestampTruncated)) {
           counters.put(timestampTruncated, new AtomicInteger());
         }

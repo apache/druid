@@ -120,7 +120,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String apply(long value)
   {
-    final long truncated = granularity.truncate(new DateTime(value)).getMillis();
+    final long truncated = granularity.bucketStart(new DateTime(value)).getMillis();
     return formatter == null ? String.valueOf(truncated) : formatter.print(truncated);
   }
 

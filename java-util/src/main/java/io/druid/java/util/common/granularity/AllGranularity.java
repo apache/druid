@@ -66,7 +66,7 @@ public final class AllGranularity extends Granularity
   }
 
   @Override
-  public DateTime truncate(DateTime time)
+  public DateTime bucketStart(DateTime time)
   {
     return minDateTime;
   }
@@ -105,7 +105,7 @@ public final class AllGranularity extends Granularity
   @Override
   public int hashCode()
   {
-    return 1;
+    return getClass().hashCode();
   }
 
   @Override

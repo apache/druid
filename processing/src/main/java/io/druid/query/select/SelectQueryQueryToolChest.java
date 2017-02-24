@@ -366,13 +366,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
     for (Interval interval : intervals) {
       if (query.isDescending()) {
-        long granularEnd = granularity.truncate(interval.getEnd()).getMillis();
+        long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();
         Long currentEnd = granularThresholds.get(granularEnd);
         if (currentEnd == null || interval.getEndMillis() > currentEnd) {
           granularThresholds.put(granularEnd, interval.getEndMillis());
         }
       } else {
-        long granularStart = granularity.truncate(interval.getStart()).getMillis();
+        long granularStart = granularity.bucketStart(interval.getStart()).getMillis();
         Long currentStart = granularThresholds.get(granularStart);
         if (currentStart == null || interval.getStartMillis() < currentStart) {
           granularThresholds.put(granularStart, interval.getStartMillis());
@@ -386,7 +386,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     if (query.isDescending()) {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.truncate(interval.getEnd()).getMillis());
+        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.bucketStart(interval.getEnd()).getMillis());
         if (ceiling == null || interval.getStartMillis() >= ceiling.getValue()) {
           it.remove();
         }
@@ -394,7 +394,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     } else {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.truncate(interval.getStart()).getMillis());
+        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.bucketStart(interval.getStart()).getMillis());
         if (floor == null || interval.getEndMillis() <= floor.getValue()) {
           it.remove();
         }

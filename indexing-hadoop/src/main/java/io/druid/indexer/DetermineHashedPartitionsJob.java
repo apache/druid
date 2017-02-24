@@ -248,7 +248,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
 
       final List<Object> groupKey = Rows.toGroupKey(
-          rollupGranularity.truncate(inputRow.getTimestamp()).getMillis(),
+          rollupGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
           inputRow
       );
       Interval interval;

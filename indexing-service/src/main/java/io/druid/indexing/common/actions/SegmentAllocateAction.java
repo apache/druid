@@ -150,10 +150,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
 
       final List<Interval> tryIntervals = Lists.newArrayList();
 
-      final Interval rowInterval = new Interval(
-          queryGranularity.truncate(timestamp),
-          queryGranularity.nextRound(timestamp)
-      );
+      final Interval rowInterval = queryGranularity.bucket(timestamp);
 
       final Set<DataSegment> usedSegmentsForRow = ImmutableSet.copyOf(
           msc.getUsedSegmentsForInterval(dataSource, rowInterval)

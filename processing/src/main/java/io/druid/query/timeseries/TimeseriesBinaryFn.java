@@ -73,7 +73,7 @@ public class TimeseriesBinaryFn
                new TimeseriesResultValue(retVal)
            ) :
            new Result<TimeseriesResultValue>(
-               gran.truncate(arg1.getTimestamp()),
+               gran.bucketStart(arg1.getTimestamp()),
                new TimeseriesResultValue(retVal)
            );
   }

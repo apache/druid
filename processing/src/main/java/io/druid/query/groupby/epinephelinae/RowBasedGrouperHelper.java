@@ -210,7 +210,7 @@ public class RowBasedGrouperHelper
           @Override
           public long apply(Row row)
           {
-            return query.getGranularity().truncate(row.getTimestamp()).getMillis();
+            return query.getGranularity().bucketStart(row.getTimestamp()).getMillis();
           }
         };
       }

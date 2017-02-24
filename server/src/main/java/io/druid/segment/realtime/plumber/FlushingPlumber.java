@@ -142,7 +142,7 @@ public class FlushingPlumber extends RealtimePlumber
   private void startFlushThread()
   {
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
-    final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
     final long windowMillis = config.getWindowPeriod().toStandardDuration().getMillis();
 
     log.info(
@@ -179,7 +179,7 @@ public class FlushingPlumber extends RealtimePlumber
                   return ScheduledExecutors.Signal.STOP;
                 }
 
-                long minTimestamp = segmentGranularity.truncate(
+                long minTimestamp = segmentGranularity.bucketStart(
                     getRejectionPolicy().getCurrMaxTime().minus(windowMillis)
                 ).getMillis();
 

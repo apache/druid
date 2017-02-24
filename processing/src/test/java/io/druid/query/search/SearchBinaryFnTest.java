@@ -130,7 +130,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> expected = new Result<SearchResultValue>(
-        Granularity.DAY.truncate(currTime),
+        Granularity.DAY.bucketStart(currTime),
         new SearchResultValue(
             ImmutableList.<SearchHit>of(
                 new SearchHit(

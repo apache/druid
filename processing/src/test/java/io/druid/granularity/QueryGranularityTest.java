@@ -347,11 +347,11 @@ public class QueryGranularityTest
             new DateTime("2012-11-04T03:00:00.000-08:00")
         ),
         Lists.newArrayList(
-          hour.truncate(new DateTime("2012-11-04T00:30:00-07:00")),
-          hour.truncate(new DateTime("2012-11-04T01:30:00-07:00")),
-          hour.truncate(new DateTime("2012-11-04T01:30:00-08:00")),
-          hour.truncate(new DateTime("2012-11-04T02:30:00-08:00")),
-          hour.truncate(new DateTime("2012-11-04T03:30:00-08:00"))
+          hour.bucketStart(new DateTime("2012-11-04T00:30:00-07:00")),
+          hour.bucketStart(new DateTime("2012-11-04T01:30:00-07:00")),
+          hour.bucketStart(new DateTime("2012-11-04T01:30:00-08:00")),
+          hour.bucketStart(new DateTime("2012-11-04T02:30:00-08:00")),
+          hour.bucketStart(new DateTime("2012-11-04T03:30:00-08:00"))
         )
     );
   }
@@ -414,9 +414,9 @@ public class QueryGranularityTest
             new DateTime("2012-01-04T05:00:00.000-08:00")
         ),
         Lists.newArrayList(
-            periodOrigin.truncate(new DateTime("2012-01-01T05:00:04.123-08:00")),
-            periodOrigin.truncate(new DateTime("2012-01-02T07:00:04.123-08:00")),
-            periodOrigin.truncate(new DateTime("2012-01-04T07:20:04.123-08:00"))
+            periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
+            periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
+            periodOrigin.bucketStart(new DateTime("2012-01-04T07:20:04.123-08:00"))
 
         )
     );
@@ -431,9 +431,9 @@ public class QueryGranularityTest
             new DateTime("2012-01-03T00:00:00.000-08:00")
         ),
         Lists.newArrayList(
-            periodNoOrigin.truncate(new DateTime("2012-01-01T05:00:04.123-08:00")),
-            periodNoOrigin.truncate(new DateTime("2012-01-02T07:00:04.123-08:00")),
-            periodNoOrigin.truncate(new DateTime("2012-01-04T07:20:04.123-08:00"))
+            periodNoOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
+            periodNoOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
+            periodNoOrigin.bucketStart(new DateTime("2012-01-04T07:20:04.123-08:00"))
 
         )
     );
@@ -451,9 +451,9 @@ public class QueryGranularityTest
             new DateTime("2012-01-04T00:20:00.000Z")
         ),
         Lists.newArrayList(
-            periodOrigin.truncate(new DateTime("2012-01-01T05:00:04.123Z")),
-            periodOrigin.truncate(new DateTime("2012-01-02T07:08:04.123Z")),
-            periodOrigin.truncate(new DateTime("2012-01-04T00:20:04.123Z"))
+            periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123Z")),
+            periodOrigin.bucketStart(new DateTime("2012-01-02T07:08:04.123Z")),
+            periodOrigin.bucketStart(new DateTime("2012-01-04T00:20:04.123Z"))
 
         )
     );
@@ -466,9 +466,9 @@ public class QueryGranularityTest
             new DateTime("2012-01-04T00:15:00.000Z")
         ),
         Lists.newArrayList(
-            periodNoOrigin.truncate(new DateTime("2012-01-01T05:00:04.123Z")),
-            periodNoOrigin.truncate(new DateTime("2012-01-02T07:00:04.123Z")),
-            periodNoOrigin.truncate(new DateTime("2012-01-04T00:20:04.123Z"))
+            periodNoOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123Z")),
+            periodNoOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123Z")),
+            periodNoOrigin.bucketStart(new DateTime("2012-01-04T00:20:04.123Z"))
 
         )
     );
@@ -492,10 +492,10 @@ public class QueryGranularityTest
               new DateTime("2012-02-04T05:00:00.000-08:00")
           ),
           Lists.newArrayList(
-              periodOrigin.truncate(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-03-01T07:20:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-02-04T05:00:00.000-08:00"))
+              periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-03-01T07:20:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-02-04T05:00:00.000-08:00"))
           )
       );
 
@@ -512,10 +512,10 @@ public class QueryGranularityTest
               new DateTime("2012-02-16T00:00:00.000-08:00")
           ),
           Lists.newArrayList(
-              periodNoOrigin.truncate(new DateTime("1970-01-01T05:02:04.123-08:00")),
-              periodNoOrigin.truncate(new DateTime("2012-01-01T05:02:04.123-08:00")),
-              periodNoOrigin.truncate(new DateTime("2012-01-15T07:01:04.123-08:00")),
-              periodNoOrigin.truncate(new DateTime("2012-02-16T00:00:00.000-08:00"))
+              periodNoOrigin.bucketStart(new DateTime("1970-01-01T05:02:04.123-08:00")),
+              periodNoOrigin.bucketStart(new DateTime("2012-01-01T05:02:04.123-08:00")),
+              periodNoOrigin.bucketStart(new DateTime("2012-01-15T07:01:04.123-08:00")),
+              periodNoOrigin.bucketStart(new DateTime("2012-02-16T00:00:00.000-08:00"))
 
           )
       );
@@ -536,10 +536,10 @@ public class QueryGranularityTest
               new DateTime("2012-02-03T22:25:00.000-08:00")
           ),
           Lists.newArrayList(
-              periodOrigin.truncate(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-01-03T00:20:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-02-03T22:25:00.000-08:00"))
+              periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-01-03T00:20:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-02-03T22:25:00.000-08:00"))
           )
       );
     }
@@ -563,10 +563,10 @@ public class QueryGranularityTest
               new DateTime("2012-02-03T22:25:00.000-08:00")
           ),
           Lists.newArrayList(
-              periodOrigin.truncate(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-01-03T00:20:04.123-08:00")),
-              periodOrigin.truncate(new DateTime("2012-02-03T22:25:00.000-08:00"))
+              periodOrigin.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-01-03T00:20:04.123-08:00")),
+              periodOrigin.bucketStart(new DateTime("2012-02-03T22:25:00.000-08:00"))
           )
       );
     }
@@ -589,10 +589,10 @@ public class QueryGranularityTest
               new DateTime("2012-02-03T22:25:00.000-08:00")
           ),
           Lists.newArrayList(
-              gran.truncate(new DateTime("2012-01-01T05:00:04.123-08:00")),
-              gran.truncate(new DateTime("2012-01-02T07:00:04.123-08:00")),
-              gran.truncate(new DateTime("2012-01-03T00:20:04.123-08:00")),
-              gran.truncate(new DateTime("2012-02-03T22:25:00.000-08:00"))
+              gran.bucketStart(new DateTime("2012-01-01T05:00:04.123-08:00")),
+              gran.bucketStart(new DateTime("2012-01-02T07:00:04.123-08:00")),
+              gran.bucketStart(new DateTime("2012-01-03T00:20:04.123-08:00")),
+              gran.bucketStart(new DateTime("2012-02-03T22:25:00.000-08:00"))
           )
       );
     }

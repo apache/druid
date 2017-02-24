@@ -242,7 +242,7 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
-    final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
+    final long truncatedTime = segmentGranularity.bucketStart(new DateTime(timestamp)).getMillis();
 
     SegmentIdentifier retVal = segments.get(truncatedTime);
 
@@ -334,7 +334,7 @@ public class AppenderatorPlumber implements Plumber
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
-    final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
+    final DateTime truncatedNow = segmentGranularity.bucketStart(new DateTime());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
@@ -391,7 +391,7 @@ public class AppenderatorPlumber implements Plumber
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
-    DateTime minTimestampAsDate = segmentGranularity.truncate(
+    DateTime minTimestampAsDate = segmentGranularity.bucketStart(
         new DateTime(
             Math.max(
                 windowMillis,

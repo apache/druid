@@ -119,7 +119,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @Override
-  public DateTime truncate(DateTime time)
+  public DateTime bucketStart(DateTime time)
   {
     return new DateTime(truncate(time.getMillis()));
   }
@@ -134,7 +134,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     DateTime date = GranularityType.getDateTime(granularityType, vals);
 
     if (date != null) {
-      return truncate(date);
+      return bucketStart(date);
     }
 
     return null;

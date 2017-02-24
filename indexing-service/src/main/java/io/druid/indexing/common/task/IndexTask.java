@@ -290,7 +290,7 @@ public class IndexTask extends AbstractTask
           hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
         }
 
-        List<Object> groupKey = Rows.toGroupKey(queryGranularity.truncate(inputRow.getTimestamp()).getMillis(), inputRow);
+        List<Object> groupKey = Rows.toGroupKey(queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(), inputRow);
         hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
       }
     }

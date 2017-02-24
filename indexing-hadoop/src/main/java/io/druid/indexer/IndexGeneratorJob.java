@@ -281,7 +281,7 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
-      final long truncatedTimestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestamp()).getMillis();
+      final long truncatedTimestamp = granularitySpec.getQueryGranularity().bucketStart(inputRow.getTimestamp()).getMillis();
       final byte[] hashedDimensions = hashFunction.hashBytes(
           HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(

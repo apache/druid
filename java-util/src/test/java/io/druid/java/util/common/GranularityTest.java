@@ -357,13 +357,13 @@ public class GranularityTest {
     public void testTruncate() throws Exception
     {
         DateTime date = new DateTime("2011-03-15T22:42:23.898");
-        Assert.assertEquals(new DateTime("2011-01-01T00:00:00.000"), YEAR.truncate(date));
-        Assert.assertEquals(new DateTime("2011-03-01T00:00:00.000"), MONTH.truncate(date));
-        Assert.assertEquals(new DateTime("2011-03-14T00:00:00.000"), WEEK.truncate(date));
-        Assert.assertEquals(new DateTime("2011-03-15T00:00:00.000"), DAY.truncate(date));
-        Assert.assertEquals(new DateTime("2011-03-15T22:00:00.000"), HOUR.truncate(date));
-        Assert.assertEquals(new DateTime("2011-03-15T22:42:00.000"), MINUTE.truncate(date));
-        Assert.assertEquals(new DateTime("2011-03-15T22:42:23.000"), SECOND.truncate(date));
+        Assert.assertEquals(new DateTime("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
+        Assert.assertEquals(new DateTime("2011-03-01T00:00:00.000"), MONTH.bucketStart(date));
+        Assert.assertEquals(new DateTime("2011-03-14T00:00:00.000"), WEEK.bucketStart(date));
+        Assert.assertEquals(new DateTime("2011-03-15T00:00:00.000"), DAY.bucketStart(date));
+        Assert.assertEquals(new DateTime("2011-03-15T22:00:00.000"), HOUR.bucketStart(date));
+        Assert.assertEquals(new DateTime("2011-03-15T22:42:00.000"), MINUTE.bucketStart(date));
+        Assert.assertEquals(new DateTime("2011-03-15T22:42:23.000"), SECOND.bucketStart(date));
     }
 
     @Test

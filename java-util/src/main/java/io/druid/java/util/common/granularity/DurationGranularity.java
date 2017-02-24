@@ -88,7 +88,7 @@ public class DurationGranularity extends Granularity
   }
 
   @Override
-  public DateTime truncate(DateTime time)
+  public DateTime bucketStart(DateTime time)
   {
     long t = time.getMillis();
     final long duration = getDurationMillis();

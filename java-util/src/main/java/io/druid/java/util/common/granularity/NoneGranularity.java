@@ -55,7 +55,7 @@ public final class NoneGranularity extends Granularity
   }
 
   @Override
-  public DateTime truncate(DateTime time)
+  public DateTime bucketStart(DateTime time)
   {
     if (time == null) {
       return null;
