@@ -22,7 +22,6 @@ package io.druid.common.utils;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-
 import io.druid.collections.IntList;
 
 import java.io.IOException;
@@ -42,15 +41,13 @@ public class SerializerUtils
   /**
    * Writes the given long value into the given OutputStream, using the helperBuffer. Faster alternative to
    * out.write(Longs.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into {@link
-   * java.io.DataOutputStream}.
+   * java.io.DataOutputStream}. The order in which the value's bytes are written to the OutputStream depends on the
+   * {@link ByteBuffer#order(ByteOrder)} of the given buffer.
    *
-   * @param helperBuffer must be a big-endian, heap ByteBuffer of capacity 8.
+   * @param helperBuffer a heap ByteBuffer of capacity at least 8.
    */
   public static void writeLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer) throws IOException
   {
-    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
-      throw new IllegalArgumentException("helperBuffer should be big-endian");
-    }
     helperBuffer.putLong(0, value);
     out.write(helperBuffer.array(), 0, 8);
   }
@@ -58,15 +55,13 @@ public class SerializerUtils
   /**
    * Writes the given int value into the given OutputStream, using the helperBuffer. Faster alternative to
    * out.write(Ints.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into {@link
-   * java.io.DataOutputStream}.
+   * java.io.DataOutputStream}. The order in which the value's bytes are written to the OutputStream depends on the
+   * {@link ByteBuffer#order(ByteOrder)} of the given buffer.
    *
-   * @param helperBuffer must be a big-endian, heap ByteBuffer of capacity 4.
+   * @param helperBuffer a heap ByteBuffer of capacity of at least 4.
    */
   public static void writeIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer) throws IOException
   {
-    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
-      throw new IllegalArgumentException("helperBuffer should be big-endian");
-    }
     helperBuffer.putInt(0, value);
     out.write(helperBuffer.array(), 0, 4);
   }
