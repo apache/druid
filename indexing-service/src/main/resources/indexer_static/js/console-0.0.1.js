@@ -9,7 +9,7 @@ var killTask = function(taskId) {
       url: '/druid/indexer/v1/task/'+ taskId +'/shutdown',
       data: ''
     }).done(function(data) {
-      alert('Submitted kill request for: '+data.task);
+      setTimeout(function() { location.reload(true) }, 75);
     }).fail(function(data) {
       alert('Kill request failed with status: '+data.status+' please check overlord logs');
     })
