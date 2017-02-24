@@ -130,6 +130,19 @@ public class LifecycleLockTest
     Assert.assertFalse(lifecycleLock.canStop());
   }
 
+  @Test
+  public void testRestart()
+  {
+    LifecycleLock lifecycleLock = new LifecycleLock();
+    Assert.assertTrue(lifecycleLock.canStart());
+    lifecycleLock.started();
+    lifecycleLock.exitStart();
+    Assert.assertTrue(lifecycleLock.canStop());
+    lifecycleLock.exitStop();
+    lifecycleLock.reset();
+    Assert.assertTrue(lifecycleLock.canStart());
+  }
+
   @Test(expected = IllegalMonitorStateException.class)
   public void testDoubleStarted()
   {
