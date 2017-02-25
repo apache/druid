@@ -22,7 +22,7 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -48,7 +48,7 @@ public class QueryRunnerHelper
       Filter filter,
       VirtualColumns virtualColumns,
       boolean descending,
-      QueryGranularity granularity,
+      Granularity granularity,
       final Function<Cursor, Result<T>> mapFn
   )
   {

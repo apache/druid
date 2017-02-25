@@ -24,9 +24,8 @@ import com.google.common.collect.Lists;
 
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -52,7 +51,7 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.MINUTE, null),
+        new UniformGranularitySpec(Granularity.HOUR, Granularity.MINUTE, null),
         new DefaultObjectMapper()
     );
 

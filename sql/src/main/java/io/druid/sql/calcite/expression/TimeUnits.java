@@ -20,8 +20,8 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -60,7 +60,7 @@ public class TimeUnits
    *
    * @return queryGranularity, or null
    */
-  public static QueryGranularity toQueryGranularity(final TimeUnitRange timeUnitRange, final DateTimeZone timeZone)
+  public static Granularity toQueryGranularity(final TimeUnitRange timeUnitRange, final DateTimeZone timeZone)
   {
     final Period period = PERIOD_MAP.get(timeUnitRange);
     if (period == null) {

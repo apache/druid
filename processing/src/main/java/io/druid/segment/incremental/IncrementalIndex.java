@@ -37,7 +37,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -185,7 +185,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   }
 
   private final long minTimestamp;
-  private final QueryGranularity gran;
+  private final Granularity gran;
   private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
@@ -469,7 +469,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       dims = newDims;
     }
 
-    long truncated = gran.truncate(row.getTimestampFromEpoch());
+    long truncated = 0;
+    if (row.getTimestamp() != null) {
+      truncated = gran.bucketStart(row.getTimestamp()).getMillis();
+    }
     return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
   }
 
@@ -555,7 +558,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public Interval getInterval()
   {
-    return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.next(getMaxTimeMillis()));
+    return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.increment(new DateTime(getMaxTimeMillis())).getMillis());
   }
 
   public DateTime getMinTime()

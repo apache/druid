@@ -22,8 +22,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -113,7 +113,7 @@ public class ScanQueryEngine
                 filter,
                 intervals.get(0),
                 VirtualColumns.EMPTY,
-                QueryGranularities.ALL,
+                Granularity.ALL,
                 query.isDescending()
             ),
             new Function<Cursor, Sequence<ScanResultValue>>()

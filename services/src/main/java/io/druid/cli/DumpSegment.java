@@ -42,7 +42,7 @@ import io.druid.collections.bitmap.RoaringBitmapFactory;
 
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -253,7 +253,7 @@ public class DumpSegment extends GuiceRunnable
         Filters.toFilter(filter),
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
         VirtualColumns.EMPTY,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         false
     );
 
