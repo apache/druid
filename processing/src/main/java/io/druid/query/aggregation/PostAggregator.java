@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.query.cache.Cacheable;
+import io.druid.java.util.common.Cacheable;
 
 import java.util.Comparator;
 import java.util.Map;

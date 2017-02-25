@@ -27,9 +27,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.math.expr.ExprType;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -61,6 +61,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
@@ -473,14 +474,11 @@ public class Expressions
         // Check if we can strip the extractionFn and convert the filter to a direct filter on __time.
         // This allows potential conversion to query-level "intervals" later on, which is ideal for Druid queries.
 
-        final QueryGranularity granularity = ExtractionFns.toQueryGranularity(extractionFn);
+        final Granularity granularity = ExtractionFns.toQueryGranularity(extractionFn);
         if (granularity != null) {
           // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
           final long rhsMillis = toMillisLiteral(rhs, plannerContext.getTimeZone());
-          final Interval rhsInterval = new Interval(
-              granularity.truncate(rhsMillis),
-              granularity.next(granularity.truncate(rhsMillis))
-          );
+          final Interval rhsInterval = granularity.bucket(new DateTime(rhsMillis));
 
           // Is rhs aligned on granularity boundaries?
           final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;

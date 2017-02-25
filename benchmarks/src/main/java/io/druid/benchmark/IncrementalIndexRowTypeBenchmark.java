@@ -22,8 +22,7 @@ package io.druid.benchmark;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
-
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -123,7 +122,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     return new OnheapIncrementalIndex(
         0,
-        QueryGranularities.NONE,
+        Granularity.NONE,
         aggs,
         false,
         false,

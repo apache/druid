@@ -19,6 +19,7 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -29,22 +30,27 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class HadoopIngestionSpecTest
 {
   private static final ObjectMapper jsonMapper;
+
   static {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
   }
 
   @Test
-  public void testGranularitySpec()
+  public void testGranularitySpec() throws JsonProcessingException
   {
     final HadoopIngestionSpec schema;
 
@@ -78,8 +84,42 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getSegmentGranularity",
-        "HOUR",
-        granularitySpec.getSegmentGranularity().toString()
+        Granularity.HOUR,
+        granularitySpec.getSegmentGranularity()
+    );
+  }
+
+  @Test
+  public void testPeriodSegmentGranularitySpec()
+  {
+    final HadoopIngestionSpec schema;
+
+    try {
+      schema = jsonReadWriteRead(
+          "{\n"
+          + "    \"dataSchema\": {\n"
+          + "     \"dataSource\": \"foo\",\n"
+          + "     \"metricsSpec\": [],\n"
+          + "        \"granularitySpec\": {\n"
+          + "                \"type\": \"uniform\",\n"
+          + "                \"segmentGranularity\": {\"type\": \"period\", \"period\":\"PT1H\", \"timeZone\":\"America/Los_Angeles\"},\n"
+          + "                \"intervals\": [\"2012-01-01/P1D\"]\n"
+          + "        }\n"
+          + "    }\n"
+          + "}",
+          HadoopIngestionSpec.class
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    final UniformGranularitySpec granularitySpec = (UniformGranularitySpec) schema.getDataSchema().getGranularitySpec();
+
+    Assert.assertEquals(
+        "getSegmentGranularity",
+        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")),
+        granularitySpec.getSegmentGranularity()
     );
   }
 
@@ -171,10 +211,10 @@ public class HadoopIngestionSpecTest
         200
     );
 
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
+    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
+        ((SingleDimensionPartitionsSpec) partitionsSpec).getPartitionDimension(),
         "foo"
     );
   }

@@ -26,14 +26,12 @@ import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -110,82 +108,71 @@ public class DetermineHashedPartitionsJobTest
     this.errorMargin = errorMargin;
     File tmpDir = Files.createTempDir();
 
-    try {
-
-      HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
-          new DataSchema(
-              "test_schema",
-              HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                  new StringInputRowParser(
-                      new DelimitedParseSpec(
-                          new TimestampSpec("ts", null, null),
-                          new DimensionsSpec(
-                              DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                                  "market",
-                                  "quality",
-                                  "placement",
-                                  "placementish"
-                              )),
-                              null,
-                              null
-                          ),
-                          "\t",
-                          null,
-                          Arrays.asList(
-                              "ts",
-                              "market",
-                              "quality",
-                              "placement",
-                              "placementish",
-                              "index"
-                          )
-                      ),
-                      null
-                  ),
-                  Map.class
-              ),
-              new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
-              new UniformGranularitySpec(
-                  Granularity.DAY,
-                  QueryGranularities.NONE,
-                  ImmutableList.of(new Interval(interval))
-              ),
-              HadoopDruidIndexerConfig.JSON_MAPPER
-          ),
-          new HadoopIOConfig(
-              ImmutableMap.<String, Object>of(
-                  "paths",
-                  dataFilePath,
-                  "type",
-                  "static"
-              ), null, tmpDir.getAbsolutePath()
-          ),
-          new HadoopTuningConfig(
-              tmpDir.getAbsolutePath(),
-              null,
-              new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
-              null,
-              null,
-              null,
-              false,
-              false,
-              false,
-              false,
-              null,
-              false,
-              false,
-              null,
-              null,
-              null,
-              false,
-              false
-          )
-      );
-      this.indexerConfig = new HadoopDruidIndexerConfig(ingestionSpec);
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpDir);
-    }
+    HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
+        new DataSchema(
+            "test_schema",
+            HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                new StringInputRowParser(
+                    new DelimitedParseSpec(
+                        new TimestampSpec("ts", null, null),
+                        new DimensionsSpec(
+                            DimensionsSpec.getDefaultSchemas(ImmutableList.of("market", "quality", "placement", "placementish")),
+                            null,
+                            null
+                        ),
+                        "\t",
+                        null,
+                        Arrays.asList(
+                            "ts",
+                            "market",
+                            "quality",
+                            "placement",
+                            "placementish",
+                            "index"
+                        )
+                    ),
+                    null
+                ),
+                Map.class
+            ),
+            new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
+            new UniformGranularitySpec(
+                Granularity.DAY,
+                Granularity.NONE,
+                ImmutableList.of(new Interval(interval))
+            ),
+            HadoopDruidIndexerConfig.JSON_MAPPER
+        ),
+        new HadoopIOConfig(
+            ImmutableMap.<String, Object>of(
+                "paths",
+                dataFilePath,
+                "type",
+                "static"
+            ), null, tmpDir.getAbsolutePath()
+        ),
+        new HadoopTuningConfig(
+            tmpDir.getAbsolutePath(),
+            null,
+            new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
+            null,
+            null,
+            null,
+            false,
+            false,
+            false,
+            false,
+            null,
+            false,
+            false,
+            null,
+            null,
+            null,
+            false,
+            false
+        )
+    );
+    this.indexerConfig = new HadoopDruidIndexerConfig(ingestionSpec);
   }
 
   @Test

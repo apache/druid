@@ -23,9 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -155,7 +154,7 @@ public class TimeseriesQueryRunnerTest
   @Test
   public void testFullOnTimeseries()
   {
-    QueryGranularity gran = QueryGranularities.DAY;
+    Granularity gran = Granularity.DAY;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
@@ -228,7 +227,7 @@ public class TimeseriesQueryRunnerTest
   @Test
   public void testTimeseriesNoAggregators()
   {
-    QueryGranularity gran = QueryGranularities.DAY;
+    Granularity gran = Granularity.DAY;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
@@ -264,7 +263,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularity.ALL)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.asList(
@@ -627,7 +626,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
-                                   .granularity(QueryGranularities.HOUR)
+                                   .granularity(Granularity.HOUR)
                                    .intervals(
                                        Arrays.asList(
                                            new Interval(
@@ -648,19 +647,18 @@ public class TimeseriesQueryRunnerTest
                                    .build();
 
     List<Result<TimeseriesResultValue>> lotsOfZeroes = Lists.newArrayList();
-    for (final Long millis : QueryGranularities.HOUR.iterable(
-        new DateTime("2011-04-14T01").getMillis(),
-        new DateTime("2011-04-15").getMillis()
-    )) {
-      lotsOfZeroes.add(
-          new Result<>(
-              new DateTime(millis),
-              new TimeseriesResultValue(
-                  ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
-              )
-          )
-      );
+    final Iterable<Interval> iterable = Granularity.HOUR.getIterable(new Interval(new DateTime("2011-04-14T01").getMillis(), new DateTime("2011-04-15").getMillis()));
+    for (Interval interval : iterable) {
+        lotsOfZeroes.add(
+                new Result<>(
+                        interval.getStart(),
+                        new TimeseriesResultValue(
+                                ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
+                        )
+                )
+        );
     }
+
     List<Result<TimeseriesResultValue>> expectedResults1 = Lists.newArrayList(
         Iterables.concat(
             Arrays.asList(

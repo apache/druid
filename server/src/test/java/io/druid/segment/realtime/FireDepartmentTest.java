@@ -28,9 +28,8 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.TestHelper;
@@ -98,7 +97,7 @@ public class FireDepartmentTest
             new AggregatorFactory[]{
                 new CountAggregatorFactory("count")
             },
-            new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.MINUTE, null),
+            new UniformGranularitySpec(Granularity.HOUR, Granularity.MINUTE, null),
             jsonMapper
         ),
         new RealtimeIOConfig(

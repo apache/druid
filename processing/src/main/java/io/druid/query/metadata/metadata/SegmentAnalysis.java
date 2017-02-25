@@ -22,7 +22,7 @@ package io.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Interval;
 
@@ -39,7 +39,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final long numRows;
   private final Map<String, AggregatorFactory> aggregators;
   private final TimestampSpec timestampSpec;
-  private final QueryGranularity queryGranularity;
+  private final Granularity queryGranularity;
   private final Boolean rollup;
 
   @JsonCreator
@@ -51,7 +51,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
+      @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup
   )
   {
@@ -103,7 +103,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
-  public QueryGranularity getQueryGranularity()
+  public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }

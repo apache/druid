@@ -22,7 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -51,7 +51,7 @@ public class MetadataTest
             new LongSumAggregatorFactory("out", "in")
         };
     metadata.setAggregators(aggregators);
-    metadata.setQueryGranularity(QueryGranularities.ALL);
+    metadata.setQueryGranularity(Granularity.ALL);
     metadata.setRollup(Boolean.FALSE);
 
     Metadata other = jsonMapper.readValue(
@@ -81,14 +81,14 @@ public class MetadataTest
     m1.put("k", "v");
     m1.setAggregators(aggs);
     m1.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    m1.setQueryGranularity(QueryGranularities.ALL);
+    m1.setQueryGranularity(Granularity.ALL);
     m1.setRollup(Boolean.FALSE);
 
     Metadata m2 = new Metadata();
     m2.put("k", "v");
     m2.setAggregators(aggs);
     m2.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    m2.setQueryGranularity(QueryGranularities.ALL);
+    m2.setQueryGranularity(Granularity.ALL);
     m2.setRollup(Boolean.FALSE);
 
     Metadata merged = new Metadata();
@@ -100,7 +100,7 @@ public class MetadataTest
     );
     merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
     merged.setRollup(Boolean.FALSE);
-    merged.setQueryGranularity(QueryGranularities.ALL);
+    merged.setQueryGranularity(Granularity.ALL);
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
     //merge check with one metadata being null
@@ -127,7 +127,7 @@ public class MetadataTest
     );
 
     merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    merged.setQueryGranularity(QueryGranularities.ALL);
+    merged.setQueryGranularity(Granularity.ALL);
     m1.setRollup(Boolean.TRUE);
     Assert.assertEquals(
         merged,

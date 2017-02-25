@@ -272,7 +272,7 @@ public class TestHelper
   {
     // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
     // always generate exactly the same results (different merge ordering / float vs double)
-    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
+    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp().getMillis(), actual.getTimestamp().getMillis());
 
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();

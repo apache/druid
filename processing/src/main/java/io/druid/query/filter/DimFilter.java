@@ -22,7 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
-import io.druid.query.cache.Cacheable;
+import io.druid.java.util.common.Cacheable;
 
 /**
  */

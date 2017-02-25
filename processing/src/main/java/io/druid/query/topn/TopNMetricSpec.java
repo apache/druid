@@ -21,9 +21,9 @@ package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.java.util.common.Cacheable;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.cache.Cacheable;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 

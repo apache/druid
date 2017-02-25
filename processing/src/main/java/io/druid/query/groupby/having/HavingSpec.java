@@ -22,7 +22,7 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.Row;
-import io.druid.query.cache.Cacheable;
+import io.druid.java.util.common.Cacheable;
 import io.druid.segment.column.ValueType;
 
 import java.util.Map;

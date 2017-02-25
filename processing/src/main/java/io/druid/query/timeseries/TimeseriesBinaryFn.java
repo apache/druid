@@ -19,8 +19,8 @@
 
 package io.druid.query.timeseries;
 
-import io.druid.granularity.AllGranularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -34,11 +34,11 @@ import java.util.Map;
 public class TimeseriesBinaryFn
     implements BinaryFn<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>
 {
-  private final QueryGranularity gran;
+  private final Granularity gran;
   private final List<AggregatorFactory> aggregations;
 
   public TimeseriesBinaryFn(
-      QueryGranularity granularity,
+      Granularity granularity,
       List<AggregatorFactory> aggregations
   )
   {
@@ -73,7 +73,7 @@ public class TimeseriesBinaryFn
                new TimeseriesResultValue(retVal)
            ) :
            new Result<TimeseriesResultValue>(
-               gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis())),
+               gran.bucketStart(arg1.getTimestamp()),
                new TimeseriesResultValue(retVal)
            );
   }

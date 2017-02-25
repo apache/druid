@@ -19,8 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.cache.Cacheable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;

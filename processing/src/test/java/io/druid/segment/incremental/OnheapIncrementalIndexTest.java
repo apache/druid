@@ -22,7 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregator;
@@ -45,7 +45,7 @@ public class OnheapIncrementalIndexTest
   {
     final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
         0,
-        QueryGranularities.MINUTE,
+        Granularity.MINUTE,
         new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
         MAX_ROWS
     );
@@ -111,7 +111,7 @@ public class OnheapIncrementalIndexTest
 
     final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
             0,
-            QueryGranularities.MINUTE,
+            Granularity.MINUTE,
             new AggregatorFactory[]{new LongMaxAggregatorFactory("max", "max")},
             MAX_ROWS
     );

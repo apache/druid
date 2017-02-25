@@ -44,7 +44,6 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Smile;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -57,6 +56,7 @@ import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -222,7 +222,7 @@ public class IndexTask extends AbstractTask
   {
     final ObjectMapper jsonMapper = toolbox.getObjectMapper();
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    final QueryGranularity queryGranularity = granularitySpec.getQueryGranularity();
+    final Granularity queryGranularity = granularitySpec.getQueryGranularity();
     final boolean determineNumPartitions = ingestionSchema.getTuningConfig().getNumShards() == null;
     final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                        .getGranularitySpec()
@@ -290,7 +290,7 @@ public class IndexTask extends AbstractTask
           hllCollectors.put(interval, Optional.of(HyperLogLogCollector.makeLatestCollector()));
         }
 
-        List<Object> groupKey = Rows.toGroupKey(queryGranularity.truncate(inputRow.getTimestampFromEpoch()), inputRow);
+        List<Object> groupKey = Rows.toGroupKey(queryGranularity.bucketStart(inputRow.getTimestamp()).getMillis(), inputRow);
         hllCollectors.get(interval).get().add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
       }
     }

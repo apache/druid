@@ -30,9 +30,9 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.granularity.QueryGranularity;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -143,8 +143,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                 config.getGranularitySpec().getSegmentGranularity(),
                 config.getGranularitySpec().getQueryGranularity(),
                 config.getGranularitySpec().isRollup(),
-                intervals,
-                config.getGranularitySpec().getTimezone()
+                intervals
             )
         );
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
@@ -213,7 +212,7 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineCardinalityMapper extends HadoopDruidIndexerMapper<LongWritable, BytesWritable>
   {
     private static HashFunction hashFunction = Hashing.murmur3_128();
-    private QueryGranularity rollupGranularity = null;
+    private Granularity rollupGranularity = null;
     private Map<Interval, HyperLogLogCollector> hyperLogLogs;
     private HadoopDruidIndexerConfig config;
     private boolean determineIntervals;
@@ -249,7 +248,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
 
       final List<Object> groupKey = Rows.toGroupKey(
-          rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
+          rollupGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
           inputRow
       );
       Interval interval;

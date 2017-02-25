@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import io.druid.collections.StupidPool;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -67,7 +67,7 @@ public class TopNQueryEngine
 
     final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
-    final QueryGranularity granularity = query.getGranularity();
+    final Granularity granularity = query.getGranularity();
     final Function<Cursor, Result<TopNResultValue>> mapFn = getMapFn(query, adapter);
 
     Preconditions.checkArgument(

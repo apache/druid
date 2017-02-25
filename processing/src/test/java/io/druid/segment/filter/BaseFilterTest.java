@@ -30,8 +30,8 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
-import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.Aggregator;
@@ -303,7 +303,7 @@ public abstract class BaseFilterTest
         filter,
         new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
         VIRTUAL_COLUMNS,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         false
     );
   }
