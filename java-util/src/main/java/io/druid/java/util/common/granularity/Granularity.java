@@ -20,7 +20,6 @@
 package io.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.Cacheable;
@@ -30,7 +29,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -39,20 +37,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static io.druid.java.util.common.granularity.Granularities.DAY;
-import static io.druid.java.util.common.granularity.Granularities.FIFTEEN_MINUTE;
-import static io.druid.java.util.common.granularity.Granularities.FIVE_MINUTE;
-import static io.druid.java.util.common.granularity.Granularities.HOUR;
-import static io.druid.java.util.common.granularity.Granularities.MINUTE;
-import static io.druid.java.util.common.granularity.Granularities.MONTH;
-import static io.druid.java.util.common.granularity.Granularities.QUARTER;
-import static io.druid.java.util.common.granularity.Granularities.SECOND;
-import static io.druid.java.util.common.granularity.Granularities.SIX_HOUR;
-import static io.druid.java.util.common.granularity.Granularities.TEN_MINUTE;
-import static io.druid.java.util.common.granularity.Granularities.THIRTY_MINUTE;
-import static io.druid.java.util.common.granularity.Granularities.WEEK;
-import static io.druid.java.util.common.granularity.Granularities.YEAR;
 
 public abstract class Granularity implements Cacheable
 {
