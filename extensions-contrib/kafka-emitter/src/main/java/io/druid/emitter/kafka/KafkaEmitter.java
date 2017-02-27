@@ -64,11 +64,21 @@ public class KafkaEmitter implements Emitter {
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final ScheduledExecutorService scheduler;
 
-  public KafkaEmitter(final KafkaEmitterConfig config, ObjectMapper jsonMapper) {
+  public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper) {
     this.config = config;
     this.jsonMapper = jsonMapper;
-    this.producer = getKafkaProducer(config);
-    this.producerCallback = new Callback() {
+    this.producer = setKafkaProducer();
+    this.producerCallback = setProducerCallback();
+    this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.scheduler = Executors.newScheduledThreadPool(3);
+    this.metricLost = new AtomicLong(0L);
+    this.alertLost = new AtomicLong(0L);
+    this.invalidLost = new AtomicLong(0L);
+  }
+
+  private Callback setProducerCallback() {
+    return new Callback() {
       @Override
       public void onCompletion(RecordMetadata recordMetadata, Exception e) {
         if(e != null) {
@@ -82,15 +92,9 @@ public class KafkaEmitter implements Emitter {
         }
       }
     };
-    this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(3);
-    this.metricLost = new AtomicLong(0L);
-    this.alertLost = new AtomicLong(0L);
-    this.invalidLost = new AtomicLong(0L);
   }
 
-  private Producer<String, String> getKafkaProducer(KafkaEmitterConfig config) {
+  private Producer<String, String> setKafkaProducer() {
     Properties props = new Properties();
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
