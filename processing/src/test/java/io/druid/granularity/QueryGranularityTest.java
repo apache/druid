@@ -773,14 +773,14 @@ public class QueryGranularityTest
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 10_000L)
   public void testDeadLock() throws Exception
   {
     final URL[] urls = ((URLClassLoader)Granularity.class.getClassLoader()).getURLs();
     final String className = Granularity.class.getCanonicalName();
-    for(int i = 0; i < 1000; ++i) {
+    for(int i = 0; i < 100; ++i) {
       final ClassLoader loader = new URLClassLoader(urls, null);
-      Assert.assertNotNull(Class.forName(className, true, loader));
+      Assert.assertNotNull(String.valueOf(i), Class.forName(className, true, loader));
     }
   }
 }

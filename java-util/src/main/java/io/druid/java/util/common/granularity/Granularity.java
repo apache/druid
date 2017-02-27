@@ -274,8 +274,8 @@ public abstract class Granularity implements Cacheable
         1,
         "P1Y"
     ),
-    ALL(AllGranularity.getInstance()),
-    NONE(NoneGranularity.getInstance());
+    ALL(new AllGranularity()),
+    NONE(new NoneGranularity());
 
     private final String hiveFormat;
     private final String lowerDefaultFormat;

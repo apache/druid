@@ -114,7 +114,7 @@ public class TimeBoundaryQueryRunnerFactory
           legacyQuery.getQuerySegmentSpec().getIntervals(),
           Filters.toFilter(legacyQuery.getDimensionsFilter()), VirtualColumns.EMPTY,
           descending,
-          AllGranularity.getInstance(),
+          new AllGranularity(),
           this.skipToFirstMatching
       );
       final List<Result<DateTime>> resultList = Sequences.toList(
