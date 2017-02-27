@@ -437,9 +437,9 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       JsonGenerator jsonGenerator, SerializerProvider serializerProvider
   ) throws IOException, JsonProcessingException
   {
-    // Retain the same behavior as pre-refactor granularity code.
+    // Retain the same behavior as before #3850.
     // i.e. when Granularity class was an enum.
-    if (PREDEFINED_GRANULARITIES.contains(this)) {
+    if (GranularityType.isStandard(this)) {
       jsonGenerator.writeString(GranularityType.fromPeriod(getPeriod()).toString());
     } else {
       jsonGenerator.writeStartObject();

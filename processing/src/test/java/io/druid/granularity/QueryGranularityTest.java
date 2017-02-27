@@ -779,8 +779,7 @@ public class QueryGranularityTest
   {
     final URL[] urls = ((URLClassLoader)Granularity.class.getClassLoader()).getURLs();
     final String className = Granularity.class.getCanonicalName();
-    for(int i = 0; i < 100; ++i) {
-      System.out.println(new DateTime() + "---" + i);
+    for(int i = 0; i < 1000; ++i) {
       final ClassLoader loader = new URLClassLoader(urls, null);
       Assert.assertNotNull(String.valueOf(i), Class.forName(className, true, loader));
     }

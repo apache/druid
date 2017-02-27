@@ -28,9 +28,9 @@ import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -57,15 +57,6 @@ import static io.druid.java.util.common.granularity.Granularities.YEAR;
 public abstract class Granularity implements Cacheable
 {
   /**
-   * For a select subset of granularites, users can specify them directly as string.
-   * These are "predefined granularities".
-   * For all others, the users will have to use "Duration" or "Period" type granularities
-   */
-  static final List<Granularity> PREDEFINED_GRANULARITIES = ImmutableList.of(
-      SECOND, MINUTE, FIVE_MINUTE, TEN_MINUTE, FIFTEEN_MINUTE, THIRTY_MINUTE,
-      HOUR, SIX_HOUR, DAY, WEEK, MONTH, QUARTER, YEAR);
-
-  /**
    * Default patterns for parsing paths.
    */
   private static final Pattern defaultPathPattern =
@@ -78,7 +69,7 @@ public abstract class Granularity implements Cacheable
   @JsonCreator
   public static Granularity fromString(String str)
   {
-    return GranularityType.valueOf(str.toUpperCase()).defaultGranularity;
+    return GranularityType.valueOf(str.toUpperCase()).getDefaultGranularity();
   }
 
   /**
@@ -214,227 +205,6 @@ public abstract class Granularity implements Cacheable
     DEFAULT,
     HIVE,
     LOWER_DEFAULT
-  }
-
-  /**
-   * Only to create a mapping of the granularity and all the supported file patterns
-   * namely: default, lowerDefault and hive.
-   */
-  public enum GranularityType
-  {
-    SECOND(
-        "'dt'=yyyy-MM-dd-HH-mm-ss",
-        "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH/'m'=mm/'s'=ss",
-        "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH/'M'=mm/'S'=ss",
-        6,
-        "PT1S"
-    ),
-    MINUTE(
-        "'dt'=yyyy-MM-dd-HH-mm",
-        "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH/'m'=mm",
-        "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH/'M'=mm",
-        5,
-        "PT1M"
-    ),
-    FIVE_MINUTE(MINUTE, "PT5M"),
-    TEN_MINUTE(MINUTE, "PT10M"),
-    FIFTEEN_MINUTE(MINUTE, "PT15M"),
-    THIRTY_MINUTE(MINUTE, "PT30M"),
-    HOUR(
-        "'dt'=yyyy-MM-dd-HH",
-        "'y'=yyyy/'m'=MM/'d'=dd/'h'=HH",
-        "'y'=yyyy/'m'=MM/'d'=dd/'H'=HH",
-        4,
-        "PT1H"
-    ),
-    SIX_HOUR(HOUR, "PT6H"),
-    DAY(
-        "'dt'=yyyy-MM-dd",
-        "'y'=yyyy/'m'=MM/'d'=dd",
-        "'y'=yyyy/'m'=MM/'d'=dd",
-        3,
-        "P1D"
-    ),
-    WEEK(DAY, "P1W"),
-    MONTH(
-        "'dt'=yyyy-MM",
-        "'y'=yyyy/'m'=MM",
-        "'y'=yyyy/'m'=MM",
-        2,
-        "P1M"
-    ),
-    QUARTER(MONTH, "P3M"),
-    YEAR(
-        "'dt'=yyyy",
-        "'y'=yyyy",
-        "'y'=yyyy",
-        1,
-        "P1Y"
-    ),
-    ALL(new AllGranularity()),
-    NONE(new NoneGranularity());
-
-    private final String hiveFormat;
-    private final String lowerDefaultFormat;
-    private final String defaultFormat;
-    private final int dateValuePositions;
-    private final Period period;
-    private final Granularity defaultGranularity;
-
-    GranularityType(Granularity specialGranularity)
-    {
-      this.hiveFormat = null;
-      this.lowerDefaultFormat = null;
-      this.defaultFormat = null;
-      this.dateValuePositions = 0;
-      this.period = null;
-      this.defaultGranularity = specialGranularity;
-    }
-
-    GranularityType(
-        final String hiveFormat,
-        final String lowerDefaultFormat,
-        final String defaultFormat,
-        final int dateValuePositions,
-        final String period
-    )
-    {
-      this.hiveFormat = hiveFormat;
-      this.lowerDefaultFormat = lowerDefaultFormat;
-      this.defaultFormat = defaultFormat;
-      this.dateValuePositions = dateValuePositions;
-      this.period = new Period(period);
-      this.defaultGranularity = new PeriodGranularity(this.period, null, null);
-    }
-
-    GranularityType(GranularityType granularityType, String period)
-    {
-      this(
-          granularityType.getHiveFormat(),
-          granularityType.getLowerDefaultFormat(),
-          granularityType.getDefaultFormat(),
-          granularityType.dateValuePositions,
-          period
-      );
-    }
-
-    Granularity create(DateTime origin, DateTimeZone tz)
-    {
-      if (period != null && (origin != null || tz != null)) {
-        return new PeriodGranularity(period, origin, tz);
-      } else {
-        // If All or None granularity, or if origin and tz are both null, return the cached granularity
-        return defaultGranularity;
-      }
-    }
-
-    public Granularity getDefaultGranularity()
-    {
-      return defaultGranularity;
-    }
-
-    public static DateTime getDateTime(GranularityType granularityType, Integer[] vals)
-    {
-      if (granularityType.dateValuePositions == 0) {
-        // All or None granularity
-        return null;
-      }
-      for (int i = 1; i <= granularityType.dateValuePositions; i++) {
-        if (vals[i] == null) {
-          return null;
-        }
-      }
-      return new DateTime(
-          vals[1],
-          granularityType.dateValuePositions >= 2 ? vals[2] : 1,
-          granularityType.dateValuePositions >= 3 ? vals[3] : 1,
-          granularityType.dateValuePositions >= 4 ? vals[4] : 0,
-          granularityType.dateValuePositions >= 5 ? vals[5] : 0,
-          granularityType.dateValuePositions >= 6 ? vals[6] : 0,
-          0
-      );
-    }
-
-    /**
-     * Note: This is only an estimate based on the values in period.
-     * This will not work for complicated periods that represent say 1 year 1 day
-     */
-    public static GranularityType fromPeriod(Period period)
-    {
-      int[] vals = period.getValues();
-      int index = -1;
-      for (int i = 0; i < vals.length; i++) {
-        if (vals[i] != 0) {
-          if (index < 0) {
-            index = i;
-          } else {
-            throw new IAE("Granularity is not supported. [%s]", period);
-          }
-        }
-      }
-
-      switch (index) {
-        case 0:
-          return GranularityType.YEAR;
-        case 1:
-          if (vals[index] == 4) {
-            return GranularityType.QUARTER;
-          }
-          else if (vals[index] == 1) {
-            return GranularityType.MONTH;
-          }
-          break;
-        case 2:
-          return GranularityType.WEEK;
-        case 3:
-          return GranularityType.DAY;
-        case 4:
-          if (vals[index] == 6) {
-            return GranularityType.SIX_HOUR;
-          }
-          else if (vals[index] == 1) {
-            return GranularityType.HOUR;
-          }
-          break;
-        case 5:
-          if (vals[index] == 30) {
-            return GranularityType.THIRTY_MINUTE;
-          }
-          else if (vals[index] == 15) {
-            return GranularityType.FIFTEEN_MINUTE;
-          }
-          else if (vals[index] == 10) {
-            return GranularityType.TEN_MINUTE;
-          }
-          else if (vals[index] == 5) {
-            return GranularityType.FIVE_MINUTE;
-          }
-          else if (vals[index] == 1) {
-            return GranularityType.MINUTE;
-          }
-          break;
-        case 6:
-          return GranularityType.SECOND;
-        default:
-          break;
-      }
-      throw new IAE("Granularity is not supported. [%s]", period);
-    }
-
-    public String getHiveFormat()
-    {
-      return hiveFormat;
-    }
-
-    public String getLowerDefaultFormat()
-    {
-      return lowerDefaultFormat;
-    }
-
-    public String getDefaultFormat()
-    {
-      return defaultFormat;
-    }
   }
 
   private class IntervalIterable implements Iterable<Interval>
