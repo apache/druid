@@ -123,7 +123,7 @@ public class KafkaEmitter implements Emitter {
     scheduler.scheduleWithFixedDelay(new Runnable() {
       @Override
       public void run() {
-        log.info("Message lost counter: metricLost=[%d] / alertLost=[%d] / invalidLost=[%d]",
+        log.info("Message lost counter: metricLost=[%d], alertLost=[%d], invalidLost=[%d]",
                  metricLost.get(), alertLost.get(), invalidLost.get());
       }
     }, 5, 5, TimeUnit.MINUTES);
