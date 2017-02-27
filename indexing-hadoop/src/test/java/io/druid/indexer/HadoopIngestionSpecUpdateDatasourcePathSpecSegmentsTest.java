@@ -235,7 +235,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.DAY,
+                Granularities.DAY,
                 null,
                 ImmutableList.of(
                     new Interval("2010-01-01/P1D")

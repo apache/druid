@@ -276,7 +276,7 @@ public class DatasourcePathSpecTest
                     new LongSumAggregatorFactory("visited_sum", "visited")
                 },
                 new UniformGranularitySpec(
-                    Granularity.DAY, Granularity.NONE, ImmutableList.of(Interval.parse("2000/3000"))
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Interval.parse("2000/3000"))
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),

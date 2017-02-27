@@ -122,7 +122,7 @@ public class CachingQueryRunnerTest
         .threshold(3)
         .intervals("2011-01-05/2011-01-10")
         .aggregators(AGGS)
-        .granularity(Granularity.ALL);
+        .granularity(Granularities.ALL);
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

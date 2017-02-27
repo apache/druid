@@ -80,7 +80,7 @@ public class MapVirtualColumnTest
 
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-        .withQueryGranularity(Granularity.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .build();
     final IncrementalIndex index = new OnheapIncrementalIndex(schema, true, 10000);
 

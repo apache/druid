@@ -199,7 +199,7 @@ public class KafkaIndexTaskTest
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.DAY, Granularity.NONE, null),
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         objectMapper
     );
   }
@@ -1607,7 +1607,7 @@ public class KafkaIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory("rows", "rows")
                                       )
-                                  ).granularity(Granularity.ALL)
+                                  ).granularity(Granularities.ALL)
                                   .intervals("0000/3000")
                                   .build();
 

@@ -211,7 +211,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   {
     final File persistDir = new File(tmpDir, UUID.randomUUID().toString());
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(Granularity.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(

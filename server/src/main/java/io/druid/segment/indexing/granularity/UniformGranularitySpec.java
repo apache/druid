@@ -36,8 +36,8 @@ import java.util.SortedSet;
 
 public class UniformGranularitySpec implements GranularitySpec
 {
-  private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularity.DAY;
-  private static final Granularity DEFAULT_QUERY_GRANULARITY = Granularity.NONE;
+  private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.DAY;
+  private static final Granularity DEFAULT_QUERY_GRANULARITY = Granularities.NONE;
 
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;

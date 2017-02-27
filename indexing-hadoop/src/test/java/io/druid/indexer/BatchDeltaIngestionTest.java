@@ -323,7 +323,7 @@ public class BatchDeltaIngestionTest
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
         null,
-        Granularity.NONE
+        Granularities.NONE
     );
 
     List<InputRow> rows = Lists.newArrayList();
@@ -358,7 +358,7 @@ public class BatchDeltaIngestionTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
                 new UniformGranularitySpec(
-                    Granularity.DAY, Granularity.NONE, ImmutableList.of(INTERVAL_FULL)
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)
                 ),
                 MAPPER
             ),

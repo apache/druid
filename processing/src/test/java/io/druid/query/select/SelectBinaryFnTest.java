@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.ISE;
 import io.druid.query.Result;
@@ -47,7 +48,7 @@ public class SelectBinaryFnTest
   @Test
   public void testApply() throws Exception
   {
-    SelectBinaryFn binaryFn = new SelectBinaryFn(Granularity.ALL, new PagingSpec(null, 5), false);
+    SelectBinaryFn binaryFn = new SelectBinaryFn(Granularities.ALL, new PagingSpec(null, 5), false);
 
     Result<SelectResultValue> res1 = new Result<>(
         new DateTime("2013-01-01"),
@@ -213,7 +214,7 @@ public class SelectBinaryFnTest
   @Test
   public void testColumnMerge() throws Exception
   {
-    SelectBinaryFn binaryFn = new SelectBinaryFn(Granularity.ALL, new PagingSpec(null, 5), false);
+    SelectBinaryFn binaryFn = new SelectBinaryFn(Granularities.ALL, new PagingSpec(null, 5), false);
 
     Result<SelectResultValue> res1 = new Result<>(
         new DateTime("2013-01-01"),

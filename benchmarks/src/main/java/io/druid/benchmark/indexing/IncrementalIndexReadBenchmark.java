@@ -125,7 +125,7 @@ public class IncrementalIndexReadBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(rollup)
@@ -203,7 +203,7 @@ public class IncrementalIndexReadBenchmark
         filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
-        Granularity.ALL,
+        Granularities.ALL,
         false
     );
   }

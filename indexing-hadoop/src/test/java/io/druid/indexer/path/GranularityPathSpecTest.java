@@ -119,7 +119,7 @@ public class GranularityPathSpecTest
   @Test
   public void testSetDataGranularity()
   {
-    Granularity granularity = Granularity.DAY;
+    Granularity granularity = Granularities.DAY;
     granularityPathSpec.setDataGranularity(granularity);
     Assert.assertEquals(granularity, granularityPathSpec.getDataGranularity());
   }
@@ -127,13 +127,13 @@ public class GranularityPathSpecTest
   @Test
   public void testSerdeCustomInputFormat() throws Exception
   {
-    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, TextInputFormat.class);
+    testSerde("/test/path", "*.test", "pat_pat", Granularities.SECOND, TextInputFormat.class);
   }
 
   @Test
   public void testSerdeNoInputFormat() throws Exception
   {
-    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
+    testSerde("/test/path", "*.test", "pat_pat", Granularities.SECOND, null);
   }
 
   @Test
@@ -146,8 +146,8 @@ public class GranularityPathSpecTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.DAY,
-                Granularity.MINUTE,
+                Granularities.DAY,
+                Granularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
@@ -156,7 +156,7 @@ public class GranularityPathSpecTest
         DEFAULT_TUNING_CONFIG
     );
 
-    granularityPathSpec.setDataGranularity(Granularity.HOUR);
+    granularityPathSpec.setDataGranularity(Granularities.HOUR);
     granularityPathSpec.setFilePattern(".*");
     granularityPathSpec.setInputFormat(TextInputFormat.class);
 
@@ -197,8 +197,8 @@ public class GranularityPathSpecTest
             null,
             new AggregatorFactory[0],
             new UniformGranularitySpec(
-                Granularity.DAY,
-                Granularity.ALL,
+                Granularities.DAY,
+                Granularities.ALL,
                 ImmutableList.of(new Interval("2015-01-01T11Z/2015-01-02T05Z"))
             ),
             jsonMapper
@@ -207,7 +207,7 @@ public class GranularityPathSpecTest
         DEFAULT_TUNING_CONFIG
     );
 
-    granularityPathSpec.setDataGranularity(Granularity.HOUR);
+    granularityPathSpec.setDataGranularity(Granularities.HOUR);
     granularityPathSpec.setPathFormat("yyyy/MM/dd/HH");
     granularityPathSpec.setFilePattern(".*");
     granularityPathSpec.setInputFormat(TextInputFormat.class);
@@ -243,7 +243,7 @@ public class GranularityPathSpecTest
   {
     final PeriodGranularity pt2S = new PeriodGranularity(new Period("PT2S"), null, DateTimeZone.UTC);
     Assert.assertNotEquals("\"SECOND\"", jsonMapper.writeValueAsString(pt2S));
-    final Granularity pt1S = Granularity.SECOND;
+    final Granularity pt1S = Granularities.SECOND;
     Assert.assertEquals("\"SECOND\"", jsonMapper.writeValueAsString(pt1S));
   }
 

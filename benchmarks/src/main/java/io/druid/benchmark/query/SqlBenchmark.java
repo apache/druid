@@ -190,7 +190,7 @@ public class SqlBenchmark
             )
         )
         .setAggregatorSpecs(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("c")))
-        .setGranularity(Granularity.ALL)
+        .setGranularity(Granularities.ALL)
         .build();
 
     sqlQuery = "SELECT\n"

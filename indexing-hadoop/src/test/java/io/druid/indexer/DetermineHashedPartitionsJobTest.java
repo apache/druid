@@ -137,8 +137,8 @@ public class DetermineHashedPartitionsJobTest
             ),
             new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
             new UniformGranularitySpec(
-                Granularity.DAY,
-                Granularity.NONE,
+                Granularities.DAY,
+                Granularities.NONE,
                 ImmutableList.of(new Interval(interval))
             ),
             HadoopDruidIndexerConfig.JSON_MAPPER

@@ -266,7 +266,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
@@ -292,7 +292,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
@@ -322,7 +322,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
@@ -356,7 +356,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
@@ -401,7 +401,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .intervals(
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
@@ -437,7 +437,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .intervals(
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
@@ -473,7 +473,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(Granularity.DAY)
+                                           .granularity(Granularities.DAY)
                                            .intervals(
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(

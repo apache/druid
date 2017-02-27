@@ -167,7 +167,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery queryA =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(false)
@@ -187,7 +187,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery timeFilterQuery =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(false)
@@ -207,7 +207,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery timeFilterQuery =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(false)
@@ -224,7 +224,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery timeFilterQuery =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(false)
@@ -314,7 +314,7 @@ public class TimeseriesBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

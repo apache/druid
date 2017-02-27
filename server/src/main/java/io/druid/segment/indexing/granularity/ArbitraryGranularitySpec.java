@@ -50,7 +50,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
   {
-    this.queryGranularity = queryGranularity == null ? Granularity.NONE : queryGranularity;
+    this.queryGranularity = queryGranularity == null ? Granularities.NONE : queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
 

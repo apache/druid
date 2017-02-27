@@ -299,7 +299,7 @@ public class DruidQueryBuilder
     final List<DimensionSpec> dimensions = grouping.getDimensions();
 
     if (dimensions.isEmpty()) {
-      queryGranularity = Granularity.ALL;
+      queryGranularity = Granularities.ALL;
     } else if (dimensions.size() == 1) {
       final DimensionSpec dimensionSpec = Iterables.getOnlyElement(dimensions);
       final Granularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
@@ -421,7 +421,7 @@ public class DruidQueryBuilder
         limitSpec.getLimit(),
         filtration.getQuerySegmentSpec(),
         filtration.getDimFilter(),
-        Granularity.ALL,
+        Granularities.ALL,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
         context
@@ -454,7 +454,7 @@ public class DruidQueryBuilder
         filtration.getQuerySegmentSpec(),
         VirtualColumns.EMPTY,
         filtration.getDimFilter(),
-        Granularity.ALL,
+        Granularities.ALL,
         grouping.getDimensions(),
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
@@ -506,7 +506,7 @@ public class DruidQueryBuilder
         filtration.getQuerySegmentSpec(),
         descending,
         filtration.getDimFilter(),
-        Granularity.ALL,
+        Granularities.ALL,
         selectProjection != null ? selectProjection.getDimensions() : ImmutableList.<DimensionSpec>of(),
         selectProjection != null ? selectProjection.getMetrics() : ImmutableList.<String>of(),
         null,

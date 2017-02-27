@@ -149,7 +149,7 @@ public class TimestampAggregationSelectTest
         recordParser,
         aggregator,
         0,
-        Granularity.MONTH,
+        Granularities.MONTH,
         100,
         Resources.toString(Resources.getResource("select.json"), Charsets.UTF_8)
     );

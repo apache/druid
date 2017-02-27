@@ -274,7 +274,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, Granularity.NONE);
+      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, Granularities.NONE);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

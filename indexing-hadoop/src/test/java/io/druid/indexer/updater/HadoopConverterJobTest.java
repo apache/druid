@@ -175,8 +175,8 @@ public class HadoopConverterJobTest
                     new HyperUniquesAggregatorFactory("quality_uniques", "quality")
                 },
                 new UniformGranularitySpec(
-                    Granularity.MONTH,
-                    Granularity.DAY,
+                    Granularities.MONTH,
+                    Granularities.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER

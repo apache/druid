@@ -167,7 +167,7 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(Granularity.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimSequential")
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
@@ -183,7 +183,7 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(Granularity.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
           .intervals(intervalSpec)
@@ -199,7 +199,7 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(Granularity.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
           .intervals(intervalSpec)
@@ -294,7 +294,7 @@ public class TopNBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

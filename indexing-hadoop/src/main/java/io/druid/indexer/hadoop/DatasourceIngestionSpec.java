@@ -76,7 +76,7 @@ public class DatasourceIngestionSpec
     this.segments = segments;
 
     this.filter = filter;
-    this.granularity = granularity == null ? Granularity.NONE : granularity;
+    this.granularity = granularity == null ? Granularities.NONE : granularity;
 
     this.dimensions = dimensions;
     this.metrics = metrics;

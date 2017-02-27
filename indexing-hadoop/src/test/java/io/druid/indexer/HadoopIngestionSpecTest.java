@@ -84,7 +84,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getSegmentGranularity",
-        Granularity.HOUR,
+        Granularities.HOUR,
         granularitySpec.getSegmentGranularity()
     );
   }

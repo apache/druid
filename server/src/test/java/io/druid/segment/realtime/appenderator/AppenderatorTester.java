@@ -116,7 +116,7 @@ public class AppenderatorTester implements AutoCloseable
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("met", "met")
         },
-        new UniformGranularitySpec(Granularity.MINUTE, Granularity.NONE, null),
+        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
         objectMapper
     );
 

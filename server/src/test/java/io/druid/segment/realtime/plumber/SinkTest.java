@@ -51,7 +51,7 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, Granularity.MINUTE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
         new DefaultObjectMapper()
     );
 

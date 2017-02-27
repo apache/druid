@@ -40,25 +40,22 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.druid.java.util.common.granularity.Granularities.DAY;
+import static io.druid.java.util.common.granularity.Granularities.FIFTEEN_MINUTE;
+import static io.druid.java.util.common.granularity.Granularities.FIVE_MINUTE;
+import static io.druid.java.util.common.granularity.Granularities.HOUR;
+import static io.druid.java.util.common.granularity.Granularities.MINUTE;
+import static io.druid.java.util.common.granularity.Granularities.MONTH;
+import static io.druid.java.util.common.granularity.Granularities.QUARTER;
+import static io.druid.java.util.common.granularity.Granularities.SECOND;
+import static io.druid.java.util.common.granularity.Granularities.SIX_HOUR;
+import static io.druid.java.util.common.granularity.Granularities.TEN_MINUTE;
+import static io.druid.java.util.common.granularity.Granularities.THIRTY_MINUTE;
+import static io.druid.java.util.common.granularity.Granularities.WEEK;
+import static io.druid.java.util.common.granularity.Granularities.YEAR;
+
 public abstract class Granularity implements Cacheable
 {
-
-  public static final Granularity SECOND = GranularityType.SECOND.defaultGranularity;
-  public static final Granularity MINUTE = GranularityType.MINUTE.defaultGranularity;
-  public static final Granularity FIVE_MINUTE = GranularityType.FIVE_MINUTE.defaultGranularity;
-  public static final Granularity TEN_MINUTE = GranularityType.TEN_MINUTE.defaultGranularity;
-  public static final Granularity FIFTEEN_MINUTE = GranularityType.FIFTEEN_MINUTE.defaultGranularity;
-  public static final Granularity THIRTY_MINUTE = GranularityType.THIRTY_MINUTE.defaultGranularity;
-  public static final Granularity HOUR = GranularityType.HOUR.defaultGranularity;
-  public static final Granularity SIX_HOUR = GranularityType.SIX_HOUR.defaultGranularity;
-  public static final Granularity DAY = GranularityType.DAY.defaultGranularity;
-  public static final Granularity WEEK = GranularityType.WEEK.defaultGranularity;
-  public static final Granularity MONTH = GranularityType.MONTH.defaultGranularity;
-  public static final Granularity QUARTER = GranularityType.QUARTER.defaultGranularity;
-  public static final Granularity YEAR = GranularityType.YEAR.defaultGranularity;
-  public static final Granularity ALL = GranularityType.ALL.defaultGranularity;
-  public static final Granularity NONE = GranularityType.NONE.defaultGranularity;
-
   /**
    * For a select subset of granularites, users can specify them directly as string.
    * These are "predefined granularities".
@@ -329,6 +326,11 @@ public abstract class Granularity implements Cacheable
         // If All or None granularity, or if origin and tz are both null, return the cached granularity
         return defaultGranularity;
       }
+    }
+
+    public Granularity getDefaultGranularity()
+    {
+      return defaultGranularity;
     }
 
     public static DateTime getDateTime(GranularityType granularityType, Integer[] vals)

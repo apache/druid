@@ -113,7 +113,7 @@ public class ScanQueryEngine
                 filter,
                 intervals.get(0),
                 VirtualColumns.EMPTY,
-                Granularity.ALL,
+                Granularities.ALL,
                 query.isDescending()
             ),
             new Function<Cursor, Sequence<ScanResultValue>>()

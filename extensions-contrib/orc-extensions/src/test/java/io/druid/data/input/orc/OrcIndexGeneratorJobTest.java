@@ -189,7 +189,7 @@ public class OrcIndexGeneratorJobTest
                 ),
                 aggs,
                 new UniformGranularitySpec(
-                    Granularity.DAY, Granularity.NONE, ImmutableList.of(this.interval)
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
                 mapper
             ),

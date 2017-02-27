@@ -99,7 +99,7 @@ public class SketchAggregationTestWithSimpleData
         readFileFromClasspathAsString("simple_test_data_aggregators.json"),
         s1,
         0,
-        Granularity.NONE,
+        Granularities.NONE,
         5000
     );
 
@@ -110,7 +110,7 @@ public class SketchAggregationTestWithSimpleData
         readFileFromClasspathAsString("simple_test_data_aggregators.json"),
         s2,
         0,
-        Granularity.NONE,
+        Granularities.NONE,
         5000
     );
   }

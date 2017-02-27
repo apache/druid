@@ -49,7 +49,7 @@ public class DatasourceIngestionSpecTest
         null,
         null,
         new SelectorDimFilter("dim", "value", null),
-        Granularity.DAY,
+        Granularities.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
         false
@@ -133,7 +133,7 @@ public class DatasourceIngestionSpecTest
             )
         ),
         new SelectorDimFilter("dim", "value", null),
-        Granularity.DAY,
+        Granularities.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
         true

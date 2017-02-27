@@ -192,7 +192,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(Granularity.ALL)
+                 .granularity(Granularities.ALL)
                  .intervals(intervalSpec)
                  .query("123");
   }
@@ -221,7 +221,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(Granularity.ALL)
+                 .granularity(Granularities.ALL)
                  .intervals(intervalSpec)
                  .query("")
                  .dimensions(Lists.newArrayList("dimUniform", "dimHyperUnique"))
@@ -275,7 +275,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(Granularity.ALL)
+                 .granularity(Granularities.ALL)
                  .intervals(intervalSpec)
                  .query("")
                  .dimensions(Lists.newArrayList("dimUniform"))
@@ -304,7 +304,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(Granularity.ALL)
+                 .granularity(Granularities.ALL)
                  .intervals(intervalSpec)
                  .query("")
                  .dimensions(Lists.newArrayList("dimUniform"))
@@ -390,7 +390,7 @@ public class SearchBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

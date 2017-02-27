@@ -1749,8 +1749,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
-            Granularity.HOUR,
-            Granularity.NONE,
+            Granularities.HOUR,
+            Granularities.NONE,
             ImmutableList.<Interval>of()
         ),
         objectMapper
