@@ -298,6 +298,7 @@ public class TaskSerdeTest
         aggregators,
         true,
         indexSpec,
+        true,
         null
     );
 
@@ -529,6 +530,7 @@ public class TaskSerdeTest
             new CountAggregatorFactory("cnt")
         ),
         indexSpec,
+        true,
         null
     );
 
