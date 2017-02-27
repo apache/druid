@@ -58,18 +58,33 @@ public class KafkaEmitter implements Emitter {
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
+  private final Callback producerCallback;
   private final ObjectMapper jsonMapper;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final ScheduledExecutorService scheduler;
 
-  public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper) {
+  public KafkaEmitter(final KafkaEmitterConfig config, ObjectMapper jsonMapper) {
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.producer = getKafkaProducer(config);
+    this.producerCallback = new Callback() {
+      @Override
+      public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+        if(e != null) {
+          if(recordMetadata.topic().equals(config.getMetricTopic())) {
+            metricLost.incrementAndGet();
+          } else if (recordMetadata.topic().equals(config.getAlertTopic())) {
+            alertLost.incrementAndGet();
+          } else {
+            invalidLost.incrementAndGet();
+          }
+        }
+      }
+    };
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(2);
+    this.scheduler = Executors.newScheduledThreadPool(3);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
     this.invalidLost = new AtomicLong(0L);
@@ -101,6 +116,13 @@ public class KafkaEmitter implements Emitter {
         sendAlertToKafka();
       }
     }, 10, 10, TimeUnit.SECONDS);
+    scheduler.scheduleWithFixedDelay(new Runnable() {
+      @Override
+      public void run() {
+        log.info("Message lost counter: metricLost=[%d] / alertLost=[%d] / invalidLost=[%d]",
+                 metricLost.get(), alertLost.get(), invalidLost.get());
+      }
+    }, 5, 5, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
 
@@ -116,26 +138,7 @@ public class KafkaEmitter implements Emitter {
     ObjectContainer<String> objectToSend;
     try {
       while((objectToSend = recordQueue.take()) != null) {
-        final ObjectContainer<String> finalObjectToSend = objectToSend;
-        producer.send(new ProducerRecord<String, String>(topic, finalObjectToSend.getData()), new Callback() {
-          @Override
-          public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-            if(e != null) {
-              log.warn(e, "Exception occured!");
-              if(topic.equals(config.getMetricTopic())) {
-                if(!metricQueue.offer(finalObjectToSend)) {
-                  log.warn("metricQueue is now memory bounded! metricLost: " + metricLost.incrementAndGet());
-                }
-              } else if(topic.equals(config.getAlertTopic())) {
-                if(!alertQueue.offer(finalObjectToSend)) {
-                  log.warn("alertQueue is now memory bounded! alertLost: " + alertLost.incrementAndGet());
-                }
-              } else {
-                log.warn("Invalid topic name! invalidLost: " + invalidLost.incrementAndGet());
-              }
-            }
-          }
-        });
+        producer.send(new ProducerRecord<String, String>(topic, objectToSend.getData()), producerCallback);
       }
     } catch (InterruptedException e) {
       log.warn(e, "Failed to take record from queue!");
@@ -156,17 +159,17 @@ public class KafkaEmitter implements Emitter {
         ObjectContainer<String> objectContainer = new ObjectContainer<>(resultJson, resultJson.getBytes().length);
         if(event instanceof ServiceMetricEvent) {
           if(!metricQueue.offer(objectContainer)) {
-            log.warn("metricQueue is now memory bounded! metricLost: " + metricLost.incrementAndGet());
+            metricLost.incrementAndGet();
           }
         } else if(event instanceof AlertEvent) {
           if(!alertQueue.offer(objectContainer)) {
-            log.warn("alertQueue is now memory bounded! alertLost: " + alertLost.incrementAndGet());
+            alertLost.incrementAndGet();
           }
         } else {
-          log.warn("Unsupported event type! invalidLost: " + invalidLost.incrementAndGet());
+          invalidLost.incrementAndGet();
         }
       } catch (JsonProcessingException e) {
-        log.warn(e, "Failed to generate json! invalidLost: " + invalidLost.incrementAndGet());
+        invalidLost.incrementAndGet();
       }
     }
   }
