@@ -141,24 +141,24 @@ public enum GranularityType
     return defaultGranularity;
   }
 
-  public static DateTime getDateTime(GranularityType granularityType, Integer[] vals)
+  public DateTime getDateTime(Integer[] vals)
   {
-    if (granularityType.dateValuePositions == 0) {
+    if (dateValuePositions == 0) {
       // All or None granularity
       return null;
     }
-    for (int i = 1; i <= granularityType.dateValuePositions; i++) {
+    for (int i = 1; i <= dateValuePositions; i++) {
       if (vals[i] == null) {
         return null;
       }
     }
     return new DateTime(
         vals[1],
-        granularityType.dateValuePositions >= 2 ? vals[2] : 1,
-        granularityType.dateValuePositions >= 3 ? vals[3] : 1,
-        granularityType.dateValuePositions >= 4 ? vals[4] : 0,
-        granularityType.dateValuePositions >= 5 ? vals[5] : 0,
-        granularityType.dateValuePositions >= 6 ? vals[6] : 0,
+        dateValuePositions >= 2 ? vals[2] : 1,
+        dateValuePositions >= 3 ? vals[3] : 1,
+        dateValuePositions >= 4 ? vals[4] : 0,
+        dateValuePositions >= 5 ? vals[5] : 0,
+        dateValuePositions >= 6 ? vals[6] : 0,
         0
     );
   }

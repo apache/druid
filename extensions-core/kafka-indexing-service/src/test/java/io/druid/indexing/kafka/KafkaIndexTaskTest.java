@@ -74,7 +74,7 @@ import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;

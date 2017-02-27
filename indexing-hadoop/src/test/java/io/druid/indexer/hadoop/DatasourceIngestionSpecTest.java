@@ -22,7 +22,7 @@ package io.druid.indexer.hadoop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;

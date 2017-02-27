@@ -131,7 +131,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     Integer[] vals = getDateValues(filePath, formatter);
     GranularityType granularityType = GranularityType.fromPeriod(period);
 
-    DateTime date = GranularityType.getDateTime(granularityType, vals);
+    DateTime date = granularityType.getDateTime(vals);
 
     if (date != null) {
       return bucketStart(date);

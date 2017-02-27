@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.io.CharSource;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;

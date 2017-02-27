@@ -37,7 +37,7 @@ import io.druid.indexer.HadoopyShardSpec;
 import io.druid.indexer.IndexGeneratorJob;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
