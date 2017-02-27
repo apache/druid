@@ -32,6 +32,7 @@ import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -217,6 +218,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   {
     this.dimLookup = new DimensionDictionary();
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
+  }
+
+  @Override
+  public ValueType getValueType()
+  {
+    return ValueType.STRING;
   }
 
   @Override

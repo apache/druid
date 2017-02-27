@@ -19,10 +19,12 @@
 
 package io.druid.segment;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -31,6 +33,12 @@ import java.util.List;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
+  @Override
+  public ValueType getValueType()
+  {
+    return ValueType.LONG;
+  }
+
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
   {
@@ -56,19 +64,19 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public Indexed<Long> getSortedIndexedValues()
   {
-    return null;
+    throw new UnsupportedOperationException("Numeric columns do not support value dictionaries.");
   }
 
   @Override
   public Long getMinValue()
   {
-    return 0L;
+    return Long.MIN_VALUE;
   }
 
   @Override
   public Long getMaxValue()
   {
-    return 0L;
+    return Long.MAX_VALUE;
   }
 
   @Override
@@ -124,7 +132,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Long key, boolean asList)
   {
-    return Lists.newArrayList(key);
+    return ImmutableList.of(key);
   }
 
   @Override

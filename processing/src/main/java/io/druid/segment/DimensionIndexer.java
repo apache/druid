@@ -22,6 +22,7 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -108,6 +109,11 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 public interface DimensionIndexer
     <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
 {
+  /**
+   * @return The ValueType corresponding to this dimension indexer's ActualType.
+   */
+  ValueType getValueType();
+
   /**
    * Given a single row value or list of row values (for multi-valued dimensions), update any internal data structures
    * with the ingested values and return the row values as an array to be used within a TimeAndDims key.

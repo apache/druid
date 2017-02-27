@@ -33,6 +33,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.Capabilities;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
@@ -43,6 +44,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.LongWrappingDimensionSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
+import io.druid.segment.NumericColumnSelectorWrappers;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
@@ -393,11 +395,25 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  return (FloatColumnSelector) indexer.makeColumnValueSelector(
+                  final ColumnValueSelector selector = indexer.makeColumnValueSelector(
                       new DefaultDimensionSpec(columnName, null),
                       currEntry,
                       dimensionDesc
                   );
+
+                  ValueType indexerType = indexer.getValueType();
+                  if (!NumericColumnSelectorWrappers.WRAPPABLE_TYPES.contains(indexerType)) {
+                    throw new UnsupportedOperationException(
+                        "Cannot create float selector on column with type: " + indexerType
+                    );
+                  }
+
+                  if (indexer.getValueType() == ValueType.LONG) {
+                    return NumericColumnSelectorWrappers.wrapLongAsFloat((LongColumnSelector) selector);
+                  }
+
+                  return (FloatColumnSelector) selector;
+
                 }
 
                 final Integer metricIndexInt = index.getMetricIndex(columnName);
@@ -438,11 +454,24 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  return (LongColumnSelector) indexer.makeColumnValueSelector(
+                  final ColumnValueSelector selector = indexer.makeColumnValueSelector(
                       new DefaultDimensionSpec(columnName, null),
                       currEntry,
                       dimensionDesc
                   );
+
+                  ValueType indexerType = indexer.getValueType();
+                  if (!NumericColumnSelectorWrappers.WRAPPABLE_TYPES.contains(indexerType)) {
+                    throw new UnsupportedOperationException(
+                        "Cannot create float selector on column with type: " + indexerType
+                    );
+                  }
+
+                  if (indexer.getValueType() == ValueType.FLOAT) {
+                    return NumericColumnSelectorWrappers.wrapFloatAsLong((FloatColumnSelector) selector);
+                  }
+
+                  return (LongColumnSelector) selector;
                 }
 
                 final Integer metricIndexInt = index.getMetricIndex(columnName);
