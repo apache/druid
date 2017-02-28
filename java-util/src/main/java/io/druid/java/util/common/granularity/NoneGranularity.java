@@ -24,6 +24,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 /**
  * NoneGranularity does not bucket data
+ * This class is serialized and deserialized based on type in GranularityModule
  */
 public class NoneGranularity extends Granularity
 {

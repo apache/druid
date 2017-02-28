@@ -26,6 +26,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 /**
  * AllGranularty buckets everything into a single bucket
+ * This class is serialized and deserialized based on type in GranularityModule
  */
 public class AllGranularity extends Granularity
 {
