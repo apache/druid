@@ -24,8 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -334,7 +333,7 @@ public class Druids
     private boolean descending;
     private VirtualColumns virtualColumns;
     private DimFilter dimFilter;
-    private QueryGranularity granularity;
+    private Granularity granularity;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
@@ -346,7 +345,7 @@ public class Druids
       descending = false;
       virtualColumns = null;
       dimFilter = null;
-      granularity = QueryGranularities.ALL;
+      granularity = Granularity.ALL;
       aggregatorSpecs = Lists.newArrayList();
       postAggregatorSpecs = Lists.newArrayList();
       context = null;
@@ -413,7 +412,7 @@ public class Druids
       return descending;
     }
 
-    public QueryGranularity getGranularity()
+    public Granularity getGranularity()
     {
       return granularity;
     }
@@ -505,11 +504,11 @@ public class Druids
 
     public TimeseriesQueryBuilder granularity(String g)
     {
-      granularity = QueryGranularity.fromString(g);
+      granularity = Granularity.fromString(g);
       return this;
     }
 
-    public TimeseriesQueryBuilder granularity(QueryGranularity g)
+    public TimeseriesQueryBuilder granularity(Granularity g)
     {
       granularity = g;
       return this;
@@ -562,7 +561,7 @@ public class Druids
   {
     private DataSource dataSource;
     private DimFilter dimFilter;
-    private QueryGranularity granularity;
+    private Granularity granularity;
     private int limit;
     private QuerySegmentSpec querySegmentSpec;
     private List<DimensionSpec> dimensions;
@@ -574,7 +573,7 @@ public class Druids
     {
       dataSource = null;
       dimFilter = null;
-      granularity = QueryGranularities.ALL;
+      granularity = Granularity.ALL;
       limit = 0;
       querySegmentSpec = null;
       dimensions = null;
@@ -655,11 +654,11 @@ public class Druids
 
     public SearchQueryBuilder granularity(String g)
     {
-      granularity = QueryGranularity.fromString(g);
+      granularity = Granularity.fromString(g);
       return this;
     }
 
-    public SearchQueryBuilder granularity(QueryGranularity g)
+    public SearchQueryBuilder granularity(Granularity g)
     {
       granularity = g;
       return this;
@@ -1121,7 +1120,7 @@ public class Druids
     private boolean descending;
     private Map<String, Object> context;
     private DimFilter dimFilter;
-    private QueryGranularity granularity;
+    private Granularity granularity;
     private List<DimensionSpec> dimensions;
     private List<String> metrics;
     private VirtualColumns virtualColumns;
@@ -1133,7 +1132,7 @@ public class Druids
       querySegmentSpec = null;
       context = null;
       dimFilter = null;
-      granularity = QueryGranularities.ALL;
+      granularity = Granularity.ALL;
       dimensions = Lists.newArrayList();
       metrics = Lists.newArrayList();
       pagingSpec = null;
@@ -1225,11 +1224,11 @@ public class Druids
 
     public SelectQueryBuilder granularity(String g)
     {
-      granularity = QueryGranularity.fromString(g);
+      granularity = Granularity.fromString(g);
       return this;
     }
 
-    public SelectQueryBuilder granularity(QueryGranularity g)
+    public SelectQueryBuilder granularity(Granularity g)
     {
       granularity = g;
       return this;

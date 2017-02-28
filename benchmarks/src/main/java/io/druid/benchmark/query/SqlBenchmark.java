@@ -29,7 +29,7 @@ import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -190,7 +190,7 @@ public class SqlBenchmark
             )
         )
         .setAggregatorSpecs(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("c")))
-        .setGranularity(QueryGranularities.ALL)
+        .setGranularity(Granularity.ALL)
         .build();
 
     sqlQuery = "SELECT\n"

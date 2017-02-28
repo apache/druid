@@ -32,10 +32,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
@@ -58,6 +57,7 @@ import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.column.Column;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
@@ -96,7 +96,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private final LimitSpec limitSpec;
   private final HavingSpec havingSpec;
   private final DimFilter dimFilter;
-  private final QueryGranularity granularity;
+  private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
@@ -109,7 +109,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("granularity") QueryGranularity granularity,
+      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
@@ -182,7 +182,7 @@ public class GroupByQuery extends BaseQuery<Row>
       QuerySegmentSpec querySegmentSpec,
       VirtualColumns virtualColumns,
       DimFilter dimFilter,
-      QueryGranularity granularity,
+      Granularity granularity,
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggregatorSpecs,
       List<PostAggregator> postAggregatorSpecs,
@@ -218,7 +218,7 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
@@ -354,7 +354,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Comparator<Row> getTimeComparator(boolean granular)
   {
-    if (QueryGranularities.ALL.equals(granularity)) {
+    if (Granularity.ALL.equals(granularity)) {
       return null;
     } else if (granular) {
       return new Comparator<Row>()
@@ -363,8 +363,8 @@ public class GroupByQuery extends BaseQuery<Row>
         public int compare(Row lhs, Row rhs)
         {
           return Longs.compare(
-              granularity.truncate(lhs.getTimestampFromEpoch()),
-              granularity.truncate(rhs.getTimestampFromEpoch())
+              granularity.bucketStart(lhs.getTimestamp()).getMillis(),
+              granularity.bucketStart(rhs.getTimestamp()).getMillis()
           );
         }
       };
@@ -572,6 +572,13 @@ public class GroupByQuery extends BaseQuery<Row>
         throw new IAE("Duplicate output name[%s]", postAggregator.getName());
       }
     }
+
+    if (outputNames.contains(Column.TIME_COLUMN_NAME)) {
+      throw new IAE(
+          "'%s' cannot be used as an output name for dimensions, aggregators, or post-aggregators.",
+          Column.TIME_COLUMN_NAME
+      );
+    }
   }
 
   public static class Builder
@@ -580,7 +587,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private QuerySegmentSpec querySegmentSpec;
     private VirtualColumns virtualColumns;
     private DimFilter dimFilter;
-    private QueryGranularity granularity;
+    private Granularity granularity;
     private List<DimensionSpec> dimensions;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
@@ -741,7 +748,7 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder setGranularity(QueryGranularity granularity)
+    public Builder setGranularity(Granularity granularity)
     {
       this.granularity = granularity;
       return this;

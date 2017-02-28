@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.cache;
+package io.druid.java.util.common;
 
 public interface Cacheable
 {

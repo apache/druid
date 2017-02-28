@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.CacheStrategy;
@@ -77,7 +77,7 @@ public class TopNQueryQueryToolChestTest
                     )
                 ),
                 null,
-                QueryGranularities.ALL,
+                Granularity.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
                 ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
                 null
@@ -129,7 +129,7 @@ public class TopNQueryQueryToolChestTest
             )
         ),
         null,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
         ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
         null
@@ -149,7 +149,7 @@ public class TopNQueryQueryToolChestTest
             )
         ),
         null,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
         ImmutableList.<PostAggregator>of(
             new ArithmeticPostAggregator(

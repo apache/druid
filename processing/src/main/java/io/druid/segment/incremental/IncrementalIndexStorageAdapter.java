@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
@@ -193,7 +193,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       final Filter filter,
       final Interval interval,
       final VirtualColumns virtualColumns,
-      final QueryGranularity gran,
+      final Granularity gran,
       final boolean descending
   )
   {
@@ -205,7 +205,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval dataInterval = new Interval(
         getMinTime().getMillis(),
-        gran.next(gran.truncate(getMaxTime().getMillis()))
+        gran.bucketEnd(getMaxTime()).getMillis()
     );
 
     if (!actualIntervalTmp.overlaps(dataInterval)) {
@@ -221,21 +221,21 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval actualInterval = actualIntervalTmp;
 
-    Iterable<Long> iterable = gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis());
+    Iterable<Interval> iterable = gran.getIterable(actualInterval);
     if (descending) {
-      // might be better to be included in granularity#iterable
       iterable = Lists.reverse(ImmutableList.copyOf(iterable));
     }
+
     return Sequences.map(
         Sequences.simple(iterable),
-        new Function<Long, Cursor>()
+        new Function<Interval, Cursor>()
         {
           EntryHolder currEntry = new EntryHolder();
 
           @Override
-          public Cursor apply(final Long input)
+          public Cursor apply(@Nullable final Interval interval)
           {
-            final long timeStart = Math.max(input, actualInterval.getStartMillis());
+            final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
 
             return new Cursor()
             {
@@ -251,10 +251,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 cursorIterable = index.getFacts().timeRangeIterable(
                     descending,
                     timeStart,
-                    Math.min(actualInterval.getEndMillis(), gran.next(input))
+                    Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
                 );
                 emptyRange = !cursorIterable.iterator().hasNext();
-                time = gran.toDateTime(input);
+                time = gran.toDateTime(interval.getStartMillis());
 
                 reset();
               }

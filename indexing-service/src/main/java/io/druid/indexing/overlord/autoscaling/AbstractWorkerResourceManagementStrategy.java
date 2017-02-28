@@ -21,8 +21,8 @@ package io.druid.indexing.overlord.autoscaling;
 
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.LifecycleLock;
-import io.druid.granularity.PeriodGranularity;
 import io.druid.indexing.overlord.WorkerTaskRunner;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 
 import org.joda.time.DateTime;
@@ -81,7 +81,7 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
           resourceManagementSchedulerConfig.getOriginTime(),
           null
       );
-      final long startTime = granularity.next(granularity.truncate(new DateTime().getMillis()));
+      final long startTime = granularity.bucketEnd(new DateTime()).getMillis();
 
       ScheduledExecutors.scheduleAtFixedRate(
           exec,

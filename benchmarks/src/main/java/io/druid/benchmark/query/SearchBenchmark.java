@@ -33,7 +33,7 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
@@ -192,7 +192,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(QueryGranularities.ALL)
+                 .granularity(Granularity.ALL)
                  .intervals(intervalSpec)
                  .query("123");
   }
@@ -221,7 +221,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(QueryGranularities.ALL)
+                 .granularity(Granularity.ALL)
                  .intervals(intervalSpec)
                  .query("")
                  .dimensions(Lists.newArrayList("dimUniform", "dimHyperUnique"))
@@ -275,7 +275,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(QueryGranularities.ALL)
+                 .granularity(Granularity.ALL)
                  .intervals(intervalSpec)
                  .query("")
                  .dimensions(Lists.newArrayList("dimUniform"))
@@ -304,7 +304,7 @@ public class SearchBenchmark
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
-                 .granularity(QueryGranularities.ALL)
+                 .granularity(Granularity.ALL)
                  .intervals(intervalSpec)
                  .query("")
                  .dimensions(Lists.newArrayList("dimUniform"))
@@ -390,7 +390,7 @@ public class SearchBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularity.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),
