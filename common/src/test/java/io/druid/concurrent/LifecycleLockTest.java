@@ -126,7 +126,7 @@ public class LifecycleLockTest
     LifecycleLock lifecycleLock = new LifecycleLock();
     Assert.assertTrue(lifecycleLock.canStart());
     lifecycleLock.exitStart();
-    Assert.assertFalse(lifecycleLock.isStarted());
+    Assert.assertFalse(lifecycleLock.awaitStarted());
     Assert.assertFalse(lifecycleLock.canStop());
   }
 

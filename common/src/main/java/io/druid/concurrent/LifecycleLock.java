@@ -19,6 +19,7 @@
 
 package io.druid.concurrent;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
@@ -26,7 +27,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * happens-before between start() and other methods and/or to check that the object was successfully started in other
  * methods.
  *
- * Guarantees in terms of JMM: happens-before between {@link #exitStart()} and {@link #isStarted()},
+ * Guarantees in terms of JMM: happens-before between {@link #exitStart()} and {@link #awaitStarted()},
  * exitStart() and {@link #canStop()}, if it returns {@code true}.
  *
  * Example:
@@ -50,7 +51,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  *
  *   void otherMethod()
  *   {
- *     Preconditions.checkState(lifecycleLock.isStarted());
+ *     Preconditions.checkState(lifecycleLock.awaitStarted());
  *     // all actions done in start() are visible here
  *     .. do stuff
  *   }
@@ -114,11 +115,24 @@ public final class LifecycleLock
       }
     }
 
-    boolean isStarted()
+    boolean awaitStarted()
     {
       try {
         // see tryAcquireShared()
         acquireSharedInterruptibly(1);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return getState() == START_EXITED_SUCCESSFUL;
+    }
+
+    boolean awaitStarted(long timeNanos)
+    {
+      try {
+        // see tryAcquireShared()
+        if (!tryAcquireSharedNanos(1, timeNanos))
+          return false;
       }
       catch (InterruptedException e) {
         throw new RuntimeException(e);
@@ -199,9 +213,19 @@ public final class LifecycleLock
    * Awaits until {@link #exitStart()} is called, if needed, and returns {@code true} if {@link #started()} was called
    * before that.
    */
-  public boolean isStarted()
+  public boolean awaitStarted()
   {
-    return sync.isStarted();
+    return sync.awaitStarted();
+  }
+
+  /**
+   * Awaits until {@link #exitStart()} is called for at most the specified timeout, and returns {@code true} if {@link
+   * #started()} was called before that. Returns {@code false} if {@code started()} wasn't called before {@code
+   * exitStart()}, or if {@code exitStart()} isn't called on this LifecycleLock until the specified timeout expires.
+   */
+  public boolean awaitStarted(long timeout, TimeUnit unit)
+  {
+    return sync.awaitStarted(unit.toNanos(timeout));
   }
 
   /**
