@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
