@@ -31,6 +31,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.LifecycleLock;
+import io.druid.concurrent.Threads;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
@@ -119,7 +120,8 @@ public class LookupReferencesManager
       }
 
       if (!testMode) {
-        mainThread = new Thread(
+        mainThread = Threads.createThread(
+            "LookupReferencesManager-MainThread",
             new Runnable()
             {
               @Override
@@ -147,10 +149,10 @@ public class LookupReferencesManager
                   LOG.info("Lookup Management loop exited, Lookup notices are not handled anymore.");
                 }
               }
-            }
+            },
+            true
         );
 
-        mainThread.setName("LookupReferencesManager-MainThread");
         mainThread.start();
       }
 
