@@ -87,10 +87,9 @@ public class GenericIndexedBenchmark
     @Override
     public int compare(byte[] o1, byte[] o2)
     {
-      return Ints.compare(Ints.fromByteArray(o1), Ints.fromByteArray(o2));
+      return Integer.compare(Ints.fromByteArray(o1), Ints.fromByteArray(o2));
     }
   };
-
 
   @Param({"10000"})
   public int n;
@@ -101,6 +100,7 @@ public class GenericIndexedBenchmark
   private File smooshDir;
   private GenericIndexed<byte[]> genericIndexed;
   private int[] iterationIndexes;
+  private byte[][] elementsToSearch;
 
   @Setup(Level.Trial)
   public void createGenericIndexed() throws IOException
@@ -112,8 +112,12 @@ public class GenericIndexedBenchmark
     );
     genericIndexedWriter.open();
 
-    final ByteBuffer element = ByteBuffer.allocate(elementSize);
+    // GenericIndexObject caches prevObject for comparison, so need two arrays for correct objectsSorted computation.
+    ByteBuffer[] elements = new ByteBuffer[2];
+    elements[0] = ByteBuffer.allocate(elementSize);
+    elements[1] = ByteBuffer.allocate(elementSize);
     for (int i = 0; i < n; i++) {
+      ByteBuffer element = elements[i & 1];
       element.putInt(0, i);
       genericIndexedWriter.write(element.array());
     }
@@ -141,11 +145,30 @@ public class GenericIndexedBenchmark
     }
   }
 
+  @Setup(Level.Trial)
+  public void createElementsToSearch()
+  {
+    elementsToSearch = new byte[ITERATIONS][];
+    for (int i = 0; i < ITERATIONS; i++) {
+      elementsToSearch[i] = Ints.toByteArray(ThreadLocalRandom.current().nextInt(n));
+    }
+  }
+
   @Benchmark
   public void get(Blackhole bh)
   {
     for (int i : iterationIndexes) {
       bh.consume(genericIndexed.get(i));
     }
+  }
+
+  @Benchmark
+  public int indexOf()
+  {
+    int r = 0;
+    for (byte[] elementToSearch : elementsToSearch) {
+      r ^= genericIndexed.indexOf(elementToSearch);
+    }
+    return r;
   }
 }
