@@ -547,7 +547,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   @Override
   public LongColumnSelector makeLongColumnSelector(
-      DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
      return ZeroLongColumnSelector.instance();
@@ -555,7 +555,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   @Override
   public FloatColumnSelector makeFloatColumnSelector(
-      DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+      IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
   )
   {
     return ZeroFloatColumnSelector.instance();

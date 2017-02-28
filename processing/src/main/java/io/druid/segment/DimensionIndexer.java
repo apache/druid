@@ -223,13 +223,11 @@ public interface DimensionIndexer
   /**
    * Return an object used to read values from this indexer's column as Longs.
    *
-   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
    * @param currEntry Provides access to the current TimeAndDims object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
   LongColumnSelector makeLongColumnSelector(
-      DimensionSpec spec,
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   );
@@ -238,13 +236,11 @@ public interface DimensionIndexer
   /**
    * Return an object used to read values from this indexer's column as Floats.
    *
-   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
    * @param currEntry Provides access to the current TimeAndDims object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
   FloatColumnSelector makeFloatColumnSelector(
-      DimensionSpec spec,
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   );

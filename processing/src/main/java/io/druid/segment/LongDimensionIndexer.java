@@ -90,14 +90,13 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   )
   {
     return new LongWrappingDimensionSelector(
-        makeLongColumnSelector(spec, currEntry, desc),
+        makeLongColumnSelector(currEntry, desc),
         spec.getExtractionFn()
     );
   }
 
   @Override
   public LongColumnSelector makeLongColumnSelector(
-      final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
@@ -123,7 +122,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public FloatColumnSelector makeFloatColumnSelector(
-      final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )

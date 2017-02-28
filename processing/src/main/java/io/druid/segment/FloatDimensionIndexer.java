@@ -90,14 +90,13 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   )
   {
     return new FloatWrappingDimensionSelector(
-        makeFloatColumnSelector(spec, currEntry, desc),
+        makeFloatColumnSelector(currEntry, desc),
         spec.getExtractionFn()
     );
   }
 
   @Override
   public LongColumnSelector makeLongColumnSelector(
-      final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
@@ -124,7 +123,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public FloatColumnSelector makeFloatColumnSelector(
-      final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
