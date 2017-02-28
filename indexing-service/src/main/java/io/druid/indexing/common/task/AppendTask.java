@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
@@ -49,9 +50,10 @@ import java.util.Map;
  */
 public class AppendTask extends MergeTaskBase
 {
-
+  private static final Boolean defaultBuildV9Directly = Boolean.TRUE;
   private final IndexSpec indexSpec;
   private final List<AggregatorFactory> aggregators;
+  private final Boolean buildV9Directly;
 
   @JsonCreator
   public AppendTask(
@@ -60,12 +62,14 @@ public class AppendTask extends MergeTaskBase
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(id, dataSource, segments, context);
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
     this.aggregators = aggregators;
+    this.buildV9Directly = buildV9Directly == null ? defaultBuildV9Directly : buildV9Directly;
   }
 
   @Override
@@ -131,7 +135,8 @@ public class AppendTask extends MergeTaskBase
       );
     }
 
-    return toolbox.getIndexMerger().append(
+    IndexMerger indexMerger = buildV9Directly ? toolbox.getIndexMergerV9() : toolbox.getIndexMerger();
+    return indexMerger.append(
         adapters,
         aggregators == null ? null : aggregators.toArray(new AggregatorFactory[aggregators.size()]),
         outDir,
