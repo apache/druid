@@ -145,6 +145,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       Float key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {
-    // floats don't have bitmaps
+    throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");
   }
 }

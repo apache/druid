@@ -145,6 +145,6 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       Long key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {
-    // longs don't have bitmaps
+    throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");
   }
 }
