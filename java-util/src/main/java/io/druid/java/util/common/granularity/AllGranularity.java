@@ -26,7 +26,6 @@ import org.joda.time.format.DateTimeFormatter;
 
 /**
  * AllGranularty buckets everything into a single bucket
- * This class is serialized and deserialized based on type in GranularityModule
  */
 public class AllGranularity extends Granularity
 {
@@ -39,6 +38,10 @@ public class AllGranularity extends Granularity
   private final DateTime maxDateTime = new DateTime(MAX_INSTANT);
   private final DateTime minDateTime = new DateTime(MIN_INSTANT);
 
+  /**
+   * This constructor is public b/c it is serialized and deserialized
+   * based on type in GranularityModule
+   */
   public AllGranularity() {}
 
   @Override
