@@ -87,7 +87,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
   public void add(long value) throws IOException
   {
-    SerializerUtils.writeLongToOutputStream(tempOut, value, helperBuffer);
+    SerializerUtils.writeBigEndianLongToOutputStream(tempOut, value, helperBuffer);
     ++numInserted;
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
       uniqueValues.put(value, uniqueValues.size());

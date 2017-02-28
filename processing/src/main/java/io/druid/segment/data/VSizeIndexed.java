@@ -61,7 +61,7 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
     int offset = 0;
     try {
-      SerializerUtils.writeIntToOutputStream(headerBytes, count, helperBuffer);
+      SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, count, helperBuffer);
 
       for (VSizeIndexedInts object : objectsIterable) {
         if (object.getNumBytes() != numBytes) {
@@ -69,7 +69,7 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
         }
         byte[] bytes = object.getBytesNoPadding();
         offset += bytes.length;
-        SerializerUtils.writeIntToOutputStream(headerBytes, offset, helperBuffer);
+        SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, offset, helperBuffer);
         valueBytes.write(bytes);
       }
       valueBytes.write(new byte[4 - numBytes]);

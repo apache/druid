@@ -448,8 +448,8 @@ public class GenericIndexed<T> implements Indexed<T>
 
         final byte[] bytes = strategy.toBytes(next);
         offset += Ints.BYTES + bytes.length;
-        SerializerUtils.writeIntToOutputStream(headerBytes, offset, helperBuffer);
-        SerializerUtils.writeIntToOutputStream(valueBytes, bytes.length, helperBuffer);
+        SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, offset, helperBuffer);
+        SerializerUtils.writeBigEndianIntToOutputStream(valueBytes, bytes.length, helperBuffer);
         valueBytes.write(bytes);
 
         if (prevVal instanceof Closeable) {

@@ -83,7 +83,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
     metaOut.write(Ints.toByteArray(table.size()));
     ByteBuffer helperBuffer = ByteBuffer.allocate(Longs.BYTES);
     for (int i = 0; i < valueAddedInOrder.size(); i++) {
-      SerializerUtils.writeLongToOutputStream(metaOut, valueAddedInOrder.getLong(i), helperBuffer);
+      SerializerUtils.writeBigEndianLongToOutputStream(metaOut, valueAddedInOrder.getLong(i), helperBuffer);
     }
   }
 

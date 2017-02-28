@@ -67,6 +67,7 @@ public class GenericIndexedWriter<T> implements Closeable
   private long numWritten = 0;
   private boolean requireMultipleFiles = false;
   private ByteBuffer buf;
+  private final ByteBuffer sizeHelperBuffer = ByteBuffer.allocate(Ints.BYTES);
 
 
   public GenericIndexedWriter(
@@ -138,13 +139,13 @@ public class GenericIndexedWriter<T> implements Closeable
     byte[] bytesToWrite = strategy.toBytes(objectToWrite);
 
     ++numWritten;
-    valuesOut.write(Ints.toByteArray(bytesToWrite.length));
+    SerializerUtils.writeBigEndianIntToOutputStream(valuesOut, bytesToWrite.length, sizeHelperBuffer);
     valuesOut.write(bytesToWrite);
 
     if (!requireMultipleFiles) {
-      SerializerUtils.writeIntToOutputStream(headerOut, Ints.checkedCast(valuesOut.getCount()), buf);
+      SerializerUtils.writeBigEndianIntToOutputStream(headerOut, Ints.checkedCast(valuesOut.getCount()), buf);
     } else {
-      SerializerUtils.writeLongToOutputStream(headerOutLong, valuesOut.getCount(), buf);
+      SerializerUtils.writeNativeOrderedLongToOutputStream(headerOutLong, valuesOut.getCount(), buf);
     }
 
     if (!requireMultipleFiles && getSerializedSize() > fileSizeLimit) {
@@ -420,7 +421,11 @@ public class GenericIndexedWriter<T> implements Closeable
         }
         currentNumBytes = Long.reverseBytes(headerFile.readLong());
         relativeNumBytes = currentNumBytes - relativeRefBytes;
-        SerializerUtils.writeIntToOutputStream(finalHeaderOut, Ints.checkedCast(relativeNumBytes), helperBuffer);
+        SerializerUtils.writeNativeOrderedIntToOutputStream(
+            finalHeaderOut,
+            Ints.checkedCast(relativeNumBytes),
+            helperBuffer
+        );
       }
 
       long numBytesToPutInFile = finalHeaderOut.getCount();
@@ -444,7 +449,7 @@ public class GenericIndexedWriter<T> implements Closeable
       ByteBuffer buf = ByteBuffer.allocate(Longs.BYTES).order(ByteOrder.nativeOrder());
       for (int i = 0; i < numWritten; i++) {
         int count = headerFile.readInt();
-        SerializerUtils.writeLongToOutputStream(headerOutLong, count, buf);
+        SerializerUtils.writeNativeOrderedLongToOutputStream(headerOutLong, count, buf);
       }
     }
   }

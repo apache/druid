@@ -39,29 +39,65 @@ public class SerializerUtils
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
   /**
-   * Writes the given long value into the given OutputStream, using the helperBuffer. Faster alternative to
-   * out.write(Longs.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into {@link
-   * java.io.DataOutputStream}. The order in which the value's bytes are written to the OutputStream depends on the
-   * {@link ByteBuffer#order(ByteOrder)} of the given buffer.
+   * Writes the given long value into the given OutputStream in big-endian byte order, using the helperBuffer. Faster
+   * alternative to out.write(Longs.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into
+   * {@link java.io.DataOutputStream}.
    *
-   * @param helperBuffer a heap ByteBuffer of capacity at least 8.
+   * @param helperBuffer a big-endian heap ByteBuffer with capacity of at least 8
    */
-  public static void writeLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer) throws IOException
+  public static void writeBigEndianLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer)
+      throws IOException
   {
+    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
+      throw new IllegalArgumentException("Expected big-endian byteBuffer");
+    }
     helperBuffer.putLong(0, value);
     out.write(helperBuffer.array(), 0, 8);
   }
 
   /**
-   * Writes the given int value into the given OutputStream, using the helperBuffer. Faster alternative to
-   * out.write(Ints.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into {@link
-   * java.io.DataOutputStream}. The order in which the value's bytes are written to the OutputStream depends on the
-   * {@link ByteBuffer#order(ByteOrder)} of the given buffer.
+   * Writes the given long value into the given OutputStream in the native byte order, using the helperBuffer.
    *
-   * @param helperBuffer a heap ByteBuffer of capacity of at least 4.
+   * @param helperBuffer a heap ByteBuffer with capacity of at least 8, with the native byte order
    */
-  public static void writeIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer) throws IOException
+  public static void writeNativeOrderedLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer)
+      throws IOException
   {
+    if (helperBuffer.order() != ByteOrder.nativeOrder()) {
+      throw new IllegalArgumentException("Expected byteBuffer with the native byte order");
+    }
+    helperBuffer.putLong(0, value);
+    out.write(helperBuffer.array(), 0, 8);
+  }
+
+  /**
+   * Writes the given int value into the given OutputStream in big-endian byte order, using the helperBuffer. Faster
+   * alternative to out.write(Ints.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into
+   * {@link java.io.DataOutputStream}.
+   *
+   * @param helperBuffer a big-endian heap ByteBuffer with capacity of at least 4
+   */
+  public static void writeBigEndianIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer)
+      throws IOException
+  {
+    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
+      throw new IllegalArgumentException("Expected big-endian byteBuffer");
+    }
+    helperBuffer.putInt(0, value);
+    out.write(helperBuffer.array(), 0, 4);
+  }
+
+  /**
+   * Writes the given int value into the given OutputStream in the native byte order, using the given helperBuffer.
+   *
+   * @param helperBuffer a heap ByteBuffer with capacity of at least 4, with the native byte order
+   */
+  public static void writeNativeOrderedIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer)
+      throws IOException
+  {
+    if (helperBuffer.order() != ByteOrder.nativeOrder()) {
+      throw new IllegalArgumentException("Expected byteBuffer with the native byte order");
+    }
     helperBuffer.putInt(0, value);
     out.write(helperBuffer.array(), 0, 4);
   }
