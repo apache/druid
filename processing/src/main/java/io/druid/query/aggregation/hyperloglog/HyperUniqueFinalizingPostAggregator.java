@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.PostAggregatorIds;
 import io.druid.query.cache.CacheKeyBuilder;
@@ -84,6 +85,12 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public HyperUniqueFinalizingPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty("fieldName")

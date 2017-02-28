@@ -20,8 +20,8 @@
 package io.druid.query.select;
 
 import com.google.common.collect.Sets;
-import io.druid.granularity.AllGranularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.AllGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
@@ -34,12 +34,12 @@ import java.util.Set;
 public class SelectBinaryFn
     implements BinaryFn<Result<SelectResultValue>, Result<SelectResultValue>, Result<SelectResultValue>>
 {
-  private final QueryGranularity gran;
+  private final Granularity gran;
   private final PagingSpec pagingSpec;
   private final boolean descending;
 
   public SelectBinaryFn(
-      QueryGranularity granularity,
+      Granularity granularity,
       PagingSpec pagingSpec,
       boolean descending
   )
@@ -75,7 +75,7 @@ public class SelectBinaryFn
 
     final DateTime timestamp = (gran instanceof AllGranularity)
                                ? arg1.getTimestamp()
-                               : gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis()));
+                               : gran.bucketStart(arg1.getTimestamp());
 
     SelectResultValueBuilder builder = new SelectResultValueBuilder.MergeBuilder(timestamp, pagingSpec, descending);
 

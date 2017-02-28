@@ -35,10 +35,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -117,6 +118,7 @@ import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -141,6 +143,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
@@ -347,9 +351,7 @@ public class GroupByQueryRunnerTest
         )
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        configSupplier,
         strategySelector,
-        bufferPool,
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     return new GroupByQueryRunnerFactory(
@@ -1793,7 +1795,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = ImmutableList.of();
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    Assert.assertEquals(expectedResults, results);
+    assertEquals(expectedResults, results);
   }
 
   @Test
@@ -2148,7 +2150,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
-    final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularities.ALL).build();
+    final GroupByQuery allGranQuery = builder.copy().setGranularity(Granularity.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
@@ -2266,7 +2268,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(QueryGranularities.DAY)
+        .setGranularity(Granularity.DAY)
         .setLimit(limit)
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
 
@@ -2296,16 +2298,33 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
     );
+  }
 
-    builder.setAggregatorSpecs(
-        Arrays.asList(
-            QueryRunnerTestHelper.rowsCount,
-            new LongSumAggregatorFactory("idx", null, "index * 2 + indexMin / 10")
+  @Test
+  public void testMergeResultsAcrossMultipleDaysWithLimitAndOrderByUsingMathExpressions()
+  {
+    final int limit = 14;
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn("expr", "index * 2 + indexMin / 10")
         )
-    );
-    fullQuery = builder.build();
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "expr")
+            )
+        )
+        .setGranularity(Granularity.DAY)
+        .setLimit(limit)
+        .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
 
-    expectedResults = Arrays.asList(
+    GroupByQuery fullQuery = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 6090L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 6030L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 333L),
@@ -2323,8 +2342,9 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 265L)
     );
 
-    mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
+    Map<String, Object> context = Maps.newHashMap();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
     );
@@ -2497,6 +2517,7 @@ public class GroupByQueryRunnerTest
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
 
+    // Now try it with an expression based aggregator.
     builder.limit(Integer.MAX_VALUE)
            .setAggregatorSpecs(
                Arrays.asList(
@@ -2517,6 +2538,23 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "premium", 6L, 6627.927734375D},
         new Object[]{"2011-04-01", "mezzanine", 6L, 6635.47998046875D}
     );
+
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(builder.build(), context), "no-limit");
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+    );
+
+    // Now try it with an expression virtual column.
+    builder.limit(Integer.MAX_VALUE)
+           .setVirtualColumns(
+               new ExpressionVirtualColumn("expr", "index / 2 + indexMin")
+           )
+           .setAggregatorSpecs(
+               Arrays.asList(
+                   QueryRunnerTestHelper.rowsCount,
+                   new DoubleSumAggregatorFactory("idx", "expr")
+               )
+           );
 
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(builder.build(), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3140,7 +3178,7 @@ public class GroupByQueryRunnerTest
 
     final Object next1 = resultsIter.next();
     Object expectedNext1 = expectedResultsIter.next();
-    Assert.assertEquals("order-limit", expectedNext1, next1);
+    assertEquals("order-limit", expectedNext1, next1);
 
     final Object next2 = resultsIter.next();
     Object expectedNext2 = expectedResultsIter.next();
@@ -3241,7 +3279,7 @@ public class GroupByQueryRunnerTest
                 new DoubleSumAggregatorFactory("index", "index")
             )
         )
-        .setGranularity(QueryGranularities.ALL)
+        .setGranularity(Granularity.ALL)
         .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
         .setLimitSpec(
             new DefaultLimitSpec(
@@ -4024,13 +4062,17 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, query), ""
     );
 
-    subquery = subquery.withAggregatorSpecs(
-        Arrays.asList(
-            QueryRunnerTestHelper.rowsCount,
-            new LongSumAggregatorFactory("idx", null, "-index + 100"),
-            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
+    subquery = new GroupByQuery.Builder(subquery)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn("expr", "-index + 100")
         )
-    );
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "expr"),
+                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
+            )
+        ).build();
     query = (GroupByQuery) query.withDataSource(new QueryDataSource(subquery));
 
     expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
@@ -4196,6 +4238,11 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByTimeExtractionNamedUnderUnderTime()
   {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
+    );
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -4228,28 +4275,16 @@ public class GroupByQueryRunnerTest
         )
         .setLimitSpec(new DefaultLimitSpec(ImmutableList.<OrderByColumnSpec>of(), 1))
         .build();
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "1970-01-01",
-            "__time",
-            "Friday",
-            "market",
-            "spot",
-            "index",
-            13219.574157714844,
-            "rows",
-            117L,
-            "addRowsIndexConstant",
-            13337.574157714844
-        )
-    );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
   public void testGroupByWithUnderUnderTimeAsDimensionNameWithHavingAndLimit()
   {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
+    );
+
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -4277,16 +4312,6 @@ public class GroupByQueryRunnerTest
             )
         )
         .build();
-
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "__time", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "__time", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "__time", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "__time", "automotive", "rows", 1L, "idx", 147L)
-    );
-
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -5139,14 +5164,44 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testSubqueryWithOuterVirtualColumns()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setVirtualColumns(new ExpressionVirtualColumn("expr", "1"))
+        .setDimensions(Lists.<DimensionSpec>newArrayList())
+        .setAggregatorSpecs(ImmutableList.<AggregatorFactory>of(new LongSumAggregatorFactory("count", "expr")))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "count", 18L)
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testSubqueryWithOuterCardinalityAggregator()
   {
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market"),
-                                                         new DefaultDimensionSpec("quality", "quality")))
+        .setDimensions(Lists.<DimensionSpec>newArrayList(
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("quality", "quality")
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -6908,7 +6963,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Assert.assertEquals(
+    assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),
@@ -7172,7 +7227,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Assert.assertEquals(
+    assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),

@@ -28,7 +28,7 @@ import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -104,7 +104,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(QueryGranularities.DAY)
+                                            .withQueryGranularity(Granularity.DAY)
                                             .withMetrics(METRIC_AGGS)
                                             .withDimensionsSpec(
                                                 new DimensionsSpec(
@@ -272,7 +272,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       IncrementalIndex first = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularity.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -296,7 +296,7 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularity.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -320,7 +320,7 @@ public class IndexMergerV9WithSpatialIndexTest
       );
       IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularities.DAY)
+                                              .withQueryGranularity(Granularity.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -525,7 +525,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularity.ALL)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -579,7 +579,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularity.ALL)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -632,7 +632,7 @@ public class IndexMergerV9WithSpatialIndexTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularities.DAY)
+                                  .granularity(Granularity.DAY)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(

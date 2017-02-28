@@ -45,7 +45,6 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -66,9 +65,9 @@ import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.indexing.test.TestDataSegmentPusher;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.metadata.EntryExistsException;
@@ -806,8 +805,8 @@ public class RealtimeIndexTaskTest
             directory,
             task1.getId(),
             task1.getDataSource(),
-            Granularity.DAY.truncate(now),
-            Granularity.DAY.increment(Granularity.DAY.truncate(now))
+            Granularity.DAY.bucketStart(now),
+            Granularity.DAY.bucketEnd(now)
         )
     );
 
@@ -889,7 +888,7 @@ public class RealtimeIndexTaskTest
         "test_ds",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
+        new UniformGranularitySpec(Granularity.DAY, Granularity.NONE, null),
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -1079,7 +1078,7 @@ public class RealtimeIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory(metric, metric)
                                       )
-                                  ).granularity(QueryGranularities.ALL)
+                                  ).granularity(Granularity.ALL)
                                   .intervals("2000/3000")
                                   .build();
 

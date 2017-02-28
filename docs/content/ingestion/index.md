@@ -239,7 +239,8 @@ For example, the following `dimensionsSpec` section from a `dataSchema` ingests 
 
 ## GranularitySpec
 
-The default granularity spec is `uniform`.
+The default granularity spec is `uniform`, and can be changed by setting the `type` field.
+Currently, `uniform` and `arbitrary` types are supported.
 
 ### Uniform Granularity Spec
 
@@ -247,12 +248,10 @@ This spec is used to generated segments with uniform intervals.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | string | The type of granularity spec. | no (default == 'uniform') |
 | segmentGranularity | string | The granularity to create segments at. | no (default == 'DAY') |
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
-| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for Hadoop ingestion, no otherwise |
-| timezone | string | The timezone to represent the interval offsets in. Only valid if intervals are explicitly specified for batch ingestion. Will not be valid for kafka based ingestion. | no (default == 'UTC')
+| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
 
 ### Arbitrary Granularity Spec
 
@@ -260,11 +259,9 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | string | The type of granularity spec. | no (default == 'uniform') |
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
 | intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
-| timezone | string | The timezone to represent the interval offsets in. Only valid if intervals are explicitly specified for batch ingestion. Will not be valid for kafka based ingestion. | no (default == 'UTC')
 
 # IO Config
 

@@ -22,10 +22,23 @@ package io.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 
+import java.util.concurrent.ExecutorService;
+
 /**
 */
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
+  /**
+   * Returns the given query is cacheable or not.
+   * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
+   *
+   * @param query            the query to be cached
+   * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} will be
+   *                         called on the cached by-segment results
+   * @return true if the query is cacheable, otherwise false.
+   */
+  boolean isCacheable(QueryType query, boolean willMergeRunners);
+
   /**
    * Computes the cache key for the given query
    *

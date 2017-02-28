@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
@@ -71,6 +72,12 @@ public class FieldAccessPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public FieldAccessPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @Override

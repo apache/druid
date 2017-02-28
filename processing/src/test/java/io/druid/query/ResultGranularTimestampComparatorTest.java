@@ -19,8 +19,7 @@
 
 package io.druid.query;
 
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -56,7 +55,7 @@ public class ResultGranularTimestampComparatorTest
     Result<Object> r1 = new Result<Object>(time, null);
     Result<Object> r2 = new Result<Object>(time.plusYears(5), null);
 
-    Assert.assertEquals(ResultGranularTimestampComparator.create(QueryGranularities.ALL, descending).compare(r1, r2), 0);
+    Assert.assertEquals(ResultGranularTimestampComparator.create(Granularity.ALL, descending).compare(r1, r2), 0);
   }
 
   @Test
@@ -67,7 +66,7 @@ public class ResultGranularTimestampComparatorTest
     Result<Object> greater = new Result<Object>(time.plusHours(25), null);
     Result<Object> less = new Result<Object>(time.minusHours(1), null);
 
-    QueryGranularity day = QueryGranularities.DAY;
+    Granularity day = Granularity.DAY;
     Assert.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, same), 0);
     Assert.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, greater), descending ? 1 : -1);
     Assert.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, less), descending ? -1 : 1);
@@ -81,7 +80,7 @@ public class ResultGranularTimestampComparatorTest
     Result<Object> greater = new Result<Object>(time.plusHours(1), null);
     Result<Object> less = new Result<Object>(time.minusHours(1), null);
 
-    QueryGranularity hour = QueryGranularities.HOUR;
+    Granularity hour = Granularity.HOUR;
     Assert.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, same), 0);
     Assert.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, greater), descending ? 1 : -1);
     Assert.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, less), descending ? -1 : 1);

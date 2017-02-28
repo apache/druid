@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
+import io.druid.query.Queries;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 
@@ -98,6 +100,12 @@ public class LongGreatestPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public LongGreatestPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return new LongGreatestPostAggregator(name, Queries.decoratePostAggregators(fields, aggregators));
   }
 
   @JsonProperty

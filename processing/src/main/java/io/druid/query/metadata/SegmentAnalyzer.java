@@ -27,7 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.common.utils.StringUtils;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
@@ -253,7 +253,7 @@ public class SegmentAnalyzer
               null,
               new Interval(start, end),
               VirtualColumns.EMPTY,
-              QueryGranularities.ALL,
+              Granularity.ALL,
               false
           );
 

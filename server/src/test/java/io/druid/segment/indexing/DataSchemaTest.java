@@ -29,7 +29,8 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.DurationGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -74,7 +75,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(Granularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
 
@@ -106,7 +107,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(Granularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
 
@@ -138,7 +139,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(Granularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
     schema.getParser();
@@ -167,7 +168,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric2", "col2"),
             new DoubleSumAggregatorFactory("metric1", "col3"),
         },
-        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(Granularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
     schema.getParser();
@@ -249,7 +250,7 @@ public class DataSchemaTest
     );
     Assert.assertEquals(
         actual.getGranularitySpec(),
-        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015")))
+        new ArbitraryGranularitySpec(new DurationGranularity(86400000, null), ImmutableList.of(Interval.parse("2014/2015")))
     );
   }
 }
