@@ -131,8 +131,9 @@ public final class LifecycleLock
     {
       try {
         // see tryAcquireShared()
-        if (!tryAcquireSharedNanos(1, timeNanos))
+        if (!tryAcquireSharedNanos(1, timeNanos)) {
           return false;
+        }
       }
       catch (InterruptedException e) {
         throw new RuntimeException(e);
