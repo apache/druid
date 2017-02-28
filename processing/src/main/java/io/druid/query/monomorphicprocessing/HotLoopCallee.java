@@ -35,8 +35,9 @@ public interface HotLoopCallee
    *     c. Objects, which don't always have a specific class in runtime. For example, a field of type {@link
    *        java.util.Set} could be {@link java.util.HashSet} or {@link java.util.TreeSet} in runtime, depending on how
    *        this instance (the instance on which inspectRuntimeShape() is called) is configured.
-   *     d. Arrays of objects, meeting conditions a, b or c.
+   *     d. ByteBuffer or similar objects, where byte order matters
    *     e. boolean flags, affecting branch taking
+   *     f. Arrays of objects, meeting conditions any of conditions a-e.
    */
   void inspectRuntimeShape(RuntimeShapeInspector inspector);
 }
