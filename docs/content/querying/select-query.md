@@ -179,3 +179,14 @@ Note that in the second query, an offset is specified and that it is 1 greater t
     "pagingSpec":{"pagingIdentifiers": {}, "threshold":5, "fromNext": true}
   }
 ```
+
+Note that specifying the `fromNext` option in the `pagingSpec` overrides the default value set by `druid.query.select.enableFromNextDefault` in the server configuration. See [Server configuration](#server-configuration) for more details.
+
+
+#### Server configuration
+
+The following runtime properties apply to select queries:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.select.enableFromNextDefault`|If the `fromNext` property in a query's `pagingSpec` is left unspecified, the system will use the value of this property as the default value for `fromNext`.|true|

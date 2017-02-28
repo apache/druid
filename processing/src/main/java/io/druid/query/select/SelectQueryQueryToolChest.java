@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -77,15 +78,19 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       };
 
   private final ObjectMapper jsonMapper;
-
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final Supplier<SelectQueryConfig> configSupplier;
 
   @Inject
-  public SelectQueryQueryToolChest(ObjectMapper jsonMapper,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
+  public SelectQueryQueryToolChest(
+      ObjectMapper jsonMapper,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      Supplier<SelectQueryConfig> configSupplier
+  )
   {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.configSupplier = configSupplier;
   }
 
   @Override
@@ -197,13 +202,15 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
+        final boolean defaultFromNext = configSupplier.get().getEnableFromNextDefault();
+
         final byte[] virtualColumnsCacheKey = query.getVirtualColumns().getCacheKey();
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1
                 + granularityBytes.length
                 + filterBytes.length
-                + query.getPagingSpec().getCacheKey().length
+                + query.getPagingSpec().getCacheKey(defaultFromNext).length
                 + dimensionsBytesSize
                 + metricBytesSize
                 + virtualColumnsCacheKey.length
@@ -211,7 +218,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             .put(SELECT_QUERY)
             .put(granularityBytes)
             .put(filterBytes)
-            .put(query.getPagingSpec().getCacheKey());
+            .put(query.getPagingSpec().getCacheKey(defaultFromNext));
 
         for (byte[] dimensionsByte : dimensionsBytes) {
           queryCacheKey.put(dimensionsByte);

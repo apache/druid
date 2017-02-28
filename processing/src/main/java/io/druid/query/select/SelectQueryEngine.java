@@ -21,9 +21,11 @@ package io.druid.query.select;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -158,6 +160,16 @@ public class SelectQueryEngine
     }
   }
 
+  private final Supplier<SelectQueryConfig> configSupplier;
+
+  @Inject
+  public SelectQueryEngine(
+      Supplier<SelectQueryConfig> configSupplier
+  )
+  {
+    this.configSupplier = configSupplier;
+  }
+
   public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
@@ -231,7 +243,8 @@ public class SelectQueryEngine
               builder.addMetric(metric);
             }
 
-            final PagingOffset offset = query.getPagingOffset(segmentId);
+            final boolean defaultFromNext = configSupplier.get().getEnableFromNextDefault();
+            final PagingOffset offset = query.getPagingOffset(segmentId, defaultFromNext);
 
             cursor.advanceTo(offset.startDelta());
 

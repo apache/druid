@@ -58,13 +58,13 @@ public class PagingSpec
 
   private final Map<String, Integer> pagingIdentifiers;
   private final int threshold;
-  private final boolean fromNext;
+  private final Boolean fromNext;
 
   @JsonCreator
   public PagingSpec(
       @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
       @JsonProperty("threshold") int threshold,
-      @JsonProperty("fromNext") boolean fromNext
+      @JsonProperty("fromNext") Boolean fromNext
   )
   {
     this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
@@ -74,7 +74,7 @@ public class PagingSpec
 
   public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold)
   {
-    this(pagingIdentifiers, threshold, false);
+    this(pagingIdentifiers, threshold, null);
   }
 
   @JsonProperty
@@ -90,12 +90,12 @@ public class PagingSpec
   }
 
   @JsonProperty
-  public boolean isFromNext()
+  public Boolean isFromNext()
   {
     return fromNext;
   }
 
-  public byte[] getCacheKey()
+  public byte[] getCacheKey(boolean defaultFromNext)
   {
     final byte[][] pagingKeys = new byte[pagingIdentifiers.size()][];
     final byte[][] pagingValues = new byte[pagingIdentifiers.size()][];
@@ -124,17 +124,17 @@ public class PagingSpec
     }
 
     queryCacheKey.put(thresholdBytes);
-    queryCacheKey.put(isFromNext() ? (byte) 0x01 : 0x00);
+    queryCacheKey.put(shouldApplyFromNext(defaultFromNext) ? (byte) 0x01 : 0x00);
 
     return queryCacheKey.array();
   }
 
-  public PagingOffset getOffset(String identifier, boolean descending)
+  public PagingOffset getOffset(String identifier, boolean descending, boolean defaultFromNext)
   {
     Integer offset = pagingIdentifiers.get(identifier);
     if (offset == null) {
       offset = PagingOffset.toOffset(0, descending);
-    } else if (fromNext) {
+    } else if (shouldApplyFromNext(defaultFromNext)) {
       offset = descending ? offset - 1 : offset + 1;
     }
     return PagingOffset.of(offset, threshold);
@@ -182,5 +182,10 @@ public class PagingSpec
            ", threshold=" + threshold +
            ", fromNext=" + fromNext +
            '}';
+  }
+
+  private boolean shouldApplyFromNext(boolean defaultFromNext)
+  {
+    return fromNext == null ? defaultFromNext : fromNext;
   }
 }

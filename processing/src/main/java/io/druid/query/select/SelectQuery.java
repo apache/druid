@@ -139,9 +139,9 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return virtualColumns;
   }
 
-  public PagingOffset getPagingOffset(String identifier)
+  public PagingOffset getPagingOffset(String identifier, boolean defaultFromNext)
   {
-    return pagingSpec.getOffset(identifier, isDescending());
+    return pagingSpec.getOffset(identifier, isDescending(), defaultFromNext);
   }
 
   public SelectQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
