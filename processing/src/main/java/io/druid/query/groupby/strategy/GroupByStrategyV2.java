@@ -37,6 +37,7 @@ import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -116,7 +117,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     if (!timestampStringFromContext.isEmpty()) {
       return new DateTime(Long.parseLong(timestampStringFromContext));
-    } else if (Granularity.ALL.equals(gran)) {
+    } else if (Granularities.ALL.equals(gran)) {
       final long timeStart = query.getIntervals().get(0).getStartMillis();
       return gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStart();
     } else {

@@ -32,6 +32,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -69,7 +70,7 @@ public class GroupByQueryHelper
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
     long granTimeStart = timeStart;
-    if (!(Granularity.ALL.equals(gran))) {
+    if (!(Granularities.ALL.equals(gran))) {
       granTimeStart = gran.bucketStart(new DateTime(timeStart)).getMillis();
     }
 

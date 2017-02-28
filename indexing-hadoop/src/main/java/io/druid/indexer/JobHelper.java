@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
-
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;

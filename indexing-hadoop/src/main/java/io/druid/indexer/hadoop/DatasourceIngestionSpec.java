@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.common.utils.JodaUtils;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.filter.DimFilter;
 import io.druid.timeline.DataSegment;
@@ -76,7 +77,7 @@ public class DatasourceIngestionSpec
     this.segments = segments;
 
     this.filter = filter;
-    this.granularity = granularity == null ? Granularity.NONE : granularity;
+    this.granularity = granularity == null ? Granularities.NONE : granularity;
 
     this.dimensions = dimensions;
     this.metrics = metrics;

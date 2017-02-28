@@ -34,6 +34,7 @@ import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -354,7 +355,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Comparator<Row> getTimeComparator(boolean granular)
   {
-    if (Granularity.ALL.equals(granularity)) {
+    if (Granularities.ALL.equals(granularity)) {
       return null;
     } else if (granular) {
       return new Comparator<Row>()

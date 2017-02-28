@@ -31,10 +31,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
-
 import io.druid.jackson.CommaListJoinDeserializer;
 import io.druid.jackson.CommaListJoinSerializer;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -288,8 +287,8 @@ public class DataSegment implements Comparable<DataSegment>
       {
         int retVal;
 
-        DateTime lhsMonth = Granularity.MONTH.bucketStart(lhs.getInterval().getStart());
-        DateTime rhsMonth = Granularity.MONTH.bucketStart(rhs.getInterval().getStart());
+        DateTime lhsMonth = Granularities.MONTH.bucketStart(lhs.getInterval().getStart());
+        DateTime rhsMonth = Granularities.MONTH.bucketStart(rhs.getInterval().getStart());
 
         retVal = lhsMonth.compareTo(rhsMonth);
 
