@@ -573,7 +573,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     class StringIndexerObjectColumnSelector implements ObjectColumnSelector<String>
     {
-
       @Override
       public Class<String> classOfObject()
       {

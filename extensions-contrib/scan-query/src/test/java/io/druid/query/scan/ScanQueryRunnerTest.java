@@ -144,7 +144,6 @@ public class ScanQueryRunnerTest
         "indexMin",
         "indexMaxPlusTen",
         "quality_uniques"
-
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
