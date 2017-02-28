@@ -172,6 +172,7 @@ public class CalciteTests
                     public int getNumMergeBuffers()
                     {
                       // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+                      // Two buffers for the broker and one for the queryable
                       return 3;
                     }
                   }

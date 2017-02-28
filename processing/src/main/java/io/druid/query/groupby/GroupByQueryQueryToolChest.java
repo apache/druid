@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -32,21 +31,19 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularity;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -54,15 +51,16 @@ import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DimFilter;
+import io.druid.query.groupby.resource.GroupByQueryResource;
+import io.druid.query.groupby.strategy.GroupByStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -85,22 +83,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   };
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
-  private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByStrategySelector strategySelector;
-  private final StupidPool<ByteBuffer> bufferPool;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
 
   @Inject
   public GroupByQueryQueryToolChest(
-      Supplier<GroupByQueryConfig> configSupplier,
       GroupByStrategySelector strategySelector,
-      @Global StupidPool<ByteBuffer> bufferPool,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this.configSupplier = configSupplier;
     this.strategySelector = strategySelector;
-    this.bufferPool = bufferPool;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
@@ -117,7 +109,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
 
         if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
-          return mergeGroupByResults(
+          return initAndMergeGroupByResults(
               (GroupByQuery) query,
               runner,
               responseContext
@@ -128,8 +120,31 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(
+  private Sequence<Row> initAndMergeGroupByResults(
       final GroupByQuery query,
+      QueryRunner<Row> runner,
+      Map<String, Object> context
+  )
+  {
+    final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
+    final GroupByQueryResource resource = groupByStrategy.prepareResource(query, false);
+
+    return Sequences.withBaggage(
+        mergeGroupByResults(
+            groupByStrategy,
+            query,
+            resource,
+            runner,
+            context
+        ),
+        resource
+    );
+  }
+
+  private Sequence<Row> mergeGroupByResults(
+      GroupByStrategy groupByStrategy,
+      final GroupByQuery query,
+      GroupByQueryResource resource,
       QueryRunner<Row> runner,
       Map<String, Object> context
   )
@@ -162,6 +177,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       final Sequence<Row> subqueryResult = mergeGroupByResults(
+          groupByStrategy,
           subquery.withOverriddenContext(
               ImmutableMap.<String, Object>of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
@@ -170,6 +186,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   false
               )
           ),
+          resource,
           runner,
           context
       );
@@ -187,9 +204,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         finalizingResults = subqueryResult;
       }
 
-      return strategySelector.strategize(query).processSubqueryResult(subquery, query, finalizingResults);
+      return groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults);
     } else {
-      return strategySelector.strategize(query).mergeResults(runner, query, context);
+      return groupByStrategy.mergeResults(runner, query, context);
     }
   }
 
@@ -352,49 +369,23 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<DimensionSpec> dims = query.getDimensions();
 
+      @Override
+      public boolean isCacheable(GroupByQuery query, boolean willMergeRunners)
+      {
+        return strategySelector.strategize(query).isCacheable(willMergeRunners);
+      }
 
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
-        final DimFilter dimFilter = query.getDimFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
-        final byte[][] dimensionsBytes = new byte[query.getDimensions().size()][];
-        int dimensionsBytesSize = 0;
-        int index = 0;
-        for (DimensionSpec dimension : query.getDimensions()) {
-          dimensionsBytes[index] = dimension.getCacheKey();
-          dimensionsBytesSize += dimensionsBytes[index].length;
-          ++index;
-        }
-        final byte[] havingBytes = query.getHavingSpec() == null ? new byte[]{} : query.getHavingSpec().getCacheKey();
-        final byte[] limitBytes = query.getLimitSpec().getCacheKey();
-
-        ByteBuffer buffer = ByteBuffer
-            .allocate(
-                2
-                + granularityBytes.length
-                + filterBytes.length
-                + aggregatorBytes.length
-                + dimensionsBytesSize
-                + havingBytes.length
-                + limitBytes.length
-            )
-            .put(GROUPBY_QUERY)
-            .put(CACHE_STRATEGY_VERSION)
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(aggregatorBytes);
-
-        for (byte[] dimensionsByte : dimensionsBytes) {
-          buffer.put(dimensionsByte);
-        }
-
-        return buffer
-            .put(havingBytes)
-            .put(limitBytes)
-            .array();
+        return new CacheKeyBuilder(GROUPBY_QUERY)
+            .appendByte(CACHE_STRATEGY_VERSION)
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimFilter())
+            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
+            .appendCacheablesIgnoringOrder(query.getDimensions())
+            .appendCacheable(query.getVirtualColumns())
+            .build();
       }
 
       @Override
@@ -435,7 +426,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         return new Function<Object, Row>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Row apply(Object input)

@@ -26,6 +26,7 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
@@ -34,7 +35,6 @@ import java.io.OutputStream;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializer
@@ -131,13 +131,11 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    try (InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream input = flattener.combineStreams().getInput()) {
+    try (InputStream meta = ioPeon.makeInputStream(metaFile)) {
       ByteStreams.copy(Channels.newChannel(meta), channel);
-      final ReadableByteChannel from = Channels.newChannel(input);
-      ByteStreams.copy(from, channel);
+      flattener.writeToChannel(channel, smoosher);
     }
   }
 }

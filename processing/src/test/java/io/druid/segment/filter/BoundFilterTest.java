@@ -355,6 +355,20 @@ public class BoundFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testNumericMatchVirtualColumn()
+  {
+    assertFilterMatches(
+        new BoundDimFilter("expr", "1", "2", false, false, false, null, StringComparators.NUMERIC),
+        ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter("expr", "2", "3", false, false, false, null, StringComparators.NUMERIC),
+        ImmutableList.<String>of()
+    );
+  }
+
+  @Test
   public void testNumericMatchExactlySingleValue()
   {
     assertFilterMatches(
@@ -413,10 +427,10 @@ public class BoundFilterTest extends BaseFilterTest
   public void testMatchWithExtractionFn()
   {
     String extractionJsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     String nullJsFn = "function(str) { return null; }";
-    ExtractionFn makeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getDefault());
+    ExtractionFn makeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     assertFilterMatches(
         new BoundDimFilter("dim0", "", "", false, false, false, makeNullFn, StringComparators.LEXICOGRAPHIC),

@@ -26,12 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.client.indexing.ClientAppendQuery;
 import io.druid.client.indexing.ClientKillQuery;
 import io.druid.client.indexing.ClientMergeQuery;
-import io.druid.granularity.QueryGranularities;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -137,6 +136,25 @@ public class TaskSerdeTest
 
     Assert.assertEquals(null, tuningConfig.getTargetPartitionSize());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":-1}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertEquals(null, tuningConfig.getNumShards());
+    Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertEquals(null, tuningConfig.getNumShards());
+    Assert.assertEquals(
+        IndexTask.IndexTuningConfig.DEFAULT_TARGET_PARTITION_SIZE,
+        (int) tuningConfig.getTargetPartitionSize()
+    );
   }
 
   @Test
@@ -417,7 +435,7 @@ public class TaskSerdeTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+                new UniformGranularitySpec(Granularity.HOUR, Granularity.NONE, null),
                 jsonMapper
             ),
             new RealtimeIOConfig(

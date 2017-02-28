@@ -53,6 +53,7 @@ import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -183,6 +184,7 @@ public class OverlordTest
             announcementLatch.countDown();
           }
         },
+        new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
         EasyMock.createNiceMock(OverlordHelperManager.class)

@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -112,7 +112,7 @@ public class DataSourceMetadataQueryTest
   public void testMaxIngestedEventTime() throws Exception
   {
     final IncrementalIndex rtIndex = new OnheapIncrementalIndex(
-        0L, QueryGranularities.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000
+        0L, Granularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000
     );
     ;
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(

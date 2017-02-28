@@ -32,8 +32,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.MapUtils;
@@ -171,7 +170,7 @@ public class ServerManagerTest
   public void testSimpleGet()
   {
     Future future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         "test",
         new Interval("P1d/2011-04-01"),
         ImmutableList.<Pair<String, Interval>>of(
@@ -182,7 +181,7 @@ public class ServerManagerTest
 
 
     future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         "test", new Interval("P2d/2011-04-02"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("1", new Interval("P1d/2011-04-01")),
@@ -199,7 +198,7 @@ public class ServerManagerTest
     final Interval interval = new Interval("2011-04-01/2011-04-02");
 
     Future future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         dataSouce, interval,
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("2", interval)
@@ -209,7 +208,7 @@ public class ServerManagerTest
 
     dropQueryable(dataSouce, "2", interval);
     future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         dataSouce, interval,
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("1", interval)
@@ -224,7 +223,7 @@ public class ServerManagerTest
     loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         "test", new Interval("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
@@ -236,7 +235,7 @@ public class ServerManagerTest
     dropQueryable("test", "1", new Interval("2011-04-04/2011-04-05"));
 
     future = assertQueryable(
-        QueryGranularities.HOUR,
+        Granularity.HOUR,
         "test", new Interval("2011-04-04/2011-04-04T06"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("2", new Interval("2011-04-04T00/2011-04-04T01")),
@@ -249,7 +248,7 @@ public class ServerManagerTest
     waitForTestVerificationAndCleanup(future);
 
     future = assertQueryable(
-        QueryGranularities.HOUR,
+        Granularity.HOUR,
         "test", new Interval("2011-04-04/2011-04-04T03"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("2", new Interval("2011-04-04T00/2011-04-04T01")),
@@ -260,7 +259,7 @@ public class ServerManagerTest
     waitForTestVerificationAndCleanup(future);
 
     future = assertQueryable(
-        QueryGranularities.HOUR,
+        Granularity.HOUR,
         "test", new Interval("2011-04-04T04/2011-04-04T06"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("2", new Interval("2011-04-04T04/2011-04-04T05")),
@@ -276,7 +275,7 @@ public class ServerManagerTest
     loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         "test", new Interval("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
@@ -315,7 +314,7 @@ public class ServerManagerTest
     loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         "test", new Interval("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
@@ -358,7 +357,7 @@ public class ServerManagerTest
     loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
 
     Future future = assertQueryable(
-        QueryGranularities.DAY,
+        Granularity.DAY,
         "test", new Interval("2011-04-04/2011-04-06"),
         ImmutableList.<Pair<String, Interval>>of(
             new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
@@ -411,7 +410,7 @@ public class ServerManagerTest
   }
 
   private <T> Future assertQueryable(
-      QueryGranularity granularity,
+      Granularity granularity,
       String dataSource,
       Interval interval,
       List<Pair<String, Interval>> expected

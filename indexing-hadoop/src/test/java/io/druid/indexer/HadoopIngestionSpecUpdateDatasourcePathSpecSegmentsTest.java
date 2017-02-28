@@ -32,7 +32,7 @@ import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.path.StaticPathSpec;
 import io.druid.indexer.path.UsedSegmentLister;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;

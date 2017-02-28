@@ -20,10 +20,17 @@
 package io.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.IAE;
 import org.joda.time.Period;
+
+import java.util.Map;
 
 public class PlannerConfig
 {
+  public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
+  public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_KEY_USE_FALLBACK = "useFallback";
+
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
 
@@ -65,7 +72,7 @@ public class PlannerConfig
 
   public int getMaxQueryCount()
   {
-    return maxTopNLimit;
+    return maxQueryCount;
   }
 
   public int getSelectThreshold()
@@ -88,8 +95,56 @@ public class PlannerConfig
     return useFallback;
   }
 
+  public PlannerConfig withOverrides(final Map<String, Object> context)
+  {
+    if (context == null) {
+      return this;
+    }
+
+    final PlannerConfig newConfig = new PlannerConfig();
+    newConfig.metadataRefreshPeriod = getMetadataRefreshPeriod();
+    newConfig.maxSemiJoinRowsInMemory = getMaxSemiJoinRowsInMemory();
+    newConfig.maxTopNLimit = getMaxTopNLimit();
+    newConfig.maxQueryCount = getMaxQueryCount();
+    newConfig.selectThreshold = getSelectThreshold();
+    newConfig.useApproximateCountDistinct = getContextBoolean(
+        context,
+        CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
+        isUseApproximateCountDistinct()
+    );
+    newConfig.useApproximateTopN = getContextBoolean(
+        context,
+        CTX_KEY_USE_APPROXIMATE_TOPN,
+        isUseApproximateTopN()
+    );
+    newConfig.useFallback = getContextBoolean(
+        context,
+        CTX_KEY_USE_FALLBACK,
+        isUseFallback()
+    );
+    return newConfig;
+  }
+
+  private static boolean getContextBoolean(
+      final Map<String, Object> context,
+      final String parameter,
+      final boolean defaultValue
+  )
+  {
+    final Object value = context.get(parameter);
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return Boolean.parseBoolean((String) value);
+    } else if (value instanceof Boolean) {
+      return (Boolean) value;
+    } else {
+      throw new IAE("Expected parameter[%s] to be boolean", parameter);
+    }
+  }
+
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -98,7 +153,7 @@ public class PlannerConfig
       return false;
     }
 
-    PlannerConfig that = (PlannerConfig) o;
+    final PlannerConfig that = (PlannerConfig) o;
 
     if (maxSemiJoinRowsInMemory != that.maxSemiJoinRowsInMemory) {
       return false;

@@ -26,14 +26,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -42,11 +41,10 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.filter.DimFilter;
+import io.druid.query.cache.CacheKeyBuilder;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -130,24 +128,22 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
       @Override
+      public boolean isCacheable(TimeseriesQuery query, boolean willMergeRunners)
+      {
+        return true;
+      }
+
+      @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
       {
-        final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
-        final byte[] granularityBytes = query.getGranularity().cacheKey();
-        final byte descending = query.isDescending() ? (byte) 1 : 0;
-        final byte skipEmptyBuckets = query.isSkipEmptyBuckets() ? (byte) 1 : 0;
-
-        return ByteBuffer
-            .allocate(3 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
-            .put(TIMESERIES_QUERY)
-            .put(descending)
-            .put(skipEmptyBuckets)
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(aggregatorBytes)
-            .array();
+        return new CacheKeyBuilder(TIMESERIES_QUERY)
+            .appendBoolean(query.isDescending())
+            .appendBoolean(query.isSkipEmptyBuckets())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
+            .build();
       }
 
       @Override
@@ -182,7 +178,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         return new Function<Object, Result<TimeseriesResultValue>>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Result<TimeseriesResultValue> apply(@Nullable Object input)

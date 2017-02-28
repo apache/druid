@@ -23,8 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
 
-import io.druid.granularity.QueryGranularity;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularity;
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -70,9 +69,7 @@ public interface GranularitySpec
 
   boolean isRollup();
 
-  QueryGranularity getQueryGranularity();
-
-  String getTimezone();
+  public Granularity getQueryGranularity();
 
   GranularitySpec withIntervals(List<Interval> inputIntervals);
 }

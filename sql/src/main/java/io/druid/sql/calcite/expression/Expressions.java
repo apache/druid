@@ -27,8 +27,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.math.expr.ExprType;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -36,8 +37,8 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -46,7 +47,11 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.Column;
 import io.druid.sql.calcite.aggregation.PostAggregatorFactory;
+import io.druid.sql.calcite.filtration.BoundRefKey;
+import io.druid.sql.calcite.filtration.Bounds;
 import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.planner.Calcites;
+import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
@@ -56,6 +61,9 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 
 import java.util.Calendar;
 import java.util.List;
@@ -138,22 +146,24 @@ public class Expressions
    * Translate a Calcite row-expression to a Druid row extraction. Note that this signature will probably need to
    * change once we support extractions from multiple columns.
    *
-   * @param rowOrder   order of fields in the Druid rows to be extracted from
-   * @param expression expression meant to be applied on top of the rows
+   * @param plannerContext SQL planner context
+   * @param rowOrder       order of fields in the Druid rows to be extracted from
+   * @param expression     expression meant to be applied on top of the rows
    *
    * @return RowExtraction or null if not possible
    */
   public static RowExtraction toRowExtraction(
+      final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
   )
   {
-    return EXPRESSION_CONVERTER.convert(rowOrder, expression);
+    return EXPRESSION_CONVERTER.convert(plannerContext, rowOrder, expression);
   }
 
   /**
    * Translate a Calcite row-expression to a Druid PostAggregator. One day, when possible, this could be folded
-   * into {@link #toRowExtraction(List, RexNode)}.
+   * into {@link #toRowExtraction(PlannerContext, List, RexNode)}.
    *
    * @param name                              name of the PostAggregator
    * @param rowOrder                          order of fields in the Druid rows to be extracted from
@@ -231,7 +241,7 @@ public class Expressions
 
   /**
    * Translate a row-expression to a Druid math expression. One day, when possible, this could be folded into
-   * {@link #toRowExtraction(List, RexNode)}.
+   * {@link #toRowExtraction(PlannerContext, List, RexNode)}.
    *
    * @param rowOrder   order of fields in the Druid rows to be extracted from
    * @param expression expression meant to be applied on top of the rows
@@ -330,12 +340,34 @@ public class Expressions
   }
 
   /**
+   * Translates "literal" (a TIMESTAMP or DATE literal) to milliseconds since the epoch using the provided
+   * session time zone.
+   *
+   * @param literal  TIMESTAMP or DATE literal
+   * @param timeZone session time zone
+   *
+   * @return milliseconds time
+   */
+  public static long toMillisLiteral(final RexNode literal, final DateTimeZone timeZone)
+  {
+    final SqlTypeName typeName = literal.getType().getSqlTypeName();
+    if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
+      throw new IAE("Expected TIMESTAMP or DATE literal but got[%s:%s]", literal.getKind(), typeName);
+    }
+
+    final Calendar calendar = (Calendar) RexLiteral.value(literal);
+    return Calcites.calciteTimestampToJoda(calendar.getTimeInMillis(), timeZone).getMillis();
+  }
+
+  /**
    * Translates "condition" to a Druid filter, or returns null if we cannot translate the condition.
    *
-   * @param rowSignature row signature of the dataSource to be filtered
-   * @param expression   Calcite row expression
+   * @param plannerContext planner context
+   * @param rowSignature   row signature of the dataSource to be filtered
+   * @param expression     Calcite row expression
    */
   public static DimFilter toFilter(
+      final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode expression
   )
@@ -345,7 +377,7 @@ public class Expressions
         || expression.getKind() == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
-        final DimFilter nextFilter = toFilter(rowSignature, rexNode);
+        final DimFilter nextFilter = toFilter(plannerContext, rowSignature, rexNode);
         if (nextFilter == null) {
           return null;
         }
@@ -362,7 +394,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(rowSignature, expression);
+      return toLeafFilter(plannerContext, rowSignature, expression);
     }
   }
 
@@ -370,10 +402,12 @@ public class Expressions
    * Translates "condition" to a Druid filter, assuming it does not contain any boolean expressions. Returns null
    * if we cannot translate the condition.
    *
-   * @param rowSignature row signature of the dataSource to be filtered
-   * @param expression   Calcite row expression
+   * @param plannerContext planner context
+   * @param rowSignature   row signature of the dataSource to be filtered
+   * @param expression     Calcite row expression
    */
   private static DimFilter toLeafFilter(
+      final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode expression
   )
@@ -388,7 +422,11 @@ public class Expressions
 
     if (kind == SqlKind.LIKE) {
       final List<RexNode> operands = ((RexCall) expression).getOperands();
-      final RowExtraction rex = EXPRESSION_CONVERTER.convert(rowSignature.getRowOrder(), operands.get(0));
+      final RowExtraction rex = EXPRESSION_CONVERTER.convert(
+          plannerContext,
+          rowSignature.getRowOrder(),
+          operands.get(0)
+      );
       if (rex == null || !rex.isFilterable(rowSignature)) {
         return null;
       }
@@ -424,7 +462,7 @@ public class Expressions
       }
 
       // lhs must be translatable to a RowExtraction to be filterable
-      final RowExtraction rex = EXPRESSION_CONVERTER.convert(rowSignature.getRowOrder(), lhs);
+      final RowExtraction rex = EXPRESSION_CONVERTER.convert(plannerContext, rowSignature.getRowOrder(), lhs);
       if (rex == null || !rex.isFilterable(rowSignature)) {
         return null;
       }
@@ -432,25 +470,45 @@ public class Expressions
       final String column = rex.getColumn();
       final ExtractionFn extractionFn = rex.getExtractionFn();
 
-      if (column.equals(Column.TIME_COLUMN_NAME) && ExtractionFns.toQueryGranularity(extractionFn) != null) {
-        // lhs is FLOOR(__time TO gran); convert to range
-        final QueryGranularity gran = ExtractionFns.toQueryGranularity(extractionFn);
-        final long rhsMillis = ((Calendar) RexLiteral.value(rhs)).getTimeInMillis();
-        if (gran.truncate(rhsMillis) != rhsMillis) {
-          // Nothing matches.
-          return Filtration.matchNothing();
-        } else {
-          // Match any __time within the granular bucket.
-          return new BoundDimFilter(
-              Column.TIME_COLUMN_NAME,
-              String.valueOf(gran.truncate(rhsMillis)),
-              String.valueOf(gran.next(gran.truncate(rhsMillis))),
-              false,
-              true,
-              null,
-              null,
-              StringComparators.NUMERIC
-          );
+      if (column.equals(Column.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
+        // Check if we can strip the extractionFn and convert the filter to a direct filter on __time.
+        // This allows potential conversion to query-level "intervals" later on, which is ideal for Druid queries.
+
+        final Granularity granularity = ExtractionFns.toQueryGranularity(extractionFn);
+        if (granularity != null) {
+          // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
+          final long rhsMillis = toMillisLiteral(rhs, plannerContext.getTimeZone());
+          final Interval rhsInterval = granularity.bucket(new DateTime(rhsMillis));
+
+          // Is rhs aligned on granularity boundaries?
+          final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
+
+          // Create a BoundRefKey that strips the extractionFn and compares __time as a number.
+          final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
+
+          if (kind == SqlKind.EQUALS) {
+            return rhsAligned
+                   ? Bounds.interval(boundRefKey, rhsInterval)
+                   : Filtration.matchNothing();
+          } else if (kind == SqlKind.NOT_EQUALS) {
+            return rhsAligned
+                   ? new NotDimFilter(Bounds.interval(boundRefKey, rhsInterval))
+                   : Filtration.matchEverything();
+          } else if ((!flip && kind == SqlKind.GREATER_THAN) || (flip && kind == SqlKind.LESS_THAN)) {
+            return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+          } else if ((!flip && kind == SqlKind.GREATER_THAN_OR_EQUAL) || (flip && kind == SqlKind.LESS_THAN_OR_EQUAL)) {
+            return rhsAligned
+                   ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
+                   : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+          } else if ((!flip && kind == SqlKind.LESS_THAN) || (flip && kind == SqlKind.GREATER_THAN)) {
+            return rhsAligned
+                   ? Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
+                   : Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+          } else if ((!flip && kind == SqlKind.LESS_THAN_OR_EQUAL) || (flip && kind == SqlKind.GREATER_THAN_OR_EQUAL)) {
+            return Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+          } else {
+            throw new IllegalStateException("WTF?! Shouldn't have got here...");
+          }
         }
       }
 
@@ -458,37 +516,37 @@ public class Expressions
       final RexLiteral rhsLiteral = (RexLiteral) rhs;
       if (SqlTypeName.NUMERIC_TYPES.contains(rhsLiteral.getTypeName())) {
         val = String.valueOf(RexLiteral.value(rhsLiteral));
-      } else if (rhsLiteral.getTypeName() == SqlTypeName.CHAR) {
+      } else if (SqlTypeName.CHAR_TYPES.contains(rhsLiteral.getTypeName())) {
         val = String.valueOf(RexLiteral.stringValue(rhsLiteral));
-      } else if (SqlTypeName.DATETIME_TYPES.contains(rhsLiteral.getTypeName())) {
-        val = String.valueOf(((Calendar) RexLiteral.value(rhsLiteral)).getTimeInMillis());
+      } else if (SqlTypeName.TIMESTAMP == rhsLiteral.getTypeName() || SqlTypeName.DATE == rhsLiteral.getTypeName()) {
+        val = String.valueOf(toMillisLiteral(rhsLiteral, plannerContext.getTimeZone()));
       } else {
-        // Hope for the best.
-        val = String.valueOf(RexLiteral.value(rhsLiteral));
+        // Don't know how to filter on this kind of literal.
+        return null;
       }
 
       // Numeric lhs needs a numeric comparison.
       final boolean lhsIsNumeric = SqlTypeName.NUMERIC_TYPES.contains(lhs.getType().getSqlTypeName())
-                                   || SqlTypeName.DATETIME_TYPES.contains(lhs.getType().getSqlTypeName());
+                                   || SqlTypeName.TIMESTAMP == lhs.getType().getSqlTypeName()
+                                   || SqlTypeName.DATE == lhs.getType().getSqlTypeName();
       final StringComparator comparator = lhsIsNumeric ? StringComparators.NUMERIC : StringComparators.LEXICOGRAPHIC;
 
+      final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
       final DimFilter filter;
 
       // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
       if (kind == SqlKind.EQUALS) {
-        filter = new BoundDimFilter(column, val, val, false, false, null, extractionFn, comparator);
+        filter = Bounds.equalTo(boundRefKey, val);
       } else if (kind == SqlKind.NOT_EQUALS) {
-        filter = new NotDimFilter(
-            new BoundDimFilter(column, val, val, false, false, null, extractionFn, comparator)
-        );
+        filter = new NotDimFilter(Bounds.equalTo(boundRefKey, val));
       } else if ((!flip && kind == SqlKind.GREATER_THAN) || (flip && kind == SqlKind.LESS_THAN)) {
-        filter = new BoundDimFilter(column, val, null, true, false, null, extractionFn, comparator);
+        filter = Bounds.greaterThan(boundRefKey, val);
       } else if ((!flip && kind == SqlKind.GREATER_THAN_OR_EQUAL) || (flip && kind == SqlKind.LESS_THAN_OR_EQUAL)) {
-        filter = new BoundDimFilter(column, val, null, false, false, null, extractionFn, comparator);
+        filter = Bounds.greaterThanOrEqualTo(boundRefKey, val);
       } else if ((!flip && kind == SqlKind.LESS_THAN) || (flip && kind == SqlKind.GREATER_THAN)) {
-        filter = new BoundDimFilter(column, null, val, false, true, null, extractionFn, comparator);
+        filter = Bounds.lessThan(boundRefKey, val);
       } else if ((!flip && kind == SqlKind.LESS_THAN_OR_EQUAL) || (flip && kind == SqlKind.GREATER_THAN_OR_EQUAL)) {
-        filter = new BoundDimFilter(column, null, val, false, false, null, extractionFn, comparator);
+        filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
       } else {
         throw new IllegalStateException("WTF?! Shouldn't have got here...");
       }

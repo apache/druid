@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.java.util.common.Cacheable;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -39,13 +40,13 @@ import java.util.List;
     @JsonSubTypes.Type(name = "inverted", value = InvertedTopNMetricSpec.class),
     @JsonSubTypes.Type(name = "dimension", value = DimensionTopNMetricSpec.class),
 })
-public interface TopNMetricSpec
+public interface TopNMetricSpec extends Cacheable
 {
-  public void verifyPreconditions(List<AggregatorFactory> aggregatorSpecs, List<PostAggregator> postAggregatorSpecs);
+  void verifyPreconditions(List<AggregatorFactory> aggregatorSpecs, List<PostAggregator> postAggregatorSpecs);
 
-  public Comparator getComparator(List<AggregatorFactory> aggregatorSpecs, List<PostAggregator> postAggregatorSpecs);
+  Comparator getComparator(List<AggregatorFactory> aggregatorSpecs, List<PostAggregator> postAggregatorSpecs);
 
-  public TopNResultBuilder getResultBuilder(
+  TopNResultBuilder getResultBuilder(
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
@@ -54,13 +55,11 @@ public interface TopNMetricSpec
       List<PostAggregator> postAggs
   );
 
-  public byte[] getCacheKey();
+  <T> TopNMetricSpecBuilder<T> configureOptimizer(TopNMetricSpecBuilder<T> builder);
 
-  public <T> TopNMetricSpecBuilder<T> configureOptimizer(TopNMetricSpecBuilder<T> builder);
+  void initTopNAlgorithmSelector(TopNAlgorithmSelector selector);
 
-  public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector);
+  String getMetricName(DimensionSpec dimSpec);
 
-  public String getMetricName(DimensionSpec dimSpec);
-
-  public boolean canBeOptimizedUnordered();
+  boolean canBeOptimizedUnordered();
 }

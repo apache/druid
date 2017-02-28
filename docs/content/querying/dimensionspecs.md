@@ -15,8 +15,17 @@ The following JSON fields can be used in a query to operate on dimension values.
 Returns dimension values as is and optionally renames the dimension.
 
 ```json
-{ "type" : "default", "dimension" : <dimension>, "outputName": <output_name> }
+{
+  "type" : "default",
+  "dimension" : <dimension>,
+  "outputName": <output_name>,
+  "outputType": <"STRING"|"LONG"|"FLOAT">
+}
 ```
+
+When specifying a DimensionSpec on a numeric column, the user should include the type of the column in the `outputType` field. If left unspecified, the `outputType` defaults to STRING.
+
+Please refer to the [Output Types](#output-types) section for more details.
 
 ### Extraction DimensionSpec
 
@@ -27,9 +36,14 @@ Returns dimension values transformed using the given [extraction function](#extr
   "type" : "extraction",
   "dimension" : <dimension>,
   "outputName" :  <output_name>,
+  "outputType": <"STRING"|"LONG"|"FLOAT">,
   "extractionFn" : <extraction_function>
 }
 ```
+
+`outputType` may also be specified in an ExtractionDimensionSpec to apply type conversion to results before merging. If left unspecified, the `outputType` defaults to STRING.
+
+Please refer to the [Output Types](#output-types) section for more details.
 
 ### Filtered DimensionSpecs
 
@@ -95,6 +109,21 @@ The second kind where it is not possible to pass at query time due to their size
   "name":"lookupName"
 }
 ```
+
+## Output Types
+
+The dimension specs provide an option to specify the output type of a column's values. This is necessary as it is possible for a column with given name to have different value types in different segments; results will be converted to the type specified by `outputType` before merging.
+
+Note that not all use cases for DimensionSpec currently support `outputType`, the table below shows which use cases support this option:
+
+|Query Type|Supported?|
+|--------|---------|
+|GroupBy (v1)|no|
+|GroupBy (v2)|yes|
+|TopN|yes|
+|Search|no|
+|Select|no|
+|Cardinality Aggregator|no|
 
 ## Extraction Functions
 
@@ -279,8 +308,7 @@ Example for the `__time` dimension:
 ```
 
 <div class="note info">
-Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines
-about using Druid's JavaScript functionality.
+JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
 
 ### Lookup extraction function

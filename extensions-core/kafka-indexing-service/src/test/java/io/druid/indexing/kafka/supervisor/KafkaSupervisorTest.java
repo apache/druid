@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -35,7 +34,6 @@ import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -49,6 +47,7 @@ import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.kafka.KafkaPartitions;
 import io.druid.indexing.kafka.KafkaTuningConfig;
 import io.druid.indexing.kafka.test.TestBroker;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
@@ -58,8 +57,8 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorReport;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.Granularity;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -1485,9 +1484,86 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal();
+    supervisor.resetInternal(null);
     verifyAll();
 
+  }
+
+  @Test
+  public void testResetDataSourceMetadata() throws Exception
+  {
+    supervisor = getSupervisor(1, 1, true, "PT1H", null);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    Capture<String> captureDataSource = EasyMock.newCapture();
+    Capture<DataSourceMetadata> captureDataSourceMetadata = EasyMock.newCapture();
+
+    KafkaDataSourceMetadata kafkaDataSourceMetadata = new KafkaDataSourceMetadata(new KafkaPartitions(
+        KAFKA_TOPIC,
+        ImmutableMap.of(0, 1000L, 1, 1000L, 2, 1000L)
+    ));
+
+    KafkaDataSourceMetadata resetMetadata = new KafkaDataSourceMetadata(new KafkaPartitions(
+        KAFKA_TOPIC,
+        ImmutableMap.of(1, 1000L, 2, 1000L)
+    ));
+
+    KafkaDataSourceMetadata expectedMetadata = new KafkaDataSourceMetadata(new KafkaPartitions(
+        KAFKA_TOPIC,
+        ImmutableMap.of(0, 1000L)
+    ));
+
+    reset(indexerMetadataStorageCoordinator);
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(kafkaDataSourceMetadata);
+    expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+        EasyMock.capture(captureDataSource),
+        EasyMock.capture(captureDataSourceMetadata)
+    )).andReturn(true);
+    replay(indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(resetMetadata);
+    verifyAll();
+
+    Assert.assertEquals(captureDataSource.getValue(), DATASOURCE);
+    Assert.assertEquals(captureDataSourceMetadata.getValue(), expectedMetadata);
+  }
+
+  @Test
+  public void testResetNoDataSourceMetadata() throws Exception
+  {
+    supervisor = getSupervisor(1, 1, true, "PT1H", null);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaDataSourceMetadata resetMetadata = new KafkaDataSourceMetadata(new KafkaPartitions(
+        KAFKA_TOPIC,
+        ImmutableMap.of(1, 1000L, 2, 1000L)
+    ));
+
+    reset(indexerMetadataStorageCoordinator);
+    // no DataSourceMetadata in metadata store
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null);
+    replay(indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(resetMetadata);
+    verifyAll();
   }
 
   @Test
@@ -1566,7 +1642,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskQueue.shutdown("id3");
     replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal();
+    supervisor.resetInternal(null);
     verifyAll();
   }
 
@@ -1674,7 +1750,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
             Granularity.HOUR,
-            QueryGranularities.NONE,
+            Granularity.NONE,
             ImmutableList.<Interval>of()
         ),
         objectMapper
@@ -1702,8 +1778,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.<String, String>of(),
             true,
             false,
-            minimumMessageTime,
-            null
+            minimumMessageTime
         ),
         ImmutableMap.<String, Object>of(),
         null

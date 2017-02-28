@@ -73,11 +73,13 @@ import io.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.indexing.overlord.supervisor.SupervisorResource;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.audit.AuditManagerProvider;
+import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
@@ -113,17 +115,25 @@ public class CliOverlord extends ServerRunnable
   @Override
   protected List<? extends Module> getModules()
   {
+    return getModules(true);
+  }
+
+  protected List<? extends Module> getModules(final boolean standalone)
+  {
     return ImmutableList.<Module>of(
         new Module()
         {
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant()
-                  .annotatedWith(Names.named("serviceName"))
-                  .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
+            if (standalone) {
+              binder.bindConstant()
+                    .annotatedWith(Names.named("serviceName"))
+                    .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
+            }
 
+            JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
 
@@ -146,6 +156,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
             binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskStorageQueryAdapter.class).in(LazySingleton.class);
+            binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 
@@ -158,14 +169,18 @@ public class CliOverlord extends ServerRunnable
                   .toProvider(AuditManagerProvider.class)
                   .in(ManageLifecycle.class);
 
-            binder.bind(RedirectFilter.class).in(LazySingleton.class);
-            binder.bind(RedirectInfo.class).to(OverlordRedirectInfo.class).in(LazySingleton.class);
+            if (standalone) {
+              binder.bind(RedirectFilter.class).in(LazySingleton.class);
+              binder.bind(RedirectInfo.class).to(OverlordRedirectInfo.class).in(LazySingleton.class);
+              binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
+            }
 
-            binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
 
-            LifecycleModule.register(binder, Server.class);
+            if (standalone) {
+              LifecycleModule.register(binder, Server.class);
+            }
           }
 
           private void configureTaskStorage(Binder binder)
@@ -274,7 +289,6 @@ public class CliOverlord extends ServerRunnable
           )
       );
       JettyServerInitUtils.addExtensionFilters(root, injector);
-      root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
 
       // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);
@@ -286,7 +300,12 @@ public class CliOverlord extends ServerRunnable
       root.addFilter(GuiceFilter.class, "/druid/*", null);
 
       HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
+      handlerList.setHandlers(
+          new Handler[]{
+              JettyServerInitUtils.getJettyRequestLogHandler(),
+              JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+          }
+      );
 
       server.setHandler(handlerList);
     }

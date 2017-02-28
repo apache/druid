@@ -21,6 +21,7 @@ package io.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 /**
  */
@@ -35,6 +36,18 @@ public class ColumnBuilder
   private Supplier<ComplexColumn> complexColumn = null;
   private Supplier<BitmapIndex> bitmapIndex = null;
   private Supplier<SpatialIndex> spatialIndex = null;
+  private SmooshedFileMapper fileMapper = null;
+
+  public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
+  {
+    this.fileMapper = fileMapper;
+    return this;
+  }
+
+  public SmooshedFileMapper getFileMapper()
+  {
+    return this.fileMapper;
+  }
 
   public ColumnBuilder setType(ValueType type)
   {

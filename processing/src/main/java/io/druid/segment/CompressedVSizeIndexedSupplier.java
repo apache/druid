@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
@@ -76,18 +77,20 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
     valueSupplier.writeToChannel(channel);
   }
 
-  public static CompressedVSizeIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedVSizeIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper fileMapper)
   {
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == version) {
       CompressedVSizeIntsIndexedSupplier offsetSupplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
           buffer,
-          order
+          order,
+          fileMapper
       );
       CompressedVSizeIntsIndexedSupplier valueSupplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
           buffer,
-          order
+          order,
+          fileMapper
       );
       return new CompressedVSizeIndexedSupplier(offsetSupplier, valueSupplier);
     }

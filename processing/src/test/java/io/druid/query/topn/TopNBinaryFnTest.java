@@ -22,7 +22,7 @@ package io.druid.query.topn;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -145,7 +145,7 @@ public class TopNBinaryFnTest
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
         TopNResultMerger.identity,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
         2,
@@ -208,7 +208,7 @@ public class TopNBinaryFnTest
     );
 
     Result<TopNResultValue> expected = new Result<TopNResultValue>(
-        new DateTime(QueryGranularities.DAY.truncate(currTime.getMillis())),
+        Granularity.DAY.bucketStart(currTime),
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
                 ImmutableMap.<String, Object>of(
@@ -227,7 +227,7 @@ public class TopNBinaryFnTest
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
         TopNResultMerger.identity,
-        QueryGranularities.DAY,
+        Granularity.DAY,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
         2,
@@ -272,7 +272,7 @@ public class TopNBinaryFnTest
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
         TopNResultMerger.identity,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
         2,
@@ -368,7 +368,7 @@ public class TopNBinaryFnTest
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
         TopNResultMerger.identity,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("addrowsindexconstant"),
         3,
@@ -450,7 +450,7 @@ public class TopNBinaryFnTest
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
         TopNResultMerger.identity,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
         2,
@@ -508,7 +508,7 @@ public class TopNBinaryFnTest
 
     Result<TopNResultValue> actual = new TopNBinaryFn(
         TopNResultMerger.identity,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         new DefaultDimensionSpec("INVALID_DIM_NAME", null),
         new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC),
         2,

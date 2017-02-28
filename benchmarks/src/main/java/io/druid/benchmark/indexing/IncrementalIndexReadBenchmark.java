@@ -20,14 +20,13 @@
 package io.druid.benchmark.indexing;
 
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
-
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -98,7 +97,7 @@ public class IncrementalIndexReadBenchmark
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
@@ -126,7 +125,7 @@ public class IncrementalIndexReadBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularity.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(rollup)
@@ -171,7 +170,7 @@ public class IncrementalIndexReadBenchmark
     DimFilter filter = new OrDimFilter(
         Arrays.asList(
             new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
-            new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getDefault()),
+            new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getEnabledInstance()),
             new RegexDimFilter("dimSequential", "X", null),
             new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
             new InDimFilter("dimSequential", Arrays.asList("X"), null)
@@ -204,7 +203,7 @@ public class IncrementalIndexReadBenchmark
         filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
-        QueryGranularities.ALL,
+        Granularity.ALL,
         false
     );
   }

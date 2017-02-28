@@ -70,9 +70,9 @@ public class DruidSemiJoinRule extends RelOptRule
         }
       };
 
-  private final PlannerConfig plannerConfig;
+  private static final DruidSemiJoinRule INSTANCE = new DruidSemiJoinRule();
 
-  private DruidSemiJoinRule(final PlannerConfig plannerConfig)
+  private DruidSemiJoinRule()
   {
     super(
         operand(
@@ -88,12 +88,11 @@ public class DruidSemiJoinRule extends RelOptRule
             )
         )
     );
-    this.plannerConfig = plannerConfig;
   }
 
-  public static DruidSemiJoinRule create(final PlannerConfig plannerConfig)
+  public static DruidSemiJoinRule instance()
   {
-    return new DruidSemiJoinRule(plannerConfig);
+    return INSTANCE;
   }
 
   @Override
@@ -129,6 +128,7 @@ public class DruidSemiJoinRule extends RelOptRule
     }
 
     final RelBuilder relBuilder = call.builder();
+    final PlannerConfig plannerConfig = left.getPlannerContext().getPlannerConfig();
 
     if (join.getJoinType() == JoinRelType.LEFT) {
       // Join can be eliminated since the right-hand side cannot have any effect (nothing is being selected,

@@ -22,6 +22,7 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Cacheable;
 import io.druid.segment.column.ValueType;
 
 import java.util.Map;
@@ -43,12 +44,12 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class),
     @JsonSubTypes.Type(name = "filter", value = DimFilterHavingSpec.class)
 })
-public interface HavingSpec
+public interface HavingSpec extends Cacheable
 {
   // Atoms for easy combination, but for now they are mostly useful
   // for testing.
-  public static final HavingSpec NEVER = new NeverHavingSpec();
-  public static final HavingSpec ALWAYS = new AlwaysHavingSpec();
+  HavingSpec NEVER = new NeverHavingSpec();
+  HavingSpec ALWAYS = new AlwaysHavingSpec();
 
   /**
    * Informs this HavingSpec that rows passed to "eval" will have a certain signature. Will be called
@@ -56,7 +57,7 @@ public interface HavingSpec
    *
    * @param rowSignature signature of the rows
    */
-  public void setRowSignature(Map<String, ValueType> rowSignature);
+  void setRowSignature(Map<String, ValueType> rowSignature);
 
   /**
    * Evaluates if a given row satisfies the having spec.
@@ -65,7 +66,5 @@ public interface HavingSpec
    *
    * @return true if the given row satisfies the having spec. False otherwise.
    */
-  public boolean eval(Row row);
-
-  public byte[] getCacheKey();
+  boolean eval(Row row);
 }

@@ -25,9 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -105,9 +104,9 @@ public class QueryRunnerTestHelper
 
   public static final DateTime minTime = new DateTime("2011-01-12T00:00:00.000Z");
 
-  public static final QueryGranularity dayGran = QueryGranularities.DAY;
-  public static final QueryGranularity monthGran = QueryGranularities.MONTH;
-  public static final QueryGranularity allGran = QueryGranularities.ALL;
+  public static final Granularity dayGran = Granularity.DAY;
+  public static final Granularity allGran = Granularity.ALL;
+  public static final Granularity monthGran = Granularity.MONTH;
   public static final String timeDimension = "__time";
   public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";
@@ -139,7 +138,7 @@ public class QueryRunnerTestHelper
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
       "ntimestamps",
@@ -149,7 +148,7 @@ public class QueryRunnerTestHelper
       ") { return current + 1; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
       "pishcount",
@@ -157,7 +156,7 @@ public class QueryRunnerTestHelper
       "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
       JS_RESET_0,
       JS_COMBINE_A_PLUS_B,
-      JavaScriptConfig.getDefault()
+      JavaScriptConfig.getEnabledInstance()
   );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",

@@ -20,10 +20,12 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.rule.DruidFilterRule;
 import io.druid.sql.calcite.rule.DruidRelToBindableRule;
 import io.druid.sql.calcite.rule.DruidRelToDruidRule;
 import io.druid.sql.calcite.rule.DruidSemiJoinRule;
+import io.druid.sql.calcite.rule.DruidTableScanRule;
 import io.druid.sql.calcite.rule.GroupByRules;
 import io.druid.sql.calcite.rule.SelectRules;
 import org.apache.calcite.interpreter.Bindables;
@@ -36,7 +38,6 @@ import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.AggregateStarTableRule;
 import org.apache.calcite.rel.rules.AggregateValuesRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
-import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
@@ -133,6 +134,7 @@ public class Rules
       );
 
   // Rules from RelOptUtil's registerAbstractRels.
+  // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
   private static final List<RelOptRule> RELOPTUTIL_ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
@@ -147,8 +149,7 @@ public class Rules
           PruneEmptyRules.SORT_FETCH_ZERO_INSTANCE,
           UnionMergeRule.INSTANCE,
           ProjectToWindowRule.PROJECT,
-          FilterMergeRule.INSTANCE,
-          DateRangeRules.FILTER_INSTANCE
+          FilterMergeRule.INSTANCE
       );
 
   private Rules()
@@ -156,38 +157,42 @@ public class Rules
     // No instantiation.
   }
 
-  public static List<Program> programs(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+  public static List<Program> programs(final QueryMaker queryMaker, final DruidOperatorTable operatorTable)
   {
     return ImmutableList.of(
-        Programs.ofRules(druidConventionRuleSet(operatorTable, plannerConfig)),
-        Programs.ofRules(bindableConventionRuleSet(operatorTable, plannerConfig))
+        Programs.ofRules(druidConventionRuleSet(queryMaker, operatorTable)),
+        Programs.ofRules(bindableConventionRuleSet(queryMaker, operatorTable))
     );
   }
 
   private static List<RelOptRule> druidConventionRuleSet(
-      final DruidOperatorTable operatorTable,
-      final PlannerConfig plannerConfig
+      final QueryMaker queryMaker,
+      final DruidOperatorTable operatorTable
   )
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(operatorTable, plannerConfig))
+        .addAll(baseRuleSet(queryMaker, operatorTable))
         .add(DruidRelToDruidRule.instance())
         .build();
   }
 
   private static List<RelOptRule> bindableConventionRuleSet(
-      final DruidOperatorTable operatorTable,
-      final PlannerConfig plannerConfig
+      final QueryMaker queryMaker,
+      final DruidOperatorTable operatorTable
   )
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(operatorTable, plannerConfig))
+        .addAll(baseRuleSet(queryMaker, operatorTable))
         .addAll(Bindables.RULES)
         .build();
   }
 
-  private static List<RelOptRule> baseRuleSet(final DruidOperatorTable operatorTable, final PlannerConfig plannerConfig)
+  private static List<RelOptRule> baseRuleSet(
+      final QueryMaker queryMaker,
+      final DruidOperatorTable operatorTable
+  )
   {
+    final PlannerConfig plannerConfig = queryMaker.getPlannerContext().getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
 
     // Calcite rules.
@@ -202,14 +207,15 @@ public class Rules
     }
 
     // Druid-specific rules.
+    rules.add(new DruidTableScanRule(queryMaker));
     rules.add(DruidFilterRule.instance());
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
-      rules.add(DruidSemiJoinRule.create(plannerConfig));
+      rules.add(DruidSemiJoinRule.instance());
     }
 
     rules.addAll(SelectRules.rules());
-    rules.addAll(GroupByRules.rules(operatorTable, plannerConfig));
+    rules.addAll(GroupByRules.rules(operatorTable));
 
     return rules.build();
   }
