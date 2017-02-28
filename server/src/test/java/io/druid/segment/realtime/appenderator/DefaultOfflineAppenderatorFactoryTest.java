@@ -30,9 +30,9 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -125,7 +125,7 @@ public class DefaultOfflineAppenderatorFactoryTest
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("met", "met")
         },
-        new UniformGranularitySpec(Granularity.MINUTE, Granularity.NONE, null),
+        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
         objectMapper
     );
 

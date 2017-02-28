@@ -22,8 +22,9 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -78,7 +79,7 @@ public class AppendTest
   };
 
   final String dataSource = "testing";
-  final Granularity allGran = Granularity.ALL;
+  final Granularity allGran = Granularities.ALL;
   final String dimensionValue = "dimension";
   final String valueValue = "value";
   final String marketDimension = "market";

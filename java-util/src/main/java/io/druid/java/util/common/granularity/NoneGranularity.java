@@ -25,16 +25,13 @@ import org.joda.time.format.DateTimeFormatter;
 /**
  * NoneGranularity does not bucket data
  */
-public final class NoneGranularity extends Granularity
+public class NoneGranularity extends Granularity
 {
-  private static final NoneGranularity INSTANCE = new NoneGranularity();
-
-  private NoneGranularity() {}
-
-  public static NoneGranularity getInstance()
-  {
-    return INSTANCE;
-  }
+  /**
+   * This constructor is public b/c it is serialized and deserialized
+   * based on type in GranularityModule
+   */
+  public NoneGranularity() {}
 
   @Override
   public DateTimeFormatter getFormatter(Formatter type)

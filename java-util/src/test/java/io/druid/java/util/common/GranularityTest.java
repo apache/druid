@@ -19,7 +19,9 @@
 
 package io.druid.java.util.common;
 
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.GranularityType;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -34,15 +36,15 @@ import java.util.NoSuchElementException;
 
 public class GranularityTest {
 
-    final Granularity SECOND = Granularity.SECOND;
-    final Granularity MINUTE = Granularity.MINUTE;
-    final Granularity HOUR = Granularity.HOUR;
-    final Granularity SIX_HOUR = Granularity.SIX_HOUR;
-    final Granularity FIFTEEN_MINUTE = Granularity.FIFTEEN_MINUTE;
-    final Granularity DAY = Granularity.DAY;
-    final Granularity WEEK = Granularity.WEEK;
-    final Granularity MONTH = Granularity.MONTH;
-    final Granularity YEAR = Granularity.YEAR;
+    final Granularity SECOND = Granularities.SECOND;
+    final Granularity MINUTE = Granularities.MINUTE;
+    final Granularity HOUR = Granularities.HOUR;
+    final Granularity SIX_HOUR = Granularities.SIX_HOUR;
+    final Granularity FIFTEEN_MINUTE = Granularities.FIFTEEN_MINUTE;
+    final Granularity DAY = Granularities.DAY;
+    final Granularity WEEK = Granularities.WEEK;
+    final Granularity MONTH = Granularities.MONTH;
+    final Granularity YEAR = Granularities.YEAR;
 
     @Test
     public void testHiveFormat() {
@@ -412,7 +414,7 @@ public class GranularityTest {
     {
         try {
           Period p = Period.years(6).withMonths(3).withSeconds(23);
-          Granularity.GranularityType.fromPeriod(p);
+          GranularityType.fromPeriod(p);
           Assert.fail("Complicated period creation should fail b/c of unsupported granularity type.");
         }
         catch (IAE e) {

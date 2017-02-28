@@ -39,6 +39,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -219,7 +220,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(Granularity.DAY)
+          .setGranularity(Granularities.DAY)
           .build();
 
       GroupByQuery queryA = GroupByQuery
@@ -232,7 +233,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(Granularity.WEEK)
+          .setGranularity(Granularities.WEEK)
           .build();
 
       basicQueries.put("nested", queryA);
@@ -477,7 +478,7 @@ public class GroupByBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(withRollup)

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -53,7 +54,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
     this.format = format;
     this.tz = tz;
     this.locale = localeString == null ? null : Locale.forLanguageTag(localeString);
-    this.granularity = granularity == null ? Granularity.NONE : granularity;
+    this.granularity = granularity == null ? Granularities.NONE : granularity;
 
     if (asMillis && format == null) {
       Preconditions.checkArgument(tz == null, "timeZone requires a format");
