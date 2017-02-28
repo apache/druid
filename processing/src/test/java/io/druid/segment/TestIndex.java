@@ -28,8 +28,8 @@ import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -236,7 +236,7 @@ public class TestIndex
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
-        .withQueryGranularity(Granularity.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)

@@ -22,6 +22,7 @@ package io.druid.query.search.search;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -67,7 +68,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 
     this.dimFilter = dimFilter;
     this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
-    this.granularity = granularity == null ? Granularity.ALL : granularity;
+    this.granularity = granularity == null ? Granularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;

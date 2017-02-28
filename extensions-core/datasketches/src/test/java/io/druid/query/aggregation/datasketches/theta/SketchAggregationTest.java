@@ -30,7 +30,7 @@ import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -94,7 +94,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
         0,
-        Granularity.NONE,
+        Granularities.NONE,
         5,
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
@@ -135,7 +135,7 @@ public class SketchAggregationTest
         + "  }"
         + "]",
         0,
-        Granularity.NONE,
+        Granularities.NONE,
         5,
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
@@ -333,7 +333,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_record_parser.json"),
         readFileFromClasspathAsString("simple_test_data_aggregators.json"),
         0,
-        Granularity.NONE,
+        Granularities.NONE,
         5,
         readFileFromClasspathAsString("retention_test_data_group_by_query.json")
     );

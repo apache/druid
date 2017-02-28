@@ -55,6 +55,7 @@ import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
@@ -242,7 +243,7 @@ public class CachingClusteredClientTest
   );
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
-  private static final Granularity GRANULARITY = Granularity.DAY;
+  private static final Granularity GRANULARITY = Granularities.DAY;
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";

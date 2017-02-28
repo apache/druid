@@ -30,9 +30,9 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.MapCache;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
@@ -122,7 +122,7 @@ public class CachingQueryRunnerTest
         .threshold(3)
         .intervals("2011-01-05/2011-01-10")
         .aggregators(AGGS)
-        .granularity(Granularity.ALL);
+        .granularity(Granularities.ALL);
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

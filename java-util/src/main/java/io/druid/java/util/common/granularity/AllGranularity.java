@@ -27,7 +27,7 @@ import org.joda.time.format.DateTimeFormatter;
 /**
  * AllGranularty buckets everything into a single bucket
  */
-public final class AllGranularity extends Granularity
+public class AllGranularity extends Granularity
 {
   // These constants are from JodaUtils in druid-common.
   // Creates circular dependency.
@@ -38,14 +38,11 @@ public final class AllGranularity extends Granularity
   private final DateTime maxDateTime = new DateTime(MAX_INSTANT);
   private final DateTime minDateTime = new DateTime(MIN_INSTANT);
 
-  private static final AllGranularity INSTANCE = new AllGranularity();
-
-  private AllGranularity() {}
-
-  public static AllGranularity getInstance()
-  {
-    return INSTANCE;
-  }
+  /**
+   * This constructor is public b/c it is serialized and deserialized
+   * based on type in GranularityModule
+   */
+  public AllGranularity() {}
 
   @Override
   public DateTimeFormatter getFormatter(Formatter type)

@@ -24,8 +24,8 @@ import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -106,7 +106,7 @@ public class IndexIngestionBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(rollup)

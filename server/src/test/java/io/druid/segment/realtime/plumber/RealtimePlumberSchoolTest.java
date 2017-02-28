@@ -35,8 +35,8 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
@@ -143,7 +143,7 @@ public class RealtimePlumberSchoolTest
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, Granularity.NONE, null),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
         jsonMapper
     );
 
@@ -162,7 +162,7 @@ public class RealtimePlumberSchoolTest
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.YEAR, Granularity.NONE, null),
+        new UniformGranularitySpec(Granularities.YEAR, Granularities.NONE, null),
         jsonMapper
     );
 

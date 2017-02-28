@@ -70,7 +70,7 @@ import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
@@ -646,7 +646,7 @@ public class TaskLifecycleTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
@@ -704,7 +704,7 @@ public class TaskLifecycleTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P1D"))
                 ),
@@ -1063,7 +1063,7 @@ public class TaskLifecycleTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
@@ -1168,7 +1168,7 @@ public class TaskLifecycleTest
         "test_ds",
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
-        new UniformGranularitySpec(Granularity.DAY, Granularity.NONE, null),
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(

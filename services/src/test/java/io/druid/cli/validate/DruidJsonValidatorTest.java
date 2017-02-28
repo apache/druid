@@ -28,7 +28,7 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -149,7 +149,7 @@ public class DruidJsonValidatorTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, Granularity.NONE, null),
+                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
                 jsonMapper
             ),
             new RealtimeIOConfig(
