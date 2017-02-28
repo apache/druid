@@ -85,7 +85,45 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public ColumnValueSelector makeColumnValueSelector(
+  public DimensionSelector makeDimensionSelector(
+      DimensionSpec spec, IncrementalIndexStorageAdapter.EntryHolder currEntry, IncrementalIndex.DimensionDesc desc
+  )
+  {
+    return new FloatWrappingDimensionSelector(
+        makeFloatColumnSelector(spec, currEntry, desc),
+        spec.getExtractionFn()
+    );
+  }
+
+  @Override
+  public LongColumnSelector makeLongColumnSelector(
+      final DimensionSpec spec,
+      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final IncrementalIndex.DimensionDesc desc
+  )
+  {
+    final int dimIndex = desc.getIndex();
+    class IndexerLongColumnSelector implements LongColumnSelector
+    {
+      @Override
+      public long get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0L;
+        }
+
+        float floatVal = (Float) dims[dimIndex];
+        return (long) floatVal;
+      }
+    }
+
+    return new IndexerLongColumnSelector();
+  }
+
+  @Override
+  public FloatColumnSelector makeFloatColumnSelector(
       final DimensionSpec spec,
       final IncrementalIndexStorageAdapter.EntryHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
@@ -108,6 +146,38 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     }
 
     return new IndexerFloatColumnSelector();
+  }
+
+  @Override
+  public ObjectColumnSelector makeObjectColumnSelector(
+      final DimensionSpec spec,
+      final IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      final IncrementalIndex.DimensionDesc desc
+  )
+  {
+    final int dimIndex = desc.getIndex();
+    class IndexerObjectColumnSelector implements ObjectColumnSelector
+    {
+      @Override
+      public Class classOfObject()
+      {
+        return Float.class;
+      }
+
+      @Override
+      public Object get()
+      {
+        final Object[] dims = currEntry.getKey().getDims();
+
+        if (dimIndex >= dims.length) {
+          return 0L;
+        }
+
+        return dims[dimIndex];
+      }
+    }
+
+    return new IndexerObjectColumnSelector();
   }
 
   @Override

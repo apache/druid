@@ -206,20 +206,59 @@ public interface DimensionIndexer
 
 
   /**
-   * Return an object used to read rows from a StorageAdapter's Cursor.
-   *
-   * e.g. String -> DimensionSelector
-   *      Long   -> LongColumnSelector
-   *      Float  -> FloatColumnSelector
-   *
-   * See StringDimensionIndexer.makeColumnValueSelector() for a reference implementation.
+   * Return an object used to read values from this indexer's column as Strings.
    *
    * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
    * @param currEntry Provides access to the current TimeAndDims object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  ColumnValueSelector makeColumnValueSelector(
+  DimensionSelector makeDimensionSelector(
+      DimensionSpec spec,
+      IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  );
+
+
+  /**
+   * Return an object used to read values from this indexer's column as Longs.
+   *
+   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
+   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
+   * @param desc Descriptor object for this dimension within an IncrementalIndex
+   * @return A new object that reads rows from currEntry
+   */
+  LongColumnSelector makeLongColumnSelector(
+      DimensionSpec spec,
+      IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  );
+
+
+  /**
+   * Return an object used to read values from this indexer's column as Floats.
+   *
+   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
+   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
+   * @param desc Descriptor object for this dimension within an IncrementalIndex
+   * @return A new object that reads rows from currEntry
+   */
+  FloatColumnSelector makeFloatColumnSelector(
+      DimensionSpec spec,
+      IncrementalIndexStorageAdapter.EntryHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  );
+
+
+  /**
+   * Return an object used to read values from this indexer's column as Objects.
+   *
+   * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
+   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
+   * @param desc Descriptor object for this dimension within an IncrementalIndex
+   * @return A new object that reads rows from currEntry
+   */
+  ObjectColumnSelector makeObjectColumnSelector(
       DimensionSpec spec,
       IncrementalIndexStorageAdapter.EntryHolder currEntry,
       IncrementalIndex.DimensionDesc desc
