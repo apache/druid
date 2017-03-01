@@ -36,6 +36,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class LookupReferencesManagerTest
 {
@@ -62,16 +63,16 @@ public class LookupReferencesManagerTest
         mapper,
         true
     );
-    Assert.assertTrue("must be closed before start call", !lookupReferencesManager.lifecycleLock.isStarted());
+    Assert.assertTrue("must be closed before start call", !lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
     lookupReferencesManager.start();
-    Assert.assertTrue("must start after start call", lookupReferencesManager.lifecycleLock.isStarted());
+    Assert.assertTrue("must start after start call", lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
   }
 
   @After
   public void tearDown()
   {
     lookupReferencesManager.stop();
-    Assert.assertTrue("stop call should close it", !lookupReferencesManager.lifecycleLock.isStarted());
+    Assert.assertTrue("stop call should close it", !lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
     executorService.shutdownNow();
   }
 
