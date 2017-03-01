@@ -24,7 +24,7 @@ package io.druid.data.input;
 public interface Committer extends Runnable
 {
     /**
-     * @return A json serialized represenation of commit metadata,
+     * @return A json serialized representation of commit metadata,
      * which needs to be serialized and deserialized by Jackson.
      * Commit metadata can be a complex type, but we recommend keeping it to List/Map/"Primitive JSON" types
      * */
