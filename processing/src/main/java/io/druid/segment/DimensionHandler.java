@@ -50,10 +50,15 @@ import java.io.IOException;
  *
  * The EncodedType and ActualType are Comparable because columns used as dimensions must have sortable values.
  *
- * @param <EncodedType> class of the encoded values
- * @param <ActualType> class of the actual values
+ * @param <EncodedType> class of a single encoded value
+ * @param <EncodedKeyComponentType> A row key contains a component for each dimension, this param specifies the
+ *                                 class of this dimension's key component. A column type that supports multivalue rows
+ *                                 should use an array type (Strings would use int[]). Column types without multivalue
+ *                                 row support should use single objects (e.g., Long, Float).
+ * @param <ActualType> class of a single actual value
  */
-public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, EncodedTypeArray, ActualType extends Comparable<ActualType>>
+public interface DimensionHandler
+    <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
 {
   /**
    * Get the name of the column associated with this handler.
@@ -66,12 +71,12 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
 
   /**
-   * Creates a new DimensionIndexer, a per-dimension object responsible for processing ingested rows in-memory, used by the
-   * IncrementalIndex. See {@link DimensionIndexer} interface for more information.
+   * Creates a new DimensionIndexer, a per-dimension object responsible for processing ingested rows in-memory, used
+   * by the IncrementalIndex. See {@link DimensionIndexer} interface for more information.
    *
    * @return A new DimensionIndexer object.
    */
-  DimensionIndexer<EncodedType, EncodedTypeArray, ActualType> makeIndexer();
+  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer();
 
 
   /**
@@ -88,7 +93,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
    * @return A new DimensionMergerV9 object.
    */
-  DimensionMergerV9<EncodedTypeArray> makeMerger(
+  DimensionMergerV9<EncodedKeyComponentType> makeMerger(
       IndexSpec indexSpec,
       File outDir,
       IOPeon ioPeon,
@@ -98,8 +103,8 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
 
   /**
-   * Creates a new DimensionMergerLegacy, a per-dimension object responsible for merging indexes/row data across segments
-   * and building the on-disk representation of a dimension. For use with IndexMerger only.
+   * Creates a new DimensionMergerLegacy, a per-dimension object responsible for merging indexes/row data across
+   * segments and building the on-disk representation of a dimension. For use with IndexMerger only.
    *
    * See {@link DimensionMergerLegacy} interface for more information.
    *
@@ -111,7 +116,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
    * @return A new DimensionMergerLegacy object.
    */
-  DimensionMergerLegacy<EncodedTypeArray> makeLegacyMerger(
+  DimensionMergerLegacy<EncodedKeyComponentType> makeLegacyMerger(
       IndexSpec indexSpec,
       File outDir,
       IOPeon ioPeon,
@@ -120,53 +125,55 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
   ) throws IOException;
 
   /**
-   * Given an array representing a single set of row value(s) for this dimension as an Object,
-   * return the length of the array after appropriate type-casting.
+   * Given an key component representing a single set of row value(s) for this dimension as an Object,
+   * return the length of the key component after appropriate type-casting.
    *
-   * For example, a dictionary encoded String dimension would receive an int[] as an Object.
+   * For example, a dictionary encoded String dimension would receive an int[] as input to this method,
+   * while a Long numeric dimension would receive a single Long object (no multivalue support)
    *
-   * @param dimVals Array of row values
+   * @param dimVals Values for this dimension from a row
    * @return Size of dimVals
    */
-  int getLengthFromEncodedArray(EncodedTypeArray dimVals);
+  int getLengthOfEncodedKeyComponent(EncodedKeyComponentType dimVals);
 
 
   /**
-   * Given two arrays representing sorted encoded row value(s), return the result of their comparison.
+   * Given two key components representing sorted encoded row value(s), return the result of their comparison.
    *
-   * If the two arrays have different lengths, the shorter array should be ordered first in the comparison.
+   * If the two key components have different lengths, the shorter component should be ordered first in the comparison.
    *
-   * Otherwise, this function should iterate through the array values and return the comparison of the first difference.
+   * Otherwise, this function should iterate through the key components and return the comparison of the
+   * first difference.
    *
-   * @param lhs array of row values
-   * @param rhs array of row values
+   * For dimensions that do not support multivalue rows, lhs and rhs can be compared directly.
    *
-   * @return integer indicating comparison result of arrays
+   * @param lhs key component from a row
+   * @param rhs key component from a row
+   *
+   * @return integer indicating comparison result of key components
    */
-  int compareSortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
+  int compareSortedEncodedKeyComponents(EncodedKeyComponentType lhs, EncodedKeyComponentType rhs);
 
 
   /**
-   * Given two arrays representing sorted encoded row value(s), check that the two arrays have the same encoded values,
-   * or if the encoded values differ, that they translate into the same actual values, using the mappings
-   * provided by lhsEncodings and rhsEncodings (if applicable).
+   * Given two key components representing sorted encoded row value(s), check that the two key components
+   * have the same encoded values, or if the encoded values differ, that they translate into the same actual values,
+   * using the mappings provided by lhsEncodings and rhsEncodings (if applicable).
    *
    * If validation fails, this method should throw a SegmentValidationException.
    *
    * Used by IndexIO for validating segments.
    *
-   * See StringDimensionHandler.validateSortedEncodedArrays() for a reference implementation.
+   * See StringDimensionHandler.validateSortedEncodedKeyComponents() for a reference implementation.
    *
-   * @param lhs array of row values
-   * @param rhs array of row values
+   * @param lhs key component from a row
+   * @param rhs key component from a row
    * @param lhsEncodings encoding lookup from lhs's segment, null if not applicable for this dimension's type
    * @param rhsEncodings encoding lookup from rhs's segment, null if not applicable for this dimension's type
-   *
-   * @return integer indicating comparison result of arrays
    */
-  void validateSortedEncodedArrays(
-      EncodedTypeArray lhs,
-      EncodedTypeArray rhs,
+  void validateSortedEncodedKeyComponents(
+      EncodedKeyComponentType lhs,
+      EncodedKeyComponentType rhs,
       Indexed<ActualType> lhsEncodings,
       Indexed<ActualType> rhsEncodings
   ) throws SegmentValidationException;
@@ -186,15 +193,16 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
 
 
   /**
-   * Given a subcolumn from getSubColumn, and the index of the current row, retrieve a row as an array of values.
+   * Given a subcolumn from getSubColumn, and the index of the current row, retrieve a dimension's values
+   * from a row as an EncodedKeyComponentType.
    *
    * For example:
    * - A String-typed implementation would read the current row from a DictionaryEncodedColumn as an int[].
-   * - A long-typed implemention would read the current row from a GenericColumn return the current row as a long[].
+   * - A long-typed implemention would read the current row from a GenericColumn and return a Long.
    *
    * @param column Column for this dimension from a QueryableIndex
    * @param currRow The index of the row to retrieve
-   * @return The row from "column" specified by "currRow", as an array of values
+   * @return The key component for this dimension from the current row of the column.
    */
-  Object getRowValueArrayFromColumn(Closeable column, int currRow);
+  EncodedKeyComponentType getEncodedKeyComponentFromColumn(Closeable column, int currRow);
 }

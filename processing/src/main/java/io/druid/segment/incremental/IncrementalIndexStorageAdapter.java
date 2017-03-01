@@ -27,7 +27,6 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
@@ -363,23 +362,26 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   return selector;
                 }
 
-                ColumnCapabilities capabilities = getColumnCapabilities(dimension);
-                if (capabilities != null) {
+                final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
+                if (dimensionDesc == null) {
+                  // not a dimension, column may be a metric
+                  ColumnCapabilities capabilities = getColumnCapabilities(dimension);
+                  if (capabilities == null) {
+                    return NullDimensionSelector.instance();
+                  }
                   if (capabilities.getType() == ValueType.LONG) {
                     return new LongWrappingDimensionSelector(makeLongColumnSelector(dimension), extractionFn);
                   }
                   if (capabilities.getType() == ValueType.FLOAT) {
                     return new FloatWrappingDimensionSelector(makeFloatColumnSelector(dimension), extractionFn);
                   }
-                }
 
-                final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
-                if (dimensionDesc == null) {
+                  // if we can't wrap the base column, just return a column of all nulls
                   return NullDimensionSelector.instance();
+                } else {
+                  final DimensionIndexer indexer = dimensionDesc.getIndexer();
+                  return indexer.makeDimensionSelector(dimensionSpec, currEntry, dimensionDesc);
                 }
-
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                return (DimensionSelector) indexer.makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc);
               }
 
               @Override
@@ -393,8 +395,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  return (FloatColumnSelector) indexer.makeColumnValueSelector(
-                      new DefaultDimensionSpec(columnName, null),
+                  return indexer.makeFloatColumnSelector(
                       currEntry,
                       dimensionDesc
                   );
@@ -438,8 +439,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 if (dimIndex != null) {
                   final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  return (LongColumnSelector) indexer.makeColumnValueSelector(
-                      new DefaultDimensionSpec(columnName, null),
+                  return indexer.makeLongColumnSelector(
                       currEntry,
                       dimensionDesc
                   );
@@ -542,7 +542,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         return null;
                       }
 
-                      return indexer.convertUnsortedEncodedArrayToActualArrayOrList(
+                      return indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(
                           dims[dimensionIndex], DimensionIndexer.ARRAY
                       );
                     }

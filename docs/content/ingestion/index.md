@@ -36,7 +36,32 @@ An example dataSchema is shown below:
         "format" : "auto"
       },
       "dimensionsSpec" : {
-        "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+        "dimensions": [
+          "page",
+          "language",
+          "user",
+          "unpatrolled",
+          "newPage",
+          "robot",
+          "anonymous",
+          "namespace",
+          "continent",
+          "country",
+          "region",
+          "city",
+          {
+            "type": "long",
+            "name": "countryNum"
+          },
+          {
+            "type": "float",
+            "name": "userLatitude"
+          },
+          {
+            "type": "float",
+            "name": "userLongitude"
+          }
+        ],
         "dimensionExclusions" : [],
         "spatialDimensions" : []
       }
@@ -169,9 +194,48 @@ handle all formatting decisions on their own, without using the ParseSpec.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| dimensions | JSON String array | The names of the dimensions. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as dimension columns. | yes |
+| dimensions | JSON array | A list of [dimension schema](#dimension-schema) objects or dimension names. Providing a name is equivalent to providing a String-typed dimension schema with the given name. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as String-typed dimension columns. | yes |
 | dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
 | spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
+
+#### Dimension Schema
+A dimension schema specifies the type and name of a dimension to be ingested.
+
+For example, the following `dimensionsSpec` section from a `dataSchema` ingests one column as Long (`countryNum`), two columns as Float (`userLatitude`, `userLongitude`), and the other columns as Strings:
+
+```json
+"dimensionsSpec" : {
+  "dimensions": [
+    "page",
+    "language",
+    "user",
+    "unpatrolled",
+    "newPage",
+    "robot",
+    "anonymous",
+    "namespace",
+    "continent",
+    "country",
+    "region",
+    "city",
+    {
+      "type": "long",
+      "name": "countryNum"
+    },
+    {
+      "type": "float",
+      "name": "userLatitude"
+    },
+    {
+      "type": "float",
+      "name": "userLongitude"
+    }
+  ],
+  "dimensionExclusions" : [],
+  "spatialDimensions" : []
+}
+```
+
 
 ## GranularitySpec
 

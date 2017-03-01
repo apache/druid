@@ -7916,4 +7916,50 @@ public class GroupByQueryRunnerTest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
+
+  @Test
+  public void testGroupByWithAggsOnNumericDimensions()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimFilter(new SelectorDimFilter("quality", "technology", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("qlLong", "qualityLong"),
+                new DoubleSumAggregatorFactory("qlFloat", "qualityLong"),
+                new DoubleSumAggregatorFactory("qfFloat", "qualityFloat"),
+                new LongSumAggregatorFactory("qfLong", "qualityFloat")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias", "technology",
+            "rows", 1L,
+            "qlLong", 1700L,
+            "qlFloat", 1700.0,
+            "qfFloat", 17000.0,
+            "qfLong", 17000L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias", "technology",
+            "rows", 1L,
+            "qlLong", 1700L,
+            "qlFloat", 1700.0,
+            "qfFloat", 17000.0,
+            "qfLong", 17000L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
 }
