@@ -76,6 +76,12 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
     writer.close();
 
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
+    closeFile(outFile);
+  }
+
+  @Override
+  public void closeFile(final File outFile) throws IOException
+  {
     outFile.delete();
     MetricHolder.writeComplexMetric(
         Files.newOutputStreamSupplier(outFile, true), metricName, serde.getTypeName(), writer

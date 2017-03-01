@@ -21,7 +21,6 @@ package io.druid.tests.hadoop;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
@@ -49,14 +48,14 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
   @BeforeClass
   public void beforeClass()
   {
-    loadData(config.getProperty ("hadoopTestDir") + "/batchHadoop1");
+    loadData(config.getProperty("hadoopTestDir") + "/batchHadoop1");
     dataLoaded = true;
   }
 
   @Test
   public void testHadoopIndex() throws Exception
   {
-      queryHelper.testQueriesFromFile(BATCH_QUERIES_RESOURCE, 2);
+    queryHelper.testQueriesFromFile(BATCH_QUERIES_RESOURCE, 2);
   }
 
   private void loadData(String hadoopDir)
@@ -64,18 +63,19 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
     String indexerSpec = "";
 
     try {
-       LOG.info("indexerFile name: [%s]", BATCH_TASK);
-       indexerSpec = getTaskAsString(BATCH_TASK);
-       indexerSpec = indexerSpec.replaceAll("%%HADOOP_TEST_PATH%%", hadoopDir);
-    } catch (Exception e) {
-      LOG.error ("could not read and modify indexer file: %s", e.getMessage());
+      LOG.info("indexerFile name: [%s]", BATCH_TASK);
+      indexerSpec = getTaskAsString(BATCH_TASK);
+      indexerSpec = indexerSpec.replaceAll("%%HADOOP_TEST_PATH%%", hadoopDir);
+    }
+    catch (Exception e) {
+      LOG.error("could not read and modify indexer file: %s", e.getMessage());
       throw Throwables.propagate(e);
     }
 
     try {
       final String taskID = indexer.submitTask(indexerSpec);
       LOG.info("TaskID for loading index task %s", taskID);
-      indexer.waitUntilTaskCompletes (taskID, 60000, 20);
+      indexer.waitUntilTaskCompletes(taskID, 60000, 20);
       RetryUtil.retryUntil(
           new Callable<Boolean>()
           {
@@ -91,8 +91,9 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
           10,
           "Segment-Load-Task-" + taskID
       );
-    } catch (Exception e) {
-      LOG.error ("data could not be loaded: %s", e.getMessage());
+    }
+    catch (Exception e) {
+      LOG.error("data could not be loaded: %s", e.getMessage());
       throw Throwables.propagate(e);
     }
   }
@@ -100,14 +101,13 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
   @AfterClass
   public void afterClass()
   {
-      if (dataLoaded)
-      {
-         try
-         {
-	     unloadAndKillData(BATCH_DATASOURCE);
-         } catch (Exception e) {
-	     LOG.warn ("exception while removing segments: [%s]", e);
-         }
+    if (dataLoaded) {
+      try {
+        unloadAndKillData(BATCH_DATASOURCE);
       }
+      catch (Exception e) {
+        LOG.warn(e, "exception while removing segments: [%s]");
+      }
+    }
   }
 }

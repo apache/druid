@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package io.druid.query.cache;
+package io.druid.query;
 
-public interface Cacheable
+/**
+ * This exception is thrown when the requested operation cannot be completed due to a lack of available resources.
+ */
+public class InsufficientResourcesException extends RuntimeException
 {
-  /**
-   * Get a byte array used as a cache key.
-   *
-   * @return a cache key
-   */
-  byte[] getCacheKey();
+  public InsufficientResourcesException(String message)
+  {
+    super(message);
+  }
 }

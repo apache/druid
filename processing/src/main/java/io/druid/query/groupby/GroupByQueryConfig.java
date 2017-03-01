@@ -37,7 +37,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
 
   @JsonProperty
-  private String defaultStrategy = GroupByStrategySelector.STRATEGY_V1;
+  private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
 
   @JsonProperty
   private boolean singleThreaded = false;

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 import com.yahoo.sketches.Util;
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.PostAggregatorIds;
 import io.druid.query.cache.CacheKeyBuilder;
@@ -91,6 +92,12 @@ public class SketchSetPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  {
+    return this;
   }
 
   @JsonProperty

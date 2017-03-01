@@ -46,7 +46,7 @@ public class CombiningSequence<T> implements Sequence<T>
   private final Ordering<T> ordering;
   private final BinaryFn<T, T, T> mergeFn;
 
-  public CombiningSequence(
+  private CombiningSequence(
       Sequence<T> baseSequence,
       Ordering<T> ordering,
       BinaryFn<T, T, T> mergeFn

@@ -22,8 +22,8 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -33,13 +33,13 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-import java.util.Collections;
 import org.joda.time.Interval;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +65,7 @@ public class StringDimensionHandlerTest
   ) throws Exception {
     IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex(
         TEST_INTERVAL.getStartMillis(),
-        QueryGranularities.NONE,
+        Granularities.NONE,
         true,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
         new AggregatorFactory[]{
@@ -78,7 +78,7 @@ public class StringDimensionHandlerTest
 
     IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex(
         TEST_INTERVAL.getStartMillis(),
-        QueryGranularities.NONE,
+        Granularities.NONE,
         true,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
         new AggregatorFactory[]{
@@ -124,7 +124,7 @@ public class StringDimensionHandlerTest
         String name1 = dimNames1.get(i);
         String name2 = dimNames2.get(i);
         DimensionHandler handler = handlers.get(name1);
-        handler.validateSortedEncodedArrays(
+        handler.validateSortedEncodedKeyComponents(
             val1,
             val2,
             adapter1.getDimValueLookup(name1),

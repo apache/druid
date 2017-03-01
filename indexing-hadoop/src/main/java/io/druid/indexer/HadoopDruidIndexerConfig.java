@@ -40,13 +40,13 @@ import com.google.inject.Module;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
@@ -217,7 +217,7 @@ public class HadoopDruidIndexerConfig
   private PathSpec pathSpec;
   private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
-  private final QueryGranularity rollupGran;
+  private final Granularity rollupGran;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
@@ -413,7 +413,7 @@ public class HadoopDruidIndexerConfig
     final DateTime bucketStart = timeBucket.get().getStart();
     final ShardSpec actualSpec = shardSpecLookups.get(bucketStart.getMillis())
                                                  .getShardSpec(
-                                                     rollupGran.truncate(inputRow.getTimestampFromEpoch()),
+                                                     rollupGran.bucketStart(inputRow.getTimestamp()).getMillis(),
                                                      inputRow
                                                  );
     final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(bucketStart.getMillis()).get(actualSpec);

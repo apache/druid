@@ -21,7 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -135,7 +135,7 @@ public class ApproximateHistogramAggregationTest
         parseSpec,
         metricSpec,
         0,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         50000,
         query
     );

@@ -25,11 +25,10 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.Result;
@@ -266,7 +265,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
@@ -292,7 +291,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
@@ -322,7 +321,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
@@ -356,7 +355,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
@@ -401,7 +400,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .intervals(
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
@@ -437,7 +436,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .intervals(
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
@@ -473,7 +472,7 @@ public class AppenderatorTest
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
                                            )
-                                           .granularity(QueryGranularities.DAY)
+                                           .granularity(Granularities.DAY)
                                            .intervals(
                                                new MultipleSpecificSegmentSpec(
                                                    ImmutableList.of(
