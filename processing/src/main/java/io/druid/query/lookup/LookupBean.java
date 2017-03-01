@@ -30,6 +30,11 @@ class LookupBean
   private final LookupExtractorFactoryContainer container;
   private final String name;
 
+  //to support rollback from 0.10.0 to 0.9.2 if necessary
+  @Deprecated
+  private final LookupExtractorFactory factory;
+
+
   @JsonCreator
   public LookupBean(
       @JsonProperty("name") String name,
@@ -42,6 +47,7 @@ class LookupBean
 
     this.name = name;
     this.container = container != null ? container : new LookupExtractorFactoryContainer(null, factory);
+    this.factory = factory != null ? factory : container.getLookupExtractorFactory();
   }
 
   @JsonProperty
@@ -56,12 +62,20 @@ class LookupBean
     return container;
   }
 
+  @Deprecated
+  @JsonProperty
+  public LookupExtractorFactory getFactory()
+  {
+    return factory;
+  }
+
   @Override
   public String toString()
   {
     return "LookupBean{" +
            "container=" + container +
            ", name='" + name + '\'' +
+           ", factory=" + factory +
            '}';
   }
 
@@ -76,12 +90,13 @@ class LookupBean
     }
     LookupBean that = (LookupBean) o;
     return Objects.equals(container, that.container) &&
-           Objects.equals(name, that.name);
+           Objects.equals(name, that.name) &&
+           Objects.equals(factory, that.factory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(container, name);
+    return Objects.hash(container, name, factory);
   }
 }

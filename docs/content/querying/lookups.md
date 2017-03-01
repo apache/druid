@@ -311,6 +311,6 @@ For instance you can list all the keys/values of a map based lookup by issuing a
 ## Druid version 0.9.2 to 0.10.0 upgrade/downgrade
 Overall druid cluster lookups configuration is persisted in metadata store and also individual lookup nodes optionally persist a snapshot of loaded lookups on disk.
 If upgrading from druid version 0.9.2 to 0.10.0, then migration for all persisted metadata is handled automatically.
-If you wanna downgrade from 0.10.0 to 0.9.2, then "snapshot" directory on all lookup nodes needs to be deleted and coordinator will not see any lookup updates done after 0.10.0 upgrade.
+If downgrading from 0.10.0 to 0.9.2 then lookups updates done via coordinator while 0.10.0 was running, might be lost.
 
  
