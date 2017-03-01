@@ -34,9 +34,9 @@ import java.util.Date;
 public class TimeDimExtractionFn extends DimExtractionFn
 {
   private final String timeFormat;
-  private final SimpleDateFormat timeFormatter;
+  private final ThreadLocal<SimpleDateFormat> timeFormatter;
   private final String resultFormat;
-  private final SimpleDateFormat resultFormatter;
+  private final ThreadLocal<SimpleDateFormat> resultFormatter;
 
   @JsonCreator
   public TimeDimExtractionFn(
@@ -48,11 +48,23 @@ public class TimeDimExtractionFn extends DimExtractionFn
     Preconditions.checkNotNull(resultFormat, "resultFormat must not be null");
 
     this.timeFormat = timeFormat;
-    this.timeFormatter = new SimpleDateFormat(timeFormat);
-    this.timeFormatter.setLenient(true);
+    this.timeFormatter = new ThreadLocal<SimpleDateFormat>() {
+      @Override
+      public SimpleDateFormat initialValue() {
+        SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.timeFormat);
+        formatter.setLenient(true);
+        return formatter;
+      }
+    };
 
     this.resultFormat = resultFormat;
-    this.resultFormatter = new SimpleDateFormat(resultFormat);
+    this.resultFormatter = new ThreadLocal<SimpleDateFormat>() {
+      @Override
+      public SimpleDateFormat initialValue() {
+        SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.resultFormat);
+        return formatter;
+      }
+    };
   }
 
   @Override
@@ -70,12 +82,12 @@ public class TimeDimExtractionFn extends DimExtractionFn
   {
     Date date;
     try {
-      date = timeFormatter.parse(dimValue);
+      date = timeFormatter.get().parse(dimValue);
     }
     catch (ParseException e) {
       return dimValue;
     }
-    return resultFormatter.format(date);
+    return resultFormatter.get().format(date);
   }
 
   @JsonProperty("timeFormat")
