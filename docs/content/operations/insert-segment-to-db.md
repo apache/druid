@@ -25,7 +25,7 @@ or runtime.properties file. Specifically, this tool needs to know
 `druid.storage.type`
 
 Besides the properties above, you also need to specify the location where the segments are stored and whether you want to
-update descriptor.json. These two can be provided through command line arguments.
+update descriptor.json (`partitionNum_descriptor.json` for HDFS data storage). These two can be provided through command line arguments.
 
 `--workingDir` (Required)
 
@@ -36,11 +36,11 @@ update descriptor.json. These two can be provided through command line arguments
 
 `--updateDescriptor` (Optional)
 
-    if set to true, this tool will update `loadSpec` field in `descriptor.json` if the path in `loadSpec` is different from
-    where `desciptor.json` was found. Default value is `true`.
+    if set to true, this tool will update `loadSpec` field in `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage) if the path in `loadSpec` is different from
+    where `desciptor.json` (`partitionNum_descriptor.json` for HDFS data storage) was found. Default value is `true`.
 
 Note: you will also need to load different Druid extensions per the metadata and deep storage you use. For example, if you
-use `mysql` as metadata storage and `HDFS` as deep storage, you should load `mysql-metadata-storage` and `druid-hdfs-storage`
+use `mysql` as metadata storage and HDFS as deep storage, you should load `mysql-metadata-storage` and `druid-hdfs-storage`
 extensions.
 
 
@@ -54,24 +54,20 @@ Directory path: /druid/storage/wikipedia
 
 ├── 2013-08-31T000000.000Z_2013-09-01T000000.000Z
 │   └── 2015-10-21T22_07_57.074Z
-│       └── 0
-│           ├── descriptor.json
-│           └── index.zip
+│           ├── 0_descriptor.json
+│           └── 0_index.zip
 ├── 2013-09-01T000000.000Z_2013-09-02T000000.000Z
 │   └── 2015-10-21T22_07_57.074Z
-│       └── 0
-│           ├── descriptor.json
-│           └── index.zip
+│           ├── 0_descriptor.json
+│           └── 0_index.zip
 ├── 2013-09-02T000000.000Z_2013-09-03T000000.000Z
 │   └── 2015-10-21T22_07_57.074Z
-│       └── 0
-│           ├── descriptor.json
-│           └── index.zip
+│           ├── 0_descriptor.json
+│           └── 0_index.zip
 └── 2013-09-03T000000.000Z_2013-09-04T000000.000Z
     └── 2015-10-21T22_07_57.074Z
-        └── 0
-            ├── descriptor.json
-            └── index.zip
+            ├── 0_descriptor.json
+            └── 0_index.zip
 ```
 
 To load all these segments into `mysql`, you can fire the command below,

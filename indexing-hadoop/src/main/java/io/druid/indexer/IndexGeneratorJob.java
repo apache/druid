@@ -735,12 +735,24 @@ public class IndexGeneratorJob implements Jobby
             segmentTemplate,
             context.getConfiguration(),
             context,
-            context.getTaskAttemptID(),
             mergedBase,
-            JobHelper.makeSegmentOutputPath(
+            JobHelper.makeFileNamePath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
-                segmentTemplate
+                segmentTemplate,
+                JobHelper.INDEX_ZIP
+            ),
+            JobHelper.makeFileNamePath(
+                new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
+                outputFS,
+                segmentTemplate,
+                JobHelper.DESCRIPTOR_JSON
+            ),
+            JobHelper.makeTmpPath(
+                new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
+                outputFS,
+                segmentTemplate,
+                context.getTaskAttemptID()
             )
         );
 

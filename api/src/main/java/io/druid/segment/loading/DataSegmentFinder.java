@@ -30,11 +30,12 @@ import java.util.Set;
 public interface DataSegmentFinder
 {
   /**
-   * This method should first recursively look for descriptor.json underneath workingDirPath and then verify that
-   * index.zip exists in the same folder. If not, it should throw SegmentLoadingException to let the caller know that
-   * descriptor.json exists while index.zip doesn't. If a segment is found and updateDescriptor is set, then this method
-   * should update the loadSpec in descriptor.json to reflect the location from where it was found. After the search,
-   * this method should return the set of segments that were found.
+   * This method should first recursively look for descriptor.json (partitionNum_descriptor.json for HDFS data storage) underneath
+   * workingDirPath and then verify that index.zip (partitionNum_index.zip for HDFS data storage) exists in the same folder.
+   * If not, it should throw SegmentLoadingException to let the caller know that descriptor.json exists
+   * while index.zip doesn't. If a segment is found and updateDescriptor is set, then this method should update the
+   * loadSpec in descriptor.json to reflect the location from where it was found. After the search, this method
+   * should return the set of segments that were found.
    *
    * @param workingDirPath   the String representation of the working directory path
    * @param updateDescriptor if true, update loadSpec in descriptor.json if loadSpec's location is different from where

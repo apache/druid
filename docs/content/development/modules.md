@@ -85,7 +85,7 @@ In this way, you can validate both push (at realtime node) and pull (at historic
 
 * DataSegmentPusher
 
-Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` and `index.zip` after your ingestion task ends.
+Wherever your data storage (cloud storage service, distributed file system, etc.) is, you should be able to see two new files: `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage) and `index.zip` (`partitionNum_index.zip` for HDFS data storage) after your ingestion task ends.
 
 * DataSegmentPuller
 
@@ -118,7 +118,7 @@ To mark a segment as not used, you need to connect to your metadata storage and 
 
 To start a segment killing task, you need to access the old Coordinator console `http://<COODRINATOR_IP>:<COORDINATOR_PORT/old-console/kill.html` then select the appropriate datasource and then input a time range (e.g. `2000/3000`).
 
-After the killing task ends, both `descriptor.json` and `index.zip` files should be deleted from the data storage.
+After the killing task ends, both `descriptor.json` (`partitionNum_descriptor.json` for HDFS data storage)  and `index.zip` (`partitionNum_index.zip` for HDFS data storage) files should be deleted from the data storage.
 
 ### Adding a new Firehose
 

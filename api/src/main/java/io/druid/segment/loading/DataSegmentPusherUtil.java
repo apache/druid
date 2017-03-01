@@ -60,8 +60,7 @@ public class DataSegmentPusherUtil
             segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
             segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
         ),
-        segment.getVersion().replaceAll(":", "_"),
-        segment.getShardSpec().getPartitionNum()
+        segment.getVersion().replaceAll(":", "_")
     );
   }
 }

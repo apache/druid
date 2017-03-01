@@ -109,23 +109,38 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush);
 
+
+    String indexUri = String.format(
+        "%s/%s/%d_index.zip",
+        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+        DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush),
+        segmentToPush.getShardSpec().getPartitionNum()
+    );
+
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(segmentToPush, segment);
     Assert.assertEquals(ImmutableMap.of(
         "type",
         "hdfs",
         "path",
-        String.format(
-            "%s/%s/index.zip",
-            FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-            DataSegmentPusherUtil.getHdfsStorageDir(segmentToPush)
-        )
+        indexUri
     ), segment.getLoadSpec());
     // rename directory after push
     final String segmentPath = DataSegmentPusherUtil.getHdfsStorageDir(segment);
-    File indexFile = new File(String.format("%s/%s/index.zip", storageDirectory, segmentPath));
+
+    File indexFile = new File(String.format(
+        "%s/%s/%d_index.zip",
+        storageDirectory,
+        segmentPath,
+        segment.getShardSpec().getPartitionNum()
+    ));
     Assert.assertTrue(indexFile.exists());
-    File descriptorFile = new File(String.format("%s/%s/descriptor.json", storageDirectory, segmentPath));
+    File descriptorFile = new File(String.format(
+        "%s/%s/%d_descriptor.json",
+        storageDirectory,
+        segmentPath,
+        segment.getShardSpec().getPartitionNum()
+    ));
     Assert.assertTrue(descriptorFile.exists());
 
     // push twice will fail and temp dir cleaned

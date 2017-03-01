@@ -102,7 +102,41 @@ public class HdfsDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(new Path(partition012Dir, "index.zip").toString()));
 
-    Assert.assertFalse(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.delete(dataSourceDir, false));
+  }
+
+  @Test
+  public void testKillForSegmentPathWithoutPartitionNumber() throws Exception
+  {
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "/tmp";
+          }
+        }
+    );
+
+    FileSystem fs = FileSystem.get(config);
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
+
+    Path interval1Dir = new Path(dataSourceDir, "intervalNew");
+    Path version11Dir = new Path(interval1Dir, "v1");
+
+    makePartitionDirWithIndexWitNewFormat(fs, version11Dir, 3);
+    killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
+
+    Assert.assertFalse(fs.exists(version11Dir));
+    Assert.assertFalse(fs.exists(interval1Dir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.exists(new Path("/tmp")));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.delete(dataSourceDir, false));
   }
 
   @Test
@@ -126,7 +160,21 @@ public class HdfsDataSegmentKillerTest
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
     Assert.assertTrue(fs.mkdirs(path));
-    try (FSDataOutputStream os = fs.create(new Path(path, "index.zip"))) {
+    try (FSDataOutputStream os = fs.create(new Path(path, "index.zip")); FSDataOutputStream oos = fs.create(new Path(
+        path,
+        "descriptor.json"
+    ))) {
+    }
+  }
+
+  private void makePartitionDirWithIndexWitNewFormat(FileSystem fs, Path path, Integer partitionNumber)
+      throws IOException
+  {
+    Assert.assertTrue(fs.mkdirs(path));
+    try (FSDataOutputStream os = fs.create(new Path(
+        path,
+        String.format("%s_index.zip", partitionNumber)
+    )); FSDataOutputStream oos = fs.create(new Path(path, String.format("%s_descriptor.json", partitionNumber)))) {
     }
   }
 
