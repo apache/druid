@@ -198,7 +198,9 @@ public class GenericIndexedWriter<T> implements Closeable
         headerOut.getCount()
     );
     Preconditions.checkState(
-        numBytesWritten < fileSizeLimit, "Wrote[%s] bytes, which is too many.", numBytesWritten
+        numBytesWritten < fileSizeLimit, "Wrote[%s] bytes to base file %s, which is too many.",
+        numBytesWritten,
+        filenameBase
     );
 
     try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"))) {
@@ -221,8 +223,9 @@ public class GenericIndexedWriter<T> implements Closeable
     );
     Preconditions.checkState(
         headerOutLong.getCount() < (Integer.MAX_VALUE & ~PAGE_SIZE),
-        "Wrote[%s] bytes in header file, which is too many.",
-        headerOutLong.getCount()
+        "Wrote[%s] bytes in header file of base file %s, which is too many.",
+        headerOutLong.getCount(),
+        filenameBase
     );
   }
 
