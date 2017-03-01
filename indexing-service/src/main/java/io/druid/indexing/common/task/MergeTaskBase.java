@@ -99,6 +99,12 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
             )
         ) == 0, "segments in the wrong datasource"
     );
+    verifyInputSegments(segments);
+
+    this.segments = segments;
+  }
+
+  protected void verifyInputSegments(List<DataSegment> segments) {
     // Verify segments are all unsharded
     Preconditions.checkArgument(
         Iterables.size(
@@ -115,8 +121,6 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
             )
         ) == 0, "segments without NoneShardSpec"
     );
-
-    this.segments = segments;
   }
 
   @Override
