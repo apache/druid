@@ -64,6 +64,14 @@ public final class DimensionHandlerUtils
       return new StringDimensionHandler(dimensionName, multiValueHandling);
     }
 
+    if (capabilities.getType() == ValueType.LONG) {
+      return new LongDimensionHandler(dimensionName);
+    }
+
+    if (capabilities.getType() == ValueType.FLOAT) {
+      return new FloatDimensionHandler(dimensionName);
+    }
+
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
     return new StringDimensionHandler(dimensionName, multiValueHandling);
   }

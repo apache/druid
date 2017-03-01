@@ -20,6 +20,7 @@
 package io.druid.query.metadata;
 
 import com.google.common.collect.Lists;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryRunner;
@@ -75,15 +76,21 @@ public class SegmentAnalyzerTest
         columns.size()
     ); // All columns including time and empty/null column
 
-    for (String dimension : TestIndex.DIMENSIONS) {
+    for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
+      final String dimension = schema.getName();
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
+      final boolean isString = schema.getValueType().name().equals(ValueType.STRING.name());
 
-      Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
-      if (analyses == null) {
-        Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+      Assert.assertEquals(dimension, schema.getValueType().name(), columnAnalysis.getType());
+      Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
+      if (isString) {
+        if (analyses == null) {
+          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+        } else {
+          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+        }
       } else {
-        Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
-        Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
+        Assert.assertNull(dimension, columnAnalysis.getCardinality());
       }
     }
 
@@ -121,17 +128,24 @@ public class SegmentAnalyzerTest
         columns.size()
     ); // All columns including time and excluding empty/null column
 
-    for (String dimension : TestIndex.DIMENSIONS) {
+    for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
+      final String dimension = schema.getName();
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
       if (dimension.equals("null_column")) {
         Assert.assertNull(columnAnalysis);
       } else {
-        Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+        final boolean isString = schema.getValueType().name().equals(ValueType.STRING.name());
+        Assert.assertEquals(dimension, schema.getValueType().name(), columnAnalysis.getType());
         Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
-        if (analyses == null) {
-          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+
+        if (isString) {
+          if (analyses == null) {
+            Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          } else {
+            Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          }
         } else {
-          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          Assert.assertNull(dimension, columnAnalysis.getCardinality());
         }
       }
     }

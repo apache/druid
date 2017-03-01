@@ -104,7 +104,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
         // Add 'null' to the dimension's dictionary.
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          accessor.indexer.processRowValsToUnsortedEncodedArray(null);
+          accessor.indexer.processRowValsToUnsortedEncodedKeyComponent(null);
           continue;
         }
         final ColumnCapabilities capabilities = dimension.getCapabilities();
@@ -112,7 +112,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         if(capabilities.hasBitmapIndexes()) {
           final MutableBitmap[] bitmapIndexes = accessor.invertedIndexes;
           final DimensionIndexer indexer = accessor.indexer;
-          indexer.fillBitmapsFromUnsortedEncodedArray(dims[dimIndex], rowNum, bitmapIndexes, bitmapFactory);
+          indexer.fillBitmapsFromUnsortedEncodedKeyComponent(dims[dimIndex], rowNum, bitmapIndexes, bitmapFactory);
         }
       }
       ++rowNum;
@@ -199,7 +199,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                   }
 
                   final DimensionIndexer indexer = indexers[dimIndex];
-                  Object sortedDimVals = indexer.convertUnsortedEncodedArrayToSortedEncodedArray(dimValues[dimIndex]);
+                  Object sortedDimVals = indexer.convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(dimValues[dimIndex]);
                   dims[dimIndex] = sortedDimVals;
                 }
 

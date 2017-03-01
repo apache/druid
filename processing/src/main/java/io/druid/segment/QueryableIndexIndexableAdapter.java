@@ -255,7 +255,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             final Object[] dims = new Object[columns.length];
             int dimIndex = 0;
             for (final Closeable column : columns) {
-              dims[dimIndex] = handlers[dimIndex].getRowValueArrayFromColumn(column, currRow);
+              dims[dimIndex] = handlers[dimIndex].getEncodedKeyComponentFromColumn(column, currRow);
               dimIndex++;
             }
 

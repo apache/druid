@@ -49,8 +49,13 @@ import java.util.List;
  *
  * A class implementing this interface is expected to be highly stateful, updating its internal state as these
  * functions are called.
+ *
+ * @param <EncodedKeyComponentType> A row key contains a component for each dimension, this param specifies the
+ *                                 class of this dimension's key component. A column type that supports multivalue rows
+ *                                 should use an array type (Strings would use int[]). Column types without multivalue
+ *                                 row support should use single objects (e.g., Long, Float).
  */
-public interface DimensionMerger<EncodedTypedArray>
+public interface DimensionMerger<EncodedKeyComponentType>
 {
   /**
    * Given a list of segment adapters:
@@ -72,7 +77,8 @@ public interface DimensionMerger<EncodedTypedArray>
 
 
   /**
-   * Convert a row from a single segment to its equivalent representation in the merged set of rows.
+   * Convert a row's key component with per-segment encoding to its equivalent representation
+   * in the merged set of rows.
    *
    * This function is used by the index merging process to build the merged sequence of rows.
    *
@@ -83,17 +89,22 @@ public interface DimensionMerger<EncodedTypedArray>
    * segment-specific dictionary values within the row to the common merged dictionary values
    * determined during writeMergedValueMetadata().
    *
-   * @param segmentRow A row from a segment to be converted to its representation within the merged sequence of rows.
+   * @param segmentRow A row's key component for this dimension. The encoding of the key component's
+   *                   values will be converted from per-segment encodings to the combined encodings from
+   *                   the merged sequence of rows.
    * @param segmentIndexNumber Integer indicating which segment the row originated from.
    */
-  EncodedTypedArray convertSegmentRowValuesToMergedRowValues(EncodedTypedArray segmentRow, int segmentIndexNumber);
+  EncodedKeyComponentType convertSegmentRowValuesToMergedRowValues(
+      EncodedKeyComponentType segmentRow,
+      int segmentIndexNumber
+  );
 
 
   /**
-   * Process a row from the merged sequence of rows and update the DimensionMerger's internal state.
+   * Process a key component from the merged sequence of rows and update the DimensionMerger's internal state.
    *
    * After constructing a merged sequence of rows across segments, the index merging process will
-   * iterate through these rows and pass row values from each dimension to their correspodning DimensionMergers.
+   * iterate through these rows and pass row key components from each dimension to their corresponding DimensionMergers.
    *
    * This allows each DimensionMerger to build its internal view of the sequence of merged rows, to be
    * written out to a segment later.
@@ -101,7 +112,7 @@ public interface DimensionMerger<EncodedTypedArray>
    * @param rowValues The row values to be added.
    * @throws IOException
    */
-  void processMergedRow(EncodedTypedArray rowValues) throws IOException;
+  void processMergedRow(EncodedKeyComponentType rowValues) throws IOException;
 
 
   /**
