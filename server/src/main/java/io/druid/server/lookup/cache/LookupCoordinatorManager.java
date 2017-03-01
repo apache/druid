@@ -513,7 +513,12 @@ public class LookupCoordinatorManager
                           currState.put(node, updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop)));
 
                           if (LOG.isDebugEnabled()) {
-                            LOG.debug("Sent lookup updates to node [%s].", node);
+                            LOG.debug(
+                                "Sent lookup toAdd[%d] and toDrop[%d] updates to node [%s].",
+                                toLoad.size(),
+                                toDrop.size(),
+                                node
+                            );
                           }
                         }
 
@@ -574,7 +579,23 @@ public class LookupCoordinatorManager
         makeResponseHandler(returnCode, reasonString),
         lookupCoordinatorManagerConfig.getHostTimeout()
     ).get()) {
-      if (!httpStatusIsSuccess(returnCode.get())) {
+      if (httpStatusIsSuccess(returnCode.get())) {
+        try {
+          final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                response
+            );
+          }
+          return response;
+        } catch (IOException ex) {
+          throw new IOException(
+              String.format("Failed to parse update response from [%s]. response [%s]", url, result),
+              ex
+          );
+        }
+      } else {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
           StreamUtils.copyAndClose(result, baos);
@@ -592,22 +613,6 @@ public class LookupCoordinatorManager
                 StringUtils.fromUtf8(baos.toByteArray())
             )
         );
-      } else {
-        try {
-          final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
-                response
-            );
-          }
-          return response;
-        } catch (IOException ex) {
-          throw new IOException(
-              String.format("Failed to parse update response from [%s]. response [%s]", url, result),
-              ex
-          );
-        }
       }
     }
   }
