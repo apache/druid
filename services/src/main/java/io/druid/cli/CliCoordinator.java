@@ -162,13 +162,11 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(DruidCoordinator.class);
 
-            binder.bind(LookupCoordinatorManager.class).in(ManageLifecycle.class);
             binder.bind(ListenerDiscoverer.class).in(ManageLifecycle.class);
 
             LifecycleModule.register(binder, ListenerDiscoverer.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
-            LifecycleModule.register(binder, LookupCoordinatorManager.class);
 
             binder.bind(JettyServerInitializer.class)
                   .to(CoordinatorJettyServerInitializer.class);
