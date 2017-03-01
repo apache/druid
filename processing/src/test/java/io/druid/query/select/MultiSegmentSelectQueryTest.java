@@ -78,42 +78,42 @@ public class MultiSegmentSelectQueryTest
 
   // time modified version of druid.sample.numeric.tsv
   public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	100.000000",
-      "2011-01-12T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	100.000000",
-      "2011-01-12T02:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	100.000000",
-      "2011-01-12T03:00:00.000Z	spot	health\t1300\t13000.0\t130000\tpreferred	hpreferred	100.000000",
-      "2011-01-12T04:00:00.000Z	spot	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	100.000000",
-      "2011-01-12T05:00:00.000Z	spot	news\t1500\t15000.0\t150000\tpreferred	npreferred	100.000000",
-      "2011-01-12T06:00:00.000Z	spot	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	100.000000",
-      "2011-01-12T07:00:00.000Z	spot	technology\t1700\t17000.0\t170000\tpreferred	tpreferred	100.000000",
-      "2011-01-12T08:00:00.000Z	spot	travel\t1800\t18000.0\t180000\tpreferred	tpreferred	100.000000",
-      "2011-01-12T09:00:00.000Z	total_market	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	1000.000000",
-      "2011-01-12T10:00:00.000Z	total_market	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	1000.000000",
-      "2011-01-12T11:00:00.000Z	upfront	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	800.000000	value",
-      "2011-01-12T12:00:00.000Z	upfront	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	800.000000	value"
+      "2011-01-12T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t100.000000",
+      "2011-01-12T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t100.000000",
+      "2011-01-12T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t100.000000",
+      "2011-01-12T03:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t100.000000",
+      "2011-01-12T04:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t100.000000",
+      "2011-01-12T05:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t100.000000",
+      "2011-01-12T06:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t100.000000",
+      "2011-01-12T07:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T08:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T09:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1000.000000",
+      "2011-01-12T10:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1000.000000",
+      "2011-01-12T11:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t800.000000\tvalue",
+      "2011-01-12T12:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t800.000000\tvalue"
   };
 
   public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	94.874713",
-      "2011-01-13T01:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	103.629399",
-      "2011-01-13T02:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	110.087299",
-      "2011-01-13T03:00:00.000Z	spot	health\t1300\t13000.0\t130000\tpreferred	hpreferred	114.947403",
-      "2011-01-13T04:00:00.000Z	spot	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	104.465767",
-      "2011-01-13T05:00:00.000Z	spot	news\t1500\t15000.0\t150000\tpreferred	npreferred	102.851683",
-      "2011-01-13T06:00:00.000Z	spot	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	108.863011",
-      "2011-01-13T07:00:00.000Z	spot	technology\t1700\t17000.0\t170000\tpreferred	tpreferred	111.356672",
-      "2011-01-13T08:00:00.000Z	spot	travel\t1800\t18000.0\t180000\tpreferred	tpreferred	106.236928",
-      "2011-01-13T09:00:00.000Z	total_market	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	1040.945505",
-      "2011-01-13T10:00:00.000Z	total_market	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	1689.012875",
-      "2011-01-13T11:00:00.000Z	upfront	mezzanine\t1400\t14000.0\t140000\tpreferred	mpreferred	826.060182	value",
-      "2011-01-13T12:00:00.000Z	upfront	premium\t1600\t16000.0\t160000\tpreferred	ppreferred	1564.617729	value"
+      "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t94.874713",
+      "2011-01-13T01:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t103.629399",
+      "2011-01-13T02:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t110.087299",
+      "2011-01-13T03:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t114.947403",
+      "2011-01-13T04:00:00.000Z\tspot\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t104.465767",
+      "2011-01-13T05:00:00.000Z\tspot\tnews\t1500\t15000.0\t150000\tpreferred\tnpreferred\t102.851683",
+      "2011-01-13T06:00:00.000Z\tspot\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t108.863011",
+      "2011-01-13T07:00:00.000Z\tspot\ttechnology\t1700\t17000.0\t170000\tpreferred\ttpreferred\t111.356672",
+      "2011-01-13T08:00:00.000Z\tspot\ttravel\t1800\t18000.0\t180000\tpreferred\ttpreferred\t106.236928",
+      "2011-01-13T09:00:00.000Z\ttotal_market\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t1040.945505",
+      "2011-01-13T10:00:00.000Z\ttotal_market\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1689.012875",
+      "2011-01-13T11:00:00.000Z\tupfront\tmezzanine\t1400\t14000.0\t140000\tpreferred\tmpreferred\t826.060182\tvalue",
+      "2011-01-13T12:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
   };
 
   public static final String[] V_OVERRIDE = {
-      "2011-01-12T04:00:00.000Z	spot	automotive\t1000\t10000.0\t100000\tpreferred	apreferred	999.000000",
-      "2011-01-12T05:00:00.000Z	spot	business\t1100\t11000.0\t110000\tpreferred	bpreferred	999.000000",
-      "2011-01-12T06:00:00.000Z	spot	entertainment\t1200\t12000.0\t120000\tpreferred	epreferred	999.000000",
-      "2011-01-12T07:00:00.000Z	spot	health\t1300\t13000.0\t130000\tpreferred	hpreferred	999.000000"
+      "2011-01-12T04:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t100000\tpreferred\tapreferred\t999.000000",
+      "2011-01-12T05:00:00.000Z\tspot\tbusiness\t1100\t11000.0\t110000\tpreferred\tbpreferred\t999.000000",
+      "2011-01-12T06:00:00.000Z\tspot\tentertainment\t1200\t12000.0\t120000\tpreferred\tepreferred\t999.000000",
+      "2011-01-12T07:00:00.000Z\tspot\thealth\t1300\t13000.0\t130000\tpreferred\thpreferred\t999.000000"
   };
 
   private static Segment segment0;

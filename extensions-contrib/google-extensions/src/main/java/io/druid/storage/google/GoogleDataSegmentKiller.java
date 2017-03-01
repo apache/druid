@@ -60,9 +60,9 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
     }
   }
 
-	@Override
-	public void killAll() throws IOException
-	{
-		throw new UnsupportedOperationException("not implemented");
-	}
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }

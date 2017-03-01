@@ -38,17 +38,17 @@ public class ProtoBufInputRowParserTest
   public static final String[] DIMENSIONS = new String[]{"eventType", "id", "someOtherId", "isValid"};
 
   /*
-  eventType = 1;
-
-	required uint64 id = 2;
-	required string timestamp = 3;
-	optional uint32 someOtherId = 4;
-	optional bool isValid = 5;
-	optional string description = 6;
-
-	optional float someFloatColumn = 7;
-	optional uint32 someIntColumn = 8;
-	optional uint64 someLongColumn = 9;
+   * eventType = 1;
+   *
+   * required uint64 id = 2;
+   * required string timestamp = 3;
+   * optional uint32 someOtherId = 4;
+   * optional bool isValid = 5;
+   * optional string description = 6;
+   *
+   * optional float someFloatColumn = 7;
+   * optional uint32 someIntColumn = 8;
+   * optional uint64 someLongColumn = 9;
    */
 
   @Test

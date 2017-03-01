@@ -612,10 +612,10 @@ public abstract class AbstractIntSet implements IntSet
       return 1;
     }
 
-		/*
+    /*
      * Compute the sum of binomial coefficients ranging from (size choose
-		 * max) to (size choose min) using dynamic programming
-		 */
+     * max) to (size choose min) using dynamic programming
+     */
 
     // trivial cases
     max = Math.min(size, max);

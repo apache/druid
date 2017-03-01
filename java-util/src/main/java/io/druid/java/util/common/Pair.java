@@ -27,11 +27,12 @@ import java.util.Comparator;
  */
 public class Pair<T1, T2>
 {
-  
-  public static <T1, T2> Pair<T1, T2> of(T1 lhs, T2 rhs) {
+
+  public static <T1, T2> Pair<T1, T2> of(T1 lhs, T2 rhs)
+  {
     return new Pair<>(lhs, rhs);
   }
-  
+
   public final T1 lhs;
   public final T2 rhs;
 
