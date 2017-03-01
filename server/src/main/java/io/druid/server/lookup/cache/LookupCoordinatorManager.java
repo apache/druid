@@ -124,7 +124,6 @@ public class LookupCoordinatorManager
   private final JacksonConfigManager configManager;
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig;
   private final AtomicReference<Map<HostAndPort, LookupsStateWithMap>> knownOldState = new AtomicReference<>();
-  private final Object giantLock = new Object();
 
   // Updated by config watching service
   private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
@@ -187,7 +186,7 @@ public class LookupCoordinatorManager
       }
     }
 
-    synchronized (giantLock) {
+    synchronized (lifecycleLock) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null && !updateSpec.isEmpty()) {
         // To prevent accidentally erasing configs if we haven't updated our cache of the values
@@ -233,13 +232,13 @@ public class LookupCoordinatorManager
 
   public Map<String, Map<String, LookupExtractorFactoryMapContainer>> getKnownLookups()
   {
-    Preconditions.checkState(lifecycleLock.isStarted(), "not started");
+    Preconditions.checkState(lifecycleLock.awaitStarted(10, TimeUnit.MILLISECONDS), "not started");
     return lookupMapConfigRef.get();
   }
 
   public boolean deleteLookup(final String tier, final String lookup, AuditInfo auditInfo)
   {
-    synchronized (giantLock) {
+    synchronized (lifecycleLock) {
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
       if (priorSpec == null) {
         LOG.warn("Requested delete lookup [%s]/[%s]. But no lookups exist!", tier, lookup);
@@ -300,132 +299,128 @@ public class LookupCoordinatorManager
   @LifecycleStart
   public void start()
   {
-    synchronized (giantLock) {
-      if (!lifecycleLock.canStart()) {
-        return;
+    if (!lifecycleLock.canStart()) {
+      LOG.warn("Lookup coordinator manager can not start.");
+      return;
+    }
+
+    try {
+      if (executorService.isShutdown()) {
+        throw new ISE("Cannot restart after stop!");
       }
 
-      try {
-        if (executorService.isShutdown()) {
-          throw new ISE("Cannot restart after stop!");
-        }
+      lookupMapConfigRef = configManager.watch(
+          LOOKUP_CONFIG_KEY,
+          new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
+          {
+          },
+          null
+      );
 
-        lookupMapConfigRef = configManager.watch(
-            LOOKUP_CONFIG_KEY,
-            new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
+      // backward compatibility with 0.9.x
+      if (lookupMapConfigRef.get() == null) {
+        Map<String, Map<String, Map<String, Object>>> oldLookups = configManager.watch(
+            OLD_LOOKUP_CONFIG_KEY,
+            new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
             {
             },
             null
-        );
+        ).get();
 
-        // backward compatibility with 0.9.x
-        if (lookupMapConfigRef.get() == null) {
-          Map<String, Map<String, Map<String, Object>>> oldLookups = configManager.watch(
-              OLD_LOOKUP_CONFIG_KEY,
-              new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
-              {
-              },
-              null
-          ).get();
-
-          if (oldLookups != null) {
-            Map<String, Map<String, LookupExtractorFactoryMapContainer>> converted = new HashMap<>();
-            for (String tier : oldLookups.keySet()) {
-              Map<String, Map<String, Object>> oldTierLookups = oldLookups.get(tier);
-              if (oldLookups != null && !oldLookups.isEmpty()) {
-                Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
-                for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
-                  convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
-                }
-                converted.put(tier, convertedTierLookups);
+        if (oldLookups != null) {
+          Map<String, Map<String, LookupExtractorFactoryMapContainer>> converted = new HashMap<>();
+          for (String tier : oldLookups.keySet()) {
+            Map<String, Map<String, Object>> oldTierLookups = oldLookups.get(tier);
+            if (oldLookups != null && !oldLookups.isEmpty()) {
+              Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
+              for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
+                convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
               }
+              converted.put(tier, convertedTierLookups);
             }
-            configManager.set(
-                LOOKUP_CONFIG_KEY,
-                converted,
-                new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
-            );
           }
+          configManager.set(
+              LOOKUP_CONFIG_KEY,
+              converted,
+              new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
+          );
         }
-
-        this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                lookupMgmtLoop();
-              }
-            },
-            0,
-            lookupCoordinatorManagerConfig.getPeriod(),
-            TimeUnit.MILLISECONDS
-        );
-        Futures.addCallback(
-            backgroundManagerFuture, new FutureCallback()
-            {
-              @Override
-              public void onSuccess(@Nullable Object result)
-              {
-                backgroundManagerExitedLatch.countDown();
-                LOG.debug("Exited background lookup manager");
-              }
-
-              @Override
-              public void onFailure(Throwable t)
-              {
-                backgroundManagerExitedLatch.countDown();
-                if (backgroundManagerFuture.isCancelled()) {
-                  LOG.info("Background lookup manager exited");
-                  LOG.trace(t, "Background lookup manager exited with throwable");
-                } else {
-                  LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
-                }
-              }
-            }
-        );
-
-        lifecycleLock.started();
-        LOG.debug("Started");
-      } finally {
-        lifecycleLock.exitStart();
       }
 
+      this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              lookupMgmtLoop();
+            }
+          },
+          0,
+          lookupCoordinatorManagerConfig.getPeriod(),
+          TimeUnit.MILLISECONDS
+      );
+      Futures.addCallback(
+          backgroundManagerFuture, new FutureCallback()
+          {
+            @Override
+            public void onSuccess(@Nullable Object result)
+            {
+              backgroundManagerExitedLatch.countDown();
+              LOG.debug("Exited background lookup manager");
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              backgroundManagerExitedLatch.countDown();
+              if (backgroundManagerFuture.isCancelled()) {
+                LOG.info("Background lookup manager exited");
+                LOG.trace(t, "Background lookup manager exited with throwable");
+              } else {
+                LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
+              }
+            }
+          }
+      );
+
+      lifecycleLock.started();
+      LOG.debug("Started");
+    } finally {
+      lifecycleLock.exitStart();
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    synchronized (giantLock) {
-      if (!lifecycleLock.canStop()) {
-        LOG.warn("Not started, ignoring stop request");
-        return;
-      }
-
-      executorService.shutdownNow();
-
-      //went in an stop error
-      try {
-        executorService.awaitTermination(1, TimeUnit.MINUTES);
-      } catch (InterruptedException ex) {
-
-      }
-
-      final ListenableScheduledFuture backgroundManagerFuture = this.backgroundManagerFuture;
-      this.backgroundManagerFuture = null;
-      if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
-        LOG.warn("Background lookup manager thread could not be cancelled");
-      }
-      // NOTE: we can't un-watch the configuration key
-      LOG.debug("Stopped");
+    if (!lifecycleLock.canStop()) {
+      LOG.warn("Not started, ignoring stop request");
+      return;
     }
+
+    executorService.shutdownNow();
+
+    //went in an stop error
+    try {
+      executorService.awaitTermination(1, TimeUnit.MINUTES);
+    } catch (InterruptedException ex) {
+
+    }
+
+    final ListenableScheduledFuture backgroundManagerFuture = this.backgroundManagerFuture;
+    this.backgroundManagerFuture = null;
+    if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
+      LOG.warn("Background lookup manager thread could not be cancelled");
+    }
+    // NOTE: we can't un-watch the configuration key
+    LOG.debug("Stopped");
   }
 
   private void lookupMgmtLoop()
   {
     // Sanity check for if we are shutting down
-    if (Thread.currentThread().isInterrupted() || !lifecycleLock.isStarted()) {
+    if (Thread.currentThread().isInterrupted() || !lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
       LOG.info("Not updating lookups because process was interrupted or not started.");
       return;
     }
