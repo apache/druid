@@ -48,7 +48,6 @@ import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
-import io.druid.segment.serde.ComplexColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
@@ -367,7 +366,7 @@ public class IndexMergerV9 extends IndexMerger
           builder.setValueType(ValueType.COMPLEX);
           builder.addSerde(
               ComplexColumnPartSerde.serializerBuilder().withTypeName(typeName)
-                                    .withDelegate((ComplexColumnSerializer) writer)
+                                    .withDelegate(writer)
                                     .build()
           );
           break;
