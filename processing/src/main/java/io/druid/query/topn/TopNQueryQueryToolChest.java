@@ -27,8 +27,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
@@ -317,7 +317,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             .appendInt(query.getThreshold())
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimensionsFilter())
-            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs());
+            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns());
 
         final List<PostAggregator> postAggregators = prunePostAggregators(query);
         if (!postAggregators.isEmpty()) {
@@ -368,7 +369,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       {
         return new Function<Object, Result<TopNResultValue>>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Result<TopNResultValue> apply(Object input)

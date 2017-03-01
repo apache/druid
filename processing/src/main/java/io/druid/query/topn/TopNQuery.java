@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
@@ -34,9 +34,11 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -44,29 +46,32 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 {
   public static final String TOPN = "topN";
 
+  private final VirtualColumns virtualColumns;
   private final DimensionSpec dimensionSpec;
   private final TopNMetricSpec topNMetricSpec;
   private final int threshold;
   private final DimFilter dimFilter;
-  private final QueryGranularity granularity;
+  private final Granularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
   @JsonCreator
   public TopNQuery(
       @JsonProperty("dataSource") DataSource dataSource,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("dimension") DimensionSpec dimensionSpec,
       @JsonProperty("metric") TopNMetricSpec topNMetricSpec,
       @JsonProperty("threshold") int threshold,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("granularity") QueryGranularity granularity,
+      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, false, context);
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;
@@ -74,10 +79,11 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
-    this.postAggregatorSpecs = Queries.prepareAggregations(this.aggregatorSpecs,
-                                                           postAggregatorSpecs == null
-                                                           ? ImmutableList.<PostAggregator>of()
-                                                           : postAggregatorSpecs
+    this.postAggregatorSpecs = Queries.prepareAggregations(
+        this.aggregatorSpecs,
+        postAggregatorSpecs == null
+        ? ImmutableList.<PostAggregator>of()
+        : postAggregatorSpecs
     );
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
@@ -105,6 +111,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return TOPN;
   }
 
+  @JsonProperty
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
+  }
+
   @JsonProperty("dimension")
   public DimensionSpec getDimensionSpec()
   {
@@ -130,7 +142,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
@@ -159,6 +171,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -175,6 +188,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         spec,
         topNMetricSpec,
         threshold,
@@ -191,6 +205,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         getDimensionSpec(),
         topNMetricSpec,
         threshold,
@@ -207,6 +222,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         getDimensionSpec(),
         topNMetricSpec,
         threshold,
@@ -224,6 +240,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         dataSource,
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -240,6 +257,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -256,6 +274,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         threshold,
@@ -272,6 +291,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     return new TopNQuery(
         getDataSource(),
+        virtualColumns,
         getDimensionSpec(),
         topNMetricSpec,
         threshold,
@@ -293,6 +313,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
            ", topNMetricSpec=" + topNMetricSpec +
            ", threshold=" + threshold +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", virtualColumns=" + virtualColumns +
            ", dimFilter=" + dimFilter +
            ", granularity='" + granularity + '\'' +
            ", aggregatorSpecs=" + aggregatorSpecs +
@@ -301,7 +322,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -312,49 +333,30 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     if (!super.equals(o)) {
       return false;
     }
-
-    TopNQuery topNQuery = (TopNQuery) o;
-
-    if (threshold != topNQuery.threshold) {
-      return false;
-    }
-    if (aggregatorSpecs != null
-        ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs)
-        : topNQuery.aggregatorSpecs != null) {
-      return false;
-    }
-    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) {
-      return false;
-    }
-    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null) {
-      return false;
-    }
-    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) {
-      return false;
-    }
-    if (postAggregatorSpecs != null
-        ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs)
-        : topNQuery.postAggregatorSpecs != null) {
-      return false;
-    }
-    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null) {
-      return false;
-    }
-
-    return true;
+    final TopNQuery topNQuery = (TopNQuery) o;
+    return threshold == topNQuery.threshold &&
+           Objects.equals(virtualColumns, topNQuery.virtualColumns) &&
+           Objects.equals(dimensionSpec, topNQuery.dimensionSpec) &&
+           Objects.equals(topNMetricSpec, topNQuery.topNMetricSpec) &&
+           Objects.equals(dimFilter, topNQuery.dimFilter) &&
+           Objects.equals(granularity, topNQuery.granularity) &&
+           Objects.equals(aggregatorSpecs, topNQuery.aggregatorSpecs) &&
+           Objects.equals(postAggregatorSpecs, topNQuery.postAggregatorSpecs);
   }
 
   @Override
   public int hashCode()
   {
-    int result = super.hashCode();
-    result = 31 * result + (dimensionSpec != null ? dimensionSpec.hashCode() : 0);
-    result = 31 * result + (topNMetricSpec != null ? topNMetricSpec.hashCode() : 0);
-    result = 31 * result + threshold;
-    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
-    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
-    result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
-    result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
-    return result;
+    return Objects.hash(
+        super.hashCode(),
+        virtualColumns,
+        dimensionSpec,
+        topNMetricSpec,
+        threshold,
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs
+    );
   }
 }

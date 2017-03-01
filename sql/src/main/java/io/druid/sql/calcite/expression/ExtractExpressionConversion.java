@@ -19,7 +19,7 @@
 
 package io.druid.sql.calcite.expression;
 
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -81,7 +81,7 @@ public class ExtractExpressionConversion extends AbstractExpressionConversion
 
     if (baseExtractionFn instanceof TimeFormatExtractionFn) {
       final TimeFormatExtractionFn baseTimeFormatFn = (TimeFormatExtractionFn) baseExtractionFn;
-      final QueryGranularity queryGranularity = ExtractionFns.toQueryGranularity(baseTimeFormatFn);
+      final Granularity queryGranularity = ExtractionFns.toQueryGranularity(baseTimeFormatFn);
       if (queryGranularity != null) {
         // Combine EXTRACT(X FROM FLOOR(Y TO Z)) into a single extractionFn.
         return RowExtraction.of(

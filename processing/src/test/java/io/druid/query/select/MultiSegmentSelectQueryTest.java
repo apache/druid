@@ -22,8 +22,8 @@ package io.druid.query.select;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -177,7 +177,7 @@ public class MultiSegmentSelectQueryTest
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
-        .withQueryGranularity(QueryGranularities.HOUR)
+        .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
     return new OnheapIncrementalIndex(schema, true, maxRowCount);

@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -98,6 +98,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                         .setDimFilter(tsQuery.getDimensionsFilter())
                                         .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
                                         .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                                        .setVirtualColumns(tsQuery.getVirtualColumns())
                                         .build(),
                             responseContext
                         ),
@@ -139,7 +140,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.asList(

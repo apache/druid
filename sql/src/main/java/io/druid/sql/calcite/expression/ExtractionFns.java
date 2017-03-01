@@ -20,7 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.CascadeExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
@@ -32,13 +32,13 @@ public class ExtractionFns
 {
   /**
    * Converts extractionFn to a QueryGranularity, if possible. This is the inverse of
-   * {@link #fromQueryGranularity(QueryGranularity)}.
+   * {@link #fromQueryGranularity(Granularity)}.
    *
    * @param extractionFn function
    *
    * @return query granularity, or null if extractionFn cannot be translated
    */
-  public static QueryGranularity toQueryGranularity(final ExtractionFn extractionFn)
+  public static Granularity toQueryGranularity(final ExtractionFn extractionFn)
   {
     if (extractionFn instanceof TimeFormatExtractionFn) {
       final TimeFormatExtractionFn fn = (TimeFormatExtractionFn) extractionFn;
@@ -59,7 +59,7 @@ public class ExtractionFns
    *
    * @return extractionFn, or null if queryGranularity is null
    */
-  public static ExtractionFn fromQueryGranularity(final QueryGranularity queryGranularity)
+  public static ExtractionFn fromQueryGranularity(final Granularity queryGranularity)
   {
     if (queryGranularity == null) {
       return null;

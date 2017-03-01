@@ -133,6 +133,8 @@ public class ScanQueryRunnerTest
         ScanResultValue.timestampKey,
         "market",
         "quality",
+        "qualityLong",
+        "qualityFloat",
         "qualityNumericString",
         "placement",
         "placementish",
@@ -141,9 +143,7 @@ public class ScanQueryRunnerTest
         "index",
         "indexMin",
         "indexMaxPlusTen",
-        "quality_uniques",
-        "qualityLong",
-        "qualityFloat"
+        "quality_uniques"
     );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)

@@ -27,7 +27,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -138,7 +138,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           timestampSpec = null;
         }
 
-        final QueryGranularity queryGranularity;
+        final Granularity queryGranularity;
         if (query.hasQueryGranularity()) {
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();

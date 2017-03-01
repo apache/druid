@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -43,6 +43,7 @@ import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.ExtractionFns;
@@ -295,14 +296,14 @@ public class DruidQueryBuilder
       return null;
     }
 
-    final QueryGranularity queryGranularity;
+    final Granularity queryGranularity;
     final List<DimensionSpec> dimensions = grouping.getDimensions();
 
     if (dimensions.isEmpty()) {
-      queryGranularity = QueryGranularities.ALL;
+      queryGranularity = Granularities.ALL;
     } else if (dimensions.size() == 1) {
       final DimensionSpec dimensionSpec = Iterables.getOnlyElement(dimensions);
-      final QueryGranularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
+      final Granularity gran = ExtractionFns.toQueryGranularity(dimensionSpec.getExtractionFn());
 
       if (gran == null || !dimensionSpec.getDimension().equals(Column.TIME_COLUMN_NAME)) {
         // Timeseries only applies if the single dimension is granular __time.
@@ -341,6 +342,7 @@ public class DruidQueryBuilder
         dataSource,
         filtration.getQuerySegmentSpec(),
         descending,
+        VirtualColumns.EMPTY,
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
@@ -414,12 +416,13 @@ public class DruidQueryBuilder
 
     return new TopNQuery(
         dataSource,
+        VirtualColumns.EMPTY,
         Iterables.getOnlyElement(grouping.getDimensions()),
         topNMetricSpec,
         limitSpec.getLimit(),
         filtration.getQuerySegmentSpec(),
         filtration.getDimFilter(),
-        QueryGranularities.ALL,
+        Granularities.ALL,
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
         context
@@ -450,8 +453,9 @@ public class DruidQueryBuilder
     return new GroupByQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
+        VirtualColumns.EMPTY,
         filtration.getDimFilter(),
-        QueryGranularities.ALL,
+        Granularities.ALL,
         grouping.getDimensions(),
         grouping.getAggregatorFactories(),
         grouping.getPostAggregators(),
@@ -503,7 +507,7 @@ public class DruidQueryBuilder
         filtration.getQuerySegmentSpec(),
         descending,
         filtration.getDimFilter(),
-        QueryGranularities.ALL,
+        Granularities.ALL,
         selectProjection != null ? selectProjection.getDimensions() : ImmutableList.<DimensionSpec>of(),
         selectProjection != null ? selectProjection.getMetrics() : ImmutableList.<String>of(),
         null,

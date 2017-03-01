@@ -19,7 +19,7 @@
 
 package io.druid.sql.calcite.expression;
 
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -46,7 +46,7 @@ public class FloorExpressionConversion extends AbstractExpressionConversion
 
   public static RowExtraction applyTimestampFloor(
       final RowExtraction rex,
-      final QueryGranularity queryGranularity
+      final Granularity queryGranularity
   )
   {
     if (rex == null || queryGranularity == null) {
