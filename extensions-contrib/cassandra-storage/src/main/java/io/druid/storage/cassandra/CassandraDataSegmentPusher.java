@@ -27,6 +27,7 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -36,6 +37,8 @@ import io.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 
 /**
  * Cassandra Segment Pusher
@@ -46,7 +49,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 {
 	private static final Logger log = new Logger(CassandraDataSegmentPusher.class);
 	private static final int CONCURRENCY = 10;
-	private static final Joiner JOINER = Joiner.on("/").skipNulls();  
+	private static final Joiner JOINER = Joiner.on("/").skipNulls();
 	private final ObjectMapper jsonMapper;
 
   @Inject
@@ -96,7 +99,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 			MutationBatch mutation = this.keyspace.prepareMutationBatch();
       mutation.withRow(descriptorStorage, key)
       	.putColumn("lastmodified", System.currentTimeMillis(), null)
-      	.putColumn("descriptor", json, null);      	
+      	.putColumn("descriptor", json, null);
       mutation.execute();
 			log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
 		} catch (Exception e)
@@ -114,4 +117,10 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 		compressedIndexFile.delete();
 		return segment;
 	}
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI uri)
+  {
+		throw new IAE("not supported");
+  }
 }

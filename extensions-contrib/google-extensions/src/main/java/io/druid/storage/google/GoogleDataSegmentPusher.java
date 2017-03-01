@@ -35,6 +35,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
 {
@@ -82,7 +84,8 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     return descriptorFile;
   }
 
-  public void insert(final File file, final String contentType, final String path) throws IOException {
+  public void insert(final File file, final String contentType, final String path) throws IOException
+  {
     LOG.info("Inserting [%s] to [%s]", file, path);
 
     FileInputStream fileSteam = new FileInputStream(file);
@@ -117,7 +120,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
                   "bucket", config.getBucket(),
                   "path", indexPath
               )
-           )
+          )
           .withBinaryVersion(version);
 
       descriptorFile = createDescriptorFile(jsonMapper, outSegment);
@@ -129,7 +132,8 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
-    } finally {
+    }
+    finally {
       if (indexFile != null) {
         LOG.info("Deleting file [%s]", indexFile);
         indexFile.delete();
@@ -140,6 +144,19 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
         descriptorFile.delete();
       }
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type",
+        GoogleStorageDruidModule.SCHEME,
+        "bucket",
+        config.getBucket(),
+        "path",
+        finalIndexZipFilePath.getPath().substring(1) // remove the leading "/"
+    );
   }
 
   public String buildPath(final String path)

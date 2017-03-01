@@ -140,12 +140,17 @@
             <artifactId>emitter</artifactId>
             <scope>provided</scope>
         </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-aws</artifactId>
+        <version>${hadoop.compile.version}</version>
+      </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <scope>provided</scope>
         </dependency>
-      
+
         <!-- Tests -->
         <dependency>
           <groupId>junit</groupId>

@@ -38,6 +38,8 @@ import org.jets3t.service.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
@@ -148,5 +150,15 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+  {
+    return ImmutableMap.<String, Object>of(
+        "type", "s3_zip",
+        "bucket", finalIndexZipFilePath.getHost(),
+        "key", finalIndexZipFilePath.getPath().substring(1) // remove the leading "/"
+    );
   }
 }
