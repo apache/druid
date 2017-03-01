@@ -82,6 +82,7 @@ public class KafkaEmitter implements Emitter {
       @Override
       public void onCompletion(RecordMetadata recordMetadata, Exception e) {
         if(e != null) {
+          log.debug("Event send failed [%s]", e.getMessage());
           if(recordMetadata.topic().equals(config.getMetricTopic())) {
             metricLost.incrementAndGet();
           } else if (recordMetadata.topic().equals(config.getAlertTopic())) {
