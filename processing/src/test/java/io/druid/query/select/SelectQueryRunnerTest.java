@@ -171,7 +171,7 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
         Lists.newArrayList("market", "quality", "qualityNumericString", "placement", "placementish", "partial_null_column", "null_column"),
@@ -368,7 +368,7 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         toEvents(
             new String[]{
@@ -407,7 +407,7 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         toEvents(
             new String[]{
@@ -479,7 +479,7 @@ public class SelectQueryRunnerTest
           }
       );
 
-      PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+      PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
       List<Result<SelectResultValue>> expectedResults = toExpected(
           events,
           Lists.newArrayList("quality"),
@@ -533,7 +533,7 @@ public class SelectQueryRunnerTest
         }
     );
 
-    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
         Lists.newArrayList("quality"),
@@ -588,7 +588,7 @@ public class SelectQueryRunnerTest
         }
     );
 
-    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
         Lists.newArrayList(QueryRunnerTestHelper.qualityDimension),
@@ -659,7 +659,7 @@ public class SelectQueryRunnerTest
         V_0112_0114
     );
 
-    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId, DEFAULT_FROM_NEXT);
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
         Lists.newArrayList("foo"),

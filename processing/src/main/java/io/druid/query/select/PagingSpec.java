@@ -21,8 +21,11 @@ package io.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -58,23 +61,34 @@ public class PagingSpec
 
   private final Map<String, Integer> pagingIdentifiers;
   private final int threshold;
-  private final Boolean fromNext;
+  private final boolean fromNext;
+  private final Supplier<SelectQueryConfig> configSupplier;
 
   @JsonCreator
+  @Inject
   public PagingSpec(
       @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
       @JsonProperty("threshold") int threshold,
-      @JsonProperty("fromNext") Boolean fromNext
+      @JsonProperty("fromNext") Boolean fromNext,
+      Supplier<SelectQueryConfig> configSupplier
   )
   {
     this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
     this.threshold = threshold;
-    this.fromNext = fromNext;
+    this.configSupplier = configSupplier;
+
+    boolean defaultFromNext = configSupplier.get().getEnableFromNextDefault();
+    this.fromNext = fromNext == null ? defaultFromNext : fromNext;
   }
 
   public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold)
   {
-    this(pagingIdentifiers, threshold, null);
+    this(pagingIdentifiers, threshold, null, Suppliers.ofInstance(new SelectQueryConfig()));
+  }
+
+  public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold, Boolean fromNext)
+  {
+    this(pagingIdentifiers, threshold, fromNext, Suppliers.ofInstance(new SelectQueryConfig()));
   }
 
   @JsonProperty
@@ -90,12 +104,12 @@ public class PagingSpec
   }
 
   @JsonProperty
-  public Boolean isFromNext()
+  public boolean isFromNext()
   {
     return fromNext;
   }
 
-  public byte[] getCacheKey(boolean defaultFromNext)
+  public byte[] getCacheKey()
   {
     final byte[][] pagingKeys = new byte[pagingIdentifiers.size()][];
     final byte[][] pagingValues = new byte[pagingIdentifiers.size()][];
@@ -124,17 +138,17 @@ public class PagingSpec
     }
 
     queryCacheKey.put(thresholdBytes);
-    queryCacheKey.put(shouldApplyFromNext(defaultFromNext) ? (byte) 0x01 : 0x00);
+    queryCacheKey.put(isFromNext() ? (byte) 0x01 : 0x00);
 
     return queryCacheKey.array();
   }
 
-  public PagingOffset getOffset(String identifier, boolean descending, boolean defaultFromNext)
+  public PagingOffset getOffset(String identifier, boolean descending)
   {
     Integer offset = pagingIdentifiers.get(identifier);
     if (offset == null) {
       offset = PagingOffset.toOffset(0, descending);
-    } else if (shouldApplyFromNext(defaultFromNext)) {
+    } else if (fromNext) {
       offset = descending ? offset - 1 : offset + 1;
     }
     return PagingOffset.of(offset, threshold);
@@ -182,10 +196,5 @@ public class PagingSpec
            ", threshold=" + threshold +
            ", fromNext=" + fromNext +
            '}';
-  }
-
-  private boolean shouldApplyFromNext(boolean defaultFromNext)
-  {
-    return fromNext == null ? defaultFromNext : fromNext;
   }
 }

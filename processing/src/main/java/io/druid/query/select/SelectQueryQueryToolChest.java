@@ -202,15 +202,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-        final boolean defaultFromNext = configSupplier.get().getEnableFromNextDefault();
-
         final byte[] virtualColumnsCacheKey = query.getVirtualColumns().getCacheKey();
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1
                 + granularityBytes.length
                 + filterBytes.length
-                + query.getPagingSpec().getCacheKey(defaultFromNext).length
+                + query.getPagingSpec().getCacheKey().length
                 + dimensionsBytesSize
                 + metricBytesSize
                 + virtualColumnsCacheKey.length
@@ -218,7 +216,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             .put(SELECT_QUERY)
             .put(granularityBytes)
             .put(filterBytes)
-            .put(query.getPagingSpec().getCacheKey(defaultFromNext));
+            .put(query.getPagingSpec().getCacheKey());
 
         for (byte[] dimensionsByte : dimensionsBytes) {
           queryCacheKey.put(dimensionsByte);

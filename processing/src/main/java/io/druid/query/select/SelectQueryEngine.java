@@ -243,8 +243,7 @@ public class SelectQueryEngine
               builder.addMetric(metric);
             }
 
-            final boolean defaultFromNext = configSupplier.get().getEnableFromNextDefault();
-            final PagingOffset offset = query.getPagingOffset(segmentId, defaultFromNext);
+            final PagingOffset offset = query.getPagingOffset(segmentId);
 
             cursor.advanceTo(offset.startDelta());
 

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SelectQueryConfig
 {
-  public static String CTX_KEY_ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
+  public static String ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
 
   @JsonProperty
   private boolean enableFromNextDefault = true;

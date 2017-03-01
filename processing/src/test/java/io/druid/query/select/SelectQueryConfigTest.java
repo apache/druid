@@ -31,12 +31,12 @@ public class SelectQueryConfigTest
 
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()
-      .put(SelectQueryConfig.CTX_KEY_ENABLE_FROM_NEXT_DEFAULT, "false")
+      .put(SelectQueryConfig.ENABLE_FROM_NEXT_DEFAULT, "false")
       .build();
 
   private final ImmutableMap<String, String> CONFIG_MAP2 = ImmutableMap
       .<String, String>builder()
-      .put(SelectQueryConfig.CTX_KEY_ENABLE_FROM_NEXT_DEFAULT, "true")
+      .put(SelectQueryConfig.ENABLE_FROM_NEXT_DEFAULT, "true")
       .build();
 
   private final ImmutableMap<String, String> CONFIG_MAP_EMPTY = ImmutableMap
