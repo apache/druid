@@ -19,7 +19,8 @@
 
 package io.druid.segment.data;
 
-
+import com.yahoo.memory.NativeMemory;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -115,9 +116,10 @@ public class VSizeLongSerdeTest
     buffer = ByteBuffer.wrap(outStream.toByteArray());
     Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, values.length), buffer.capacity());
     Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, values.length), outBuffer.position());
-    VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize, buffer, 0);
-    VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize, outBuffer, 0);
+    VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize, new NativeMemory(buffer), 0);
+    VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize, new NativeMemory(outBuffer), 0);
     for (int i = 0; i < values.length; i++) {
+      System.out.println("i=" + i + " longsize=" + longSize);
       Assert.assertEquals(values[i], streamDes.get(i));
       Assert.assertEquals(values[i], bufferDes.get(i));
     }
@@ -139,13 +141,14 @@ public class VSizeLongSerdeTest
     buffer = ByteBuffer.wrap(outStream.toByteArray());
     Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), buffer.capacity());
     Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), outBuffer.position());
-    VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize, buffer, 0);
-    VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize, outBuffer, 0);
+    VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize,
+        (new PositionalMemoryRegion(buffer)).getRemainingMemory(), 0);
+    VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize,
+        new NativeMemory(outBuffer), 0);
     for (int i = 0; i < end - start; i++) {
+      System.out.println("i=" + i + "  start=" + start + "  longsize=" + longSize);
       Assert.assertEquals(start + i, streamDes.get(i));
       Assert.assertEquals(start + i, bufferDes.get(i));
     }
   }
-
-
 }

@@ -23,13 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.serde.ColumnPartSerde;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.List;
 
@@ -94,15 +96,16 @@ public class ColumnDescriptor
     }
   }
 
-  public Column read(ByteBuffer buffer, ColumnConfig columnConfig, SmooshedFileMapper smooshedFiles)
+  public Column read(Memory memory, ColumnConfig columnConfig, SmooshedFileMapper smooshedFiles)
   {
+    PositionalMemoryRegion pMemoryRegion = new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity()));
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)
         .setHasMultipleValues(hasMultipleValues)
         .setFileMapper(smooshedFiles);
 
     for (ColumnPartSerde part : parts) {
-      part.getDeserializer().read(buffer, builder, columnConfig);
+      part.getDeserializer().read(pMemoryRegion, builder, columnConfig);
     }
 
     return builder.build();

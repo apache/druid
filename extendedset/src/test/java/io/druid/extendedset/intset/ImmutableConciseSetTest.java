@@ -17,12 +17,16 @@
 package io.druid.extendedset.intset;
 
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.NativeMemory;
 import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -127,7 +131,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {-1, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
 
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
@@ -140,7 +144,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {-1, 0x40000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x40000005, itr.next());
@@ -152,7 +156,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {-1, 0x42000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(-1, itr.next());
@@ -165,7 +169,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x40000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x40000005, itr.next());
@@ -177,7 +181,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x40000004, 0x40000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x40000009, itr.next());
@@ -189,7 +193,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x40000004, 0x42000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x40000004, itr.next());
@@ -202,7 +206,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000000, 0x80000000, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x00000001, itr.next());
@@ -215,7 +219,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000000, 0x00000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x00000005, itr.next());
@@ -228,7 +232,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000000, 0x02000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x80000000, itr.next());
@@ -242,7 +246,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x00000004, 0x80000000, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x00000005, itr.next());
@@ -255,7 +259,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x00000004, 0x00000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x00000009, itr.next());
@@ -268,7 +272,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x00000004, 0x02000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x00000004, itr.next());
@@ -282,7 +286,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000001, 0x80000000, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x02000001, itr.next());
@@ -295,7 +299,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000003, 0x80000000, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x80000003, itr.next());
@@ -309,7 +313,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000001, 0x00000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x02000005, itr.next());
@@ -322,7 +326,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000003, 0x00000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x80000003, itr.next());
@@ -336,7 +340,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0x80000001, 0x02000004, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x80000001, itr.next());
@@ -350,7 +354,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0xFFFFFFFE, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x42000001, itr.next());
@@ -362,7 +366,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0xFFFFFFEE, -1};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0xFFFFFFEE, itr.next());
@@ -375,7 +379,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0xFFFFFFFE, 0x40000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0x42000005, itr.next());
@@ -387,7 +391,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0xFFFFFFFC, 0x40000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0xFFFFFFFC, itr.next());
@@ -400,7 +404,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0xFFFFFFFE, 0x42000004};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0xFFFFFFFE, itr.next());
@@ -413,7 +417,7 @@ public class ImmutableConciseSetTest
   {
     int[] words = {0xFFFFFFFE, 0xFFEFFEFF};
 
-    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(IntBuffer.wrap(words)));
+    ImmutableConciseSet res = ImmutableConciseSet.compact(new ImmutableConciseSet(createMemoryFromIntArray(words)));
     ImmutableConciseSet.WordIterator itr = res.newWordIterator();
 
     Assert.assertEquals(0xFFFFFFFE, itr.next());
@@ -1718,7 +1722,7 @@ public class ImmutableConciseSetTest
     }
 
     ImmutableConciseSet testSet = ImmutableConciseSet.newImmutableFromMutable(set);
-
+    testSet.toString();
     verifyComplement(expected, testSet, NO_COMPLEMENT_LENGTH);
   }
 
@@ -2028,5 +2032,15 @@ public class ImmutableConciseSetTest
       Assert.assertEquals(s, integerSet.contains(i), conciseSet.contains(i));
       Assert.assertEquals(s, integerSet.contains(i), immutableConciseSet.contains(i));
     }
+  }
+  
+  private Memory createMemoryFromIntArray(int[] words)
+  {
+    //TODO Replace with new constructor from Memory. This is a hack till then
+    ByteBuffer bb = ByteBuffer.allocate(words.length* Ints.BYTES).order(ByteOrder.nativeOrder());
+    for(int i = 0; i < words.length; i++){
+      bb.putInt(words[i]);
+    }
+    return new NativeMemory(bb);
   }
 }

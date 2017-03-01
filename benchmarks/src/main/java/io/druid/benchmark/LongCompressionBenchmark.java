@@ -21,6 +21,7 @@ package io.druid.benchmark;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.Files;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.IndexedLongs;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -75,7 +76,7 @@ public class LongCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy + "-" + format);
     rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
-    supplier = CompressedLongsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
+    supplier = CompressedLongsIndexedSupplier.fromMemory(new PositionalMemoryRegion(buffer), ByteOrder.nativeOrder());
   }
 
   @Benchmark

@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.nio.ByteBuffer;
 
@@ -27,42 +28,43 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
 {
   private final long table[];
   private final int bitsPerValue;
-  private final ByteBuffer buffer;
+  private final PositionalMemoryRegion memory;
   private VSizeLongSerde.LongDeserializer deserializer;
 
-  public TableLongEncodingReader(ByteBuffer fromBuffer)
+  public TableLongEncodingReader(PositionalMemoryRegion fromMemory)
   {
-    this.buffer = fromBuffer.asReadOnlyBuffer();
-    byte version = buffer.get();
+
+    this.memory = fromMemory.duplicate();
+    byte version = memory.getByte();
     if (version == CompressionFactory.TABLE_ENCODING_VERSION) {
-      int tableSize = buffer.getInt();
+      int tableSize = Integer.reverseBytes(memory.getInt());
       if (tableSize < 0 || tableSize > CompressionFactory.MAX_TABLE_SIZE) {
         throw new IAE("Invalid table size[%s]", tableSize);
       }
       bitsPerValue = VSizeLongSerde.getBitsForMax(tableSize);
       table = new long[tableSize];
       for (int i = 0; i < tableSize; i++) {
-        table[i] = buffer.getLong();
+        table[i] = Long.reverseBytes(memory.getLong());
       }
-      fromBuffer.position(buffer.position());
-      deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+      fromMemory.position(memory.position());
+      deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, memory.getRemainingMemory(), 0);
     } else {
       throw new IAE("Unknown version[%s]", version);
     }
   }
 
-  private TableLongEncodingReader(ByteBuffer buffer, long table[], int bitsPerValue)
+  private TableLongEncodingReader(PositionalMemoryRegion memory, long table[], int bitsPerValue)
   {
-    this.buffer = buffer;
+    this.memory = memory;
     this.table = table;
     this.bitsPerValue = bitsPerValue;
-    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, memory.getRemainingMemory(), 0);
   }
 
   @Override
   public void setBuffer(ByteBuffer buffer)
   {
-    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, (new PositionalMemoryRegion(buffer)).getRemainingMemory(), 0);
   }
 
   @Override
@@ -80,6 +82,7 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new TableLongEncodingReader(buffer.duplicate(), table, bitsPerValue);
+    return new TableLongEncodingReader(
+        new PositionalMemoryRegion(memory, memory.position(), memory.remaining()), table, bitsPerValue);
   }
 }

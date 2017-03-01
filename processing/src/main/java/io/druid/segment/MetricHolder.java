@@ -23,10 +23,12 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.FloatSupplierSerializer;
@@ -123,43 +125,43 @@ public class MetricHolder
     }
   }
 
-  public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper) throws IOException
+  public static MetricHolder fromMemory(Memory memory) throws IOException
   {
-    return fromByteBuffer(buf, null, mapper);
+    return fromMemory(memory, null);
   }
 
-  public static MetricHolder fromByteBuffer(ByteBuffer buf, ObjectStrategy strategy, SmooshedFileMapper mapper)
-      throws IOException
+  public static MetricHolder fromMemory(Memory memory, ObjectStrategy strategy) throws IOException
   {
-    final byte ver = buf.get();
+    PositionalMemoryRegion pMemory = new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity()));
+    final byte ver = pMemory.getByte();
     if (version[0] != ver) {
       throw new ISE("Unknown version[%s] of MetricHolder", ver);
     }
 
-    final String metricName = serializerUtils.readString(buf);
-    final String typeName = serializerUtils.readString(buf);
+    final String metricName = serializerUtils.readStringReverse(pMemory);
+    final String typeName = serializerUtils.readStringReverse(pMemory);
     MetricHolder holder = new MetricHolder(metricName, typeName);
 
     switch (holder.type) {
-      case LONG:
-        holder.longType = CompressedLongsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder(), mapper);
-        break;
-      case FLOAT:
-        holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder(), mapper);
-        break;
-      case COMPLEX:
-        if (strategy != null) {
-          holder.complexType = GenericIndexed.read(buf, strategy, mapper);
-        } else {
-          final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
+    case LONG:
+      holder.longType = CompressedLongsIndexedSupplier.fromMemory(pMemory, ByteOrder.nativeOrder());
+      break;
+    case FLOAT:
+      holder.floatType = CompressedFloatsIndexedSupplier.fromMemory(pMemory, ByteOrder.nativeOrder());
+      break;
+    case COMPLEX:
+      if (strategy != null) {
+        holder.complexType = GenericIndexed.read(pMemory, strategy);
+      } else {
+        final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
 
-          if (serdeForType == null) {
-            throw new ISE("Unknown type[%s], cannot load.", holder.getTypeName());
-          }
-
-          holder.complexType = GenericIndexed.read(buf, serdeForType.getObjectStrategy());
+        if (serdeForType == null) {
+          throw new ISE("Unknown type[%s], cannot load.", holder.getTypeName());
         }
-        break;
+
+        holder.complexType = GenericIndexed.read(pMemory, serdeForType.getObjectStrategy());
+      }
+      break;
     }
 
     return holder;

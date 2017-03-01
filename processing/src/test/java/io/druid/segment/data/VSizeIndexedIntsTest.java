@@ -20,11 +20,11 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.util.List;
 
@@ -56,7 +56,7 @@ public class VSizeIndexedIntsTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(ints.getSerializedSize(), bytes.length);
-    VSizeIndexedInts deserialized = VSizeIndexedInts.readFromByteBuffer(ByteBuffer.wrap(bytes));
+     VSizeIndexedInts deserialized = VSizeIndexedInts.readFromMemory(new PositionalMemoryRegion(bytes));
 
     Assert.assertEquals(1, deserialized.getNumBytes());
     Assert.assertEquals(array.length, deserialized.size());

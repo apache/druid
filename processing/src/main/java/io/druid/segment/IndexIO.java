@@ -37,6 +37,8 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
@@ -46,6 +48,7 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -59,7 +62,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
@@ -69,6 +71,7 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
+import io.druid.segment.data.MemorySerializer;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
@@ -392,33 +395,29 @@ public class IndexIO
       }
 
       SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
-      ByteBuffer indexBuffer = smooshedFiles.mapFile("index.drd");
+      Memory indexMemory = smooshedFiles.mapFileToMemory("index.drd");
+      PositionalMemoryRegion pIndexMemory = new PositionalMemoryRegion(new MemoryRegion(indexMemory,0,indexMemory.getCapacity()));
 
-      indexBuffer.get(); // Skip the version byte
-      final GenericIndexed<String> availableDimensions = GenericIndexed.read(
-          indexBuffer,
-          GenericIndexed.STRING_STRATEGY,
-          smooshedFiles
+      pIndexMemory.getByte(); // Skip the version byte
+      final GenericIndexed<String> availableDimensions = GenericIndexed.read(pIndexMemory, GenericIndexed.STRING_STRATEGY
       );
-      final GenericIndexed<String> availableMetrics = GenericIndexed.read(
-          indexBuffer,
-          GenericIndexed.STRING_STRATEGY,
-          smooshedFiles
+      final GenericIndexed<String> availableMetrics = GenericIndexed.read(pIndexMemory, GenericIndexed.STRING_STRATEGY
       );
-      final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
+      final Interval dataInterval = new Interval(serializerUtils.readString(pIndexMemory));
       final BitmapSerdeFactory bitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
 
-      CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
-          smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()),
-          BYTE_ORDER,
-          smooshedFiles
+      Memory timestampsMemory = smooshedFiles.mapFileToMemory(makeTimeFile(inDir, BYTE_ORDER).getName());
+      PositionalMemoryRegion pTimestampsMemory = new PositionalMemoryRegion(
+          new MemoryRegion(timestampsMemory,0, timestampsMemory.getCapacity()));
+      CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromMemory(
+          pTimestampsMemory,
+          BYTE_ORDER
       );
 
       Map<String, MetricHolder> metrics = Maps.newLinkedHashMap();
       for (String metric : availableMetrics) {
         final String metricFilename = makeMetricFile(inDir, metric, BYTE_ORDER).getName();
-        final MetricHolder holder = MetricHolder.fromByteBuffer(smooshedFiles.mapFile(metricFilename), smooshedFiles);
-
+        final MetricHolder holder = MetricHolder.fromMemory(smooshedFiles.mapFileToMemory(metricFilename));
         if (!metric.equals(holder.getName())) {
           throw new ISE("Metric[%s] loaded up metric[%s] from disk.  File names do matter.", metric, holder.getName());
         }
@@ -430,8 +429,9 @@ public class IndexIO
       Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = Maps.newHashMap();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
-        ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
-        String fileDimensionName = serializerUtils.readString(dimBuffer);
+        Memory dimMemory = smooshedFiles.mapFileToMemory(makeDimFile(inDir, dimension).getName());
+        PositionalMemoryRegion pDimMemory = new PositionalMemoryRegion(new MemoryRegion(dimMemory, 0, dimMemory.getCapacity()));
+        String fileDimensionName = serializerUtils.readStringReverse(pDimMemory);
         Preconditions.checkState(
             dimension.equals(fileDimensionName),
             "Dimension file[%s] has dimension[%s] in it!?",
@@ -439,25 +439,29 @@ public class IndexIO
             fileDimensionName
         );
 
-        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.STRING_STRATEGY));
-        dimColumns.put(dimension, VSizeIndexed.readFromByteBuffer(dimBuffer));
+        dimValueLookups.put(dimension, GenericIndexed.read(pDimMemory, GenericIndexed.STRING_STRATEGY));
+        dimColumns.put(dimension, VSizeIndexed.readFromMemory(pDimMemory));
       }
 
-      ByteBuffer invertedBuffer = smooshedFiles.mapFile("inverted.drd");
+      Memory invertedDrdMemory = smooshedFiles.mapFileToMemory("inverted.drd");
+      PositionalMemoryRegion pInvertedDrdMemory = new PositionalMemoryRegion(
+          new MemoryRegion(invertedDrdMemory, 0, invertedDrdMemory.getCapacity()));
       for (int i = 0; i < availableDimensions.size(); ++i) {
         bitmaps.put(
-            serializerUtils.readString(invertedBuffer),
-            GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy())
+            serializerUtils.readStringReverse(pInvertedDrdMemory),
+            GenericIndexed.read(pInvertedDrdMemory, bitmapSerdeFactory.getObjectStrategy())
         );
       }
 
       Map<String, ImmutableRTree> spatialIndexed = Maps.newHashMap();
-      ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
-      while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
+      Memory spatialMemory = smooshedFiles.mapFileToMemory("spatial.drd");
+      PositionalMemoryRegion pSpatialMemory = new PositionalMemoryRegion(new MemoryRegion(spatialMemory, 0,
+          spatialMemory.getCapacity()));
+      while (pSpatialMemory != null && pSpatialMemory.hasRemaining()) {
         spatialIndexed.put(
-            serializerUtils.readString(spatialBuffer),
-            ByteBufferSerializer.read(
-                spatialBuffer,
+            serializerUtils.readStringReverse(pSpatialMemory),
+            MemorySerializer.read(
+                pSpatialMemory,
                 new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
             )
         );
@@ -508,24 +512,28 @@ public class IndexIO
         ByteStreams.write(Ints.toByteArray(9), Files.newOutputStreamSupplier(new File(v9Dir, "version.bin")));
 
         Map<String, GenericIndexed<ImmutableBitmap>> bitmapIndexes = Maps.newHashMap();
-        final ByteBuffer invertedBuffer = v8SmooshedFiles.mapFile("inverted.drd");
+        final Memory invertedMemory = v8SmooshedFiles.mapFileToMemory("inverted.drd");
+        PositionalMemoryRegion pInvertedMemory = new PositionalMemoryRegion(
+            new MemoryRegion(invertedMemory,0, invertedMemory.getCapacity()));
         BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
-        while (invertedBuffer.hasRemaining()) {
-          final String dimName = serializerUtils.readString(invertedBuffer);
+        while (pInvertedMemory.hasRemaining()) {
           bitmapIndexes.put(
-              dimName,
-              GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy(), v8SmooshedFiles)
+              serializerUtils.readStringReverse(pInvertedMemory),
+              GenericIndexed.read(pInvertedMemory, bitmapSerdeFactory.getObjectStrategy(),
+                  v8SmooshedFiles)
           );
         }
 
         Map<String, ImmutableRTree> spatialIndexes = Maps.newHashMap();
-        final ByteBuffer spatialBuffer = v8SmooshedFiles.mapFile("spatial.drd");
-        while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
+        final Memory spatialMemory = v8SmooshedFiles.mapFileToMemory("spatial.drd");
+        PositionalMemoryRegion pSpatialMemory = new PositionalMemoryRegion(
+            new MemoryRegion(spatialMemory, 0, spatialMemory.getCapacity()));
+        while (pSpatialMemory != null && pSpatialMemory.hasRemaining()) {
           spatialIndexes.put(
-              serializerUtils.readString(spatialBuffer),
-              ByteBufferSerializer.read(
-                  spatialBuffer, new IndexedRTree.ImmutableRTreeObjectStrategy(
+              serializerUtils.readStringReverse(pSpatialMemory),
+              MemorySerializer.read(
+                  pSpatialMemory, new IndexedRTree.ImmutableRTreeObjectStrategy(
                       bitmapSerdeFactory.getBitmapFactory()
                   )
               )
@@ -542,8 +550,10 @@ public class IndexIO
 
             final List<ByteBuffer> outParts = Lists.newArrayList();
 
-            ByteBuffer dimBuffer = v8SmooshedFiles.mapFile(filename);
-            String dimension = serializerUtils.readString(dimBuffer);
+            Memory dimBuffer = v8SmooshedFiles.mapFileToMemory(filename);
+            PositionalMemoryRegion pDimMem = new PositionalMemoryRegion(new MemoryRegion(dimBuffer,
+                0 ,dimBuffer.getCapacity()));
+            String dimension = serializerUtils.readStringReverse(pDimMem);
             if (!filename.equals(String.format("dim_%s.drd", dimension))) {
               throw new ISE("loaded dimension[%s] from file[%s]", dimension, filename);
             }
@@ -552,8 +562,7 @@ public class IndexIO
             serializerUtils.writeString(nameBAOS, dimension);
             outParts.add(ByteBuffer.wrap(nameBAOS.toByteArray()));
 
-            GenericIndexed<String> dictionary = GenericIndexed.read(
-                dimBuffer, GenericIndexed.STRING_STRATEGY
+            GenericIndexed<String> dictionary = GenericIndexed.read(pDimMem, GenericIndexed.STRING_STRATEGY
             );
 
             if (dictionary.size() == 0) {
@@ -564,7 +573,7 @@ public class IndexIO
 
             int emptyStrIdx = dictionary.indexOf("");
             List<Integer> singleValCol = null;
-            VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
+            VSizeIndexed multiValCol = VSizeIndexed.readFromMemory(pDimMem);
             GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
             ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
 
@@ -708,7 +717,7 @@ public class IndexIO
               continue;
             }
 
-            MetricHolder holder = MetricHolder.fromByteBuffer(v8SmooshedFiles.mapFile(filename), v8SmooshedFiles);
+            MetricHolder holder = MetricHolder.fromMemory(v8SmooshedFiles.mapFileToMemory(filename));
             final String metric = holder.getName();
 
             final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
@@ -762,10 +771,13 @@ public class IndexIO
             serdeficator.write(channel, v9Smoosher);
             channel.close();
           } else if (String.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
-            CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
-                v8SmooshedFiles.mapFile(filename),
-                BYTE_ORDER,
-                v8SmooshedFiles
+
+            Memory timestampsMemory = v8SmooshedFiles.mapFileToMemory(filename);
+            PositionalMemoryRegion pTimestampsMemory = new PositionalMemoryRegion(
+                new MemoryRegion(timestampsMemory, 0, timestampsMemory.getCapacity()));
+            CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromMemory(
+                pTimestampsMemory,
+                BYTE_ORDER
             );
 
             final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
@@ -793,12 +805,15 @@ public class IndexIO
           }
         }
 
-        final ByteBuffer indexBuffer = v8SmooshedFiles.mapFile("index.drd");
+        final Memory indexMemory = v8SmooshedFiles.mapFileToMemory("index.drd");
+        PositionalMemoryRegion pIndexMemory = new PositionalMemoryRegion(
+            new MemoryRegion(indexMemory, 0, indexMemory.getCapacity()));
 
-        indexBuffer.get(); // Skip the version byte
+        pIndexMemory.getByte(); // Skip the version byte
         final GenericIndexed<String> dims8 = GenericIndexed.read(
-            indexBuffer, GenericIndexed.STRING_STRATEGY
+            pIndexMemory, GenericIndexed.STRING_STRATEGY
         );
+
         final GenericIndexed<String> dims9 = GenericIndexed.fromIterable(
             Iterables.filter(
                 dims8, new Predicate<String>()
@@ -813,11 +828,12 @@ public class IndexIO
             GenericIndexed.STRING_STRATEGY
         );
         final GenericIndexed<String> availableMetrics = GenericIndexed.read(
-            indexBuffer, GenericIndexed.STRING_STRATEGY
+            pIndexMemory, GenericIndexed.STRING_STRATEGY
         );
-        final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
+
+        final Interval dataInterval = new Interval(serializerUtils.readStringReverse(pIndexMemory));
         final BitmapSerdeFactory segmentBitmapSerdeFactory = mapper.readValue(
-            serializerUtils.readString(indexBuffer),
+            serializerUtils.readStringReverse(pIndexMemory),
             BitmapSerdeFactory.class
         );
 
@@ -838,9 +854,11 @@ public class IndexIO
         serializerUtils.writeString(writer, segmentBitmapSerdeFactoryString);
         writer.close();
 
-        final ByteBuffer metadataBuffer = v8SmooshedFiles.mapFile("metadata.drd");
-        if (metadataBuffer != null) {
-          v9Smoosher.add("metadata.drd", metadataBuffer);
+        final Memory metadataMemory = v8SmooshedFiles.mapFileToMemory("metadata.drd");
+        byte[] bytes = new byte[(int)metadataMemory.getCapacity()];
+        metadataMemory.getByteArray(0, bytes, 0, bytes.length);
+        if (metadataMemory != null) {
+          v9Smoosher.add("metadata.drd", ByteBuffer.wrap(bytes));
         }
 
         log.info("Skipped files[%s]", skippedFiles);
@@ -986,22 +1004,20 @@ public class IndexIO
 
       SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
 
-      ByteBuffer indexBuffer = smooshedFiles.mapFile("index.drd");
+      Memory memory = smooshedFiles.mapFileToMemory("index.drd");
+      PositionalMemoryRegion pMemoryRegion = new PositionalMemoryRegion(
+          new MemoryRegion(memory, 0, memory.getCapacity()));
       /**
        * Index.drd should consist of the segment version, the columns and dimensions of the segment as generic
        * indexes, the interval start and end millis as longs (in 16 bytes), and a bitmap index type.
        */
-      final GenericIndexed<String> cols = GenericIndexed.read(
-          indexBuffer,
-          GenericIndexed.STRING_STRATEGY,
-          smooshedFiles
-      );
-      final GenericIndexed<String> dims = GenericIndexed.read(
-          indexBuffer,
-          GenericIndexed.STRING_STRATEGY,
-          smooshedFiles
-      );
-      final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
+      final GenericIndexed<String> cols = GenericIndexed.read(pMemoryRegion, GenericIndexed.STRING_STRATEGY);
+
+      final GenericIndexed<String> dims = GenericIndexed.read(pMemoryRegion, GenericIndexed.STRING_STRATEGY);
+
+      final Interval dataInterval = new Interval(Long.reverseBytes(pMemoryRegion.getLong()),
+          Long.reverseBytes(pMemoryRegion.getLong()));
+
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
 
       /**
@@ -1009,18 +1025,18 @@ public class IndexIO
        * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
        * this information is appended to the end of index.drd.
        */
-      if (indexBuffer.hasRemaining()) {
-        segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
+      if (pMemoryRegion.hasRemaining()) {
+        segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readStringReverse(pMemoryRegion), BitmapSerdeFactory.class);
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
       Metadata metadata = null;
-      ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+      Memory metadataBB = smooshedFiles.mapFileToMemory("metadata.drd");
       if (metadataBB != null) {
         try {
           metadata = mapper.readValue(
-              serializerUtils.readBytes(metadataBB, metadataBB.remaining()),
+              serializerUtils.readBytes(metadataBB, (int)metadataBB.getCapacity()),
               Metadata.class
           );
         }
@@ -1037,10 +1053,10 @@ public class IndexIO
       Map<String, Column> columns = Maps.newHashMap();
 
       for (String columnName : cols) {
-        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName), smooshedFiles));
+        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFileToMemory(columnName), smooshedFiles));
       }
 
-      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
+      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFileToMemory("__time"), smooshedFiles));
 
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
@@ -1051,13 +1067,15 @@ public class IndexIO
       return index;
     }
 
-    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
-        throws IOException
+    private Column deserializeColumn(ObjectMapper mapper, Memory memory, SmooshedFileMapper smooshedFiles) throws IOException
     {
+      PositionalMemoryRegion pMemoryRegion = new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity()));
+
       ColumnDescriptor serde = mapper.readValue(
-          serializerUtils.readString(byteBuffer), ColumnDescriptor.class
+          serializerUtils.readStringReverse(pMemoryRegion), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+
+      return serde.read(pMemoryRegion.getRemainingMemory(), columnConfig, smooshedFiles);
     }
   }
 

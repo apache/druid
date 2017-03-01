@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 
+import com.yahoo.memory.NativeMemory;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -162,7 +163,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 
       return ah;
     } else if (object instanceof ByteBuffer) {
-      final ApproximateHistogram ah = ApproximateHistogram.fromBytes((ByteBuffer) object);
+      final ApproximateHistogram ah = ApproximateHistogram.fromBytes(
+          new NativeMemory((ByteBuffer) object));
       ah.setLowerLimit(lowerLimit);
       ah.setUpperLimit(upperLimit);
 

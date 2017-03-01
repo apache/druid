@@ -20,7 +20,10 @@
 package io.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Ordering;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.NativeMemory;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -90,11 +93,9 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(PositionalMemoryRegion pMemory, ColumnBuilder columnBuilder)
   {
-    final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy());
+    final GenericIndexed column = GenericIndexed.read(pMemory, getObjectStrategy());
     columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
@@ -113,7 +114,12 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
         readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-        return ApproximateHistogram.fromBytes(readOnlyBuffer);
+        return ApproximateHistogram.fromBytes(new NativeMemory(readOnlyBuffer));
+      }
+
+      @Override public ApproximateHistogram fromMemory(Memory memory)
+      {
+        return ApproximateHistogram.fromBytes(memory);
       }
 
       @Override

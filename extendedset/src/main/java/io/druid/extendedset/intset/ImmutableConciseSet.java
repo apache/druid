@@ -20,11 +20,13 @@ package io.druid.extendedset.intset;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.NativeMemory;
 import io.druid.extendedset.utilities.IntList;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -34,6 +36,9 @@ import java.util.PriorityQueue;
 public class ImmutableConciseSet
 {
   private final static int CHUNK_SIZE = 10000;
+  final Memory words;
+  private final int lastWordIndex;
+  private final int size;
 
   private static final Comparator<WordIterator> UNION_COMPARATOR = new Comparator<WordIterator>()
   {
@@ -121,12 +126,39 @@ public class ImmutableConciseSet
     }
   };
 
+  public ImmutableConciseSet(Memory memory)
+  {
+    this.words = memory;
+    this.lastWordIndex = (int)memory.getCapacity()/Ints.BYTES - 1;
+    this.size = calcSize();
+  }
+
+//  public ImmutableConciseSet(ByteBuffer byteBuffer)
+//  {
+////    this.words = byteBuffer.asIntBuffer();
+////    this.lastWordIndex = words.capacity() - 1;
+////    this.size = calcSize();
+//  }
+//
+//  public ImmutableConciseSet(IntBuffer buffer)
+//  {
+////    this.words = buffer;
+////    this.lastWordIndex = (words == null || buffer.capacity() == 0) ? -1 : words.capacity() - 1;
+////    this.size = calcSize();
+//  }
+
   public static ImmutableConciseSet newImmutableFromMutable(ConciseSet conciseSet)
   {
     if (conciseSet == null || conciseSet.isEmpty()) {
       return new ImmutableConciseSet();
     }
-    return new ImmutableConciseSet(IntBuffer.wrap(conciseSet.getWords()));
+    //TODO Replace with new constructor from Memory. This is a hack till then
+    int[] words = conciseSet.getWords();
+    ByteBuffer bb = ByteBuffer.allocate(words.length*Ints.BYTES).order(ByteOrder.nativeOrder());
+    for(int i = 0; i < words.length; i++){
+      bb.putInt(words[i]);
+    }
+    return new ImmutableConciseSet(new NativeMemory(bb));
   }
 
   public static ImmutableConciseSet union(ImmutableConciseSet... sets)
@@ -262,7 +294,8 @@ public class ImmutableConciseSet
     if (retVal.isEmpty()) {
       return new ImmutableConciseSet();
     }
-    return compact(new ImmutableConciseSet(IntBuffer.wrap(retVal.toArray())));
+
+    return compact(new ImmutableConciseSet(convertToNativeMem(retVal)));
   }
 
   public static ImmutableConciseSet compact(ImmutableConciseSet set)
@@ -272,7 +305,8 @@ public class ImmutableConciseSet
     while (itr.hasNext()) {
       addAndCompact(retVal, itr.next());
     }
-    return new ImmutableConciseSet(IntBuffer.wrap(retVal.toArray()));
+
+    return new ImmutableConciseSet(convertToNativeMem(retVal));
   }
 
   private static void addAndCompact(IntList set, int wordToAdd)
@@ -482,7 +516,8 @@ public class ImmutableConciseSet
     if (retVal.isEmpty()) {
       return new ImmutableConciseSet();
     }
-    return new ImmutableConciseSet(IntBuffer.wrap(retVal.toArray()));
+
+    return new ImmutableConciseSet(convertToNativeMem(retVal));
   }
 
   public static ImmutableConciseSet doIntersection(Iterator<ImmutableConciseSet> sets)
@@ -683,7 +718,19 @@ public class ImmutableConciseSet
     if (retVal.isEmpty()) {
       return new ImmutableConciseSet();
     }
-    return new ImmutableConciseSet(IntBuffer.wrap(retVal.toArray()));
+
+    return new ImmutableConciseSet(convertToNativeMem(retVal));
+  }
+
+  private static Memory convertToNativeMem(IntList retVal)
+  {
+    //TODO Replace with new constructor from Memory. This is a hack till then
+    ByteBuffer bb = ByteBuffer.allocate(retVal.length()*Ints.BYTES).order(ByteOrder.nativeOrder());
+    for(int i = 0; i < retVal.length(); i++){
+      bb.putInt(retVal.get(i));
+    }
+
+    return new NativeMemory(bb);
   }
 
   /**
@@ -747,7 +794,8 @@ public class ImmutableConciseSet
     if (retVal.isEmpty()) {
       return new ImmutableConciseSet();
     }
-    return new ImmutableConciseSet(IntBuffer.wrap(retVal.toArray()));
+
+    return new ImmutableConciseSet(convertToNativeMem(retVal));
   }
 
   // Based on the ConciseSet implementation by Alessandro Colantonio
@@ -780,10 +828,6 @@ public class ImmutableConciseSet
     } while (true);
   }
 
-  final IntBuffer words;
-  final int lastWordIndex;
-  private final int size;
-
   public ImmutableConciseSet()
   {
     this.words = null;
@@ -791,28 +835,29 @@ public class ImmutableConciseSet
     this.size = 0;
   }
 
-  public ImmutableConciseSet(ByteBuffer byteBuffer)
-  {
-    this.words = byteBuffer.asIntBuffer();
-    this.lastWordIndex = words.capacity() - 1;
-    this.size = calcSize();
-  }
-
-  public ImmutableConciseSet(IntBuffer buffer)
-  {
-    this.words = buffer;
-    this.lastWordIndex = (words == null || buffer.capacity() == 0) ? -1 : words.capacity() - 1;
-    this.size = calcSize();
-  }
+//  public ImmutableConciseSet(ByteBuffer byteBuffer)
+//  {
+//    this.words = byteBuffer.asIntBuffer();
+//    this.lastWordIndex = words.capacity() - 1;
+//    this.size = calcSize();
+//  }
+//
+//  public ImmutableConciseSet(IntBuffer buffer)
+//  {
+//    this.words = buffer;
+//    this.lastWordIndex = (words == null || buffer.capacity() == 0) ? -1 : words.capacity() - 1;
+//    this.size = calcSize();
+//  }
 
   public byte[] toBytes()
   {
     if (words == null) {
       return new byte[]{};
     }
-    ByteBuffer buf = ByteBuffer.allocate(words.capacity() * Ints.BYTES);
-    buf.asIntBuffer().put(words.asReadOnlyBuffer());
-    return buf.array();
+
+    byte[] bytes = new byte[(int)words.getCapacity()];
+    words.getByteArray(0, bytes, 0, bytes.length);
+    return bytes;
   }
 
   public int getLastWordIndex()
@@ -825,7 +870,7 @@ public class ImmutableConciseSet
   {
     int retVal = 0;
     for (int i = 0; i <= lastWordIndex; i++) {
-      int w = words.get(i);
+      int w = words.getInt(i*Ints.BYTES);
       if (ConciseSetUtils.isLiteral(w)) {
         retVal += ConciseSetUtils.getLiteralBitCount(w);
       } else {
@@ -859,7 +904,7 @@ public class ImmutableConciseSet
 
     int last = 0;
     for (int i = 0; i <= lastWordIndex; i++) {
-      int w = words.get(i);
+      int w = words.getInt(i*Ints.BYTES);
       if (ConciseSetUtils.isLiteral(w)) {
         last += ConciseSetUtils.MAX_LITERAL_LENGTH;
       } else {
@@ -867,7 +912,7 @@ public class ImmutableConciseSet
       }
     }
 
-    int w = words.get(lastWordIndex);
+    int w = words.getInt(lastWordIndex*Ints.BYTES);
     if (ConciseSetUtils.isLiteral(w)) {
       last -= Integer.numberOfLeadingZeros(ConciseSetUtils.getLiteralBits(w));
     } else {
@@ -898,7 +943,7 @@ public class ImmutableConciseSet
     int position = i;
     int setBitsInCurrentWord = 0;
     for (int j = 0; j <= lastWordIndex; j++) {
-      int w = words.get(j);
+      int w = words.getInt(j*Ints.BYTES);
       if (ConciseSetUtils.isLiteral(w)) {
         // number of bits in the current word
         setBitsInCurrentWord = ConciseSetUtils.getLiteralBitCount(w);
@@ -958,12 +1003,21 @@ public class ImmutableConciseSet
 
   public int compareTo(ImmutableConciseSet other)
   {
-    return words.asReadOnlyBuffer().compareTo(other.words.asReadOnlyBuffer());
+    long n = Math.min(words.getCapacity(), other.words.getCapacity());
+    long i, j;
+    for (i = 0, j = 0; i < n; i++, j++) {
+      int cmp = Long.compare(this.words.getInt(i*Ints.BYTES), other.words.getInt(j*Ints.BYTES));
+      if (cmp != 0)
+      {
+        return cmp;
+      }
+    }
+    return (int)((words.getCapacity()-i) - (other.words.getCapacity()-j));
   }
 
   private boolean isEmpty()
   {
-    return words == null || words.limit() == 0;
+    return words == null || words.getCapacity() == 0;
   }
 
   @Override
@@ -1044,7 +1098,7 @@ public class ImmutableConciseSet
       if (hasNextWord) {
         return true;
       }
-      return currRow < (words.capacity() - 1);
+      return currRow < (words.getCapacity()/Ints.BYTES - 1);
     }
 
     @Override
@@ -1056,7 +1110,7 @@ public class ImmutableConciseSet
         return currWord;
       }
 
-      currWord = words.get(++currRow);
+      currWord = words.getInt(++currRow*Ints.BYTES);
       if (ConciseSetUtils.isLiteral(currWord)) {
         startIndex = wordsWalked++;
       } else {

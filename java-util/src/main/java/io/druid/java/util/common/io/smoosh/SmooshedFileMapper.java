@@ -25,7 +25,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
-import io.druid.java.util.common.ByteBufferUtils;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryMappedFile;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.java.util.common.ISE;
 
 import java.io.BufferedReader;
@@ -96,6 +98,7 @@ public class SmooshedFileMapper implements Closeable
   private final List<File> outFiles;
   private final Map<String, Metadata> internalFiles;
   private final List<MappedByteBuffer> buffersList = Lists.newArrayList();
+  private final List<MemoryMappedFile> memoryList = Lists.newArrayList();
 
   private SmooshedFileMapper(
       List<File> outFiles,
@@ -134,13 +137,48 @@ public class SmooshedFileMapper implements Closeable
     return retVal.slice();
   }
 
+  public Memory mapFileToMemory(String name) throws IOException
+  {
+    final Metadata metadata = internalFiles.get(name);
+    if (metadata == null) {
+      return null;
+    }
+
+    final int fileNum = metadata.getFileNum();
+    while (memoryList.size() <= fileNum) {
+      buffersList.add(null);
+      memoryList.add(null);
+    }
+
+    MappedByteBuffer mappedBuffer = buffersList.get(fileNum);
+    if (mappedBuffer == null) {
+      mappedBuffer = Files.map(outFiles.get(fileNum));
+      System.out.println("Buffer Size=" + mappedBuffer.remaining() + "  " + mappedBuffer.capacity());
+      buffersList.set(fileNum, mappedBuffer);
+    }
+
+    MemoryMappedFile mappedMemory = memoryList.get(fileNum);
+    if(mappedMemory == null)
+    {
+      try {
+        mappedMemory = new MemoryMappedFile(outFiles.get(fileNum), 0, outFiles.get(fileNum).length());
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+      memoryList.set(fileNum, mappedMemory);
+    }
+
+    return new MemoryRegion(mappedMemory, metadata.getStartOffset(),
+        metadata.getEndOffset() - metadata.getStartOffset());
+  }
+
   @Override
   public void close()
   {
     Throwable thrown = null;
-    for (MappedByteBuffer mappedByteBuffer : buffersList) {
+    for (MemoryMappedFile mappedMemory : memoryList) {
       try {
-        ByteBufferUtils.unmap(mappedByteBuffer);
+        mappedMemory.freeMemory();
       } catch (Throwable t) {
         if (thrown == null) {
           thrown = t;
@@ -149,6 +187,17 @@ public class SmooshedFileMapper implements Closeable
         }
       }
     }
+//    for (MappedByteBuffer mappedByteBuffer : buffersList) {
+//      try {
+//        ByteBufferUtils.unmap(mappedByteBuffer);
+//      } catch (Throwable t) {
+//        if (thrown == null) {
+//          thrown = t;
+//        } else {
+//          thrown.addSuppressed(t);
+//        }
+//      }
+//    }
     Throwables.propagateIfPossible(thrown);
   }
 }

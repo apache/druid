@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedSupplierTest;
 import io.druid.segment.data.IndexedInts;
@@ -30,7 +31,6 @@ import io.druid.segment.data.WritableSupplier;
 import org.junit.After;
 import org.junit.Before;
 
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
@@ -68,12 +68,10 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
   }
 
   @Override
-  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromMemory(PositionalMemoryRegion memory, ByteOrder order)
   {
-    return CompressedVSizeIndexedV3Supplier.fromByteBuffer(
-        buffer,
-        ByteOrder.nativeOrder(),
-        null
+    return CompressedVSizeIndexedV3Supplier.fromMemory(
+        memory, ByteOrder.nativeOrder()
     );
   }
 }

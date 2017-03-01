@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Floats;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,7 +32,6 @@ import org.junit.runners.Parameterized;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
@@ -129,7 +129,7 @@ public class CompressedFloatsSerdeTest
     );
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
-        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
+        .fromMemory(new PositionalMemoryRegion(baos.toByteArray()), order);
     IndexedFloats floats = supplier.get();
 
     assertIndexMatchesVals(floats, values);
@@ -182,8 +182,8 @@ public class CompressedFloatsSerdeTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedFloatsIndexedSupplier anotherSupplier = CompressedFloatsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes), order, null
+    CompressedFloatsIndexedSupplier anotherSupplier = CompressedFloatsIndexedSupplier.fromMemory(
+        new PositionalMemoryRegion(bytes), order
     );
     IndexedFloats indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);

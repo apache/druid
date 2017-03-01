@@ -20,6 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.MemoryRegion;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,16 +29,16 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class ByteBufferSerializer<T>
+public class MemorySerializer<T>
 {
-  public static <T> T read(ByteBuffer buffer, ObjectStrategy<T> strategy)
+  public static <T> T read(PositionalMemoryRegion pMemory, ObjectStrategy<T> strategy)
   {
-    int size = buffer.getInt();
-    ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
-    bufferToUse.limit(bufferToUse.position() + size);
-    buffer.position(bufferToUse.limit());
+    int size = Integer.reverseBytes(pMemory.getInt());
+    PositionalMemoryRegion memoryToUse = pMemory.duplicate();
+    memoryToUse.limit(memoryToUse.position() + size);
+    pMemory.position(memoryToUse.limit());
 
-    return strategy.fromByteBuffer(bufferToUse, size);
+    return strategy.fromMemory(new MemoryRegion(pMemory.getRemainingMemory(), 0, size));
   }
 
   public static <T> void writeToChannel(T obj, ObjectStrategy<T> strategy, WritableByteChannel channel)

@@ -27,6 +27,11 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
+import com.yahoo.memory.NativeMemory;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
+import javafx.geometry.Pos;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -1287,32 +1292,34 @@ public class ApproximateHistogram
    */
   public static ApproximateHistogram fromBytes(byte[] bytes)
   {
-    ByteBuffer buf = ByteBuffer.wrap(bytes);
-    return fromBytes(buf);
+    return fromBytes(new NativeMemory(bytes));
   }
 
   /**
    * Constructs an ApproximateHistogram object from the given dense byte-buffer representation
    *
-   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytesDense(ByteBuffer buf)
+  public static ApproximateHistogram fromBytesDense(Memory memory)
   {
-    int size = buf.getInt();
-    int binCount = buf.getInt();
+    PositionalMemoryRegion pMemory = new PositionalMemoryRegion(
+        new MemoryRegion(memory, 0, memory.getCapacity()));
+    int size = Integer.reverseBytes(pMemory.getInt());
+    int binCount = Integer.reverseBytes(pMemory.getInt());
 
     float[] positions = new float[size];
     long[] bins = new long[size];
 
-    buf.asFloatBuffer().get(positions);
-    buf.position(buf.position() + Floats.BYTES * positions.length);
-    buf.asLongBuffer().get(bins);
-    buf.position(buf.position() + Longs.BYTES * bins.length);
+    for(int i = 0; i < size; i++){
+      positions[i] = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
+    }
+    for(int i = 0; i < size; i++){
+      bins[i] = Long.reverseBytes(pMemory.getLong());
+    }
 
-    float min = buf.getFloat();
-    float max = buf.getFloat();
+    float min = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
+    float max = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
 
     return new ApproximateHistogram(binCount, positions, bins, min, max);
   }
@@ -1320,27 +1327,27 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given dense byte-buffer representation
    *
-   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytesSparse(ByteBuffer buf)
+  public static ApproximateHistogram fromBytesSparse(Memory memory)
   {
-    int size = buf.getInt();
-    int binCount = -1 * buf.getInt();
+    PositionalMemoryRegion pMemory = new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity()));
+    int size = Integer.reverseBytes(pMemory.getInt());
+    int binCount = -1 * Integer.reverseBytes(pMemory.getInt());
 
     float[] positions = new float[size];
     long[] bins = new long[size];
 
     for (int i = 0; i < binCount; ++i) {
-      positions[i] = buf.getFloat();
+      positions[i] = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
     }
     for (int i = 0; i < binCount; ++i) {
-      bins[i] = buf.getLong();
+      bins[i] = Long.reverseBytes(pMemory.getLong());
     }
 
-    float min = buf.getFloat();
-    float max = buf.getFloat();
+    float min = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
+    float max = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
 
     return new ApproximateHistogram(binCount, positions, bins, min, max);
   }
@@ -1348,20 +1355,21 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given compact byte-buffer representation
    *
-   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytesCompact(ByteBuffer buf)
+  public static ApproximateHistogram fromBytesCompact(Memory memory)
   {
-    short size = (short) (-1 * buf.getShort());
-    byte count = buf.get();
+    PositionalMemoryRegion pMemory = new PositionalMemoryRegion(
+        new MemoryRegion(memory, 0, memory.getCapacity()));
+    short size = (short) (-1 * Short.reverseBytes(pMemory.getShort()));
+    byte count = pMemory.getByte();
 
     if (count >= 0) {
       // only exact bins
       ApproximateHistogram histogram = new ApproximateHistogram(size);
       for (int i = 0; i < count; ++i) {
-        histogram.offer(buf.getFloat());
+        histogram.offer(Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat()))));
       }
       return histogram;
     } else {
@@ -1370,7 +1378,7 @@ public class ApproximateHistogram
       Map<Float, Long> approx = Maps.newHashMap();
 
       for (int i = 0; i < approxCount; ++i) {
-        final float value = buf.getFloat();
+        final float value = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
         if (approx.containsKey(value)) {
           approx.put(value, approx.get(value) + 1);
         } else {
@@ -1378,15 +1386,15 @@ public class ApproximateHistogram
         }
       }
 
-      float min = buf.getFloat();
-      float max = buf.getFloat();
+      float min = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
+      float max = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
 
-      byte exactCount = buf.get();
+      byte exactCount = pMemory.getByte();
 
       Map<Float, Long> exact = Maps.newHashMap();
 
       for (int i = 0; i < exactCount; ++i) {
-        final float value = buf.getFloat();
+        final float value = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(pMemory.getFloat())));
         if (exact.containsKey(value)) {
           exact.put(value, exact.get(value) + 1);
         } else {
@@ -1424,25 +1432,23 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given byte-buffer representation
    *
-   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytes(ByteBuffer buf)
+  public static ApproximateHistogram fromBytes(Memory memory)
   {
-    ByteBuffer copy = buf.asReadOnlyBuffer();
     // negative size indicates compact representation
     // this works regardless of whether we use int or short for the size since the leftmost bit is the sign bit
-    if (copy.getShort(buf.position()) < 0) {
-      return fromBytesCompact(buf);
+    if (Short.reverseBytes(memory.getShort(0)) < 0) {
+      return fromBytesCompact(memory);
     } else {
       // ignore size
-      copy.getInt();
+      memory.getInt(0);
       // determine if sparse or dense based on sign of binCount
-      if (copy.getInt() < 0) {
-        return fromBytesSparse(buf);
+      if (Integer.reverseBytes(memory.getInt(Ints.BYTES)) < 0) {
+        return fromBytesSparse(memory);
       } else {
-        return fromBytesDense(buf);
+        return fromBytesDense(memory);
       }
     }
   }

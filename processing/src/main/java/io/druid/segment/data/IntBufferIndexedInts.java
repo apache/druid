@@ -21,12 +21,14 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.NativeMemory;
 import io.druid.collections.IntList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
+import java.nio.ByteOrder;
 
 /**
  */
@@ -37,52 +39,62 @@ public class IntBufferIndexedInts implements IndexedInts, Comparable<IntBufferIn
 
   public static IntBufferIndexedInts fromArray(int[] array)
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(array.length * Ints.BYTES);
-    buffer.asIntBuffer().put(array);
-
-    return new IntBufferIndexedInts(buffer.asReadOnlyBuffer());
+    //TODO Replace this with int[] constructor in new Memory package. Till then use this workaround
+    ByteBuffer bb = ByteBuffer.allocate(array.length*Ints.BYTES).order(ByteOrder.nativeOrder());
+    for(int i = 0; i < array.length; i++){
+      bb.putInt(array[i]);
+    }
+    return new IntBufferIndexedInts(new NativeMemory(bb));
   }
 
   public static IntBufferIndexedInts fromIntList(IntList intList)
   {
     final ByteBuffer buffer = ByteBuffer.allocate(intList.length() * Ints.BYTES);
-    final IntBuffer intBuf = buffer.asIntBuffer();
 
     for (int i = 0; i < intList.length(); ++i) {
-      intBuf.put(intList.get(i));
+      buffer.putInt(i*Ints.BYTES, intList.get(i));
     }
 
-    return new IntBufferIndexedInts(buffer.asReadOnlyBuffer());
+    return new IntBufferIndexedInts(new NativeMemory(buffer));
   }
 
-  private final ByteBuffer buffer;
+  private final Memory memory;
 
-  public IntBufferIndexedInts(ByteBuffer buffer)
+  public IntBufferIndexedInts(Memory memory)
   {
-    this.buffer = buffer;
+    this.memory = memory;
   }
 
   @Override
   public int size()
   {
-    return buffer.remaining() / 4;
+    return (int)memory.getCapacity() / Ints.BYTES;
   }
 
   @Override
   public int get(int index)
   {
-    return buffer.getInt(buffer.position() + (index * 4));
+    return memory.getInt(index * Ints.BYTES);
   }
 
-  public ByteBuffer getBuffer()
+  public Memory getBuffer()
   {
-    return buffer.asReadOnlyBuffer();
+    return memory;
   }
 
   @Override
+  //TODO Remove this and implement Memory.compareTo in Memory
   public int compareTo(IntBufferIndexedInts o)
   {
-    return buffer.compareTo(o.getBuffer());
+    int n = (int)Math.min(this.getBuffer().getCapacity(), o.getBuffer().getCapacity())/Ints.BYTES;
+    int i, j;
+    for (i = 0, j = 0; i < n; i++, j++) {
+      int cmp = Byte.compare(this.getBuffer().getByte(i), o.getBuffer().getByte(j));
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+    return (int)((this.getBuffer().getCapacity()-i) - (o.getBuffer().getCapacity()-j));
   }
 
   @Override
@@ -100,19 +112,17 @@ public class IntBufferIndexedInts implements IndexedInts, Comparable<IntBufferIn
     }
 
     @Override
-    public IntBufferIndexedInts fromByteBuffer(ByteBuffer buffer, int numBytes)
+    public IntBufferIndexedInts fromMemory(Memory memory)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new IntBufferIndexedInts(readOnlyBuffer);
+      return new IntBufferIndexedInts(memory);
     }
 
     @Override
     public byte[] toBytes(IntBufferIndexedInts val)
     {
-      ByteBuffer buffer = val.getBuffer();
-      byte[] bytes = new byte[buffer.remaining()];
-      buffer.get(bytes);
+      Memory memory = val.getBuffer();
+      byte[] bytes = new byte[(int)memory.getCapacity()];
+      memory.getByteArray(0, bytes, 0, bytes.length);
 
       return bytes;
     }

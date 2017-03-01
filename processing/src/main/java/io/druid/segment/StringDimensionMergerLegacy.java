@@ -22,17 +22,18 @@ package io.druid.segment;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
-import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.MemoryMappedFile;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -51,7 +52,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.IntBuffer;
-import java.nio.MappedByteBuffer;
 import java.util.List;
 
 public class StringDimensionMergerLegacy extends StringDimensionMergerV9 implements DimensionMergerLegacy<int[]>
@@ -105,20 +105,28 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
     );
     bitmapWriter.open();
 
-    final MappedByteBuffer dimValsMapped = Files.map(dictionaryFile);
+    final MemoryMappedFile dimValsMapped;
+    try {
+      dimValsMapped = new MemoryMappedFile(dictionaryFile,0, dictionaryFile.length());
+    } catch (Exception e) {
+      throw new IOException();
+    }
     closer.register(new Closeable()
     {
       @Override
       public void close() throws IOException
       {
-        ByteBufferUtils.unmap(dimValsMapped);
+        dimValsMapped.freeMemory();
       }
     });
 
-    if (!dimensionName.equals(serializerUtils.readString(dimValsMapped))) {
+    PositionalMemoryRegion pMemory = new PositionalMemoryRegion(
+        new MemoryRegion(dimValsMapped, 0, dictionaryFile.length()));
+    String dimName = serializerUtils.readString(pMemory, Integer.reverseBytes(pMemory.getInt()));
+    if (!dimensionName.equals(dimName)) {
       throw new ISE("dimensions[%s] didn't equate!?  This is a major WTF moment.", dimensionName);
     }
-    Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
+    Indexed<String> dimVals = GenericIndexed.read(pMemory, GenericIndexed.STRING_STRATEGY);
     log.info("Starting dimension[%s] with cardinality[%,d]", dimensionName, dimVals.size());
 
 

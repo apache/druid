@@ -19,23 +19,26 @@
 
 package io.druid.segment.data;
 
-import java.nio.ByteBuffer;
+import com.yahoo.memory.Memory;
+
 import java.util.Comparator;
 
 public interface ObjectStrategy<T> extends Comparator<T>
 {
   public Class<? extends T> getClazz();
 
-  /**
-   * Convert values from their underlying byte representation.
-   *
-   * Implementations of this method must not change the given buffer mark, or limit, but may modify its position.
-   * Use buffer.asReadOnlyBuffer() or buffer.duplicate() if mark or limit need to be set.
-   *
-   * @param buffer buffer to read value from
-   * @param numBytes number of bytes used to store the value, starting at buffer.position()
-   * @return an object created from the given byte buffer representation
-   */
-  public T fromByteBuffer(ByteBuffer buffer, int numBytes);
+//  /**
+//   * Convert values from their underlying byte representation.
+//   *
+//   * Implementations of this method must not change the given buffer mark, or limit, but may modify its position.
+//   * Use buffer.asReadOnlyBuffer() or buffer.duplicate() if mark or limit need to be set.
+//   *
+//   * @param buffer buffer to read value from
+//   * @param numBytes number of bytes used to store the value, starting at buffer.position()
+//   * @return an object created from the given byte buffer representation
+//   */
+
+  public T fromMemory(Memory memory);
+
   public byte[] toBytes(T val);
 }

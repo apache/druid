@@ -20,13 +20,13 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.Random;
@@ -84,8 +84,8 @@ public class VSizeIndexedIntsWriterTest
     assertEquals(writtenLength, intsFromList.getSerializedSize());
 
     // read from ByteBuffer and check values
-    VSizeIndexedInts intsFromByteBuffer = VSizeIndexedInts.readFromByteBuffer(
-        ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output")))
+    VSizeIndexedInts intsFromByteBuffer = VSizeIndexedInts.readFromMemory(
+        new PositionalMemoryRegion(IOUtils.toByteArray(ioPeon.makeInputStream("output")))
     );
     assertEquals(vals.length, intsFromByteBuffer.size());
     for (int i = 0; i < vals.length; ++i) {

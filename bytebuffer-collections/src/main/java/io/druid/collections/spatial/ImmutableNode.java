@@ -21,6 +21,7 @@ package io.druid.collections.spatial;
 
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 
@@ -51,7 +52,7 @@ public class ImmutableNode
   private final boolean isLeaf;
   private final int childrenOffset;
 
-  private final ByteBuffer data;
+  private final Memory data;
 
   private final BitmapFactory bitmapFactory;
 
@@ -59,7 +60,7 @@ public class ImmutableNode
       int numDims,
       int initialOffset,
       int offsetFromInitial,
-      ByteBuffer data,
+      Memory data,
       BitmapFactory bitmapFactory
   )
   {
@@ -67,11 +68,11 @@ public class ImmutableNode
     this.numDims = numDims;
     this.initialOffset = initialOffset;
     this.offsetFromInitial = offsetFromInitial;
-    short header = data.getShort(initialOffset + offsetFromInitial);
+    short header = Short.reverseBytes(data.getShort(initialOffset + offsetFromInitial));
     this.isLeaf = (header & 0x8000) != 0;
     this.numChildren = (short) (header & 0x7FFF);
     final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Floats.BYTES;
-    int bitmapSize = data.getInt(sizePosition);
+    int bitmapSize = Integer.reverseBytes(data.getInt(sizePosition));
     this.childrenOffset = initialOffset
                           + offsetFromInitial
                           + HEADER_NUM_BYTES
@@ -88,7 +89,7 @@ public class ImmutableNode
       int offsetFromInitial,
       short numChildren,
       boolean leaf,
-      ByteBuffer data,
+      Memory data,
       BitmapFactory bitmapFactory
   )
   {
@@ -153,11 +154,10 @@ public class ImmutableNode
   public ImmutableBitmap getImmutableBitmap()
   {
     final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Floats.BYTES;
-    int numBytes = data.getInt(sizePosition);
-    data.position(sizePosition + Ints.BYTES);
-    ByteBuffer tmpBuffer = data.slice();
-    tmpBuffer.limit(numBytes);
-    return bitmapFactory.mapImmutableBitmap(tmpBuffer.asReadOnlyBuffer());
+    int numBytes = Integer.reverseBytes(data.getInt(sizePosition));
+    byte[] bytes = new byte[numBytes];
+    data.getByteArray(sizePosition + Ints.BYTES, bytes, 0, numBytes);
+    return bitmapFactory.mapImmutableBitmap(ByteBuffer.wrap(bytes));
   }
 
   public Iterable<ImmutableNode> getChildren()
@@ -184,7 +184,7 @@ public class ImmutableNode
               return new ImmutablePoint(
                   numDims,
                   initialOffset,
-                  data.getInt(childrenOffset + (count++) * Ints.BYTES),
+                  Integer.reverseBytes(data.getInt(childrenOffset + (count++) * Ints.BYTES)),
                   data,
                   bitmapFactory
               );
@@ -192,7 +192,7 @@ public class ImmutableNode
             return new ImmutableNode(
                 numDims,
                 initialOffset,
-                data.getInt(childrenOffset + (count++) * Ints.BYTES),
+                Integer.reverseBytes(data.getInt(childrenOffset + (count++) * Ints.BYTES)),
                 data,
                 bitmapFactory
             );
@@ -208,7 +208,7 @@ public class ImmutableNode
     };
   }
 
-  public ByteBuffer getData()
+  public Memory getData()
   {
     return data;
   }
@@ -216,11 +216,7 @@ public class ImmutableNode
   private float[] getCoords(int offset)
   {
     final float[] retVal = new float[numDims];
-
-    final ByteBuffer readOnlyBuffer = data.asReadOnlyBuffer();
-    readOnlyBuffer.position(offset);
-    readOnlyBuffer.asFloatBuffer().get(retVal);
-
+    data.getFloatArray(offset, retVal, 0, numDims);
     return retVal;
   }
 }

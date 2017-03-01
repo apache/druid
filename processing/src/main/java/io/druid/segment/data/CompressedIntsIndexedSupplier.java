@@ -26,7 +26,7 @@ import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -130,11 +130,26 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return baseIntBuffers;
   }
 
-  public static CompressedIntsIndexedSupplier fromByteBuffer(
-      ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper fileMapper
-  )
+  public static CompressedIntsIndexedSupplier fromMemory(PositionalMemoryRegion pMemory, ByteOrder order)
+  {
+    byte versionFromBuffer = pMemory.getByte();
+
+    if (versionFromBuffer == VERSION) {
+      final int totalSize = Integer.reverseBytes(pMemory.getInt());
+      final int sizePer = Integer.reverseBytes(pMemory.getInt());
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(pMemory.getByte());
+      return new CompressedIntsIndexedSupplier(
+          totalSize,
+          sizePer,
+          GenericIndexed.read(pMemory, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          compression
+      );
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -147,11 +162,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
       return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,
-          GenericIndexed.read(
-              buffer,
-              CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer),
-              fileMapper
-          ),
+          GenericIndexed.read(new PositionalMemoryRegion(buffer), CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
           compression
       );
     }

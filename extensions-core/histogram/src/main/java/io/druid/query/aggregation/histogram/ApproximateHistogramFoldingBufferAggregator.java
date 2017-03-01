@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.histogram;
 
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -67,7 +68,8 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
 
-    ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
+    ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(
+        (new PositionalMemoryRegion(mutationBuffer)).getRemainingMemory());
     h0.setLowerLimit(lowerLimit);
     h0.setUpperLimit(upperLimit);
     ApproximateHistogram hNext = selector.get();
@@ -82,7 +84,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   {
     ByteBuffer mutationBuffer = buf.asReadOnlyBuffer();
     mutationBuffer.position(position);
-    return ApproximateHistogram.fromBytesDense(mutationBuffer);
+    return ApproximateHistogram.fromBytesDense((new PositionalMemoryRegion(mutationBuffer)).getRemainingMemory());
   }
 
   @Override

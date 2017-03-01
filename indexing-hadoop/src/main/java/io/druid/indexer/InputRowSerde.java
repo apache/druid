@@ -214,7 +214,7 @@ public class InputRowSerde
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);
           byte[] value = readBytes(in);
-          event.put(metric, serde.fromBytes(value, 0, value.length));
+          event.put(metric, serde.fromBytes(value));
         }
       }
 

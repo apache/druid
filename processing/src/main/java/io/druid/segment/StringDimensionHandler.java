@@ -168,6 +168,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public int[] getEncodedKeyComponentFromColumn(Closeable column, int currRow)
   {
+    System.out.println("CurrRow=" + currRow);
     DictionaryEncodedColumn dict = (DictionaryEncodedColumn) column;
     int[] theVals;
     if (dict.hasMultipleValues()) {

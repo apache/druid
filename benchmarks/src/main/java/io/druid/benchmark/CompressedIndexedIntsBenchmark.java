@@ -20,6 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
@@ -88,7 +89,7 @@ public class CompressedIndexedIntsBenchmark
             )
         )
     );
-    this.uncompressed = VSizeIndexedInts.readFromByteBuffer(bufferUncompressed);
+    this.uncompressed = VSizeIndexedInts.readFromMemory(new PositionalMemoryRegion(bufferUncompressed));
 
     filter = new BitSet();
     for (int i = 0; i < filteredRowCount; i++) {

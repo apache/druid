@@ -20,20 +20,23 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 
 public class EntireLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
 {
   private final int totalSize;
-  private FloatBuffer buffer;
+  private PositionalMemoryRegion pMemory;
+  private ByteOrder order;
 
-  public EntireLayoutIndexedFloatSupplier(int totalSize, ByteBuffer fromBuffer, ByteOrder order)
+  public EntireLayoutIndexedFloatSupplier(int totalSize, Memory memory, ByteOrder order)
   {
     this.totalSize = totalSize;
-    this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asFloatBuffer();
+    this.pMemory = new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity()));
+    this.order = order;
   }
 
   @Override
@@ -54,7 +57,12 @@ public class EntireLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
     @Override
     public float get(int index)
     {
-      return buffer.get(buffer.position() + index);
+      if(order == ByteOrder.BIG_ENDIAN) {
+        return Float.intBitsToFloat(Integer.reverseBytes(
+            Float.floatToRawIntBits(pMemory.getFloat(pMemory.position() + index * Float.BYTES))));
+      } else {
+        return pMemory.getFloat(pMemory.position() + index * Float.BYTES);
+      }
     }
 
     @Override

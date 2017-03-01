@@ -22,12 +22,12 @@ package io.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.GenericIndexed;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -80,10 +80,10 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(PositionalMemoryRegion pMemory, ColumnBuilder builder, ColumnConfig columnConfig)
       {
         if (serde != null) {
-          serde.deserializeColumn(buffer, builder);
+          serde.deserializeColumn(pMemory, builder);
         }
       }
     };

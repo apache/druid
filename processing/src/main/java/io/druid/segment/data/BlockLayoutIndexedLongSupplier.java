@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -37,24 +38,14 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
   private final CompressionFactory.LongEncodingReader baseReader;
 
   public BlockLayoutIndexedLongSupplier(
-      int totalSize,
-      int sizePer,
-      ByteBuffer fromBuffer,
-      ByteOrder order,
+      int totalSize, int sizePer, PositionalMemoryRegion pMemory, ByteOrder order,
       CompressionFactory.LongEncodingReader reader,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
-    baseLongBuffers = GenericIndexed.read(
-        fromBuffer,
-        VSizeCompressedObjectStrategy.getBufferForOrder(
-            order,
-            strategy,
-            reader.getNumBytes(sizePer)
-        ),
-        fileMapper
-    );
+    baseLongBuffers = GenericIndexed.read(pMemory, VSizeCompressedObjectStrategy.getBufferForOrder(
+        order, strategy, reader.getNumBytes(sizePer)
+    ));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;

@@ -19,9 +19,8 @@
 
 package io.druid.collections.spatial;
 
+import com.yahoo.memory.Memory;
 import io.druid.collections.bitmap.BitmapFactory;
-
-import java.nio.ByteBuffer;
 
 public class ImmutablePoint extends ImmutableNode
 {
@@ -29,7 +28,7 @@ public class ImmutablePoint extends ImmutableNode
       int numDims,
       int initialOffset,
       int offsetFromInitial,
-      ByteBuffer data,
+      Memory data,
       BitmapFactory bitmapFactory
   )
   {

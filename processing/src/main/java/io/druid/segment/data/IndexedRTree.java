@@ -20,10 +20,9 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
+import com.yahoo.memory.Memory;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.spatial.ImmutableRTree;
-
-import java.nio.ByteBuffer;
 
 /**
  */
@@ -83,12 +82,9 @@ public class IndexedRTree implements Comparable<IndexedRTree>
       return ImmutableRTree.class;
     }
 
-    @Override
-    public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
+    @Override public ImmutableRTree fromMemory(Memory memory)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new ImmutableRTree(readOnlyBuffer, bitmapFactory);
+      return new ImmutableRTree(memory, bitmapFactory);
     }
 
     @Override

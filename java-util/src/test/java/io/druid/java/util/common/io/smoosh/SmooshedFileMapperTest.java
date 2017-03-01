@@ -21,6 +21,7 @@ package io.druid.java.util.common.io.smoosh;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
 import io.druid.java.util.common.BufferUtils;
 import io.druid.java.util.common.ISE;
 import junit.framework.Assert;
@@ -209,6 +210,15 @@ public class SmooshedFileMapperTest
         Assert.assertEquals(4, buf.remaining());
         Assert.assertEquals(4, buf.capacity());
         Assert.assertEquals(i, buf.getInt());
+      }
+    }
+
+    try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
+      for (int i = 0; i < 20; ++i) {
+        Memory mem = mapper.mapFileToMemory(String.format("%d", i));
+        Assert.assertEquals(4, mem.getCapacity());
+        // The entries are written in Big Endian in the tests
+        Assert.assertEquals(i, Integer.reverseBytes(mem.getInt(0)));
       }
     }
   }

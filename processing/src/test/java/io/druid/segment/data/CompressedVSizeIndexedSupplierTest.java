@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import org.junit.After;
 import org.junit.Assert;
@@ -91,8 +92,8 @@ public class CompressedVSizeIndexedSupplierTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);
-    WritableSupplier<IndexedMultivalue<IndexedInts>> deserializedIndexed = fromByteBuffer(
-        ByteBuffer.wrap(bytes),
+    WritableSupplier<IndexedMultivalue<IndexedInts>> deserializedIndexed = fromMemory(
+        new PositionalMemoryRegion(ByteBuffer.wrap(bytes)),
         ByteOrder.nativeOrder()
     );
 
@@ -139,12 +140,10 @@ public class CompressedVSizeIndexedSupplierTest
     }
   }
 
-  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromMemory(PositionalMemoryRegion memory, ByteOrder order)
   {
-    return CompressedVSizeIndexedSupplier.fromByteBuffer(
-        buffer,
-        ByteOrder.nativeOrder(),
-        null
+    return CompressedVSizeIndexedSupplier.fromMemory(
+        memory, ByteOrder.nativeOrder()
     );
   }
 }

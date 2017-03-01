@@ -54,6 +54,11 @@
       <version>4.8.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.yahoo.datasketches</groupId>
+      <artifactId>memory</artifactId>
+      <version>0.8.4</version>
+    </dependency>
   </dependencies>
 
 </project>

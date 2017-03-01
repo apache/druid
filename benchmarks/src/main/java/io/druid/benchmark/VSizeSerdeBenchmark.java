@@ -20,6 +20,7 @@
 package io.druid.benchmark;
 
 import com.google.common.io.Files;
+import com.yahoo.memory.NativeMemory;
 import io.druid.segment.data.VSizeLongSerde;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -84,19 +85,19 @@ public class VSizeSerdeBenchmark
       }
     }
     ByteBuffer buffer = Files.map(dummy);
-    d1 = VSizeLongSerde.getDeserializer(1, buffer, 10);
-    d2 = VSizeLongSerde.getDeserializer(2, buffer, 10);
-    d4 = VSizeLongSerde.getDeserializer(4, buffer, 10);
-    d8 = VSizeLongSerde.getDeserializer(8, buffer, 10);
-    d12 = VSizeLongSerde.getDeserializer(12, buffer, 10);
-    d16 = VSizeLongSerde.getDeserializer(16, buffer, 10);
-    d20 = VSizeLongSerde.getDeserializer(20, buffer, 10);
-    d24 = VSizeLongSerde.getDeserializer(24, buffer, 10);
-    d32 = VSizeLongSerde.getDeserializer(32, buffer, 10);
-    d40 = VSizeLongSerde.getDeserializer(40, buffer, 10);
-    d48 = VSizeLongSerde.getDeserializer(48, buffer, 10);
-    d56 = VSizeLongSerde.getDeserializer(56, buffer, 10);
-    d64 = VSizeLongSerde.getDeserializer(64, buffer, 10);
+    d1 = VSizeLongSerde.getDeserializer(1, new NativeMemory(buffer), 10);
+    d2 = VSizeLongSerde.getDeserializer(2, new NativeMemory(buffer), 10);
+    d4 = VSizeLongSerde.getDeserializer(4, new NativeMemory(buffer), 10);
+    d8 = VSizeLongSerde.getDeserializer(8, new NativeMemory(buffer), 10);
+    d12 = VSizeLongSerde.getDeserializer(12, new NativeMemory(buffer), 10);
+    d16 = VSizeLongSerde.getDeserializer(16, new NativeMemory(buffer), 10);
+    d20 = VSizeLongSerde.getDeserializer(20, new NativeMemory(buffer), 10);
+    d24 = VSizeLongSerde.getDeserializer(24, new NativeMemory(buffer), 10);
+    d32 = VSizeLongSerde.getDeserializer(32, new NativeMemory(buffer), 10);
+    d40 = VSizeLongSerde.getDeserializer(40, new NativeMemory(buffer), 10);
+    d48 = VSizeLongSerde.getDeserializer(48, new NativeMemory(buffer), 10);
+    d56 = VSizeLongSerde.getDeserializer(56, new NativeMemory(buffer), 10);
+    d64 = VSizeLongSerde.getDeserializer(64, new NativeMemory(buffer), 10);
   }
 
   @TearDown

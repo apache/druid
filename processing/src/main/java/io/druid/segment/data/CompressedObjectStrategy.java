@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
+import com.yahoo.memory.Memory;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.CompressedPools;
@@ -328,14 +329,18 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   }
 
   @Override
-  public ResourceHolder<T> fromByteBuffer(ByteBuffer buffer, int numBytes)
+  public ResourceHolder<T> fromMemory(Memory memory)
   {
+    byte[] bytes = new byte[(int)memory.getCapacity()];
+    memory.getByteArray(0, bytes, 0, (int)memory.getCapacity());
+    ByteBuffer buffer = ByteBuffer.wrap(bytes);
+
     final ResourceHolder<ByteBuffer> bufHolder = CompressedPools.getByteBuf(order);
     final ByteBuffer buf = bufHolder.get();
     buf.position(0);
     buf.limit(buf.capacity());
 
-    decompress(buffer, numBytes, buf);
+    decompress(buffer, (int)memory.getCapacity(), buf);
     return new ResourceHolder<T>()
     {
       @Override
@@ -351,6 +356,31 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       }
     };
   }
+
+//  @Override
+//  public ResourceHolder<T> fromByteBuffer(ByteBuffer buffer, int numBytes)
+//  {
+//    final ResourceHolder<ByteBuffer> bufHolder = CompressedPools.getByteBuf(order);
+//    final ByteBuffer buf = bufHolder.get();
+//    buf.position(0);
+//    buf.limit(buf.capacity());
+//
+//    decompress(buffer, numBytes, buf);
+//    return new ResourceHolder<T>()
+//    {
+//      @Override
+//      public T get()
+//      {
+//        return converter.convert(buf);
+//      }
+//
+//      @Override
+//      public void close()
+//      {
+//        bufHolder.close();
+//      }
+//    };
+//  }
 
   protected void decompress(
       ByteBuffer buffer,

@@ -33,6 +33,7 @@ import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
@@ -302,7 +303,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
         ByteBufferUtils.unmap(dimValsMapped);
       }
     }) {
-      Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
+      Indexed<String> dimVals = GenericIndexed.read(new PositionalMemoryRegion(dimValsMapped), GenericIndexed.STRING_STRATEGY);
       BitmapFactory bmpFactory = bitmapSerdeFactory.getBitmapFactory();
 
       RTree tree = null;

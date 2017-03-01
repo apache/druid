@@ -20,35 +20,41 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 
 public class LongsLongEncodingReader implements CompressionFactory.LongEncodingReader
 {
-  private LongBuffer buffer;
+  private PositionalMemoryRegion pMemory;
+  private ByteOrder order;
 
-  public LongsLongEncodingReader(ByteBuffer fromBuffer, ByteOrder order)
+  public LongsLongEncodingReader(PositionalMemoryRegion pMemory, ByteOrder order)
   {
-    this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asLongBuffer();
+    this.pMemory = pMemory.duplicate();
+    this.order = order;
   }
 
-  private LongsLongEncodingReader(LongBuffer buffer)
+  private LongsLongEncodingReader(PositionalMemoryRegion memory)
   {
-    this.buffer = buffer;
+    this.pMemory = memory;
   }
 
   @Override
   public void setBuffer(ByteBuffer buffer)
   {
-    this.buffer = buffer.asLongBuffer();
+    this.pMemory = new PositionalMemoryRegion(buffer);
   }
 
   @Override
   public long read(int index)
   {
-    return buffer.get(buffer.position() + index);
+    if(order == ByteOrder.BIG_ENDIAN) {
+      return Long.reverseBytes(pMemory.getLong(pMemory.position() + index * Long.BYTES));
+    } else {
+      return pMemory.getLong(pMemory.position() + index * Long.BYTES);
+    }
   }
 
   @Override
@@ -60,6 +66,6 @@ public class LongsLongEncodingReader implements CompressionFactory.LongEncodingR
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new LongsLongEncodingReader(buffer.duplicate());
+    return new LongsLongEncodingReader(pMemory.duplicate());
   }
 }

@@ -19,10 +19,9 @@
 
 package io.druid.segment.data;
 
-import java.nio.ByteBuffer;
-
 import com.google.common.collect.Ordering;
 
+import com.yahoo.memory.Memory;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
@@ -78,11 +77,9 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
     }
 
     @Override
-    public WrappedImmutableConciseBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
+    public WrappedImmutableConciseBitmap fromMemory(Memory memory)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new WrappedImmutableConciseBitmap(new ImmutableConciseSet(readOnlyBuffer));
+      return new WrappedImmutableConciseBitmap(new ImmutableConciseSet(memory));
     }
 
     @Override

@@ -19,6 +19,8 @@
 
 package io.druid.extendedset.intset;
 
+import com.google.common.primitives.Ints;
+
 import java.util.NoSuchElementException;
 
 // Based on the ConciseSet implementation by Alessandro Colantonio
@@ -75,7 +77,7 @@ public final class BitIterator implements IntSet.IntIterator
   {
     int wordExpanderNext;
     while ((wordExpanderNext = wordExpanderAdvance()) < 0) {
-      if (nextIndex > immutableConciseSet.lastWordIndex) {
+      if (nextIndex > immutableConciseSet.getLastWordIndex()) {
         return -1;
       }
       nextWord();
@@ -114,7 +116,7 @@ public final class BitIterator implements IntSet.IntIterator
         next = wordExpanderNext;
         return;
       }
-      if (nextIndex > immutableConciseSet.lastWordIndex) {
+      if (nextIndex > immutableConciseSet.getLastWordIndex()) {
         next = -1;
         return;
       }
@@ -150,7 +152,7 @@ public final class BitIterator implements IntSet.IntIterator
 
   private void nextWord()
   {
-    final int word = immutableConciseSet.words.get(nextIndex++);
+    final int word = immutableConciseSet.words.getInt(nextIndex++ * Ints.BYTES);
     literalAndZeroFill = wordExpanderReset(nextOffset, word);
 
     // prepare next offset

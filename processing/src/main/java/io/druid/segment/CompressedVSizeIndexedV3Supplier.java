@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
@@ -59,24 +59,19 @@ public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<Indexe
     this.valueSupplier = valueSupplier;
   }
 
-  public static CompressedVSizeIndexedV3Supplier fromByteBuffer(
-      ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper fileMapper
-  )
+  public static CompressedVSizeIndexedV3Supplier fromMemory(PositionalMemoryRegion memory, ByteOrder order)
   {
-    byte versionFromBuffer = buffer.get();
+    byte versionFromBuffer = memory.getByte();
 
     if (versionFromBuffer == VERSION) {
-      CompressedIntsIndexedSupplier offsetSupplier = CompressedIntsIndexedSupplier.fromByteBuffer(
-          buffer,
-          order,
-          fileMapper
+
+      CompressedIntsIndexedSupplier offsetSupplier = CompressedIntsIndexedSupplier.fromMemory(
+          memory,
+          order
       );
-      CompressedVSizeIntsIndexedSupplier valueSupplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
-          buffer,
-          order,
-          fileMapper
+      CompressedVSizeIntsIndexedSupplier valueSupplier = CompressedVSizeIntsIndexedSupplier.fromMemory(
+          memory,
+          order
       );
       return new CompressedVSizeIndexedV3Supplier(offsetSupplier, valueSupplier);
     }

@@ -21,6 +21,7 @@ package io.druid.java.util.common;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.yahoo.memory.Memory;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -53,6 +54,25 @@ public class StringUtils
     buffer.get(bytes);
     return fromUtf8(bytes);
   }
+
+  public static String fromUtf8(final Memory memory)
+  {
+    final byte[] bytes = new byte[(int)memory.getCapacity()];
+    memory.getByteArray(0, bytes, 0, (int)memory.getCapacity());
+    return fromUtf8(bytes);
+  }
+
+//  public static byte[] toBigEndianInt(final Memory memory, int numBytes)
+//  {
+//    byte[] bytes = new byte[numBytes];
+//    int b = 0;
+//    while(b < numBytes){
+//      bytes[numBytes-1-b] = memory.getByte(b);
+//      b++;
+//    }
+//
+//    return bytes;
+//  }
 
   public static String fromUtf8(final ByteBuffer buffer)
   {

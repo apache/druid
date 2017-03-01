@@ -22,6 +22,8 @@ package io.druid.collections.spatial;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.NativeMemory;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
@@ -38,21 +40,21 @@ public class ImmutableRTree
   private static byte VERSION = 0x0;
   private final int numDims;
   private final ImmutableNode root;
-  private final ByteBuffer data;
+  private final Memory data;
   private final SearchStrategy defaultSearchStrategy = new GutmanSearchStrategy();
 
   public ImmutableRTree()
   {
     this.numDims = 0;
-    this.data = ByteBuffer.wrap(new byte[]{});
+    this.data = new NativeMemory(new byte[]{});
     this.root = null;
   }
 
-  public ImmutableRTree(ByteBuffer data, BitmapFactory bitmapFactory)
+  public ImmutableRTree(Memory data, BitmapFactory bitmapFactory)
   {
-    final int initPosition = data.position();
-    Preconditions.checkArgument(data.get(0) == VERSION, "Mismatching versions");
-    this.numDims = data.getInt(1 + initPosition) & 0x7FFF;
+    final int initPosition = 0;
+    Preconditions.checkArgument(data.getByte(0) == VERSION, "Mismatching versions");
+    this.numDims = Integer.reverseBytes(data.getInt(1 + initPosition)) & 0x7FFF;
     this.data = data;
     this.root = new ImmutableNode(numDims, initPosition, 1 + Ints.BYTES, data, bitmapFactory);
   }
@@ -69,7 +71,7 @@ public class ImmutableRTree
     buffer.putInt(rTree.getNumDims());
     rTree.getRoot().storeInByteBuffer(buffer, buffer.position());
     buffer.position(0);
-    return new ImmutableRTree(buffer.asReadOnlyBuffer(), rTree.getBitmapFactory());
+    return new ImmutableRTree(new NativeMemory(buffer), rTree.getBitmapFactory());
   }
 
   private static int calcNumBytes(RTree tree)
@@ -102,7 +104,7 @@ public class ImmutableRTree
 
   public int size()
   {
-    return data.capacity();
+    return (int)data.getCapacity();
   }
 
   public ImmutableNode getRoot()
@@ -132,13 +134,22 @@ public class ImmutableRTree
 
   public byte[] toBytes()
   {
-    ByteBuffer buf = ByteBuffer.allocate(data.capacity());
-    buf.put(data.asReadOnlyBuffer());
-    return buf.array();
+    byte[] bytes = new byte[(int)data.getCapacity()];
+    data.getByteArray(0, bytes, 0, bytes.length);
+    return bytes;
   }
 
-  public int compareTo(ImmutableRTree other)
+  //TODO Remove this and implement Memory.compareTo in Memory
+  public int compareTo(ImmutableRTree o)
   {
-    return this.data.compareTo(other.data);
+    int n = (int)Math.min(this.data.getCapacity(), o.data.getCapacity())/Ints.BYTES;
+    int i, j;
+    for (i = 0, j = 0; i < n; i++, j++) {
+      int cmp = Byte.compare(this.data.getByte(i), o.data.getByte(j));
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+    return (int)((this.data.getCapacity()-i) - (o.data.getCapacity()-j));
   }
 }

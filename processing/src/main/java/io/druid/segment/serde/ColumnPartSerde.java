@@ -22,11 +22,11 @@ package io.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -53,6 +53,6 @@ public interface ColumnPartSerde
 
   public interface Deserializer
   {
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+    public void read(PositionalMemoryRegion pMemory, ColumnBuilder builder, ColumnConfig columnConfig);
   }
 }

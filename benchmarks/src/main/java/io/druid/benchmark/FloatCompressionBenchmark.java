@@ -23,6 +23,7 @@ package io.druid.benchmark;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.Files;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.IndexedFloats;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -72,7 +73,7 @@ public class FloatCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy);
     rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
-    supplier = CompressedFloatsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
+    supplier = CompressedFloatsIndexedSupplier.fromMemory(new PositionalMemoryRegion(buffer), ByteOrder.nativeOrder());
   }
 
   @Benchmark

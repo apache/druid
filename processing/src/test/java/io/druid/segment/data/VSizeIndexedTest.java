@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -64,7 +65,7 @@ public class VSizeIndexedTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(indexed.getSerializedSize(), bytes.length);
-    VSizeIndexed deserializedIndexed = VSizeIndexed.readFromByteBuffer(ByteBuffer.wrap(bytes));
+    VSizeIndexed deserializedIndexed = VSizeIndexed.readFromMemory(new PositionalMemoryRegion(ByteBuffer.wrap(bytes)));
 
     assertSame(someInts, deserializedIndexed);
   }

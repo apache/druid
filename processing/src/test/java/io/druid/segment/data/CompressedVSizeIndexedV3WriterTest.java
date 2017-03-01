@@ -25,11 +25,14 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -42,7 +45,6 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
@@ -154,10 +156,9 @@ public class CompressedVSizeIndexedV3WriterTest
       assertEquals(writtenLength, supplierFromIterable.getSerializedSize());
 
       // read from ByteBuffer and check values
-      CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
-          ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
-          byteOrder,
-          null
+      CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromMemory(
+          new PositionalMemoryRegion(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
+          byteOrder
       );
       indexedMultivalue = supplierFromByteBuffer.get();
       assertEquals(indexedMultivalue.size(), vals.size());
@@ -299,10 +300,10 @@ public class CompressedVSizeIndexedV3WriterTest
       smoosher.close();
       SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
 
-      CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
-          mapper.mapFile("test"),
-          byteOrder,
-          mapper
+      Memory memory = mapper.mapFileToMemory("test");
+      CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromMemory(
+          new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity())),
+          byteOrder
       );
       IndexedMultivalue<IndexedInts> indexedMultivalue = supplierFromByteBuffer.get();
       assertEquals(indexedMultivalue.size(), vals.size());

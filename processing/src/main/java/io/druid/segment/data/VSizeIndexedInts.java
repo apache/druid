@@ -21,7 +21,10 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.NativeMemory;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -70,7 +73,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes) + (4 - numBytes));
     writeToBuffer(buffer, list, numBytes, maxValue);
 
-    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
+    return new VSizeIndexedInts(new NativeMemory(buffer), numBytes);
   }
 
   private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
@@ -110,21 +113,21 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return numBytes;
   }
 
-  private final ByteBuffer buffer;
+  private final Memory memory;
   private final int numBytes;
 
   private final int bitsToShift;
   private final int size;
 
-  public VSizeIndexedInts(ByteBuffer buffer, int numBytes)
+  public VSizeIndexedInts(Memory memory, int numBytes)
   {
-    this.buffer = buffer;
+    this.memory = memory;
     this.numBytes = numBytes;
 
     bitsToShift = 32 - (numBytes << 3); // numBytes * 8
 
     int numBufferBytes = 4 - numBytes;
-    size = (buffer.remaining() - numBufferBytes) / numBytes;
+    size = ((int)memory.getCapacity() - numBufferBytes) / numBytes;
   }
 
   @Override
@@ -136,31 +139,33 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   @Override
   public int get(int index)
   {
-    return buffer.getInt(buffer.position() + (index * numBytes)) >>> bitsToShift;
+    return Integer.reverseBytes(memory.getInt( index * numBytes)) >>> bitsToShift;
   }
 
   public byte[] getBytesNoPadding()
   {
-    int bytesToTake = buffer.remaining() - (4 - numBytes);
+    int bytesToTake = (int)memory.getCapacity() - (4 - numBytes);
     byte[] bytes = new byte[bytesToTake];
-    buffer.asReadOnlyBuffer().get(bytes);
+    memory.getByteArray(0, bytes, 0, bytesToTake);
     return bytes;
   }
 
   public byte[] getBytes()
   {
-    byte[] bytes = new byte[buffer.remaining()];
-    buffer.asReadOnlyBuffer().get(bytes);
+    byte[] bytes = new byte[(int)memory.getCapacity()];
+    memory.getByteArray(0, bytes, 0, (int)memory.getCapacity());
     return bytes;
   }
 
   @Override
   public int compareTo(VSizeIndexedInts o)
   {
+    //TODO Need to implement this
     int retVal = Ints.compare(numBytes, o.numBytes);
 
     if (retVal == 0) {
-      retVal = buffer.compareTo(o.buffer);
+//      retVal = buffer.compareTo(o.buffer);
+
     }
 
     return retVal;
@@ -174,7 +179,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public long getSerializedSize()
   {
     // version, numBytes, size, remaining
-    return 1 + 1 + 4 + buffer.remaining();
+    return 1 + 1 + 4 + memory.getCapacity();
   }
 
   @Override
@@ -186,23 +191,26 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(buffer.remaining())));
-    channel.write(buffer.asReadOnlyBuffer());
+    channel.write(ByteBuffer.wrap(Ints.toByteArray((int)memory.getCapacity())));
+
+    byte[] bytes = new byte[(int)memory.getCapacity()];
+    memory.getByteArray(0, bytes, 0, bytes.length);
+    channel.write(ByteBuffer.wrap(bytes));
   }
 
-  public static VSizeIndexedInts readFromByteBuffer(ByteBuffer buffer)
+  public static VSizeIndexedInts readFromMemory(PositionalMemoryRegion pMemory)
   {
-    byte versionFromBuffer = buffer.get();
+    byte versionFromBuffer = pMemory.getByte(0);
 
     if (VERSION == versionFromBuffer) {
-      int numBytes = buffer.get();
-      int size = buffer.getInt();
-      ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
-      bufferToUse.limit(bufferToUse.position() + size);
-      buffer.position(bufferToUse.limit());
+      int numBytes = pMemory.getByte();
+      int size = Integer.reverseBytes(pMemory.getInt());
+      PositionalMemoryRegion memoryToUse = pMemory.duplicate();
+      memoryToUse.limit(memoryToUse.position() + size);
+      pMemory.limit(memoryToUse.limit());
 
       return new VSizeIndexedInts(
-          bufferToUse,
+          memoryToUse.getRemainingMemory(),
           numBytes
       );
     }

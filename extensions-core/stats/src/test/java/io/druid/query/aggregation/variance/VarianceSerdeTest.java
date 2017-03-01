@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.variance;
 
+import com.yahoo.memory.NativeMemory;
 import io.druid.segment.data.ObjectStrategy;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,7 +40,7 @@ public class VarianceSerdeTest
     for (int i = 0; i < 100; i++) {
       byte[] array = strategy.toBytes(holder);
       Assert.assertArrayEquals(array, holder.toByteArray());
-      Assert.assertEquals(holder, strategy.fromByteBuffer(ByteBuffer.wrap(array), array.length));
+      Assert.assertEquals(holder, strategy.fromMemory(new NativeMemory(array)));
       holder.add(r.nextFloat());
     }
   }

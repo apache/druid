@@ -22,8 +22,9 @@ package io.druid.common.utils;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-
+import com.yahoo.memory.Memory;
 import io.druid.collections.IntList;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,16 +68,72 @@ public class SerializerUtils
     return StringUtils.fromUtf8(stringBytes);
   }
 
+  public String readString(PositionalMemoryRegion pMemory, int numBytes) throws IOException
+  {
+    return StringUtils.fromUtf8(pMemory.getBytes(numBytes));
+  }
+
+  public String readString(Memory memory, long offSet) throws IOException
+  {
+    final int length = memory.getInt(offSet);
+    byte[] bytes = new byte[length];
+    memory.getByteArray(offSet + 4, bytes, 0, length);
+    return StringUtils.fromUtf8(bytes);
+  }
+
+  public String readStringReverse(Memory memory, long offSet) throws IOException
+  {
+    final int length = Integer.reverseBytes(memory.getInt(offSet));
+    byte[] bytes = new byte[length];
+    memory.getByteArray(offSet + 4, bytes, 0, length);
+    return StringUtils.fromUtf8(bytes);
+  }
+
+  public String readStringReverse(Memory memory, int length) throws IOException
+  {
+    byte[] bytes = new byte[length];
+    memory.getByteArray(4, bytes, 0, length);
+    return StringUtils.fromUtf8(bytes);
+  }
+
+  public String readStringReverse(PositionalMemoryRegion pMemory, int length) throws IOException
+  {
+    return StringUtils.fromUtf8(pMemory.getBytes(length));
+  }
+
+  public String readStringReverse(PositionalMemoryRegion pMemory) throws IOException
+  {
+    return StringUtils.fromUtf8(pMemory.getBytes(Integer.reverseBytes(pMemory.getInt())));
+  }
+
   public String readString(ByteBuffer in) throws IOException
   {
     final int length = in.getInt();
     return StringUtils.fromUtf8(readBytes(in, length));
   }
-  
+
+  public String readString(PositionalMemoryRegion pMemory) throws IOException
+  {
+    final int length = pMemory.getInt();
+    return StringUtils.fromUtf8(readBytes(pMemory, length));
+  }
+
+  public byte[] readBytes(PositionalMemoryRegion pMemory, int length) throws IOException
+  {
+    return pMemory.getBytes(length);
+  }
+
   public byte[] readBytes(ByteBuffer in, int length) throws IOException
   {
     byte[] bytes = new byte[length];
     in.get(bytes);
+    return bytes;
+  }
+
+  public byte[] readBytes(Memory in, int length) throws IOException
+  {
+    byte[] bytes = new byte[length];
+    in.getByteArray(0, bytes, 0, length);
     return bytes;
   }
 

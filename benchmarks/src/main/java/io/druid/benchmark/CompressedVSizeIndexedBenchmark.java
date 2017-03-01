@@ -22,6 +22,7 @@ package io.druid.benchmark;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IndexedInts;
@@ -98,10 +99,8 @@ public class CompressedVSizeIndexedBenchmark
             ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
         )
     );
-    this.compressed = CompressedVSizeIndexedSupplier.fromByteBuffer(
-        bufferCompressed,
-        ByteOrder.nativeOrder(),
-        null
+    this.compressed = CompressedVSizeIndexedSupplier.fromMemory(
+        new PositionalMemoryRegion(bufferCompressed), ByteOrder.nativeOrder()
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(
@@ -119,7 +118,7 @@ public class CompressedVSizeIndexedBenchmark
             )
         ).asWritableSupplier()
     );
-    this.uncompressed = VSizeIndexed.readFromByteBuffer(bufferUncompressed);
+    this.uncompressed = VSizeIndexed.readFromMemory(new PositionalMemoryRegion(bufferUncompressed));
 
     filter = new BitSet();
     for (int i = 0; i < filteredRowCount; i++) {

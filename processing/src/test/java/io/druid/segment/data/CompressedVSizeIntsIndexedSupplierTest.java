@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedPools;
 import org.junit.After;
 import org.junit.Assert;
@@ -148,7 +149,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
 
-    supplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), byteOrder, null);
+    supplier = CompressedVSizeIntsIndexedSupplier.fromMemory(new PositionalMemoryRegion(bytes), byteOrder);
     indexed = supplier.get();
   }
 

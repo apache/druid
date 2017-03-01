@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,7 +32,6 @@ import org.junit.runners.Parameterized;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
@@ -151,7 +151,7 @@ public class CompressedLongsSerdeTest
     );
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedLongsIndexedSupplier supplier = CompressedLongsIndexedSupplier
-        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
+        .fromMemory(new PositionalMemoryRegion(baos.toByteArray()), order);
     IndexedLongs longs = supplier.get();
 
     assertIndexMatchesVals(longs, values);
@@ -204,10 +204,8 @@ public class CompressedLongsSerdeTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedLongsIndexedSupplier anotherSupplier = CompressedLongsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes),
-        order,
-        null
+    CompressedLongsIndexedSupplier anotherSupplier = CompressedLongsIndexedSupplier.fromMemory(
+        new PositionalMemoryRegion(bytes), order
     );
     IndexedLongs indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);

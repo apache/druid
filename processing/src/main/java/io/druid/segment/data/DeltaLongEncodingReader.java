@@ -20,43 +20,44 @@
 package io.druid.segment.data;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.nio.ByteBuffer;
 
 public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingReader
 {
 
-  private ByteBuffer buffer;
+  private PositionalMemoryRegion pMemory;
   private final long base;
   private final int bitsPerValue;
   private VSizeLongSerde.LongDeserializer deserializer;
 
-  public DeltaLongEncodingReader(ByteBuffer fromBuffer)
+  public DeltaLongEncodingReader(PositionalMemoryRegion fromMemory)
   {
-    this.buffer = fromBuffer.asReadOnlyBuffer();
-    byte version = buffer.get();
+    this.pMemory = fromMemory.duplicate();
+    byte version = pMemory.getByte();
     if (version == CompressionFactory.DELTA_ENCODING_VERSION) {
-      base = buffer.getLong();
-      bitsPerValue = buffer.getInt();
-      fromBuffer.position(buffer.position());
-      deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+      base = pMemory.getLong();
+      bitsPerValue = Integer.reverseBytes(pMemory.getInt());
+      fromMemory.position(pMemory.position());
+      deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, pMemory.getRemainingMemory(), 0);
     } else {
       throw new IAE("Unknown version[%s]", version);
     }
   }
 
-  private DeltaLongEncodingReader(ByteBuffer buffer, long base, int bitsPerValue)
+  private DeltaLongEncodingReader(PositionalMemoryRegion memory, long base, int bitsPerValue)
   {
-    this.buffer = buffer;
+    this.pMemory = memory;
     this.base = base;
     this.bitsPerValue = bitsPerValue;
-    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, pMemory.getRemainingMemory(), 0);
   }
 
   @Override
   public void setBuffer(ByteBuffer buffer)
   {
-    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
+    deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, (new PositionalMemoryRegion(buffer)).getRemainingMemory(), 0);
   }
 
   @Override
@@ -74,6 +75,6 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);
+    return new DeltaLongEncodingReader(pMemory.duplicate(), base, bitsPerValue);
   }
 }

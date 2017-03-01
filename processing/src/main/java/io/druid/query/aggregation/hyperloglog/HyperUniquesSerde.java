@@ -23,6 +23,8 @@ import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.hll.HyperLogLogCollector;
+import com.yahoo.memory.Memory;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -95,11 +97,9 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(PositionalMemoryRegion pMemory, ColumnBuilder columnBuilder)
   {
-    final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy());
+    final GenericIndexed column = GenericIndexed.read(pMemory, getObjectStrategy());
     columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
@@ -114,12 +114,17 @@ public class HyperUniquesSerde extends ComplexMetricSerde
         return HyperLogLogCollector.class;
       }
 
-      @Override
-      public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
+//      @Override
+//      public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
+//      {
+//        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+//        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+//        return HyperLogLogCollector.makeCollector(readOnlyBuffer);
+//      }
+
+      @Override public HyperLogLogCollector fromMemory(Memory memory)
       {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-        return HyperLogLogCollector.makeCollector(readOnlyBuffer);
+        return null;
       }
 
       @Override

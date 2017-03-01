@@ -25,6 +25,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
 import com.yahoo.memory.NativeMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.AnotB;
@@ -114,7 +115,7 @@ public class SketchHolder
   private SketchHolder(Object obj)
   {
     Preconditions.checkArgument(
-        obj instanceof Sketch || obj instanceof Union || obj instanceof Memory,
+        obj instanceof Sketch || obj instanceof Union || obj instanceof MemoryRegion || obj instanceof Memory ,
         "unknown sketch representation type [%s]", obj.getClass().getName()
     );
     this.obj = obj;

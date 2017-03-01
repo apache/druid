@@ -21,9 +21,12 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -36,23 +39,13 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
   private final int sizePer;
 
   public BlockLayoutIndexedFloatSupplier(
-      int totalSize,
-      int sizePer,
-      ByteBuffer fromBuffer,
-      ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper mapper
+      int totalSize, int sizePer, Memory memory, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
-    baseFloatBuffers = GenericIndexed.read(
-        fromBuffer,
-        VSizeCompressedObjectStrategy.getBufferForOrder(
-            order,
-            strategy,
-            sizePer * Floats.BYTES
-        ),
-        mapper
-    );
+    baseFloatBuffers = GenericIndexed.read(new PositionalMemoryRegion(new MemoryRegion(memory, 0, memory.getCapacity())), VSizeCompressedObjectStrategy.getBufferForOrder(
+        order, strategy, sizePer * Floats.BYTES
+    ));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }

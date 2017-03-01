@@ -21,11 +21,11 @@ package io.druid.segment.serde;
 
 import com.google.common.base.Function;
 import io.druid.segment.GenericColumnSerializer;
+import com.yahoo.memory.NativeMemory;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
-
-import java.nio.ByteBuffer;
 
 /**
  */
@@ -39,10 +39,9 @@ public abstract class ComplexMetricSerde
    * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
    * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
    *
-   * @param buffer  the buffer to deserialize
    * @param builder ColumnBuilder to add the column to
    */
-  public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
+  public abstract void deserializeColumn(PositionalMemoryRegion pMemory, ColumnBuilder builder);
 
   /**
    * This is deprecated because its usage is going to be removed from the code.
@@ -87,18 +86,12 @@ public abstract class ComplexMetricSerde
    * Converts byte[] to intermediate representation of the aggregate.
    *
    * @param data     array
-   * @param start    offset in the byte array where to start reading
-   * @param numBytes number of bytes to read in given array
    *
    * @return intermediate representation of the aggregate
    */
-  public Object fromBytes(byte[] data, int start, int numBytes)
+  public Object fromBytes(byte[] data)
   {
-    ByteBuffer bb = ByteBuffer.wrap(data);
-    if (start > 0) {
-      bb.position(start);
-    }
-    return getObjectStrategy().fromByteBuffer(bb, numBytes);
+    return getObjectStrategy().fromMemory(new NativeMemory(data));
   }
 
   /**

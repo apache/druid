@@ -22,8 +22,10 @@ package io.druid.segment.serde;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
 import com.metamx.common.StringUtils;
+import com.yahoo.memory.Memory;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -97,16 +99,13 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
     };
   }
 
-  @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  @Override public void deserializeColumn(PositionalMemoryRegion pMemory, ColumnBuilder columnBuilder)
   {
     final GenericIndexed column;
     if (columnBuilder.getFileMapper() == null) {
-      column = GenericIndexed.read(byteBuffer, getObjectStrategy());
+      column = GenericIndexed.read(pMemory, getObjectStrategy());
     } else {
-      column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
+      column = GenericIndexed.read(pMemory, getObjectStrategy(), columnBuilder.getFileMapper());
     }
 
     columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
@@ -123,12 +122,11 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
         return HyperLogLogCollector.class;
       }
 
-      @Override
-      public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
+      @Override public HyperLogLogCollector fromMemory(Memory memory)
       {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-        return HyperLogLogCollector.makeCollector(readOnlyBuffer);
+        byte[] bytes = new byte[(int)memory.getCapacity()];
+        memory.getByteArray(0, bytes, 0, bytes.length);
+        return HyperLogLogCollector.makeCollector(ByteBuffer.wrap(bytes));
       }
 
       @Override

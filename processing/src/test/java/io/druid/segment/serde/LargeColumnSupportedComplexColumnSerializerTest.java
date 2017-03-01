@@ -24,6 +24,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.primitives.Longs;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -91,7 +92,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             .setType(ValueType.COMPLEX)
             .setHasMultipleValues(false)
             .setFileMapper(mapper);
-        serde.deserializeColumn(mapper.mapFile("test"), builder);
+        serde.deserializeColumn(new PositionalMemoryRegion(mapper.mapFile("test")), builder);
 
         Column column = builder.build();
         ComplexColumn complexColumn = column.getComplexColumn();

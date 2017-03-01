@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Ordering;
+import com.yahoo.memory.Memory;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
@@ -99,12 +100,21 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
       return ImmutableBitmap.class;
     }
 
-    @Override
-    public ImmutableBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
+//    @Override
+//    public ImmutableBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
+//    {
+//      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+//      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+//      return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(readOnlyBuffer));
+//    }
+
+    //TODO See how we can Copy/Paste Roaring bitmap to Druid
+    @Override public ImmutableBitmap fromMemory(Memory memory)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(readOnlyBuffer));
+      byte[] bytes = new byte[(int)memory.getCapacity()];
+      memory.getByteArray(0, bytes, 0, (int)memory.getCapacity());
+
+      return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(ByteBuffer.wrap(bytes)));
     }
 
     @Override

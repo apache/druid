@@ -19,13 +19,10 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
+import com.yahoo.memory.Memory;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.java.util.common.IAE;
 import io.druid.segment.data.ObjectStrategy;
-
-import java.nio.ByteBuffer;
 
 public class SketchObjectStrategy implements ObjectStrategy
 {
@@ -45,13 +42,13 @@ public class SketchObjectStrategy implements ObjectStrategy
   }
 
   @Override
-  public Object fromByteBuffer(ByteBuffer buffer, int numBytes)
+  public Object fromMemory(Memory buffer)
   {
-    if (numBytes == 0) {
+    if (buffer.getCapacity() == 0) {
       return SketchHolder.EMPTY;
     }
 
-    return SketchHolder.of(new MemoryRegion(new NativeMemory(buffer), buffer.position(), numBytes));
+    return SketchHolder.of(buffer);
   }
 
   @Override

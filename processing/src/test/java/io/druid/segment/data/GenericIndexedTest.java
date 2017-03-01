@@ -20,12 +20,16 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Maps;
+import com.yahoo.memory.MemoryRegion;
+import com.yahoo.memory.NativeMemory;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
@@ -128,11 +132,15 @@ public class GenericIndexedTest
     indexed.writeToChannel(channel);
     channel.close();
 
-    final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
+    byte[] bytes = baos.toByteArray();
+    final ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length)
+        .order(ByteOrder.nativeOrder()).put(baos.toByteArray());
+    byteBuffer.flip();
     Assert.assertEquals(indexed.getSerializedSize(), byteBuffer.remaining());
     GenericIndexed<String> deserialized = GenericIndexed.read(
-        byteBuffer, GenericIndexed.STRING_STRATEGY
+        new PositionalMemoryRegion(byteBuffer), GenericIndexed.STRING_STRATEGY
     );
+    byteBuffer.position(byteBuffer.position() + (int)deserialized.getSerializedSize());
     Assert.assertEquals(0, byteBuffer.remaining());
     return deserialized;
   }

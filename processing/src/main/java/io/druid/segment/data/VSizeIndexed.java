@@ -20,8 +20,12 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
+import com.yahoo.memory.MemoryRegion;
+import com.yahoo.memory.NativeMemory;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,7 +45,7 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     if (!objects.hasNext()) {
       final ByteBuffer buffer = ByteBuffer.allocate(4).putInt(0);
       buffer.flip();
-      return new VSizeIndexed(buffer, 4);
+      return new VSizeIndexed(new NativeMemory(buffer), 4);
     }
 
     int numBytes = -1;
@@ -82,10 +86,10 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     theBuffer.put(valueBytes.toByteArray());
     theBuffer.flip();
 
-    return new VSizeIndexed(theBuffer.asReadOnlyBuffer(), numBytes);
+    return new VSizeIndexed(new NativeMemory(theBuffer), numBytes);
   }
 
-  private final ByteBuffer theBuffer;
+  private final Memory memory;
   private final int numBytes;
   private final int size;
 
@@ -93,15 +97,15 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
   private final int bufferBytes;
 
   VSizeIndexed(
-      ByteBuffer buffer,
+      Memory memory,
       int numBytes
   )
   {
-    this.theBuffer = buffer;
+    this.memory = memory;
     this.numBytes = numBytes;
 
-    size = theBuffer.getInt();
-    valuesOffset = theBuffer.position() + (size << 2);
+    size = Integer.reverseBytes(this.memory.getInt(0));
+    valuesOffset = Integer.BYTES + (size << 2);
     bufferBytes = 4 - numBytes;
   }
 
@@ -124,21 +128,20 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
       throw new IllegalArgumentException(String.format("Index[%s] >= size[%s]", index, size));
     }
 
-    ByteBuffer myBuffer = theBuffer.asReadOnlyBuffer();
+//    ByteBuffer myBuffer = theBuffer.asReadOnlyBuffer();
     int startOffset = 0;
     int endOffset;
 
     if (index == 0) {
-      endOffset = myBuffer.getInt();
+      endOffset = Integer.reverseBytes(memory.getInt(Integer.BYTES));
     } else {
-      myBuffer.position(myBuffer.position() + ((index - 1) * Ints.BYTES));
-      startOffset = myBuffer.getInt();
-      endOffset = myBuffer.getInt();
+      startOffset = Integer.reverseBytes(memory.getInt((index ) * Ints.BYTES));
+      endOffset = Integer.reverseBytes(memory.getInt((index + 1) * Ints.BYTES));
     }
 
-    myBuffer.position(valuesOffset + startOffset);
-    myBuffer.limit(myBuffer.position() + (endOffset - startOffset) + bufferBytes);
-    return myBuffer.hasRemaining() ? new VSizeIndexedInts(myBuffer, numBytes) : null;
+    int position = valuesOffset + startOffset;
+    int limit = position + (endOffset - startOffset) + bufferBytes;
+    return memory.getCapacity() > position ? new VSizeIndexedInts(new MemoryRegion(memory, position, limit - position), numBytes) : null;
   }
 
   @Override
@@ -149,29 +152,32 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
 
   public int getSerializedSize()
   {
-    return theBuffer.remaining() + 4 + 4 + 2;
+    return (int)memory.getCapacity() + 4 + 2;
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
+    channel.write(ByteBuffer.wrap(Ints.toByteArray((int)memory.getCapacity())));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
-    channel.write(theBuffer.asReadOnlyBuffer());
+
+    byte[] bytes = new byte[(int)memory.getCapacity()-4];
+    memory.getByteArray(4, bytes, 0, bytes.length);
+    channel.write(ByteBuffer.wrap(bytes));
   }
 
-  public static VSizeIndexed readFromByteBuffer(ByteBuffer buffer)
+  public static VSizeIndexed readFromMemory(PositionalMemoryRegion fromMemory)
   {
-    byte versionFromBuffer = buffer.get();
+    byte versionFromBuffer = fromMemory.getByte();
 
     if (version == versionFromBuffer) {
-      int numBytes = buffer.get();
-      int size = buffer.getInt();
-      ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
-      bufferToUse.limit(bufferToUse.position() + size);
-      buffer.position(bufferToUse.limit());
+      int numBytes = fromMemory.getByte();
+      int size = Integer.reverseBytes(fromMemory.getInt());
+      PositionalMemoryRegion memoryToUse = fromMemory.duplicate();
+      memoryToUse.limit(memoryToUse.position() + size);
+      fromMemory.position(memoryToUse.limit());
 
-      return new VSizeIndexed(bufferToUse, numBytes);
+      return new VSizeIndexed(memoryToUse.getRemainingMemory(), numBytes);
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);

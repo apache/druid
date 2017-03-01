@@ -27,7 +27,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.column.ColumnBuilder;
@@ -35,7 +35,6 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
@@ -44,6 +43,7 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsWriter;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
+import io.druid.segment.data.MemorySerializer;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
@@ -397,7 +397,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               }
 
               if (spatialIndex != null) {
-                ByteBufferSerializer.writeToChannel(
+                MemorySerializer.writeToChannel(
                     spatialIndex,
                     new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()),
                     channel
@@ -421,13 +421,13 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(PositionalMemoryRegion pMemory, ColumnBuilder builder, ColumnConfig columnConfig)
       {
-        final VERSION rVersion = VERSION.fromByte(buffer.get());
+        final VERSION rVersion = VERSION.fromByte(pMemory.getByte());
         final int rFlags;
 
         if (rVersion.compareTo(VERSION.COMPRESSED) >= 0) {
-          rFlags = buffer.getInt();
+          rFlags = Integer.reverseBytes(pMemory.getInt());
         } else {
           rFlags = rVersion.equals(VERSION.UNCOMPRESSED_MULTI_VALUE)
                    ? Feature.MULTI_VALUE.getMask()
@@ -436,21 +436,17 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
 
-        final GenericIndexed<String> rDictionary = GenericIndexed.read(
-            buffer,
-            GenericIndexed.STRING_STRATEGY,
-            builder.getFileMapper()
-        );
+        final GenericIndexed<String> rDictionary = GenericIndexed.read(pMemory, GenericIndexed.STRING_STRATEGY);
         builder.setType(ValueType.STRING);
 
         final WritableSupplier<IndexedInts> rSingleValuedColumn;
         final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
 
         if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColum(rVersion, buffer, rFlags, builder.getFileMapper());
+          rMultiValuedColumn = readMultiValuedColum(rVersion, pMemory, rFlags);
           rSingleValuedColumn = null;
         } else {
-          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer, builder.getFileMapper());
+          rSingleValuedColumn = readSingleValuedColumn(rVersion, pMemory);
           rMultiValuedColumn = null;
         }
 
@@ -465,7 +461,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                );
 
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
-            buffer, bitmapSerdeFactory.getObjectStrategy(), builder.getFileMapper()
+            pMemory, bitmapSerdeFactory.getObjectStrategy()
         );
         builder.setBitmapIndex(
             new BitmapIndexColumnPartSupplier(
@@ -476,42 +472,38 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         );
 
         ImmutableRTree rSpatialIndex = null;
-        if (buffer.hasRemaining()) {
-          rSpatialIndex = ByteBufferSerializer.read(
-              buffer, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
+        if (pMemory.hasRemaining()) {
+          rSpatialIndex = MemorySerializer.read(
+              pMemory, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
           );
           builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(rSpatialIndex));
         }
       }
 
 
-      private WritableSupplier<IndexedInts> readSingleValuedColumn(
-          VERSION version,
-          ByteBuffer buffer,
-          SmooshedFileMapper fileMapper
-      )
+      private WritableSupplier<IndexedInts> readSingleValuedColumn(VERSION version, PositionalMemoryRegion pMemory)
       {
         switch (version) {
           case UNCOMPRESSED_SINGLE_VALUE:
-            return VSizeIndexedInts.readFromByteBuffer(buffer).asWritableSupplier();
+            return VSizeIndexedInts.readFromMemory(pMemory).asWritableSupplier();
           case COMPRESSED:
-          return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+            return CompressedVSizeIntsIndexedSupplier.fromMemory(pMemory, byteOrder);
         }
         throw new IAE("Unsupported single-value version[%s]", version);
       }
 
       private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColum(
-          VERSION version, ByteBuffer buffer, int flags, SmooshedFileMapper fileMapper
+          VERSION version, PositionalMemoryRegion pMemory, int flags
       )
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE:
-            return VSizeIndexed.readFromByteBuffer(buffer).asWritableSupplier();
+            return VSizeIndexed.readFromMemory(pMemory).asWritableSupplier();
           case COMPRESSED:
             if (Feature.MULTI_VALUE.isSet(flags)) {
-              return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+              return CompressedVSizeIndexedSupplier.fromMemory(pMemory, byteOrder);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
-              return CompressedVSizeIndexedV3Supplier.fromByteBuffer(buffer, byteOrder, fileMapper);
+              return CompressedVSizeIndexedV3Supplier.fromMemory(pMemory, byteOrder);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d]", flags);
             }

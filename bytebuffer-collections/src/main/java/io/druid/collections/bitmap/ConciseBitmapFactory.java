@@ -26,6 +26,8 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 
+import com.yahoo.memory.NativeMemory;
+
 /**
  * As the name suggests, this class instantiates bitmaps of the types
  * WrappedConciseBitmap and WrappedImmutableConciseBitmap.
@@ -104,7 +106,7 @@ public class ConciseBitmapFactory implements BitmapFactory
   @Override
   public ImmutableBitmap mapImmutableBitmap(ByteBuffer b)
   {
-    return new WrappedImmutableConciseBitmap(b);
+    return new WrappedImmutableConciseBitmap(new NativeMemory(b));
   }
 
   @Override

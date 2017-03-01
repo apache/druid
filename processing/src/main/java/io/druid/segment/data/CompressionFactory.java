@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
+import com.yahoo.memory.Memory;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -157,9 +159,9 @@ public class CompressionFactory
      */
     DELTA((byte) 0x0) {
       @Override
-      public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
+      public LongEncodingReader getReader(PositionalMemoryRegion memory, ByteOrder order)
       {
-        return new DeltaLongEncodingReader(buffer);
+        return new DeltaLongEncodingReader(memory);
       }
     },
     /**
@@ -169,9 +171,9 @@ public class CompressionFactory
      */
     TABLE((byte) 0x1) {
       @Override
-      public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
+      public LongEncodingReader getReader(PositionalMemoryRegion memory, ByteOrder order)
       {
-        return new TableLongEncodingReader(buffer);
+        return new TableLongEncodingReader(memory);
       }
     },
     /**
@@ -179,9 +181,9 @@ public class CompressionFactory
      */
     LONGS((byte) 0xFF) {
       @Override
-      public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
+      public LongEncodingReader getReader(PositionalMemoryRegion memory, ByteOrder order)
       {
-        return new LongsLongEncodingReader(buffer, order);
+        return new LongsLongEncodingReader(memory, order);
       }
     };
 
@@ -205,7 +207,7 @@ public class CompressionFactory
       }
     }
 
-    public abstract LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order);
+    public abstract LongEncodingReader getReader(PositionalMemoryRegion memory, ByteOrder order);
 
     public static LongEncodingFormat forId(byte id)
     {
@@ -264,26 +266,16 @@ public class CompressionFactory
   }
 
   public static Supplier<IndexedLongs> getLongSupplier(
-      int totalSize,
-      int sizePer,
-      ByteBuffer fromBuffer,
-      ByteOrder order,
+      int totalSize, int sizePer, PositionalMemoryRegion pMemory, ByteOrder order,
       LongEncodingFormat encodingFormat,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
+      return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(pMemory, order));
     } else {
-      return new BlockLayoutIndexedLongSupplier(
-          totalSize,
-          sizePer,
-          fromBuffer,
-          order,
-          encodingFormat.getReader(fromBuffer, order),
-          strategy,
-          fileMapper
+      return new BlockLayoutIndexedLongSupplier(totalSize, sizePer, pMemory, order,
+                                                encodingFormat.getReader(pMemory, order), strategy
       );
     }
   }
@@ -314,18 +306,14 @@ public class CompressionFactory
   // Float currently does not support any encoding types, and stores values as 4 byte float
 
   public static Supplier<IndexedFloats> getFloatSupplier(
-      int totalSize,
-      int sizePer,
-      ByteBuffer fromBuffer,
-      ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy strategy,
-      SmooshedFileMapper fileMapper
+      int totalSize, int sizePer, Memory memory, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutIndexedFloatSupplier(totalSize, fromBuffer, order);
+      return new EntireLayoutIndexedFloatSupplier(totalSize, memory, order);
     } else {
-      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy, fileMapper);
+      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, memory, order, strategy);
     }
   }
 

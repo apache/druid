@@ -27,7 +27,7 @@ import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -149,11 +149,37 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     return baseBuffers;
   }
 
-  public static CompressedVSizeIntsIndexedSupplier fromByteBuffer(
-      ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper fileMapper
-  )
+  public static CompressedVSizeIntsIndexedSupplier fromMemory(PositionalMemoryRegion pMemory, ByteOrder order)
+  {
+    byte versionFromBuffer = pMemory.getByte();
+
+    if (versionFromBuffer == VERSION) {
+      final int numBytes = pMemory.getByte();
+      final int totalSize = Integer.reverseBytes(pMemory.getInt());
+      final int sizePer = Integer.reverseBytes(pMemory.getInt());
+      final int chunkBytes = sizePer * numBytes + bufferPadding(numBytes);
+
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
+          pMemory.getByte()
+      );
+
+      return new CompressedVSizeIntsIndexedSupplier(
+          totalSize,
+          sizePer,
+          numBytes,
+          GenericIndexed.read(
+              pMemory,
+              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes)
+          ),
+          compression
+      );
+
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedVSizeIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -172,9 +198,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
           sizePer,
           numBytes,
           GenericIndexed.read(
-              buffer,
-              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes),
-              fileMapper
+              new PositionalMemoryRegion(buffer),
+              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes)
           ),
           compression
       );

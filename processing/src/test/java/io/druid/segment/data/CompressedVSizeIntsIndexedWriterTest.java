@@ -26,6 +26,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -131,10 +132,9 @@ public class CompressedVSizeIntsIndexedWriterTest
     assertEquals(writtenLength, supplierFromList.getSerializedSize());
 
     // read from ByteBuffer and check values
-    CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
-        ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
-        byteOrder,
-        null
+    CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromMemory(
+        new PositionalMemoryRegion(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
+        byteOrder
     );
     IndexedInts indexedInts = supplierFromByteBuffer.get();
     for (int i = 0; i < vals.length; ++i) {
@@ -209,10 +209,9 @@ public class CompressedVSizeIntsIndexedWriterTest
 
     SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
 
-    CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
-        mapper.mapFile("test"),
-        byteOrder,
-        mapper
+    CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromMemory(
+        new PositionalMemoryRegion(mapper.mapFile("test")),
+        byteOrder
     );
 
     IndexedInts indexedInts = supplierFromByteBuffer.get();

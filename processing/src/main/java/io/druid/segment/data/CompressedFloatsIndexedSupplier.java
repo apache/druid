@@ -21,8 +21,9 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
+import com.yahoo.memory.Memory;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.java.util.common.io.smoosh.PositionalMemoryRegion;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,21 +37,21 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   private final int totalSize;
   private final int sizePer;
-  private final ByteBuffer buffer;
+  private final Memory memory;
   private final Supplier<IndexedFloats> supplier;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
   CompressedFloatsIndexedSupplier(
       int totalSize,
       int sizePer,
-      ByteBuffer buffer,
+      Memory memory,
       Supplier<IndexedFloats> supplier,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
     this.sizePer = sizePer;
-    this.buffer = buffer;
+    this.memory = memory;
     this.supplier = supplier;
     this.compression = compression;
   }
@@ -68,7 +69,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   public long getSerializedSize()
   {
-    return buffer.remaining() + 1 + 4 + 4 + 1;
+    return memory.getCapacity() + 1 + 4 + 4 + 1;
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -77,37 +78,45 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    channel.write(buffer.asReadOnlyBuffer());
+    long size = memory.getCapacity();
+    long bytesOut = 0;
+    while(size > bytesOut){
+      int bytes = (int) size ;
+      if(size > Integer.MAX_VALUE){
+        bytes = Integer.MAX_VALUE;
+      }
+      byte[] byteArray = new byte[bytes];
+      memory.getByteArray(bytesOut, byteArray, 0, byteArray.length);
+      ByteBuffer bb = ByteBuffer.allocate(bytes).put(byteArray);
+      bb.flip();
+      channel.write(bb);
+      bytesOut += bytes;
+    }
   }
 
-  public static CompressedFloatsIndexedSupplier fromByteBuffer(
-      ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper mapper
-  )
+  public static CompressedFloatsIndexedSupplier fromMemory(PositionalMemoryRegion pMemory, ByteOrder order)
   {
-    byte versionFromBuffer = buffer.get();
+    byte versionFromBuffer = pMemory.getByte();
 
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
+      final int totalSize = Integer.reverseBytes(pMemory.getInt());
+      final int sizePer = Integer.reverseBytes(pMemory.getInt());
       CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
       if (versionFromBuffer == version) {
-        byte compressionId = buffer.get();
+        byte compressionId = pMemory.getByte();
         compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
       }
       Supplier<IndexedFloats> supplier = CompressionFactory.getFloatSupplier(
           totalSize,
           sizePer,
-          buffer.asReadOnlyBuffer(),
+          pMemory.getRemainingMemory(),
           order,
-          compression,
-          mapper
+          compression
       );
       return new CompressedFloatsIndexedSupplier(
           totalSize,
           sizePer,
-          buffer,
+          pMemory.getRemainingMemory(),
           supplier,
           compression
       );

@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import com.yahoo.memory.NativeMemory;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -72,7 +73,7 @@ public class BitmapBenchmark
     conciseCount++;
     final ByteBuffer buf = ByteBuffer.allocateDirect(bytes.length).put(bytes);
     buf.rewind();
-    return new ImmutableConciseSet(buf);
+    return new ImmutableConciseSet(new NativeMemory(buf));
   }
 
   protected static ImmutableRoaringBitmap writeImmutable(MutableRoaringBitmap r, ByteBuffer buf) throws IOException
