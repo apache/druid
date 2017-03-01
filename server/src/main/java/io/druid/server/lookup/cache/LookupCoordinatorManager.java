@@ -55,8 +55,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StreamUtils;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.listener.resource.ListenerResource;
@@ -117,7 +115,6 @@ public class LookupCoordinatorManager
     }
   };
 
-  private final ListeningScheduledExecutorService executorService;
   private final ListenerDiscoverer listenerDiscoverer;
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
@@ -129,9 +126,10 @@ public class LookupCoordinatorManager
   private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private volatile ListenableScheduledFuture<?> backgroundManagerFuture = null;
-  private final CountDownLatch backgroundManagerExitedLatch = new CountDownLatch(1);
 
+  private ListeningScheduledExecutorService executorService;
+  private ListenableScheduledFuture<?> backgroundManagerFuture;
+  private CountDownLatch backgroundManagerExitedLatch;
 
   @Inject
   public LookupCoordinatorManager(
@@ -147,12 +145,6 @@ public class LookupCoordinatorManager
     this.httpClient = httpClient;
     this.smileMapper = smileMapper;
     this.lookupCoordinatorManagerConfig = lookupCoordinatorManagerConfig;
-    executorService = MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            lookupCoordinatorManagerConfig.getThreadPoolSize(),
-            Execs.makeThreadFactory("LookupCoordinatorManager--%s")
-        )
-    );
   }
 
   public boolean updateLookup(
@@ -296,8 +288,9 @@ public class LookupCoordinatorManager
     return tierLookups.get(lookupName);
   }
 
-  @LifecycleStart
-  public void start()
+  // start() and stop() are synchronized so that they never run in parallel in case of ZK acting funny and
+  // coordinator becomes leader and drops leadership in quick succession.
+  public synchronized void start()
   {
     if (!lifecycleLock.canStart()) {
       LOG.warn("Lookup coordinator manager can not start.");
@@ -305,10 +298,22 @@ public class LookupCoordinatorManager
     }
 
     try {
-      if (executorService.isShutdown()) {
-        throw new ISE("Cannot restart after stop!");
+      if (executorService != null &&
+          !executorService.awaitTermination(
+              lookupCoordinatorManagerConfig.getHostTimeout().getMillis() * 10,
+              TimeUnit.MILLISECONDS
+          )) {
+        throw new ISE("WTF! executor from last start() hasn't finished.");
       }
 
+      executorService = MoreExecutors.listeningDecorator(
+          Executors.newScheduledThreadPool(
+              lookupCoordinatorManagerConfig.getThreadPoolSize(),
+              Execs.makeThreadFactory("LookupCoordinatorManager--%s")
+          )
+      );
+
+      //Note: this call is idempotent, so multiple start() would not cause any problems.
       lookupMapConfigRef = configManager.watch(
           LOOKUP_CONFIG_KEY,
           new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
@@ -347,6 +352,7 @@ public class LookupCoordinatorManager
         }
       }
 
+      this.backgroundManagerExitedLatch = new CountDownLatch(1);
       this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
           new Runnable()
           {
@@ -385,36 +391,37 @@ public class LookupCoordinatorManager
       );
 
       lifecycleLock.started();
+
       LOG.debug("Started");
+    } catch (Exception ex) {
+      LOG.makeAlert(ex, "Got Exception while start()").emit();
     } finally {
       lifecycleLock.exitStart();
     }
   }
 
-  @LifecycleStop
-  public void stop()
+  public synchronized void stop()
   {
     if (!lifecycleLock.canStop()) {
       LOG.warn("Not started, ignoring stop request");
       return;
     }
 
-    executorService.shutdownNow();
-
-    //went in an stop error
     try {
-      executorService.awaitTermination(1, TimeUnit.MINUTES);
-    } catch (InterruptedException ex) {
+      if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
+        LOG.warn("Background lookup manager thread could not be cancelled");
+      }
 
-    }
+      // NOTE: we can't un-watch the configuration key
 
-    final ListenableScheduledFuture backgroundManagerFuture = this.backgroundManagerFuture;
-    this.backgroundManagerFuture = null;
-    if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
-      LOG.warn("Background lookup manager thread could not be cancelled");
+      executorService.shutdownNow();
+
+      LOG.debug("Stopped");
+    } catch (Exception ex) {
+      LOG.makeAlert(ex, "Got Exception while stop()").emit();
+    } finally {
+      lifecycleLock.reset();
     }
-    // NOTE: we can't un-watch the configuration key
-    LOG.debug("Stopped");
   }
 
   private void lookupMgmtLoop()
@@ -536,7 +543,11 @@ public class LookupCoordinatorManager
         allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS);
         knownOldState.set(currState);
       }
-      catch (Exception ex) {
+      catch (InterruptedException ex) {
+        allFuture.cancel(true);
+        Thread.currentThread().interrupt();
+        throw ex;
+      } catch (Exception ex) {
         allFuture.cancel(true);
         throw ex;
       }
