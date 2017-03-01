@@ -30,6 +30,7 @@
   </module>
 
   <module name="NewlineAtEndOfFile"/>
+  <module name="FileTabCharacter"/>
 
   <module name="TreeWalker">
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
