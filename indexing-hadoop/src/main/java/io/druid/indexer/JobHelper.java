@@ -578,7 +578,7 @@ public class JobHelper
 
   public static boolean isHdfs(FileSystem fs)
   {
-    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme());
+    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme()) || "maprfs".equals(fs.getScheme());
   }
 
   public static Path makeFileNamePath(
