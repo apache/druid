@@ -19,13 +19,11 @@
 
 package io.druid.query.select;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -62,33 +60,32 @@ public class PagingSpec
   private final Map<String, Integer> pagingIdentifiers;
   private final int threshold;
   private final boolean fromNext;
-  private final Supplier<SelectQueryConfig> configSupplier;
+  private final SelectQueryConfig config;
 
   @JsonCreator
-  @Inject
   public PagingSpec(
       @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
       @JsonProperty("threshold") int threshold,
       @JsonProperty("fromNext") Boolean fromNext,
-      Supplier<SelectQueryConfig> configSupplier
+      @JacksonInject SelectQueryConfig config
   )
   {
     this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
     this.threshold = threshold;
-    this.configSupplier = configSupplier;
+    this.config = config;
 
-    boolean defaultFromNext = configSupplier.get().getEnableFromNextDefault();
+    boolean defaultFromNext = config.getEnableFromNextDefault();
     this.fromNext = fromNext == null ? defaultFromNext : fromNext;
   }
 
   public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold)
   {
-    this(pagingIdentifiers, threshold, null, Suppliers.ofInstance(new SelectQueryConfig()));
+    this(pagingIdentifiers, threshold, null, new SelectQueryConfig(true));
   }
 
   public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold, Boolean fromNext)
   {
-    this(pagingIdentifiers, threshold, fromNext, Suppliers.ofInstance(new SelectQueryConfig()));
+    this(pagingIdentifiers, threshold, fromNext, new SelectQueryConfig(true));
   }
 
   @JsonProperty

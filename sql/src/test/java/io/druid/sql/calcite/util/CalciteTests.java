@@ -90,7 +90,7 @@ public class CalciteTests
   public static final String DATASOURCE2 = "foo2";
 
   private static final String TIMESTAMP_COLUMN = "t";
-  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig());
+  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
   private static final QueryRunnerFactoryConglomerate CONGLOMERATE = new DefaultQueryRunnerFactoryConglomerate(
       ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()

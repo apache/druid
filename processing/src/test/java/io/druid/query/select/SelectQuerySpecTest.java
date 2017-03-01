@@ -19,6 +19,7 @@
 
 package io.druid.query.select;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.QueryRunnerTestHelper;
@@ -35,7 +36,15 @@ import java.util.Arrays;
  */
 public class SelectQuerySpecTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final ObjectMapper objectMapper = new DefaultObjectMapper();
+  {
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            SelectQueryConfig.class,
+            new SelectQueryConfig(true)
+        )
+    );
+  }
 
   @Test
   public void testSerializationLegacyString() throws Exception
@@ -63,7 +72,7 @@ public class SelectQuerySpecTest
         + "{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":[],"
-        + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":null},"
+        + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":true},"
         + "\"context\":null}";
 
     SelectQuery query = new SelectQuery(
@@ -79,10 +88,10 @@ public class SelectQuerySpecTest
         null
     );
 
-    String actual = jsonMapper.writeValueAsString(query);
+    String actual = objectMapper.writeValueAsString(query);
     Assert.assertEquals(current, actual);
-    Assert.assertEquals(query, jsonMapper.readValue(actual, SelectQuery.class));
-    Assert.assertEquals(query, jsonMapper.readValue(legacy, SelectQuery.class));
+    Assert.assertEquals(query, objectMapper.readValue(actual, SelectQuery.class));
+    Assert.assertEquals(query, objectMapper.readValue(legacy, SelectQuery.class));
   }
 
   @Test
@@ -136,17 +145,17 @@ public class SelectQuerySpecTest
         new PagingSpec(null, 3, true)
     );
 
-    String actualWithNull = jsonMapper.writeValueAsString(queryWithNull);
-    Assert.assertEquals(withNull, actualWithNull);
+    String actualWithNull = objectMapper.writeValueAsString(queryWithNull);
+    Assert.assertEquals(withTrue, actualWithNull);
 
-    String actualWithFalse = jsonMapper.writeValueAsString(queryWithFalse);
+    String actualWithFalse = objectMapper.writeValueAsString(queryWithFalse);
     Assert.assertEquals(withFalse, actualWithFalse);
 
-    String actualWithTrue = jsonMapper.writeValueAsString(queryWithTrue);
+    String actualWithTrue = objectMapper.writeValueAsString(queryWithTrue);
     Assert.assertEquals(withTrue, actualWithTrue);
 
-    Assert.assertEquals(queryWithNull, jsonMapper.readValue(actualWithNull, SelectQuery.class));
-    Assert.assertEquals(queryWithFalse, jsonMapper.readValue(actualWithFalse, SelectQuery.class));
-    Assert.assertEquals(queryWithTrue, jsonMapper.readValue(actualWithTrue, SelectQuery.class));
+    Assert.assertEquals(queryWithNull, objectMapper.readValue(actualWithNull, SelectQuery.class));
+    Assert.assertEquals(queryWithFalse, objectMapper.readValue(actualWithFalse, SelectQuery.class));
+    Assert.assertEquals(queryWithTrue, objectMapper.readValue(actualWithTrue, SelectQuery.class));
   }
 }

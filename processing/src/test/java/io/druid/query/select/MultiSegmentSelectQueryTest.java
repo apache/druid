@@ -67,7 +67,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MultiSegmentSelectQueryTest
 {
-  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig());
+  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),

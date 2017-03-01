@@ -230,7 +230,7 @@ public class SelectBenchmark
       qIndexes.add(qIndex);
     }
 
-    final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig());
+    final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
     factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(

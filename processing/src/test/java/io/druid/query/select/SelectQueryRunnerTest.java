@@ -112,7 +112,7 @@ public class SelectQueryRunnerTest
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
   private static final boolean DEFAULT_FROM_NEXT = true;
-  private static final SelectQueryConfig config = new SelectQueryConfig();
+  private static final SelectQueryConfig config = new SelectQueryConfig(true);
   {
     config.setEnableFromNextDefault(DEFAULT_FROM_NEXT);
   }

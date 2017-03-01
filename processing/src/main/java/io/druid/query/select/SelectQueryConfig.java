@@ -19,6 +19,7 @@
 
 package io.druid.query.select;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SelectQueryConfig
@@ -27,6 +28,16 @@ public class SelectQueryConfig
 
   @JsonProperty
   private boolean enableFromNextDefault = true;
+
+  @JsonCreator
+  public SelectQueryConfig(
+      @JsonProperty("enableFromNextDefault") Boolean enableFromNextDefault
+  )
+  {
+    if (enableFromNextDefault != null) {
+      this.enableFromNextDefault = enableFromNextDefault.booleanValue();
+    }
+  }
 
   public boolean getEnableFromNextDefault()
   {

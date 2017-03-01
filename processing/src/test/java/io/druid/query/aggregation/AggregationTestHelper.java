@@ -167,7 +167,7 @@ public class AggregationTestHelper
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig());
+    Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         new DefaultObjectMapper(),
