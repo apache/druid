@@ -21,19 +21,29 @@ package io.druid.sql.calcite.expression;
 
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.BucketExtractionFn;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.SqlKind;
 
 import java.util.List;
 
-public class FloorExtractionOperator implements SqlExtractionOperator
+public class FloorExpressionConversion extends AbstractExpressionConversion
 {
+  private static final FloorExpressionConversion INSTANCE = new FloorExpressionConversion();
+
+  private FloorExpressionConversion()
+  {
+    super(SqlKind.FLOOR);
+  }
+
+  public static FloorExpressionConversion instance()
+  {
+    return INSTANCE;
+  }
+
   public static RowExtraction applyTimestampFloor(
       final RowExtraction rex,
       final Granularity queryGranularity
@@ -53,14 +63,8 @@ public class FloorExtractionOperator implements SqlExtractionOperator
   }
 
   @Override
-  public SqlFunction calciteFunction()
-  {
-    return SqlStdOperatorTable.FLOOR;
-  }
-
-  @Override
   public RowExtraction convert(
-      final DruidOperatorTable operatorTable,
+      final ExpressionConverter converter,
       final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
@@ -69,7 +73,7 @@ public class FloorExtractionOperator implements SqlExtractionOperator
     final RexCall call = (RexCall) expression;
     final RexNode arg = call.getOperands().get(0);
 
-    final RowExtraction rex = Expressions.toRowExtraction(operatorTable, plannerContext, rowOrder, arg);
+    final RowExtraction rex = converter.convert(plannerContext, rowOrder, arg);
     if (rex == null) {
       return null;
     } else if (call.getOperands().size() == 1) {
