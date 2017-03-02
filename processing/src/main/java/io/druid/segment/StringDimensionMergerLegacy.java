@@ -42,7 +42,6 @@ import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedRTree;
-import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.data.VSizeIndexedWriter;
 
 import java.io.Closeable;
@@ -59,7 +58,6 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
   private static final Logger log = new Logger(StringDimensionMergerLegacy.class);
 
   private VSizeIndexedWriter encodedValueWriterV8;
-  private IOPeon spatialIoPeon;
   private File dictionaryFile;
 
   public StringDimensionMergerLegacy(
@@ -127,11 +125,10 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
     RTree tree = null;
     spatialWriter = null;
     boolean hasSpatial = capabilities.hasSpatialIndexes();
-    spatialIoPeon = new TmpFileIOPeon();
     if (hasSpatial) {
       String spatialFilename = String.format("%s.spatial", dimensionName);
       spatialWriter = new ByteBufferWriter<>(
-          spatialIoPeon, spatialFilename, new IndexedRTree.ImmutableRTreeObjectStrategy(bmpFactory)
+          ioPeon, spatialFilename, new IndexedRTree.ImmutableRTreeObjectStrategy(bmpFactory)
       );
       spatialWriter.open();
       tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bmpFactory), bmpFactory);
@@ -210,7 +207,6 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
       spatialWriter.close();
       serializerUtils.writeString(spatialIndexFile, dimensionName);
       ByteStreams.copy(spatialWriter.combineStreams(), spatialIndexFile);
-      spatialIoPeon.close();
     }
   }
 

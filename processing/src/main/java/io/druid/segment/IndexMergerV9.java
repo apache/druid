@@ -53,12 +53,10 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -129,28 +127,18 @@ public class IndexMergerV9 extends IndexMerger
     }
 
     Closer closer = Closer.create();
-    final IOPeon ioPeon = new TmpFileIOPeon(false);
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        ioPeon.close();
-      }
-    });
-    final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
-    final File v9TmpDir = new File(outDir, "v9-tmp");
-    v9TmpDir.mkdirs();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        FileUtils.deleteDirectory(v9TmpDir);
-      }
-    });
-    log.info("Start making v9 index files, outDir:%s", outDir);
     try {
+      final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
+      final File v9TmpDir = new File(outDir, "v9-tmp");
+      v9TmpDir.mkdirs();
+      registerDeleteDirectory(closer, v9TmpDir);
+      log.info("Start making v9 index files, outDir:%s", outDir);
+
+      File tmpPeonFilesDir = new File(v9TmpDir, "tmpPeonFiles");
+      tmpPeonFilesDir.mkdir();
+      registerDeleteDirectory(closer, tmpPeonFilesDir);
+      final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, false);
+      closer.register(ioPeon);
       long startTime = System.currentTimeMillis();
       ByteStreams.write(
           Ints.toByteArray(IndexIO.V9_VERSION),

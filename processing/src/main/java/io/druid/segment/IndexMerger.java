@@ -625,27 +625,16 @@ public class IndexMerger
     }
 
     Closer closer = Closer.create();
-    final Interval dataInterval;
-    final File v8OutDir = new File(outDir, "v8-tmp");
-    v8OutDir.mkdirs();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        FileUtils.deleteDirectory(v8OutDir);
-      }
-    });
-    final IOPeon ioPeon = new TmpFileIOPeon();
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        ioPeon.close();
-      }
-    });
     try {
+      final Interval dataInterval;
+      final File v8OutDir = new File(outDir, "v8-tmp");
+      v8OutDir.mkdirs();
+      registerDeleteDirectory(closer, v8OutDir);
+      File tmpPeonFilesDir = new File(v8OutDir, "tmpPeonFiles");
+      tmpPeonFilesDir.mkdir();
+      registerDeleteDirectory(closer, tmpPeonFilesDir);
+      final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, true);
+      closer.register(ioPeon);
       /*************  Main index.drd file **************/
       progress.progress();
       long startTime = System.currentTimeMillis();
@@ -904,6 +893,18 @@ public class IndexMerger
     finally {
       closer.close();
     }
+  }
+
+  static void registerDeleteDirectory(Closer closer, final File dir)
+  {
+    closer.register(new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        FileUtils.deleteDirectory(dir);
+      }
+    });
   }
 
   protected DimensionHandler[] makeDimensionHandlers(final List<String> mergedDimensions, final List<ColumnCapabilitiesImpl> dimCapabilities)
