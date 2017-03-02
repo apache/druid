@@ -31,7 +31,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.Expressions;
 import io.druid.sql.calcite.expression.RowExtraction;
 import io.druid.sql.calcite.planner.Calcites;
-import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.SelectProjection;
 import io.druid.sql.calcite.table.RowSignature;
@@ -46,27 +45,26 @@ import java.util.List;
 
 public class SelectRules
 {
+  private static final List<RelOptRule> RULES = ImmutableList.of(
+      new DruidSelectProjectionRule(),
+      new DruidSelectSortRule()
+  );
+
   private SelectRules()
   {
     // No instantiation.
   }
 
-  public static List<RelOptRule> rules(final DruidOperatorTable operatorTable)
+  public static List<RelOptRule> rules()
   {
-    return ImmutableList.of(
-        new DruidSelectProjectionRule(operatorTable),
-        new DruidSelectSortRule()
-    );
+    return RULES;
   }
 
   static class DruidSelectProjectionRule extends RelOptRule
   {
-    private final DruidOperatorTable operatorTable;
-
-    public DruidSelectProjectionRule(final DruidOperatorTable operatorTable)
+    private DruidSelectProjectionRule()
     {
       super(operand(Project.class, operand(DruidRel.class, none())));
-      this.operatorTable = operatorTable;
     }
 
     @Override
@@ -97,7 +95,6 @@ public class SelectRules
       for (int i = 0; i < project.getRowType().getFieldCount(); i++) {
         final RexNode rexNode = project.getChildExps().get(i);
         final RowExtraction rex = Expressions.toRowExtraction(
-            operatorTable,
             druidRel.getPlannerContext(),
             sourceRowSignature.getRowOrder(),
             rexNode
