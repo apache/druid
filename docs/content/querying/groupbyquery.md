@@ -121,20 +121,20 @@ GroupBy queries can be executed using two different strategies. The default stra
 "druid.query.groupBy.defaultStrategy" runtime property on the broker. This can be overridden using "groupByStrategy" in
 the query context. If neither the context field nor the property is set, the "v2" strategy will be used.
 
-- "v1", the default, generates per-segment results on data nodes (historical, realtime, middleManager) using a map which
+- "v2", the default, is designed to offer better performance and memory management. This strategy generates
+per-segment results using a fully off-heap map. Data nodes merge the per-segment results using a fully off-heap
+concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
+nodes return sorted results to the broker, which merges result streams using an N-way merge. The broker materializes
+the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
+back as they are merged.
+
+- "v1", a legacy engine, generates per-segment results on data nodes (historical, realtime, middleManager) using a map which
 is partially on-heap (dimension keys and the map itself) and partially off-heap (the aggregated values). Data nodes then
 merge the per-segment results using Druid's indexing mechanism. This merging is multi-threaded by default, but can
 optionally be single-threaded. The broker merges the final result set using Druid's indexing mechanism again. The broker
 merging is always single-threaded. Because the broker merges results using the indexing mechanism, it must materialize
 the full result set before returning any results. On both the data nodes and the broker, the merging index is fully
 on-heap by default, but it can optionally store aggregated values off-heap.
-
-- "v2" (experimental) is designed to offer better performance and memory management. This strategy generates
-per-segment results using a fully off-heap map. Data nodes merge the per-segment results using a fully off-heap
-concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
-nodes return sorted results to the broker, which merges result streams using an N-way merge. The broker materializes
-the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
-back as they are merged.
 
 #### Alternatives
 
@@ -158,15 +158,6 @@ strategy perform the outer query on the broker in a single-threaded fashion.
 
 #### Server configuration
 
-When using the "v1" strategy, the following runtime properties apply:
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
-|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows for the per-segment grouping engine. This is a tuning parameter that does not impose a hard limit; rather, it potentially shifts merging work from the per-segment engine to the overall merging index. Queries that exceed this limit will not fail.|50000|
-|`druid.query.groupBy.maxResults`|Maximum number of results. Queries that exceed this limit will fail.|500000|
-|`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
-
 When using the "v2" strategy, the following runtime properties apply:
 
 |Property|Description|Default|
@@ -182,17 +173,16 @@ This may require allocating more direct memory. The amount of direct memory need
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
 
+When using the "v1" strategy, the following runtime properties apply:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
+|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows for the per-segment grouping engine. This is a tuning parameter that does not impose a hard limit; rather, it potentially shifts merging work from the per-segment engine to the overall merging index. Queries that exceed this limit will not fail.|50000|
+|`druid.query.groupBy.maxResults`|Maximum number of results. Queries that exceed this limit will fail.|500000|
+|`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
+
 #### Query context
-
-When using the "v1" strategy, the following query context parameters apply:
-
-|Property|Description|
-|--------|-----------|
-|`groupByStrategy`|Overrides the value of `druid.query.groupBy.defaultStrategy` for this query.|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
-|`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|
-|`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|
-|`useOffheap`|Set to true to store aggregations off-heap when merging results.|
 
 When using the "v2" strategy, the following query context parameters apply:
 
@@ -204,3 +194,13 @@ When using the "v2" strategy, the following query context parameters apply:
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|
+
+When using the "v1" strategy, the following query context parameters apply:
+
+|Property|Description|
+|--------|-----------|
+|`groupByStrategy`|Overrides the value of `druid.query.groupBy.defaultStrategy` for this query.|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
+|`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|
+|`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|
+|`useOffheap`|Set to true to store aggregations off-heap when merging results.|
