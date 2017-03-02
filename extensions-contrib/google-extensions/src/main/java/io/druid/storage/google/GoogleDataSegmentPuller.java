@@ -19,11 +19,11 @@
 
 package io.druid.storage.google;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
@@ -64,9 +64,9 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   {
     LOG.info("Pulling index at path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
 
-    prepareOutDir(outDir);
-
     try {
+      prepareOutDir(outDir);
+
       final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
@@ -91,16 +91,10 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     }
   }
 
-  // Needs to be public for the tests.
-  public void prepareOutDir(final File outDir) throws ISE
+  @VisibleForTesting
+  void prepareOutDir(final File outDir) throws IOException
   {
-    if (!outDir.exists()) {
-      outDir.mkdirs();
-    }
-
-    if (!outDir.isDirectory()) {
-      throw new ISE("outDir[%s] must be a directory.", outDir);
-    }
+    org.apache.commons.io.FileUtils.forceMkdir(outDir);
   }
 
   @Override
