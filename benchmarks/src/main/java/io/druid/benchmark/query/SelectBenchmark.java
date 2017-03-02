@@ -20,6 +20,8 @@
 package io.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -49,6 +51,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
@@ -227,12 +230,15 @@ public class SelectBenchmark
       qIndexes.add(qIndex);
     }
 
+    final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
     factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         ),
-        new SelectQueryEngine(),
+        new SelectQueryEngine(selectConfigSupplier),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }

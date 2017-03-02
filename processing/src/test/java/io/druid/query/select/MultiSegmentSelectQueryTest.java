@@ -19,6 +19,8 @@
 
 package io.druid.query.select;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
@@ -65,14 +67,17 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MultiSegmentSelectQueryTest
 {
+  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
-      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+      configSupplier
   );
 
   private static final QueryRunnerFactory factory = new SelectQueryRunnerFactory(
       toolChest,
-      new SelectQueryEngine(),
+      new SelectQueryEngine(configSupplier),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
 

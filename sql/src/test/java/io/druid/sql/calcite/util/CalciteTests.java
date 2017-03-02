@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.util;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +59,7 @@ import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
@@ -101,6 +103,7 @@ public class CalciteTests
   public static final String DATASOURCE2 = "foo2";
 
   private static final String TIMESTAMP_COLUMN = "t";
+  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
   private static final QueryRunnerFactoryConglomerate CONGLOMERATE = new DefaultQueryRunnerFactoryConglomerate(
       ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
@@ -118,9 +121,10 @@ public class CalciteTests
               new SelectQueryRunnerFactory(
                   new SelectQueryQueryToolChest(
                       TestHelper.getObjectMapper(),
-                      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                      selectConfigSupplier
                   ),
-                  new SelectQueryEngine(),
+                  new SelectQueryEngine(selectConfigSupplier),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )
