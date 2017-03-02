@@ -34,8 +34,9 @@ import java.util.Map;
  */
 public class TmpFileIOPeon implements IOPeon
 {
+  private final File dir;
   private final boolean allowOverwrite;
-  Map<String, File> createdFiles = Maps.newLinkedHashMap();
+  private final Map<String, File> createdFiles = Maps.newLinkedHashMap();
 
   public TmpFileIOPeon()
   {
@@ -44,6 +45,12 @@ public class TmpFileIOPeon implements IOPeon
 
   public TmpFileIOPeon(boolean allowOverwrite)
   {
+    this(null, allowOverwrite);
+  }
+
+  public TmpFileIOPeon(File dir, boolean allowOverwrite)
+  {
+    this.dir = dir;
     this.allowOverwrite = allowOverwrite;
   }
 
@@ -52,7 +59,7 @@ public class TmpFileIOPeon implements IOPeon
   {
     File retFile = createdFiles.get(filename);
     if (retFile == null) {
-      retFile = File.createTempFile("filePeon", filename);
+      retFile = File.createTempFile("filePeon", filename, dir);
       createdFiles.put(filename, retFile);
       return new BufferedOutputStream(new FileOutputStream(retFile));
     } else if (allowOverwrite) {

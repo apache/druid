@@ -106,7 +106,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
     // moving the temporary directory to the final destination, once success the potentially concurrent push operations
     // will be failed and will read the descriptor.json created by current push operation directly
-    createDirectoryIfNotExists(outDir.getParentFile());
+    FileUtils.forceMkdir(outDir.getParentFile());
     try {
       java.nio.file.Files.move(tmpOutDir.toPath(), outDir.toPath());
     }
@@ -118,13 +118,6 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  private void createDirectoryIfNotExists(File directory) throws IOException
-  {
-    if (!directory.mkdirs() && !directory.isDirectory()) {
-      throw new IOException(String.format("Cannot create directory[%s]", directory.toString()));
-    }
-  }
-
   private String intermediateDirFor(String storageDir)
   {
     return "intermediate_pushes/" + storageDir + "." + UUID.randomUUID().toString();
@@ -132,7 +125,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
   private long compressSegment(File dataSegmentFile, File outDir) throws IOException
   {
-    createDirectoryIfNotExists(outDir);
+    FileUtils.forceMkdir(outDir);
     File outFile = new File(outDir, "index.zip");
     log.info("Compressing files from[%s] to [%s]", dataSegmentFile, outFile);
     return CompressionUtils.zip(dataSegmentFile, outFile);

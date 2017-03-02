@@ -961,9 +961,7 @@ public class AppenderatorImpl implements Appenderator
   private File createPersistDirIfNeeded(SegmentIdentifier identifier) throws IOException
   {
     final File persistDir = computePersistDir(identifier);
-    if (!persistDir.mkdir() && !persistDir.exists()) {
-      throw new IOException(String.format("Could not create directory: %s", persistDir));
-    }
+    FileUtils.forceMkdir(persistDir);
 
     objectMapper.writeValue(computeIdentifierFile(identifier), identifier);
 

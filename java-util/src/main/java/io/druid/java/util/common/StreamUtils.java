@@ -25,75 +25,15 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeoutException;
 
 /**
  */
-public class
-StreamUtils
+public class StreamUtils
 {
-  // The default buffer size to use (from IOUtils)
-  private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
-
-  /**
-   * Copy from an input stream to a file (and buffer it) and close the input stream.
-   * <p/>
-   * It is highly recommended to use FileUtils.retryCopy whenever possible, and not use a raw `InputStream`
-   *
-   * @param is   The input stream to copy bytes from. `is` is closed regardless of the copy result.
-   * @param file The file to copy bytes to. Any parent directories are automatically created.
-   *
-   * @return The count of bytes written to the file
-   *
-   * @throws IOException
-   */
-  public static long copyToFileAndClose(InputStream is, File file) throws IOException
-  {
-    file.getParentFile().mkdirs();
-    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
-      final long result = ByteStreams.copy(is, os);
-      // Workarround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
-      os.flush();
-      return result;
-    }
-    finally {
-      is.close();
-    }
-  }
-
-  /**
-   * Copy bytes from `is` to `file` but timeout if the copy takes too long. The timeout is best effort and not
-   * guaranteed. Specifically, `is.read` will not be interrupted.
-   *
-   * @param is      The `InputStream` to copy bytes from. It is closed regardless of copy results.
-   * @param file    The `File` to copy bytes to
-   * @param timeout The timeout (in ms) of the copy.
-   *
-   * @return The size of bytes written to `file`
-   *
-   * @throws IOException
-   * @throws TimeoutException If `timeout` is exceeded
-   */
-  public static long copyToFileAndClose(InputStream is, File file, long timeout) throws IOException, TimeoutException
-  {
-    file.getParentFile().mkdirs();
-    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
-      final long retval = copyWithTimeout(is, os, timeout);
-      // Workarround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
-      os.flush();
-      return retval;
-    }
-    finally {
-      is.close();
-    }
-  }
 
   /**
    * Copy from `is` to `os` and close the streams regardless of the result.
@@ -117,35 +57,6 @@ StreamUtils
       is.close();
       os.close();
     }
-  }
-
-  /**
-   * Copy from the input stream to the output stream and tries to exit if the copy exceeds the timeout. The timeout
-   * is best effort. Specifically, `is.read` will not be interrupted.
-   *
-   * @param is      The input stream to read bytes from.
-   * @param os      The output stream to write bytes to.
-   * @param timeout The timeout (in ms) for the copy operation
-   *
-   * @return The total size of bytes written to `os`
-   *
-   * @throws IOException
-   * @throws TimeoutException If `tiemout` is exceeded
-   */
-  public static long copyWithTimeout(InputStream is, OutputStream os, long timeout) throws IOException, TimeoutException
-  {
-    byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
-    int n;
-    long startTime = System.currentTimeMillis();
-    long size = 0;
-    while (-1 != (n = is.read(buffer))) {
-      if (System.currentTimeMillis() - startTime > timeout) {
-        throw new TimeoutException(String.format("Copy time has exceeded %,d millis", timeout));
-      }
-      os.write(buffer, 0, n);
-      size += n;
-    }
-    return size;
   }
 
   /**
