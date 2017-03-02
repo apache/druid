@@ -29,8 +29,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -265,7 +265,7 @@ public class IndexIOTest
 
   final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex(
       new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-                                          .withQueryGranularity(QueryGranularities.NONE)
+                                          .withQueryGranularity(Granularities.NONE)
                                           .withMetrics(
                                               new AggregatorFactory[]{
                                                   new CountAggregatorFactory(
@@ -287,7 +287,7 @@ public class IndexIOTest
 
   final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex(
       new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-                                          .withQueryGranularity(QueryGranularities.NONE)
+                                          .withQueryGranularity(Granularities.NONE)
                                           .withMetrics(
                                               new AggregatorFactory[]{
                                                   new CountAggregatorFactory(

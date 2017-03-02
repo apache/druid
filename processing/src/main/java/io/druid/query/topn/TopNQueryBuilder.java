@@ -20,8 +20,8 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -71,7 +71,7 @@ public class TopNQueryBuilder
   private int threshold;
   private QuerySegmentSpec querySegmentSpec;
   private DimFilter dimFilter;
-  private QueryGranularity granularity;
+  private Granularity granularity;
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
   private Map<String, Object> context;
@@ -85,7 +85,7 @@ public class TopNQueryBuilder
     threshold = 0;
     querySegmentSpec = null;
     dimFilter = null;
-    granularity = QueryGranularities.ALL;
+    granularity = Granularities.ALL;
     aggregatorSpecs = Lists.newArrayList();
     postAggregatorSpecs = Lists.newArrayList();
     context = null;
@@ -141,7 +141,7 @@ public class TopNQueryBuilder
     return dimFilter;
   }
 
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
@@ -300,11 +300,11 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder granularity(String g)
   {
-    granularity = QueryGranularity.fromString(g);
+    granularity = Granularity.fromString(g);
     return this;
   }
 
-  public TopNQueryBuilder granularity(QueryGranularity g)
+  public TopNQueryBuilder granularity(Granularity g)
   {
     granularity = g;
     return this;

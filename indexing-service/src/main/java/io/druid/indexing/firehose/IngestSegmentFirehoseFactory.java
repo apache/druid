@@ -34,11 +34,11 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.task.NoopTask;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
@@ -274,7 +274,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, QueryGranularities.NONE);
+      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, Granularities.NONE);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

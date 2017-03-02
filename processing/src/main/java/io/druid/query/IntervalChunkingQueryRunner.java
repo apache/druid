@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.granularity.PeriodGranularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -126,14 +126,11 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
     }
 
     List<Interval> intervals = Lists.newArrayList();
-    Iterator<Long> timestamps = new PeriodGranularity(period, null, null).iterable(
-        interval.getStartMillis(),
-        interval.getEndMillis()
-    ).iterator();
+    Iterator<Interval> timestamps = new PeriodGranularity(period, null, null).getIterable(interval).iterator();
 
-    long start = Math.max(timestamps.next(), interval.getStartMillis());
+    long start = Math.max(timestamps.next().getStartMillis(), interval.getStartMillis());
     while (timestamps.hasNext()) {
-      long end = timestamps.next();
+      long end = timestamps.next().getStartMillis();
       intervals.add(new Interval(start, end));
       start = end;
     }

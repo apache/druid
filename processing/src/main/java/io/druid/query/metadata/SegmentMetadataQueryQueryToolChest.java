@@ -34,7 +34,7 @@ import com.google.inject.Inject;
 import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
@@ -352,7 +352,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         )
     );
 
-    final QueryGranularity queryGranularity = QueryGranularity.mergeQueryGranularities(
+    final Granularity queryGranularity = Granularity.mergeGranularities(
         Lists.newArrayList(
             arg1.getQueryGranularity(),
             arg2.getQueryGranularity()

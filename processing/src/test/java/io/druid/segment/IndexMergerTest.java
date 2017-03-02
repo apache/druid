@@ -27,16 +27,18 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-
-import io.druid.data.input.InputRow;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -189,7 +191,7 @@ public class IndexMergerTest
     );
 
     Assert.assertEquals(
-        QueryGranularities.NONE,
+        Granularities.NONE,
         index.getMetadata().getQueryGranularity()
     );
   }
@@ -277,7 +279,7 @@ public class IndexMergerTest
             .setAggregators(
                 IncrementalIndexTest.getDefaultCombiningAggregatorFactories()
             )
-            .setQueryGranularity(QueryGranularities.NONE)
+            .setQueryGranularity(Granularities.NONE)
             .setRollup(Boolean.TRUE)
             .putAll(metadataElems),
         index.getMetadata()
@@ -293,7 +295,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -379,13 +381,13 @@ public class IndexMergerTest
   {
     final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{},
         10
     );
     final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{},
         10
     );
@@ -923,7 +925,7 @@ public class IndexMergerTest
             null
         ))
         .withMinTimestamp(0L)
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
         .build();
 
@@ -1142,7 +1144,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersistA = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1167,7 +1169,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersistB = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1282,7 +1284,7 @@ public class IndexMergerTest
 
     IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(0L)
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
         .withRollup(false)
         .build();
@@ -1417,7 +1419,7 @@ public class IndexMergerTest
 
     IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(0L)
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
         .withRollup(false)
         .build();
@@ -1543,7 +1545,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersistBA2 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -2006,6 +2008,127 @@ public class IndexMergerTest
   }
 
   @Test
+  public void testMergeNumericDims() throws Exception
+  {
+    IncrementalIndex toPersist1 = getIndexWithNumericDims();
+    IncrementalIndex toPersist2 = getIndexWithNumericDims();
+
+    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpDir2 = temporaryFolder.newFolder();
+    final File tmpDirMerged = temporaryFolder.newFolder();
+
+    QueryableIndex index1 = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist1,
+                tmpDir,
+                indexSpec
+            )
+        )
+    );
+
+    QueryableIndex index2 = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist2,
+                tmpDir2,
+                indexSpec
+            )
+        )
+    );
+
+    final QueryableIndex merged = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
+                Arrays.asList(index1, index2),
+                true,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged,
+                indexSpec
+            )
+        )
+    );
+
+    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    Iterable<Rowboat> boats = adapter.getRows();
+    List<Rowboat> boatList = Lists.newArrayList(boats);
+
+    Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
+    Assert.assertEquals(4, boatList.size());
+
+    Assert.assertArrayEquals(new Object[]{0L, 0.0f, new int[]{2}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(0).getMetrics());
+
+    Assert.assertArrayEquals(new Object[]{72L, 60000.789f, new int[]{3}}, boatList.get(1).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(0).getMetrics());
+
+    Assert.assertArrayEquals(new Object[]{100L, 4000.567f, new int[]{1}}, boatList.get(2).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(1).getMetrics());
+
+    Assert.assertArrayEquals(new Object[]{3001L, 1.2345f, new int[]{0}}, boatList.get(3).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(2).getMetrics());
+  }
+
+  private IncrementalIndex getIndexWithNumericDims() throws Exception
+  {
+    IncrementalIndex index = getIndexWithDimsFromSchemata(
+        Arrays.asList(
+            new LongDimensionSchema("dimA"),
+            new FloatDimensionSchema("dimB"),
+            new StringDimensionSchema("dimC")
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dimA", "dimB", "dimC"),
+            ImmutableMap.<String, Object>of("dimA", 100L, "dimB", 4000.567, "dimC", "Hello")
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dimA", "dimB", "dimC"),
+            ImmutableMap.<String, Object>of("dimA", 72L, "dimB", 60000.789, "dimC", "World")
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dimA", "dimB", "dimC"),
+            ImmutableMap.<String, Object>of("dimA", 3001L, "dimB", 1.2345, "dimC", "Foobar")
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dimA", "dimB", "dimC"),
+            ImmutableMap.<String, Object>of("dimC", "Nully Row")
+        )
+    );
+
+    return index;
+  }
+
+  private IncrementalIndex getIndexWithDimsFromSchemata(List<DimensionSchema> dims)
+  {
+    IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(0L)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(new DimensionsSpec(dims, null, null))
+        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .withRollup(true)
+        .build();
+
+    return new OnheapIncrementalIndex(schema, true, 1000);
+  }
+
+
+  @Test
   public void testPersistNullColumnSkipping() throws Exception
   {
     //check that column d2 is skipped because it only has null values
@@ -2053,7 +2176,7 @@ public class IndexMergerTest
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -2089,7 +2212,7 @@ public class IndexMergerTest
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -2115,7 +2238,7 @@ public class IndexMergerTest
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(0L)
-        .withQueryGranularity(QueryGranularities.NONE)
+        .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
         .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
         .withRollup(true)

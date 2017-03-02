@@ -24,8 +24,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -229,7 +229,7 @@ public class FinalizingFieldAccessPostAggregatorTest
         parseSpec,
         metricSpec,
         0,
-        QueryGranularities.NONE,
+        Granularities.NONE,
         50000,
         query
     );

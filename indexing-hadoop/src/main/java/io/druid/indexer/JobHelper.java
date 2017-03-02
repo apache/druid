@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
-
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
@@ -76,8 +75,6 @@ import java.util.zip.ZipOutputStream;
 public class JobHelper
 {
   private static final Logger log = new Logger(JobHelper.class);
-
-
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
   private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KB
@@ -92,6 +89,8 @@ public class JobHelper
   {
     return new Path(base, "classpath");
   }
+  public static final String INDEX_ZIP = "index.zip";
+  public static final String DESCRIPTOR_JSON = "descriptor.json";
 
   /**
    * Dose authenticate against a secured hadoop cluster
@@ -377,14 +376,14 @@ public class JobHelper
       final DataSegment segmentTemplate,
       final Configuration configuration,
       final Progressable progressable,
-      final TaskAttemptID taskAttemptID,
       final File mergedBase,
-      final Path segmentBasePath
+      final Path finalIndexZipFilePath,
+      final Path finalDescriptorPath,
+      final Path tmpPath
   )
       throws IOException
   {
-    final FileSystem outputFS = FileSystem.get(segmentBasePath.toUri(), configuration);
-    final Path tmpPath = new Path(segmentBasePath, String.format("index.zip.%d", taskAttemptID.getId()));
+    final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
         DataPusher.class, new DataPusher()
@@ -413,7 +412,6 @@ public class JobHelper
     zipPusher.push();
     log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
 
-    final Path finalIndexZipFilePath = new Path(segmentBasePath, "index.zip");
     final URI indexOutURI = finalIndexZipFilePath.toUri();
     final ImmutableMap<String, Object> loadSpec;
     // TODO: Make this a part of Pushers or Pullers
@@ -464,10 +462,11 @@ public class JobHelper
           )
       );
     }
+
     writeSegmentDescriptor(
         outputFS,
         finalSegment,
-        new Path(segmentBasePath, "descriptor.json"),
+        finalDescriptorPath,
         progressable
     );
     return finalSegment;
@@ -577,16 +576,77 @@ public class JobHelper
     out.putNextEntry(new ZipEntry(file.getName()));
   }
 
-  public static Path makeSegmentOutputPath(
-      Path basePath,
-      FileSystem fileSystem,
-      DataSegment segment
+  public static boolean isHdfs(FileSystem fs)
+  {
+    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme()) || "maprfs".equals(fs.getScheme());
+  }
+
+  public static Path makeFileNamePath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate,
+      final String baseFileName
   )
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
-                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
-                        : DataSegmentPusherUtil.getStorageDir(segment);
-    return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
+    final Path finalIndexZipPath;
+    final String segmentDir;
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      finalIndexZipPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_%s",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              baseFileName
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      finalIndexZipPath = new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%s",
+              segmentDir,
+              baseFileName
+          )
+      );
+    }
+    return finalIndexZipPath;
+  }
+
+  public static Path makeTmpPath(
+      final Path basePath,
+      final FileSystem fs,
+      final DataSegment segmentTemplate,
+      final TaskAttemptID taskAttemptID
+  )
+  {
+    final String segmentDir;
+
+    if (isHdfs(fs)) {
+      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
+      return new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip.%d",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              taskAttemptID.getId()
+          )
+      );
+    } else {
+      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
+      return new Path(
+          prependFSIfNullScheme(fs, basePath),
+          String.format(
+              "./%s/%d_index.zip.%d",
+              segmentDir,
+              segmentTemplate.getShardSpec().getPartitionNum(),
+              taskAttemptID.getId()
+          )
+      );
+    }
   }
 
   /**

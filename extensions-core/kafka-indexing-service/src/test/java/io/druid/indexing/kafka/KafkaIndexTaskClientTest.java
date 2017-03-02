@@ -36,7 +36,6 @@ import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
-
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMockSupport;

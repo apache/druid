@@ -24,14 +24,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
@@ -79,25 +80,29 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   private final ObjectMapper jsonMapper;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final Supplier<SelectQueryConfig> configSupplier;
   private final QueryMetricsFactory queryMetricsFactory;
 
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      Supplier<SelectQueryConfig> configSupplier
   )
   {
-    this(jsonMapper, intervalChunkingQueryRunnerDecorator, new DefaultQueryMetricsFactory(jsonMapper));
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultQueryMetricsFactory(jsonMapper));
   }
 
   @Inject
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      Supplier<SelectQueryConfig> configSupplier,
       QueryMetricsFactory queryMetricsFactory
   )
   {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.configSupplier = configSupplier;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -279,7 +284,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       {
         return new Function<Object, Result<SelectResultValue>>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Result<SelectResultValue> apply(Object input)
@@ -366,7 +371,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       return segments;
     }
 
-    final QueryGranularity granularity = query.getGranularity();
+    final Granularity granularity = query.getGranularity();
 
     List<Interval> intervals = Lists.newArrayList(
         Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
@@ -379,13 +384,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
     for (Interval interval : intervals) {
       if (query.isDescending()) {
-        long granularEnd = granularity.truncate(interval.getEndMillis());
+        long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();
         Long currentEnd = granularThresholds.get(granularEnd);
         if (currentEnd == null || interval.getEndMillis() > currentEnd) {
           granularThresholds.put(granularEnd, interval.getEndMillis());
         }
       } else {
-        long granularStart = granularity.truncate(interval.getStartMillis());
+        long granularStart = granularity.bucketStart(interval.getStart()).getMillis();
         Long currentStart = granularThresholds.get(granularStart);
         if (currentStart == null || interval.getStartMillis() < currentStart) {
           granularThresholds.put(granularStart, interval.getStartMillis());
@@ -399,7 +404,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     if (query.isDescending()) {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.truncate(interval.getEndMillis()));
+        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.bucketStart(interval.getEnd()).getMillis());
         if (ceiling == null || interval.getStartMillis() >= ceiling.getValue()) {
           it.remove();
         }
@@ -407,7 +412,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     } else {
       while (it.hasNext()) {
         Interval interval = it.next().getInterval();
-        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.truncate(interval.getStartMillis()));
+        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.bucketStart(interval.getStart()).getMillis());
         if (floor == null || interval.getEndMillis() <= floor.getValue()) {
           it.remove();
         }

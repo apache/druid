@@ -32,8 +32,8 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -433,7 +433,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         return new Function<Object, Row>()
         {
-          private final QueryGranularity granularity = query.getGranularity();
+          private final Granularity granularity = query.getGranularity();
 
           @Override
           public Row apply(Object input)
