@@ -34,11 +34,11 @@ import io.druid.collections.StupidPool;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
@@ -63,6 +63,7 @@ import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -111,14 +112,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
    */
   public static DateTime getUniversalTimestamp(final GroupByQuery query)
   {
-    final QueryGranularity gran = query.getGranularity();
+    final Granularity gran = query.getGranularity();
     final String timestampStringFromContext = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
 
     if (!timestampStringFromContext.isEmpty()) {
       return new DateTime(Long.parseLong(timestampStringFromContext));
-    } else if (QueryGranularities.ALL.equals(gran)) {
+    } else if (Granularities.ALL.equals(gran)) {
       final long timeStart = query.getIntervals().get(0).getStartMillis();
-      return new DateTime(gran.iterable(timeStart, timeStart + 1).iterator().next());
+      return gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStart();
     } else {
       return null;
     }

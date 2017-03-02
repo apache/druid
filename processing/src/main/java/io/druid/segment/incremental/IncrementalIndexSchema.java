@@ -22,8 +22,8 @@ package io.druid.segment.incremental;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.VirtualColumns;
 
@@ -34,7 +34,7 @@ public class IncrementalIndexSchema
   public static final boolean DEFAULT_ROLLUP = true;
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
-  private final QueryGranularity gran;
+  private final Granularity gran;
   private final VirtualColumns virtualColumns;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
@@ -43,7 +43,7 @@ public class IncrementalIndexSchema
   public IncrementalIndexSchema(
       long minTimestamp,
       TimestampSpec timestampSpec,
-      QueryGranularity gran,
+      Granularity gran,
       VirtualColumns virtualColumns,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
@@ -69,7 +69,7 @@ public class IncrementalIndexSchema
     return timestampSpec;
   }
 
-  public QueryGranularity getGran()
+  public Granularity getGran()
   {
     return gran;
   }
@@ -98,7 +98,7 @@ public class IncrementalIndexSchema
   {
     private long minTimestamp;
     private TimestampSpec timestampSpec;
-    private QueryGranularity gran;
+    private Granularity gran;
     private VirtualColumns virtualColumns;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
@@ -107,7 +107,7 @@ public class IncrementalIndexSchema
     public Builder()
     {
       this.minTimestamp = 0L;
-      this.gran = QueryGranularities.NONE;
+      this.gran = Granularities.NONE;
       this.virtualColumns = VirtualColumns.EMPTY;
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
@@ -138,7 +138,7 @@ public class IncrementalIndexSchema
       return this;
     }
 
-    public Builder withQueryGranularity(QueryGranularity gran)
+    public Builder withQueryGranularity(Granularity gran)
     {
       this.gran = gran;
       return this;

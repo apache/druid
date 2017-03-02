@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.common.utils.JodaUtils;
-import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.filter.DimFilter;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -38,7 +38,7 @@ public class DatasourceIngestionSpec
   private final List<Interval> intervals;
   private final List<DataSegment> segments;
   private final DimFilter filter;
-  private final QueryGranularity granularity;
+  private final Granularity granularity;
   private final List<String> dimensions;
   private final List<String> metrics;
   private final boolean ignoreWhenNoSegments;
@@ -50,7 +50,7 @@ public class DatasourceIngestionSpec
       @JsonProperty("intervals") List<Interval> intervals,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("filter") DimFilter filter,
-      @JsonProperty("granularity") QueryGranularity granularity,
+      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
       @JsonProperty("ignoreWhenNoSegments") boolean ignoreWhenNoSegments
@@ -77,7 +77,7 @@ public class DatasourceIngestionSpec
     this.segments = segments;
 
     this.filter = filter;
-    this.granularity = granularity == null ? QueryGranularities.NONE : granularity;
+    this.granularity = granularity == null ? Granularities.NONE : granularity;
 
     this.dimensions = dimensions;
     this.metrics = metrics;
@@ -110,7 +110,7 @@ public class DatasourceIngestionSpec
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
@@ -163,7 +163,7 @@ public class DatasourceIngestionSpec
     );
   }
 
-  public DatasourceIngestionSpec withQueryGranularity(QueryGranularity granularity)
+  public DatasourceIngestionSpec withQueryGranularity(Granularity granularity)
   {
     return new DatasourceIngestionSpec(
         dataSource,

@@ -37,10 +37,10 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -195,7 +195,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularity.fromString(queryGranularity))
+          .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
       basicQueries.put("A", queryA);
@@ -220,7 +220,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularities.DAY)
+          .setGranularity(Granularities.DAY)
           .build();
 
       GroupByQuery queryA = GroupByQuery
@@ -233,7 +233,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularities.WEEK)
+          .setGranularity(Granularities.WEEK)
           .build();
 
       basicQueries.put("nested", queryA);
@@ -262,7 +262,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularity.fromString(queryGranularity))
+          .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
       simpleQueries.put("A", queryA);
@@ -289,7 +289,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularity.fromString(queryGranularity))
+          .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
       simpleLongQueries.put("A", queryA);
@@ -316,7 +316,7 @@ public class GroupByBenchmark
           .setAggregatorSpecs(
               queryAggs
           )
-          .setGranularity(QueryGranularity.fromString(queryGranularity))
+          .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
       simpleFloatQueries.put("A", queryA);
@@ -478,7 +478,7 @@ public class GroupByBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .withRollup(withRollup)

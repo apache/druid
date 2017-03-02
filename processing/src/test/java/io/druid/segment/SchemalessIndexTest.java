@@ -28,10 +28,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -141,7 +141,7 @@ public class SchemalessIndexTest
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex(timestamp, QueryGranularities.MINUTE, METRIC_AGGS, 1000);
+          theIndex = new OnheapIncrementalIndex(timestamp, Granularities.MINUTE, METRIC_AGGS, 1000);
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -351,7 +351,7 @@ public class SchemalessIndexTest
           }
 
           final IncrementalIndex rowIndex = new OnheapIncrementalIndex(
-              timestamp, QueryGranularities.MINUTE, METRIC_AGGS, 1000
+              timestamp, Granularities.MINUTE, METRIC_AGGS, 1000
           );
 
           rowIndex.add(
@@ -381,7 +381,7 @@ public class SchemalessIndexTest
     log.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularities.MINUTE, aggs, 1000
+        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), Granularities.MINUTE, aggs, 1000
     );
 
     try {

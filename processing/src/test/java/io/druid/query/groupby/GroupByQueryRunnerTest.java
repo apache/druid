@@ -35,11 +35,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -2150,7 +2150,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
-    final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularities.ALL).build();
+    final GroupByQuery allGranQuery = builder.copy().setGranularity(Granularities.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
@@ -2268,7 +2268,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(QueryGranularities.DAY)
+        .setGranularity(Granularities.DAY)
         .setLimit(limit)
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
 
@@ -2318,7 +2318,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "expr")
             )
         )
-        .setGranularity(QueryGranularities.DAY)
+        .setGranularity(Granularities.DAY)
         .setLimit(limit)
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
 
@@ -3279,7 +3279,7 @@ public class GroupByQueryRunnerTest
                 new DoubleSumAggregatorFactory("index", "index")
             )
         )
-        .setGranularity(QueryGranularities.ALL)
+        .setGranularity(Granularities.ALL)
         .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
         .setLimitSpec(
             new DefaultLimitSpec(
@@ -7910,6 +7910,52 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             166L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithAggsOnNumericDimensions()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimFilter(new SelectorDimFilter("quality", "technology", null))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("qlLong", "qualityLong"),
+                new DoubleSumAggregatorFactory("qlFloat", "qualityLong"),
+                new DoubleSumAggregatorFactory("qfFloat", "qualityFloat"),
+                new LongSumAggregatorFactory("qfLong", "qualityFloat")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "alias", "technology",
+            "rows", 1L,
+            "qlLong", 1700L,
+            "qlFloat", 1700.0,
+            "qfFloat", 17000.0,
+            "qfLong", 17000L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02",
+            "alias", "technology",
+            "rows", 1L,
+            "qlLong", 1700L,
+            "qlFloat", 1700.0,
+            "qfFloat", 17000.0,
+            "qfLong", 17000L
         )
     );
 

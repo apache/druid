@@ -31,9 +31,9 @@ import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -171,7 +171,7 @@ public class TopNTypeInterfaceBenchmark
       // Use an IdentityExtractionFn to force usage of DimExtractionTopNAlgorithm
       TopNQueryBuilder queryBuilderString = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(QueryGranularities.ALL)
+          .granularity(Granularities.ALL)
           .dimension(new ExtractionDimensionSpec("dimSequential", "dimSequential", IdentityExtractionFn.getInstance()))
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
@@ -180,7 +180,7 @@ public class TopNTypeInterfaceBenchmark
       // DimExtractionTopNAlgorithm is always used for numeric columns
       TopNQueryBuilder queryBuilderLong = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(QueryGranularities.ALL)
+          .granularity(Granularities.ALL)
           .dimension("metLongUniform")
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
@@ -188,7 +188,7 @@ public class TopNTypeInterfaceBenchmark
 
       TopNQueryBuilder queryBuilderFloat = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(QueryGranularities.ALL)
+          .granularity(Granularities.ALL)
           .dimension("metFloatNormal")
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
@@ -206,7 +206,7 @@ public class TopNTypeInterfaceBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(QueryGranularities.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
           .intervals(intervalSpec)
@@ -222,7 +222,7 @@ public class TopNTypeInterfaceBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(QueryGranularities.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
           .intervals(intervalSpec)
@@ -316,7 +316,7 @@ public class TopNTypeInterfaceBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(QueryGranularities.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

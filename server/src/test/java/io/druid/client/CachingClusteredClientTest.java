@@ -25,6 +25,8 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -51,13 +53,13 @@ import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -102,6 +104,7 @@ import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -243,10 +246,13 @@ public class CachingClusteredClientTest
   );
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
-  private static final QueryGranularity GRANULARITY = QueryGranularities.DAY;
+  private static final Granularity GRANULARITY = Granularities.DAY;
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
-  private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
+  private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
+
+  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
   static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
       ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                   .put(
@@ -271,7 +277,8 @@ public class CachingClusteredClientTest
                       SelectQuery.class,
                       new SelectQueryQueryToolChest(
                           jsonMapper,
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                          selectConfigSupplier
                       )
                   )
                   .put(
@@ -1328,7 +1335,8 @@ public class CachingClusteredClientTest
         client,
         new SelectQueryQueryToolChest(
             jsonMapper,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1404,7 +1412,8 @@ public class CachingClusteredClientTest
         client,
         new SelectQueryQueryToolChest(
             jsonMapper,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();

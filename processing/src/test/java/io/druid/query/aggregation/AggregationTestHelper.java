@@ -23,12 +23,14 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -38,9 +40,9 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -56,6 +58,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
@@ -164,18 +167,30 @@ public class AggregationTestHelper
   )
   {
     ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            SelectQueryConfig.class,
+            new SelectQueryConfig(true)
+        )
+    );
+
+    Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         new DefaultObjectMapper(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+        configSupplier
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             new DefaultObjectMapper(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            configSupplier
         ),
-        new SelectQueryEngine(),
+        new SelectQueryEngine(
+            configSupplier
+        ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
@@ -298,7 +313,7 @@ public class AggregationTestHelper
       String parserJson,
       String aggregators,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount,
       String groupByQueryJson
   ) throws Exception
@@ -313,7 +328,7 @@ public class AggregationTestHelper
       String parserJson,
       String aggregators,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount,
       String groupByQueryJson
   ) throws Exception
@@ -329,7 +344,7 @@ public class AggregationTestHelper
       String aggregators,
       File outDir,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount
   ) throws Exception
   {
@@ -350,7 +365,7 @@ public class AggregationTestHelper
       String aggregators,
       File outDir,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       int maxRowCount
   ) throws Exception
   {
@@ -387,7 +402,7 @@ public class AggregationTestHelper
       final AggregatorFactory[] metrics,
       File outDir,
       long minTimestamp,
-      QueryGranularity gran,
+      Granularity gran,
       boolean deserializeComplexMetrics,
       int maxRowCount
   ) throws Exception

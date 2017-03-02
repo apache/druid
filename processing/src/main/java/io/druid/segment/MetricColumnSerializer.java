@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -28,4 +29,5 @@ public interface MetricColumnSerializer
   public void open() throws IOException;
   public void serialize(Object aggs) throws IOException;
   public void close() throws IOException;
+  public void closeFile(File outFile) throws IOException;
 }

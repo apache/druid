@@ -33,8 +33,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.Druids;
@@ -112,7 +112,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
     public MapIncrementalIndex(
         long minTimestamp,
-        QueryGranularity gran,
+        Granularity gran,
         AggregatorFactory[] metrics,
         int maxRowCount
     )
@@ -250,10 +250,10 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
     final OnheapIncrementalIndex incrementalIndex = this.incrementalIndex.getConstructor(
         Long.TYPE,
-        QueryGranularity.class,
+        Granularity.class,
         AggregatorFactory[].class,
         Integer.TYPE
-    ).newInstance(0, QueryGranularities.NONE, factories, elementsPerThread * taskCount);
+    ).newInstance(0, Granularities.NONE, factories, elementsPerThread * taskCount);
     final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(dimensionCount + 1);
     queryAggregatorFactories.add(new CountAggregatorFactory("rows"));
     for (int i = 0; i < dimensionCount; ++i) {
@@ -340,7 +340,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                   );
                   TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                                 .dataSource("xxx")
-                                                .granularity(QueryGranularities.ALL)
+                                                .granularity(Granularities.ALL)
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
@@ -377,7 +377,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
