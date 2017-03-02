@@ -144,7 +144,7 @@ public final class LifecycleLock
     @Override
     protected int tryAcquireShared(int ignore)
     {
-      return getState() >= STARTED ? 1 : -1;
+      return getState() > STARTED ? 1 : -1;
     }
 
     boolean canStop()
