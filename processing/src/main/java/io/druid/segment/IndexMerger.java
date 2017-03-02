@@ -174,12 +174,7 @@ public class IndexMerger
       );
     }
 
-    if (!outDir.exists()) {
-      outDir.mkdirs();
-    }
-    if (!outDir.isDirectory()) {
-      throw new ISE("Can only persist to directories, [%s] wasn't a directory", outDir);
-    }
+    FileUtils.forceMkdir(outDir);
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
@@ -335,9 +330,7 @@ public class IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    if (!outDir.mkdirs()) {
-      throw new ISE("Couldn't make outdir[%s].", outDir);
-    }
+    FileUtils.forceMkdir(outDir);
 
     final List<String> mergedDimensions = getMergedDimensions(indexes);
 
@@ -496,9 +489,7 @@ public class IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    if (!outDir.mkdirs()) {
-      throw new ISE("Couldn't make outdir[%s].", outDir);
-    }
+    FileUtils.forceMkdir(outDir);
 
     final List<String> mergedDimensions = getMergedDimensions(indexes);
 
@@ -628,10 +619,10 @@ public class IndexMerger
     try {
       final Interval dataInterval;
       final File v8OutDir = new File(outDir, "v8-tmp");
-      v8OutDir.mkdirs();
+      FileUtils.forceMkdir(v8OutDir);
       registerDeleteDirectory(closer, v8OutDir);
       File tmpPeonFilesDir = new File(v8OutDir, "tmpPeonFiles");
-      tmpPeonFilesDir.mkdir();
+      FileUtils.forceMkdir(tmpPeonFilesDir);
       registerDeleteDirectory(closer, tmpPeonFilesDir);
       final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, true);
       closer.register(ioPeon);
@@ -860,7 +851,7 @@ public class IndexMerger
       }
 
       File smooshDir = new File(v8OutDir, "smoosher");
-      smooshDir.mkdir();
+      FileUtils.forceMkdir(smooshDir);
 
       for (Map.Entry<String, File> entry : Smoosh.smoosh(v8OutDir, smooshDir, files).entrySet()) {
         entry.getValue().delete();

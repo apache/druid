@@ -222,16 +222,15 @@ public class PullDependencies implements Runnable
     if (clean) {
       try {
         FileUtils.deleteDirectory(extensionsDir);
+        FileUtils.forceMkdir(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
+        FileUtils.forceMkdir(hadoopDependenciesDir);
       }
       catch (IOException e) {
         log.error("Unable to clear extension directory at [%s]", extensionsConfig.getDirectory());
         throw Throwables.propagate(e);
       }
     }
-
-    createRootExtensionsDirectory(extensionsDir);
-    createRootExtensionsDirectory(hadoopDependenciesDir);
 
     log.info(
         "Start pull-deps with local repository [%s] and remote repositories [%s]",
@@ -458,22 +457,6 @@ public class PullDependencies implements Runnable
     }
     finally {
       System.setOut(oldOut);
-    }
-  }
-
-  private void createRootExtensionsDirectory(File atLocation)
-  {
-    if (atLocation.isDirectory()) {
-      log.info("Root extension directory [%s] already exists, skip creating");
-      return;
-    }
-    if (!atLocation.mkdirs()) {
-      throw new ISE(
-          String.format(
-              "Unable to create extensions directory at [%s]",
-              atLocation.getAbsolutePath()
-          )
-      );
     }
   }
 

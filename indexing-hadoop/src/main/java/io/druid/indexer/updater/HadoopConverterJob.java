@@ -528,9 +528,7 @@ public class HadoopConverterJob
       context.setStatus("CONVERTING");
       context.progress();
       final File outDir = new File(tmpDir, "out");
-      if (!outDir.mkdir() && (!outDir.exists() || !outDir.isDirectory())) {
-        throw new IOException(String.format("Could not create output directory [%s]", outDir));
-      }
+      FileUtils.forceMkdir(outDir);
       HadoopDruidConverterConfig.INDEX_MERGER.convert(
           inDir,
           outDir,

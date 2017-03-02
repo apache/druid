@@ -53,6 +53,7 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -130,12 +131,12 @@ public class IndexMergerV9 extends IndexMerger
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
       final File v9TmpDir = new File(outDir, "v9-tmp");
-      v9TmpDir.mkdirs();
+      FileUtils.forceMkdir(v9TmpDir);
       registerDeleteDirectory(closer, v9TmpDir);
       log.info("Start making v9 index files, outDir:%s", outDir);
 
       File tmpPeonFilesDir = new File(v9TmpDir, "tmpPeonFiles");
-      tmpPeonFilesDir.mkdir();
+      FileUtils.forceMkdir(tmpPeonFilesDir);
       registerDeleteDirectory(closer, tmpPeonFilesDir);
       final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, false);
       closer.register(ioPeon);
