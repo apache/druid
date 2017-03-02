@@ -147,7 +147,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     @JsonCreator
     public SubTask(
         @JsonProperty("baseId") String baseId,
-        @JsonProperty("groupId") String groupId,
+        @JsonProperty("dataSource") String dataSource,
         @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
         @JsonProperty("rollup") Boolean rollup,
         @JsonProperty("indexSpec") IndexSpec indexSpec,
@@ -158,7 +158,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     {
       super(
           "sub_" + baseId,
-          groupId,
+          dataSource,
           segments,
           aggregators,
           rollup,
