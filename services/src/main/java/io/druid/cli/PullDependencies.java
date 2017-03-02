@@ -219,17 +219,17 @@ public class PullDependencies implements Runnable
     final File extensionsDir = new File(extensionsConfig.getDirectory());
     final File hadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
 
-    if (clean) {
-      try {
+    try {
+      if (clean) {
         FileUtils.deleteDirectory(extensionsDir);
-        FileUtils.forceMkdir(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
-        FileUtils.forceMkdir(hadoopDependenciesDir);
       }
-      catch (IOException e) {
-        log.error("Unable to clear extension directory at [%s]", extensionsConfig.getDirectory());
-        throw Throwables.propagate(e);
-      }
+      FileUtils.forceMkdir(extensionsDir);
+      FileUtils.forceMkdir(hadoopDependenciesDir);
+    }
+    catch (IOException e) {
+      log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
+      throw Throwables.propagate(e);
     }
 
     log.info(

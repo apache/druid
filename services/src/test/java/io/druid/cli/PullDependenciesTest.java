@@ -168,9 +168,9 @@ public class PullDependenciesTest
   }
 
   /**
-   * A file exists on the root extension directory path, but it's not a directory, throw ISE.
+   * A file exists on the root extension directory path, but it's not a directory, throw exception.
    */
-  @Test(expected = ISE.class)
+  @Test(expected = RuntimeException.class)
   public void testPullDependencies_root_extension_dir_bad_state() throws IOException
   {
     Assert.assertTrue(rootExtensionsDir.createNewFile());
@@ -188,9 +188,9 @@ public class PullDependenciesTest
   }
 
   /**
-   * A file exists on the root hadoop dependencies directory path, but it's not a directory, throw ISE.
+   * A file exists on the root hadoop dependencies directory path, but it's not a directory, throw exception.
    */
-  @Test(expected = ISE.class)
+  @Test(expected = RuntimeException.class)
   public void testPullDependencies_root_hadoop_dependencies_dir_bad_state() throws IOException
   {
     Assert.assertTrue(rootHadoopDependenciesDir.createNewFile());
