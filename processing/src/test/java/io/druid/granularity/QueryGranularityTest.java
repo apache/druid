@@ -599,6 +599,21 @@ public class QueryGranularityTest
     }
   }
 
+  @Test
+  public void testDurationToDateTime() throws Exception
+  {
+    final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+    Granularity gran = new DurationGranularity(
+        new Period("PT12H5M").toStandardDuration().getMillis(),
+        origin
+    );
+
+    Assert.assertEquals(
+        new DateTime("2012-01-01T05:00:04.123-08:00"),
+        gran.toDateTime(new DateTime("2012-01-01T05:00:04.123-08:00").getMillis())
+    );
+  }
+
 
   @Test
   public void testIterableAllSimple() throws Exception
