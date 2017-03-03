@@ -111,12 +111,6 @@ public class DurationGranularity extends Granularity
     return ByteBuffer.allocate(2 * Longs.BYTES).putLong(duration).putLong(origin).array();
   }
 
-  @Override
-  public DateTime toDateTime(long offset)
-  {
-    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
-  }
-
   public long getDurationMillis()
   {
     return duration;
