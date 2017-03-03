@@ -129,12 +129,12 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       final Path tmpDescriptorFile = new Path(
           tmpIndexFile.getParent(),
-          String.format("%s_descriptor.json", segment.getShardSpec().getPartitionNum())
+          String.format("%s_descriptor.json", dataSegment.getShardSpec().getPartitionNum())
       );
 
       log.info("Creating descriptor file at[%s]", tmpDescriptorFile);
       ByteSource
-          .wrap(jsonMapper.writeValueAsBytes(segment))
+          .wrap(jsonMapper.writeValueAsBytes(dataSegment))
           .copyTo(new HdfsOutputStreamSupplier(fs, tmpDescriptorFile));
 
       // Create parent if it does not exist, recreation is not an error

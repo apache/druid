@@ -19,6 +19,17 @@
 
 package io.druid.storage.hdfs;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -50,6 +61,8 @@ public class HdfsDataSegmentPusherTest
 
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
+
+  TestObjectMapper objectMapper = new TestObjectMapper();
 
   @Test
   public void testPushWithScheme() throws Exception
@@ -217,7 +230,7 @@ public class HdfsDataSegmentPusherTest
           indexUri
       ), pushedSegment.getLoadSpec());
       // rename directory after push
-      final String segmentPath = DataSegmentPusherUtil.getHdfsStorageDir(pushedSegment);
+      String segmentPath = DataSegmentPusherUtil.getHdfsStorageDir(pushedSegment);
 
       File indexFile = new File(String.format(
           "%s/%s/%d_index.zip",
@@ -234,6 +247,29 @@ public class HdfsDataSegmentPusherTest
       ));
       Assert.assertTrue(descriptorFile.exists());
 
+      //read actual data from descriptor file.
+      DataSegment fromDescriptorFileDataSegment = objectMapper.readValue(descriptorFile, DataSegment.class);
+
+      Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
+      Assert.assertEquals(segments[i], pushedSegment);
+      Assert.assertEquals(ImmutableMap.of(
+          "type",
+          "hdfs",
+          "path",
+          indexUri
+      ), fromDescriptorFileDataSegment.getLoadSpec());
+      // rename directory after push
+      segmentPath = DataSegmentPusherUtil.getHdfsStorageDir(fromDescriptorFileDataSegment);
+
+      indexFile = new File(String.format(
+          "%s/%s/%d_index.zip",
+          storageDirectory,
+          segmentPath,
+          fromDescriptorFileDataSegment.getShardSpec().getPartitionNum()
+      ));
+      Assert.assertTrue(indexFile.exists());
+
+
       // push twice will fail and temp dir cleaned
       File outDir = new File(String.format("%s/%s", config.getStorageDirectory(), segmentPath));
       outDir.setReadOnly();
@@ -242,6 +278,41 @@ public class HdfsDataSegmentPusherTest
       }
       catch (IOException e) {
         Assert.fail("should not throw exception");
+      }
+    }
+  }
+
+  public class TestObjectMapper extends ObjectMapper
+  {
+    public TestObjectMapper()
+    {
+      configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      configure(MapperFeature.AUTO_DETECT_GETTERS, false);
+      configure(MapperFeature.AUTO_DETECT_FIELDS, false);
+      configure(MapperFeature.AUTO_DETECT_IS_GETTERS, false);
+      configure(MapperFeature.AUTO_DETECT_SETTERS, false);
+      configure(SerializationFeature.INDENT_OUTPUT, false);
+      registerModule(new TestModule().registerSubtypes(new NamedType(NumberedShardSpec.class, "NumberedShardSpec")));
+    }
+
+    public class TestModule extends SimpleModule
+    {
+      TestModule()
+      {
+        addSerializer(Interval.class, ToStringSerializer.instance);
+        addSerializer(NumberedShardSpec.class, ToStringSerializer.instance);
+        addDeserializer(
+            Interval.class, new StdDeserializer<Interval>(Interval.class)
+            {
+              @Override
+              public Interval deserialize(
+                  JsonParser jsonParser, DeserializationContext deserializationContext
+              ) throws IOException, JsonProcessingException
+              {
+                return new Interval(jsonParser.getText());
+              }
+            }
+        );
       }
     }
   }
