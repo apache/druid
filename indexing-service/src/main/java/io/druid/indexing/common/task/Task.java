@@ -59,8 +59,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "version_converter_sub", value = ConvertSegmentBackwardsCompatibleTask.SubTask.class), // backwards compat - Deprecated
     @JsonSubTypes.Type(name = "convert_segment", value = ConvertSegmentTask.class),
     @JsonSubTypes.Type(name = "convert_segment_sub", value = ConvertSegmentTask.SubTask.class),
-    @JsonSubTypes.Type(name = "same_interval_merge", value = SameIntervalMergeTask.class),
-    @JsonSubTypes.Type(name = "same_interval_merge_sub", value = SameIntervalMergeTask.SubTask.class)
+    @JsonSubTypes.Type(name = "same_interval_merge", value = SameIntervalMergeTask.class)
 })
 public interface Task
 {

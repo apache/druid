@@ -19,15 +19,12 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
-import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
@@ -126,11 +123,11 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     SubTask mergeTask = new SubTask(
         getId(),
         getDataSource(),
+        segments,
         aggregators,
         rollup,
         indexSpec,
         buildV9Directly,
-        segments,
         getContext()
     );
     final TaskStatus status = mergeTask.run(toolbox);
@@ -142,18 +139,15 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
 
   public static class SubTask extends MergeTask
   {
-    private static final String TYPE = "same_interval_merge_sub";
-
-    @JsonCreator
     public SubTask(
-        @JsonProperty("baseId") String baseId,
-        @JsonProperty("dataSource") String dataSource,
-        @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
-        @JsonProperty("rollup") Boolean rollup,
-        @JsonProperty("indexSpec") IndexSpec indexSpec,
-        @JsonProperty("buildV9Directly") Boolean buildV9Directly,
-        @JsonProperty("segments") List<DataSegment> segments,
-        @JsonProperty("context") Map<String, Object> context
+        String baseId,
+        String dataSource,
+        List<DataSegment> segments,
+        List<AggregatorFactory> aggregators,
+        Boolean rollup,
+        IndexSpec indexSpec,
+        Boolean buildV9Directly,
+        Map<String, Object> context
     )
     {
       super(
@@ -169,21 +163,9 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     }
 
     @Override
-    public String getType()
-    {
-      return TYPE;
-    }
-
-    @Override
     protected void verifyInputSegments(List<DataSegment> segments)
     {
       // do nothing
-    }
-
-    @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
-    {
-      return taskActionClient.submit(new LockTryAcquireAction(getInterval())) != null;
     }
   }
 }

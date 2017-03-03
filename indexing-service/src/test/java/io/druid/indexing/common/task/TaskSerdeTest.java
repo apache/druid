@@ -373,49 +373,6 @@ public class TaskSerdeTest
   }
 
   @Test
-  public void testSameIntervalMergeSubTaskSerde() throws Exception
-  {
-    final List<DataSegment> segments = ImmutableList.<DataSegment>of(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(new Interval("2010-01-01/P1D"))
-                   .version("1234")
-                   .build()
-    );
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
-    final SameIntervalMergeTask.SubTask task = new SameIntervalMergeTask.SubTask(
-        null,
-        "foo",
-        aggregators,
-        true,
-        indexSpec,
-        true,
-        segments,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final SameIntervalMergeTask.SubTask task2 = (SameIntervalMergeTask.SubTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getRollup(), task2.getRollup());
-    Assert.assertEquals(task.getIndexSpec(), task2.getIndexSpec());
-    Assert.assertEquals(task.getSegments(), task2.getSegments());
-    Assert.assertEquals(
-        task.getAggregators().get(0).getName(),
-        task2.getAggregators().get(0).getName()
-    );
-  }
-
-  @Test
   public void testKillTaskSerde() throws Exception
   {
     final KillTask task = new KillTask(
