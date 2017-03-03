@@ -48,8 +48,8 @@ public class SerializerUtils
   public static void writeBigEndianLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer)
       throws IOException
   {
-    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
-      throw new IllegalArgumentException("Expected big-endian byteBuffer");
+    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN || !helperBuffer.hasArray()) {
+      throw new IllegalArgumentException("Expected writable, big-endian, heap byteBuffer");
     }
     helperBuffer.putLong(0, value);
     out.write(helperBuffer.array(), 0, 8);
@@ -63,8 +63,8 @@ public class SerializerUtils
   public static void writeNativeOrderedLongToOutputStream(OutputStream out, long value, ByteBuffer helperBuffer)
       throws IOException
   {
-    if (helperBuffer.order() != ByteOrder.nativeOrder()) {
-      throw new IllegalArgumentException("Expected byteBuffer with the native byte order");
+    if (helperBuffer.order() != ByteOrder.nativeOrder() || !helperBuffer.hasArray()) {
+      throw new IllegalArgumentException("Expected writable heap byteBuffer with the native byte order");
     }
     helperBuffer.putLong(0, value);
     out.write(helperBuffer.array(), 0, 8);
@@ -80,8 +80,8 @@ public class SerializerUtils
   public static void writeBigEndianIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer)
       throws IOException
   {
-    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN) {
-      throw new IllegalArgumentException("Expected big-endian byteBuffer");
+    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN || !helperBuffer.hasArray()) {
+      throw new IllegalArgumentException("Expected writable, big-endian, heap byteBuffer");
     }
     helperBuffer.putInt(0, value);
     out.write(helperBuffer.array(), 0, 4);
@@ -95,8 +95,8 @@ public class SerializerUtils
   public static void writeNativeOrderedIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer)
       throws IOException
   {
-    if (helperBuffer.order() != ByteOrder.nativeOrder()) {
-      throw new IllegalArgumentException("Expected byteBuffer with the native byte order");
+    if (helperBuffer.order() != ByteOrder.nativeOrder() || !helperBuffer.hasArray()) {
+      throw new IllegalArgumentException("Expected writable heap byteBuffer with the native byte order");
     }
     helperBuffer.putInt(0, value);
     out.write(helperBuffer.array(), 0, 4);
