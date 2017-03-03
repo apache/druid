@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -128,6 +129,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       return new ChainedExecutionQueryRunner(exec, queryWatcher, queryables).run(query, responseContext);
     }
 
+    final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
+
     final AggregatorFactory[] combiningAggregatorFactories = new AggregatorFactory[query.getAggregatorSpecs().size()];
     for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
       combiningAggregatorFactories[i] = query.getAggregatorSpecs().get(i).getCombiningFactory();
@@ -211,7 +214,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                 );
                               }
 
-                              return exec.submit(
+                              ListenableFuture<Boolean> future = exec.submit(
                                   new AbstractPrioritizedCallable<Boolean>(priority)
                                   {
                                     @Override
@@ -237,13 +240,25 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                     }
                                   }
                               );
+
+                              if (isSingleThreaded) {
+                                waitForFutureCompletion(
+                                    query,
+                                    Futures.allAsList(ImmutableList.of(future)),
+                                    timeoutAt - System.currentTimeMillis()
+                                );
+                              }
+
+                              return future;
                             }
                           }
                       )
                   )
               );
 
-              waitForFutureCompletion(query, futures, timeoutAt - System.currentTimeMillis());
+              if (!isSingleThreaded) {
+                waitForFutureCompletion(query, futures, timeoutAt - System.currentTimeMillis());
+              }
 
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,
