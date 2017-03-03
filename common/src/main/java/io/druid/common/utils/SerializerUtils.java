@@ -21,6 +21,7 @@ package io.druid.common.utils;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.IntList;
@@ -187,16 +188,12 @@ public class SerializerUtils
 
   public void writeInt(OutputStream out, int intValue) throws IOException
   {
-    byte[] outBytes = new byte[4];
-
-    ByteBuffer.wrap(outBytes).putInt(intValue);
-
-    out.write(outBytes);
+    out.write(Ints.toByteArray(intValue));
   }
 
   public void writeInt(WritableByteChannel out, int intValue) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(4);
+    final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES);
     buffer.putInt(intValue);
     buffer.flip();
     out.write(buffer);
@@ -204,19 +201,19 @@ public class SerializerUtils
 
   public int readInt(InputStream in) throws IOException
   {
-    byte[] intBytes = new byte[4];
+    byte[] intBytes = new byte[Ints.BYTES];
 
     ByteStreams.readFully(in, intBytes);
 
-    return ByteBuffer.wrap(intBytes).getInt();
+    return Ints.fromByteArray(intBytes);
   }
 
   public void writeInts(OutputStream out, int[] ints) throws IOException
   {
     writeInt(out, ints.length);
 
-    for (int i = 0; i < ints.length; i++) {
-      writeInt(out, ints[i]);
+    for (int value : ints) {
+      writeInt(out, value);
     }
   }
 
@@ -243,16 +240,12 @@ public class SerializerUtils
 
   public void writeLong(OutputStream out, long longValue) throws IOException
   {
-    byte[] outBytes = new byte[8];
-
-    ByteBuffer.wrap(outBytes).putLong(longValue);
-
-    out.write(outBytes);
+    out.write(Longs.toByteArray(longValue));
   }
 
   public void writeLong(WritableByteChannel out, long longValue) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(8);
+    final ByteBuffer buffer = ByteBuffer.allocate(Longs.BYTES);
     buffer.putLong(longValue);
     buffer.flip();
     out.write(buffer);
@@ -260,19 +253,19 @@ public class SerializerUtils
 
   public long readLong(InputStream in) throws IOException
   {
-    byte[] longBytes = new byte[8];
+    byte[] longBytes = new byte[Longs.BYTES];
 
     ByteStreams.readFully(in, longBytes);
 
-    return ByteBuffer.wrap(longBytes).getLong();
+    return Longs.fromByteArray(longBytes);
   }
 
   public void writeLongs(OutputStream out, long[] longs) throws IOException
   {
     writeInt(out, longs.length);
 
-    for (int i = 0; i < longs.length; i++) {
-      writeLong(out, longs[i]);
+    for (long value : longs) {
+      writeLong(out, value);
     }
   }
 
@@ -288,18 +281,14 @@ public class SerializerUtils
     return retVal;
   }
 
-  public void writeFloat(OutputStream out, float intValue) throws IOException
+  public void writeFloat(OutputStream out, float floatValue) throws IOException
   {
-    byte[] outBytes = new byte[4];
-
-    ByteBuffer.wrap(outBytes).putFloat(intValue);
-
-    out.write(outBytes);
+    writeInt(out, Float.floatToRawIntBits(floatValue));
   }
 
   public void writeFloat(WritableByteChannel out, float floatValue) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(4);
+    final ByteBuffer buffer = ByteBuffer.allocate(Floats.BYTES);
     buffer.putFloat(floatValue);
     buffer.flip();
     out.write(buffer);
@@ -307,19 +296,15 @@ public class SerializerUtils
 
   public float readFloat(InputStream in) throws IOException
   {
-    byte[] floatBytes = new byte[4];
-
-    ByteStreams.readFully(in, floatBytes);
-
-    return ByteBuffer.wrap(floatBytes).getFloat();
+    return Float.intBitsToFloat(readInt(in));
   }
 
   public void writeFloats(OutputStream out, float[] floats) throws IOException
   {
     writeInt(out, floats.length);
 
-    for (int i = 0; i < floats.length; i++) {
-      writeFloat(out, floats[i]);
+    for (float value : floats) {
+      writeFloat(out, value);
     }
   }
 
