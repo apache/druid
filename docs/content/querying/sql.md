@@ -106,14 +106,15 @@ The following SQL queries and features may be executed using approximate algorit
 
 - `COUNT(DISTINCT col)` and `APPROX_COUNT_DISTINCT(col)` aggregations use
 [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf), a fast approximate distinct counting
-algorithm. If you need exact distinct counts, you can instead use
-`SELECT COUNT(*) FROM (SELECT DISTINCT col FROM data_source)`, which will use a slower and more resource intensive exact
-algorithm.
+algorithm. If you need exact distinct counts, set "useApproximateCountDistinct" to "false", either through query
+context or through broker configuration.
 - TopN-style queries with a single grouping column, like
 `SELECT col1, SUM(col2) FROM data_source GROUP BY col1 ORDER BY SUM(col2) DESC LIMIT 100`, by default will be executed
 as [TopN queries](topnquery.html), which use an approximate algorithm. To disable this behavior, and use exact
 algorithms for topN-style queries, set "useApproximateTopN" to "false", either through query context or through broker
 configuration.
+
+In both cases, the exact algorithms are generally slower and more resource intensive.
 
 ### Time functions
 
