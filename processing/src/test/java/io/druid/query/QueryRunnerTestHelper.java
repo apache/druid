@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -105,9 +105,9 @@ public class QueryRunnerTestHelper
 
   public static final DateTime minTime = new DateTime("2011-01-12T00:00:00.000Z");
 
-  public static final QueryGranularity dayGran = QueryGranularities.DAY;
-  public static final QueryGranularity monthGran = QueryGranularities.MONTH;
-  public static final QueryGranularity allGran = QueryGranularities.ALL;
+  public static final Granularity dayGran = Granularities.DAY;
+  public static final Granularity allGran = Granularities.ALL;
+  public static final Granularity monthGran = Granularities.MONTH;
   public static final String timeDimension = "__time";
   public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";

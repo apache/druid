@@ -34,7 +34,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -134,7 +134,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new OffheapIncrementalIndex(
-                        0L, QueryGranularities.NONE, factories, 1000000,
+                        0L, Granularities.NONE, factories, 1000000,
                         new StupidPool<ByteBuffer>(
                             "OffheapIncrementalIndex-bufferPool",
                             new Supplier<ByteBuffer>()
@@ -167,7 +167,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new OffheapIncrementalIndex(
-                        0L, QueryGranularities.NONE, false, factories, 1000000,
+                        0L, Granularities.NONE, false, factories, 1000000,
                         new StupidPool<ByteBuffer>(
                             "OffheapIncrementalIndex-bufferPool",
                             new Supplier<ByteBuffer>()
@@ -207,7 +207,7 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularities.NONE, true, dimensionsSpec, aggregatorFactories, 1000000
+        0L, Granularities.NONE, true, dimensionsSpec, aggregatorFactories, 1000000
     );
   }
 
@@ -218,7 +218,7 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularities.NONE, true, null, aggregatorFactories, 1000000
+        0L, Granularities.NONE, true, null, aggregatorFactories, 1000000
     );
   }
 
@@ -229,7 +229,7 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularities.NONE, false, null, aggregatorFactories, 1000000
+        0L, Granularities.NONE, false, null, aggregatorFactories, 1000000
     );
   }
 
@@ -449,7 +449,7 @@ public class IncrementalIndexTest
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(new Interval("2000/2030")))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
@@ -600,7 +600,7 @@ public class IncrementalIndexTest
 
       final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                           .dataSource("xxx")
-                                          .granularity(QueryGranularities.ALL)
+                                          .granularity(Granularities.ALL)
                                           .intervals(ImmutableList.of(queryInterval))
                                           .aggregators(queryAggregatorFactories)
                                           .build();
@@ -678,7 +678,7 @@ public class IncrementalIndexTest
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularities.ALL)
+                                  .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
@@ -758,7 +758,7 @@ public class IncrementalIndexTest
   public void testgetDimensions()
   {
     final IncrementalIndex<Aggregator> incrementalIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularities.NONE)
+        new IncrementalIndexSchema.Builder().withQueryGranularity(Granularities.NONE)
                                             .withMetrics(
                                                 new AggregatorFactory[]{
                                                     new CountAggregatorFactory(
@@ -780,5 +780,39 @@ public class IncrementalIndexTest
     closer.closeLater(incrementalIndex);
 
     Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
+  }
+
+  @Test
+  public void testDynamicSchemaRollup() throws IndexSizeExceededException
+  {
+    IncrementalIndex<Aggregator> index = new OnheapIncrementalIndex(
+        new IncrementalIndexSchema.Builder().withQueryGranularity(Granularities.NONE).build(),
+        true,
+        10
+    );
+    closer.closeLater(index);
+    index.add(
+        new MapBasedInputRow(
+            1481871600000L,
+            Arrays.asList("name", "host"),
+            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            1481871670000L,
+            Arrays.asList("name", "table"),
+            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            1481871600000L,
+            Arrays.asList("name", "host"),
+            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+        )
+    );
+
+    Assert.assertEquals(2, index.size());
   }
 }

@@ -17,50 +17,35 @@
  * under the License.
  */
 
-package io.druid.granularity;
+package io.druid.query.select;
 
-public final class NoneGranularity extends BaseQueryGranularity
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class SelectQueryConfig
 {
-  @Override
-  public long next(long offset)
-  {
-    return offset + 1;
-  }
+  public static String ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
 
-  @Override
-  public long truncate(long offset)
-  {
-    return offset;
-  }
+  @JsonProperty
+  private boolean enableFromNextDefault = true;
 
-  @Override
-  public byte[] getCacheKey()
+  @JsonCreator
+  public SelectQueryConfig(
+      @JsonProperty("enableFromNextDefault") Boolean enableFromNextDefault
+  )
   {
-    return new byte[]{0x0};
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
+    if (enableFromNextDefault != null) {
+      this.enableFromNextDefault = enableFromNextDefault.booleanValue();
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    return true;
   }
 
-  @Override
-  public int hashCode()
+  public boolean getEnableFromNextDefault()
   {
-    return -1;
+    return enableFromNextDefault;
   }
 
-  @Override
-  public String toString()
+  public void setEnableFromNextDefault(boolean enableFromNextDefault)
   {
-    return "NoneGranularity";
+    this.enableFromNextDefault = enableFromNextDefault;
   }
 }

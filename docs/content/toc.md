@@ -21,6 +21,7 @@ layout: toc
     * [Stream Push](/docs/VERSION/ingestion/stream-push.html)
     * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
   * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
+  * [Ingestion Tasks](/docs/VERSION/ingestion/tasks.html)
   * [FAQ](/docs/VERSION/ingestion/faq.html)
 
 ## Querying
@@ -73,6 +74,10 @@ layout: toc
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
+  * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
+  * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
+  * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
+  * [Recommendations](/docs/VERSION/operations/recommendations.html)
 
 ## Configuration
   * [Common Configuration](/docs/VERSION/configuration/index.html)

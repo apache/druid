@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Result;
@@ -149,7 +149,7 @@ public class TimestampAggregationSelectTest
         recordParser,
         aggregator,
         0,
-        QueryGranularities.MONTH,
+        Granularities.MONTH,
         100,
         Resources.toString(Resources.getResource("select.json"), Charsets.UTF_8)
     );

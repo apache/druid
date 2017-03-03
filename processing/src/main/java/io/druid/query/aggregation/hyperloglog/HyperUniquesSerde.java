@@ -21,14 +21,17 @@ package io.druid.query.aggregation.hyperloglog;
 
 import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
-import io.druid.hll.HyperLogLogHash;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.hll.HyperLogLogHash;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -143,4 +146,11 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       }
     };
   }
+
+  @Override
+  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  {
+    return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
+  }
+
 }

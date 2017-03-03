@@ -26,12 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.client.indexing.ClientAppendQuery;
 import io.druid.client.indexing.ClientKillQuery;
 import io.druid.client.indexing.ClientMergeQuery;
-import io.druid.granularity.QueryGranularities;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -181,7 +180,7 @@ public class TaskSerdeTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
@@ -246,7 +245,7 @@ public class TaskSerdeTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
@@ -299,6 +298,7 @@ public class TaskSerdeTest
         aggregators,
         true,
         indexSpec,
+        true,
         null
     );
 
@@ -436,7 +436,7 @@ public class TaskSerdeTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
                 jsonMapper
             ),
             new RealtimeIOConfig(
@@ -487,7 +487,7 @@ public class TaskSerdeTest
             .getTuningConfig().getWindowPeriod()
     );
     Assert.assertEquals(
-        Granularity.HOUR,
+        Granularities.HOUR,
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
     Assert.assertTrue(task.getRealtimeIngestionSchema().getTuningConfig().isReportParseExceptions());
@@ -530,6 +530,7 @@ public class TaskSerdeTest
             new CountAggregatorFactory("cnt")
         ),
         indexSpec,
+        true,
         null
     );
 
@@ -722,7 +723,7 @@ public class TaskSerdeTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-                Granularity.DAY,
+                Granularities.DAY,
                 null,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             ),

@@ -17,35 +17,60 @@
  * under the License.
  */
 
-package io.druid.granularity;
+package io.druid.java.util.common.granularity;
 
-import com.google.common.collect.ImmutableList;
-import io.druid.common.utils.JodaUtils;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
 
-public final class AllGranularity extends BaseQueryGranularity
+/**
+ * NoneGranularity does not bucket data
+ */
+public class NoneGranularity extends Granularity
 {
+  /**
+   * This constructor is public b/c it is serialized and deserialized
+   * based on type in GranularityModule
+   */
+  public NoneGranularity() {}
+
   @Override
-  public long next(long offset)
+  public DateTimeFormatter getFormatter(Formatter type)
   {
-    return JodaUtils.MAX_INSTANT;
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
-  public long truncate(long offset)
+  public DateTime increment(DateTime time)
   {
-    return JodaUtils.MIN_INSTANT;
+    return new DateTime(time.getMillis() + 1);
+  }
+
+  @Override
+  public DateTime decrement(DateTime time)
+  {
+    return new DateTime(time.getMillis() - 1);
+  }
+
+  @Override
+  public DateTime bucketStart(DateTime time)
+  {
+    if (time == null) {
+      return null;
+    }
+
+    return new DateTime(time.getMillis());
+  }
+
+  @Override
+  public DateTime toDate(String filePath, Formatter formatter)
+  {
+    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[]{0x7f};
-  }
-
-  @Override
-  public Iterable<Long> iterable(long start, long end)
-  {
-    return ImmutableList.of(start);
+    return new byte[]{0x0};
   }
 
   @Override
@@ -64,12 +89,12 @@ public final class AllGranularity extends BaseQueryGranularity
   @Override
   public int hashCode()
   {
-    return 1;
+    return -1;
   }
 
   @Override
   public String toString()
   {
-    return "AllGranularity";
+    return "NoneGranularity";
   }
 }

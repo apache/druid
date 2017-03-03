@@ -94,9 +94,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     );
 
     Path tmpFile = new Path(String.format(
-        "%s/%s/index.zip",
+        "%s/%s/%s/%s_index.zip",
         fullyQualifiedStorageDirectory,
-        UUIDUtils.generateUuid()
+        segment.getDataSource(),
+        UUIDUtils.generateUuid(),
+        segment.getShardSpec().getPartitionNum()
     ));
     FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
 
@@ -107,18 +109,21 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
-      final Path outFile = new Path(String.format(
-          "%s/%s/index.zip",
+      Path outFile = new Path(String.format(
+          "%s/%s/%d_index.zip",
           fullyQualifiedStorageDirectory,
-          storageDir
+          storageDir,
+          segment.getShardSpec().getPartitionNum()
       ));
+
       final Path outDir = outFile.getParent();
       dataSegment = createDescriptorFile(
           segment.withLoadSpec(makeLoadSpec(outFile))
                  .withSize(size)
                  .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
           tmpFile.getParent(),
-          fs
+          fs,
+          segment.getShardSpec().getPartitionNum()
       );
 
       // Create parent if it does not exist, recreation is not an error
@@ -153,9 +158,9 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  private DataSegment createDescriptorFile(DataSegment segment, Path outDir, final FileSystem fs) throws IOException
+  private DataSegment createDescriptorFile(DataSegment segment, Path outDir, final FileSystem fs, final int partitionNumber) throws IOException
   {
-    final Path descriptorFile = new Path(outDir, "descriptor.json");
+    final Path descriptorFile = new Path(outDir, String.format("%s_descriptor.json", partitionNumber));
     log.info("Creating descriptor file at[%s]", descriptorFile);
     ByteSource
         .wrap(jsonMapper.writeValueAsBytes(segment))

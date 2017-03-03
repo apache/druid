@@ -119,22 +119,22 @@ See [Multi-value dimensions](multi-value-dimensions.html) for more details.
 
 GroupBy queries can be executed using two different strategies. The default strategy for a cluster is determined by the
 "druid.query.groupBy.defaultStrategy" runtime property on the broker. This can be overridden using "groupByStrategy" in
-the query context. If neither the context field nor the property is set, the "v1" strategy will be used.
+the query context. If neither the context field nor the property is set, the "v2" strategy will be used.
 
-- "v1", the default, generates per-segment results on data nodes (historical, realtime, middleManager) using a map which
+- "v2", the default, is designed to offer better performance and memory management. This strategy generates
+per-segment results using a fully off-heap map. Data nodes merge the per-segment results using a fully off-heap
+concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
+nodes return sorted results to the broker, which merges result streams using an N-way merge. The broker materializes
+the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
+back as they are merged.
+
+- "v1", a legacy engine, generates per-segment results on data nodes (historical, realtime, middleManager) using a map which
 is partially on-heap (dimension keys and the map itself) and partially off-heap (the aggregated values). Data nodes then
 merge the per-segment results using Druid's indexing mechanism. This merging is multi-threaded by default, but can
 optionally be single-threaded. The broker merges the final result set using Druid's indexing mechanism again. The broker
 merging is always single-threaded. Because the broker merges results using the indexing mechanism, it must materialize
 the full result set before returning any results. On both the data nodes and the broker, the merging index is fully
 on-heap by default, but it can optionally store aggregated values off-heap.
-
-- "v2" (experimental) is designed to offer better performance and memory management. This strategy generates
-per-segment results using a fully off-heap map. Data nodes merge the per-segment results using a fully off-heap
-concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
-nodes return sorted results to the broker, which merges result streams using an N-way merge. The broker materializes
-the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
-back as they are merged.
 
 #### Alternatives
 
@@ -156,54 +156,33 @@ indexing mechanism, and runs the outer query on these materialized results. "v2"
 inner query's results stream with off-heap fact map and on-heap string dictionary that can spill to disk. Both
 strategy perform the outer query on the broker in a single-threaded fashion.
 
-Note that groupBys require a separate merge buffer on the broker for each layer beyond the first layer of the groupBy.
-This merge buffer is immediately released once they are not used anymore during the query processing. However, deeply
-nested groupBys (there are two or more groupBy layers beyond the first one) can potentially lead to deadlocks since the
-merge buffers are limited in number and are acquired one-by-one instead of a complete set. At this time, we recommend
-that you avoid too many concurrent execution of deeply nested groupBys with the v2 strategy.
-
 #### Server configuration
-
-When using the "v1" strategy, the following runtime properties apply:
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v1|
-|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows for the per-segment grouping engine. This is a tuning parameter that does not impose a hard limit; rather, it potentially shifts merging work from the per-segment engine to the overall merging index. Queries that exceed this limit will not fail.|50000|
-|`druid.query.groupBy.maxResults`|Maximum number of results. Queries that exceed this limit will fail.|500000|
-|`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
 
 When using the "v2" strategy, the following runtime properties apply:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v1|
+|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.bufferGrouperInitialBuckets`|Initial number of buckets in the off-heap hash table used for grouping results. Set to 0 to use a reasonable default.|0|
 |`druid.query.groupBy.bufferGrouperMaxLoadFactor`|Maximum load factor of the off-heap hash table used for grouping results. When the load factor exceeds this size, the table will be grown or spilled to disk. Set to 0 to use a reasonable default.|0|
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
-
-Additionally, the "v2" strategy uses merging buffers for merging. It is currently the only query implementation that
-does so. By default, Druid is configured without any merging buffer pool, so to use the "v2" strategy you must also
-set `druid.processing.numMergeBuffers` to some non-zero number. Furthermore, if you want to execute deeply nested groupBys,
-you must set `druid.processing.numMergeBuffers` to at least 2.
 
 This may require allocating more direct memory. The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
 
+When using the "v1" strategy, the following runtime properties apply:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
+|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows for the per-segment grouping engine. This is a tuning parameter that does not impose a hard limit; rather, it potentially shifts merging work from the per-segment engine to the overall merging index. Queries that exceed this limit will not fail.|50000|
+|`druid.query.groupBy.maxResults`|Maximum number of results. Queries that exceed this limit will fail.|500000|
+|`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
+
 #### Query context
-
-When using the "v1" strategy, the following query context parameters apply:
-
-|Property|Description|
-|--------|-----------|
-|`groupByStrategy`|Overrides the value of `druid.query.groupBy.defaultStrategy` for this query.|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
-|`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|
-|`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|
-|`useOffheap`|Set to true to store aggregations off-heap when merging results.|
 
 When using the "v2" strategy, the following query context parameters apply:
 
@@ -215,3 +194,13 @@ When using the "v2" strategy, the following query context parameters apply:
 |`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|
+
+When using the "v1" strategy, the following query context parameters apply:
+
+|Property|Description|
+|--------|-----------|
+|`groupByStrategy`|Overrides the value of `druid.query.groupBy.defaultStrategy` for this query.|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
+|`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|
+|`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|
+|`useOffheap`|Set to true to store aggregations off-heap when merging results.|

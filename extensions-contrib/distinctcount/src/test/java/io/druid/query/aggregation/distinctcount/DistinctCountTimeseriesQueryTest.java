@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularities;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunnerTestHelper;
@@ -52,7 +52,7 @@ public class DistinctCountTimeseriesQueryTest
     TimeseriesQueryEngine engine =  new TimeseriesQueryEngine();
 
     IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularities.SECOND, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
+        0, Granularities.SECOND, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
     );
     String visitor_id = "visitor_id";
     String client_type = "client_type";

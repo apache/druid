@@ -25,6 +25,8 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -51,13 +53,13 @@ import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularities;
-import io.druid.granularity.QueryGranularity;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
@@ -92,6 +94,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
@@ -101,6 +104,7 @@ import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -158,7 +162,12 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of(
+      "finalize", false,
+
+      // GroupBy v2 won't cache on the broker, so test with v1.
+      "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
+  );
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
   static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
@@ -237,10 +246,13 @@ public class CachingClusteredClientTest
   );
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
-  private static final QueryGranularity GRANULARITY = QueryGranularities.DAY;
+  private static final Granularity GRANULARITY = Granularities.DAY;
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
-  private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
+  private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
+
+  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
   static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
       ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                   .put(
@@ -265,7 +277,8 @@ public class CachingClusteredClientTest
                       SelectQuery.class,
                       new SelectQueryQueryToolChest(
                           jsonMapper,
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                          selectConfigSupplier
                       )
                   )
                   .put(
@@ -1322,7 +1335,8 @@ public class CachingClusteredClientTest
         client,
         new SelectQueryQueryToolChest(
             jsonMapper,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1398,7 +1412,8 @@ public class CachingClusteredClientTest
         client,
         new SelectQueryQueryToolChest(
             jsonMapper,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -3136,6 +3151,44 @@ public class CachingClusteredClientTest
         ),
         "renamed aggregators test"
     );
+  }
+
+  @Test
+  public void testIfNoneMatch() throws Exception
+  {
+    Interval interval = new Interval("2016/2017");
+    final DataSegment dataSegment = new DataSegment(
+        "dataSource",
+        interval,
+        "ver",
+        ImmutableMap.<String, Object>of(
+            "type", "hdfs",
+            "path", "/tmp"
+        ),
+        ImmutableList.of("product"),
+        ImmutableList.of("visited_sum"),
+        NoneShardSpec.instance(),
+        9,
+        12334
+    );
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                    .dataSource(DATA_SOURCE)
+                                    .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
+                                    .context(ImmutableMap.<String, Object>of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                    .build();
+
+
+    Map<String, String> responseContext = new HashMap<>();
+
+    client.run(query, responseContext);
+    Assert.assertEquals("Z/eS4rQz5v477iq7Aashr6JPZa0=", responseContext.get("ETag"));
   }
 
 }

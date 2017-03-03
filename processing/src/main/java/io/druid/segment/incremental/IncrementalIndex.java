@@ -37,7 +37,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.granularity.QueryGranularity;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -185,7 +185,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   }
 
   private final long minTimestamp;
-  private final QueryGranularity gran;
+  private final Granularity gran;
   private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
@@ -430,10 +430,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         }
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedArray(row.getRaw(dimension));
+        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension));
 
         // Set column capabilities as data is coming in
-        if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthFromEncodedArray(dimsKey) > 1) {
+        if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
           capabilities.setHasMultipleValues(true);
         }
 
@@ -469,7 +469,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       dims = newDims;
     }
 
-    long truncated = gran.truncate(row.getTimestampFromEpoch());
+    long truncated = 0;
+    if (row.getTimestamp() != null) {
+      truncated = gran.bucketStart(row.getTimestamp()).getMillis();
+    }
     return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
   }
 
@@ -555,7 +558,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public Interval getInterval()
   {
-    return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.next(getMaxTimeMillis()));
+    return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.increment(new DateTime(getMaxTimeMillis())).getMillis());
   }
 
   public DateTime getMinTime()
@@ -701,12 +704,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                   }
                   String dimensionName = dimensionDesc.getName();
                   DimensionHandler handler = dimensionDesc.getHandler();
-                  if (dim == null || handler.getLengthFromEncodedArray(dim) == 0) {
+                  if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
                     theVals.put(dimensionName, null);
                     continue;
                   }
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  Object rowVals = indexer.convertUnsortedEncodedArrayToActualArrayOrList(dim, DimensionIndexer.LIST);
+                  Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
                   theVals.put(dimensionName, rowVals);
                 }
 
@@ -891,7 +894,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
       for (int i = 0; i < dims.length; i++) {
         final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
-        if (!indexer.checkUnsortedEncodedArraysEqual(dims[i], that.dims[i])) {
+        if (!indexer.checkUnsortedEncodedKeyComponentsEqual(dims[i], that.dims[i])) {
           return false;
         }
       }
@@ -904,7 +907,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       int hash = (int) timestamp;
       for (int i = 0; i < dims.length; i++) {
         final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
-        hash = 31 * hash + indexer.getUnsortedEncodedArrayHashCode(dims[i]);
+        hash = 31 * hash + indexer.getUnsortedEncodedKeyComponentHashCode(dims[i]);
       }
       return hash;
     }
@@ -958,16 +961,31 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         }
 
         final DimensionIndexer indexer = dimensionDescs.get(index).getIndexer();
-        retVal = indexer.compareUnsortedEncodedArrays(lhsIdxs, rhsIdxs);
+        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
         ++index;
       }
 
       if (retVal == 0) {
-        return Ints.compare(lhs.dims.length, rhs.dims.length);
+        int lengthDiff = Ints.compare(lhs.dims.length, rhs.dims.length);
+        if (lengthDiff == 0) {
+          return 0;
+        }
+        Object[] largerDims = lengthDiff > 0 ? lhs.dims : rhs.dims;
+        return allNull(largerDims, numComparisons) ? 0 : lengthDiff;
       }
 
       return retVal;
     }
+  }
+
+  private static boolean allNull(Object[] dims, int startPosition)
+  {
+    for (int i = startPosition; i < dims.length; i++) {
+      if (dims[i] != null) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static class FactsEntry implements Map.Entry<TimeAndDims, Integer>

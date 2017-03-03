@@ -44,19 +44,19 @@ import java.io.IOException;
  */
 public class CassandraDataSegmentPusher extends CassandraStorage implements DataSegmentPusher
 {
-	private static final Logger log = new Logger(CassandraDataSegmentPusher.class);
-	private static final int CONCURRENCY = 10;
-	private static final Joiner JOINER = Joiner.on("/").skipNulls();  
-	private final ObjectMapper jsonMapper;
+  private static final Logger log = new Logger(CassandraDataSegmentPusher.class);
+  private static final int CONCURRENCY = 10;
+  private static final Joiner JOINER = Joiner.on("/").skipNulls();
+  private final ObjectMapper jsonMapper;
 
   @Inject
-	public CassandraDataSegmentPusher(
-	    CassandraDataSegmentConfig config,
-	    ObjectMapper jsonMapper)
-	{
-		super(config);
-		this.jsonMapper=jsonMapper;
-	}
+  public CassandraDataSegmentPusher(
+      CassandraDataSegmentConfig config,
+      ObjectMapper jsonMapper)
+  {
+    super(config);
+    this.jsonMapper=jsonMapper;
+  }
 
   @Override
   public String getPathForHadoop()
@@ -77,41 +77,41 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     log.info("Writing [%s] to C*", indexFilesDir);
     String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
-		    DataSegmentPusherUtil.getStorageDir(segment)
-		    );
+        DataSegmentPusherUtil.getStorageDir(segment)
+        );
 
-		// Create index
-		final File compressedIndexFile = File.createTempFile("druid", "index.zip");
-		long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);
-		log.info("Wrote compressed file [%s] to [%s]", compressedIndexFile.getAbsolutePath(), key);
+    // Create index
+    final File compressedIndexFile = File.createTempFile("druid", "index.zip");
+    long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);
+    log.info("Wrote compressed file [%s] to [%s]", compressedIndexFile.getAbsolutePath(), key);
 
-		int version = SegmentUtils.getVersionFromDir(indexFilesDir);
+    int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
-		try
-		{
-			long start = System.currentTimeMillis();
-			ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
-			    .withConcurrencyLevel(CONCURRENCY).call();
-			byte[] json = jsonMapper.writeValueAsBytes(segment);
-			MutationBatch mutation = this.keyspace.prepareMutationBatch();
+    try
+    {
+      long start = System.currentTimeMillis();
+      ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
+          .withConcurrencyLevel(CONCURRENCY).call();
+      byte[] json = jsonMapper.writeValueAsBytes(segment);
+      MutationBatch mutation = this.keyspace.prepareMutationBatch();
       mutation.withRow(descriptorStorage, key)
-      	.putColumn("lastmodified", System.currentTimeMillis(), null)
-      	.putColumn("descriptor", json, null);      	
+        .putColumn("lastmodified", System.currentTimeMillis(), null)
+        .putColumn("descriptor", json, null);
       mutation.execute();
-			log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
-		} catch (Exception e)
-		{
-			throw new IOException(e);
-		}
+      log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
+    } catch (Exception e)
+    {
+      throw new IOException(e);
+    }
 
-		segment = segment.withSize(indexSize)
-		    .withLoadSpec(
-		        ImmutableMap.<String, Object> of("type", "c*", "key", key)
-		    )
-		    .withBinaryVersion(version);
+    segment = segment.withSize(indexSize)
+        .withLoadSpec(
+            ImmutableMap.<String, Object> of("type", "c*", "key", key)
+        )
+        .withBinaryVersion(version);
 
-		log.info("Deleting zipped index File[%s]", compressedIndexFile);
-		compressedIndexFile.delete();
-		return segment;
-	}
+    log.info("Deleting zipped index File[%s]", compressedIndexFile);
+    compressedIndexFile.delete();
+    return segment;
+  }
 }

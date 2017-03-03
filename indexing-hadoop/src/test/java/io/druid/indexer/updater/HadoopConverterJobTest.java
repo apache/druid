@@ -32,7 +32,6 @@ import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -43,7 +42,7 @@ import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.java.util.common.FileUtils;
-import io.druid.java.util.common.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -176,8 +175,8 @@ public class HadoopConverterJobTest
                     new HyperUniquesAggregatorFactory("quality_uniques", "quality")
                 },
                 new UniformGranularitySpec(
-                    Granularity.MONTH,
-                    QueryGranularities.DAY,
+                    Granularities.MONTH,
+                    Granularities.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
