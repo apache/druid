@@ -1929,6 +1929,38 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testApproxCountDistinctWhenHllDisabled() throws Exception
+  {
+    // When HLL is disabled, APPROX_COUNT_DISTINCT is still approximate.
+
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      AGGS(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              DIMS(new DefaultDimensionSpec("dim2", null)),
+                              false
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators() throws Exception
   {
     // When HLL is disabled, do exact count distinct through a nested query.
