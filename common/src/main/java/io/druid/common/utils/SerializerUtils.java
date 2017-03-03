@@ -22,6 +22,7 @@ package io.druid.common.utils;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import io.druid.collections.IntList;
 
 import java.io.IOException;
@@ -52,7 +53,7 @@ public class SerializerUtils
       throw new IllegalArgumentException("Expected writable, big-endian, heap byteBuffer");
     }
     helperBuffer.putLong(0, value);
-    out.write(helperBuffer.array(), 0, 8);
+    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Longs.BYTES);
   }
 
   /**
@@ -67,7 +68,7 @@ public class SerializerUtils
       throw new IllegalArgumentException("Expected writable heap byteBuffer with the native byte order");
     }
     helperBuffer.putLong(0, value);
-    out.write(helperBuffer.array(), 0, 8);
+    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Longs.BYTES);
   }
 
   /**
@@ -84,7 +85,7 @@ public class SerializerUtils
       throw new IllegalArgumentException("Expected writable, big-endian, heap byteBuffer");
     }
     helperBuffer.putInt(0, value);
-    out.write(helperBuffer.array(), 0, 4);
+    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Ints.BYTES);
   }
 
   /**
@@ -99,7 +100,7 @@ public class SerializerUtils
       throw new IllegalArgumentException("Expected writable heap byteBuffer with the native byte order");
     }
     helperBuffer.putInt(0, value);
-    out.write(helperBuffer.array(), 0, 4);
+    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Ints.BYTES);
   }
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
