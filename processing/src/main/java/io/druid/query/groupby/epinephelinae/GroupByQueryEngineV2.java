@@ -448,6 +448,15 @@ outer:
     }
 
     @Override
+    public Grouper.KeyComparator bufferComparatorWithAggregators(
+        AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
+    )
+    {
+      // not called on this
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void reset()
     {
       // No state, nothing to reset

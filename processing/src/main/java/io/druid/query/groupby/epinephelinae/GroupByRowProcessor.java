@@ -160,6 +160,7 @@ public class GroupByRowProcessor
                   aggregatorFactories
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
+             // grouper.init();
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
               closeOnExit.add(grouper);
 

@@ -57,7 +57,7 @@ public class Groupers
 
   public static <KeyType> Iterator<Grouper.Entry<KeyType>> mergeIterators(
       final Iterable<Iterator<Grouper.Entry<KeyType>>> iterators,
-      final Comparator<KeyType> keyTypeComparator
+      final Comparator<Grouper.Entry<KeyType>> keyTypeComparator
   )
   {
     if (keyTypeComparator != null) {
@@ -68,7 +68,7 @@ public class Groupers
             @Override
             public int compare(Grouper.Entry<KeyType> lhs, Grouper.Entry<KeyType> rhs)
             {
-              return keyTypeComparator.compare(lhs.getKey(), rhs.getKey());
+              return keyTypeComparator.compare(lhs, rhs);
             }
           }
       );

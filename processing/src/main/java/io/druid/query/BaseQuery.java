@@ -206,7 +206,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return parseBoolean(this, key, defaultValue);
   }
 
-  protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
+  public Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
   {
     Map<String, Object> overridden = Maps.newTreeMap();
     final Map<String, Object> context = getContext();

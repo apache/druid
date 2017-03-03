@@ -20,6 +20,7 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.primitives.Ints;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -81,6 +82,14 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
 
   @Override
   public Grouper.KeyComparator bufferComparator()
+  {
+    return KEY_COMPARATOR;
+  }
+
+  @Override
+  public Grouper.KeyComparator bufferComparatorWithAggregators(
+      AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
+  )
   {
     return KEY_COMPARATOR;
   }
