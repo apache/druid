@@ -106,8 +106,8 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    final String tzId = tz == null ? "" : tz.getID();
-    final String localeTag = locale == null ? "" : locale.toLanguageTag();
+    final String tzId = (tz == null ? DateTimeZone.UTC : tz).getID();
+    final String localeTag = (locale == null ? Locale.getDefault() : locale).toLanguageTag();
     final byte[] exprBytes = StringUtils.toUtf8(format + "\u0001" + tzId + "\u0001" + localeTag);
     final byte[] granularityCacheKey = granularity.getCacheKey();
     return ByteBuffer.allocate(4 + exprBytes.length + granularityCacheKey.length)
