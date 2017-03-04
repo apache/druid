@@ -45,6 +45,7 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.DataSource;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.InsufficientResourcesException;
+import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryDataSource;
@@ -56,6 +57,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
+import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
@@ -175,6 +177,21 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public boolean isCacheable(boolean willMergeRunners)
   {
     return willMergeRunners;
+  }
+
+  @Override
+  public QueryRunner<Row> createIntervalChunkingRunner(
+      final IntervalChunkingQueryRunnerDecorator decorator,
+      final QueryRunner<Row> runner,
+      final GroupByQueryQueryToolChest toolChest
+  )
+  {
+    // No chunkPeriod-based interval chunking for groupBy v2.
+    //  1) It concats query chunks for consecutive intervals, which won't generate correct results.
+    //  2) Merging instead of concating isn't a good idea, since it requires all chunks to run simultaneously,
+    //     which may take more resources than the cluster has.
+    // See also https://github.com/druid-io/druid/pull/4004
+    return runner;
   }
 
   @Override
