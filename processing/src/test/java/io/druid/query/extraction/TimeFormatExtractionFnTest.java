@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 public class TimeFormatExtractionFnTest
 {
@@ -171,7 +172,16 @@ public class TimeFormatExtractionFnTest
         true
     );
 
+    TimeFormatExtractionFn fn4 = new TimeFormatExtractionFn(
+        null,
+        null,
+        null,
+        null,
+        false
+    );
+
     Assert.assertFalse(Arrays.equals(fn.getCacheKey(), fn2.getCacheKey()));
+    Assert.assertFalse(Arrays.equals(fn.getCacheKey(), fn4.getCacheKey()));
     Assert.assertTrue(Arrays.equals(fn2.getCacheKey(), fn3.getCacheKey()));
   }
 }
