@@ -229,9 +229,9 @@ For a regular dimension, it assumes the string is formatted in
 ```json
 { "type" : "timeFormat",
   "format" : <output_format> (optional),
-  "timeZone" : <time_zone> (optional),
-  "locale" : <locale> (optional),
-  "granularity" : <granularity> (optional) },
+  "timeZone" : <time_zone> (optional, default UTC),
+  "locale" : <locale> (optional, default current locale),
+  "granularity" : <granularity> (optional, default none) },
   "asMillis" : <true or false> (optional) }
 ```
 
