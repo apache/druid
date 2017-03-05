@@ -20,10 +20,8 @@
 package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.audit.AuditManager;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.audit.SQLAuditManager;
@@ -34,8 +32,8 @@ import org.skife.jdbi.v2.IDBI;
 public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvider
 {
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataRuleManagerConfig> config;
-  private final Supplier<MetadataStorageTablesConfig> dbTables;
+  private final MetadataRuleManagerConfig config;
+  private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
   private final IDBI dbi;
@@ -44,8 +42,8 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
   @Inject
   public SQLMetadataRuleManagerProvider(
       ObjectMapper jsonMapper,
-      Supplier<MetadataRuleManagerConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables,
+      MetadataRuleManagerConfig config,
+      MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
       Lifecycle lifecycle,
       SQLAuditManager auditManager
@@ -72,7 +70,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
             {
               connector.createRulesTable();
               SQLMetadataRuleManager.createDefaultRule(
-                  dbi, dbTables.get().getRulesTable(), config.get().getDefaultRule(), jsonMapper
+                  dbi, dbTables.getRulesTable(), config.getDefaultRule(), jsonMapper
               );
             }
 
