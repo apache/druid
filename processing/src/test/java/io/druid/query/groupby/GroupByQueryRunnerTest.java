@@ -7975,8 +7975,24 @@ public class GroupByQueryRunnerTest
                 QueryRunnerTestHelper.rowsCount,
                 new LongSumAggregatorFactory("qlLong", "qualityLong"),
                 new DoubleSumAggregatorFactory("qlFloat", "qualityLong"),
+                new JavaScriptAggregatorFactory(
+                    "qlJs",
+                    ImmutableList.of("qualityLong"),
+                    "function(a,b) { return a + b; }",
+                    "function() { return 0; }",
+                    "function(a,b) { return a + b }",
+                    JavaScriptConfig.getEnabledInstance()
+                ),
                 new DoubleSumAggregatorFactory("qfFloat", "qualityFloat"),
-                new LongSumAggregatorFactory("qfLong", "qualityFloat")
+                new LongSumAggregatorFactory("qfLong", "qualityFloat"),
+                new JavaScriptAggregatorFactory(
+                    "qfJs",
+                    ImmutableList.of("qualityFloat"),
+                    "function(a,b) { return a + b; }",
+                    "function() { return 0; }",
+                    "function(a,b) { return a + b }",
+                    JavaScriptConfig.getEnabledInstance()
+                )
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -7989,8 +8005,10 @@ public class GroupByQueryRunnerTest
             "rows", 1L,
             "qlLong", 1700L,
             "qlFloat", 1700.0,
+            "qlJs", 1700.0,
             "qfFloat", 17000.0,
-            "qfLong", 17000L
+            "qfLong", 17000L,
+            "qfJs", 17000.0
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-02",
@@ -7998,8 +8016,10 @@ public class GroupByQueryRunnerTest
             "rows", 1L,
             "qlLong", 1700L,
             "qlFloat", 1700.0,
+            "qlJs", 1700.0,
             "qfFloat", 17000.0,
-            "qfLong", 17000L
+            "qfLong", 17000L,
+            "qfJs", 17000.0
         )
     );
 
