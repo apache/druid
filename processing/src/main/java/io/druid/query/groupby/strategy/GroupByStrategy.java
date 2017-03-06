@@ -22,9 +22,11 @@ package io.druid.query.groupby.strategy;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.segment.StorageAdapter;
 
@@ -50,6 +52,15 @@ public interface GroupByStrategy
    * @return true if this strategy is cacheable, otherwise false.
    */
   boolean isCacheable(boolean willMergeRunners);
+
+  /**
+   * Decorate a runner with an interval chunking decorator.
+   */
+  QueryRunner<Row> createIntervalChunkingRunner(
+      final IntervalChunkingQueryRunnerDecorator decorator,
+      final QueryRunner<Row> runner,
+      final GroupByQueryQueryToolChest toolChest
+  );
 
   Sequence<Row> mergeResults(
       QueryRunner<Row> baseRunner,
