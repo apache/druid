@@ -39,6 +39,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -49,10 +50,10 @@ import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
@@ -114,7 +115,7 @@ public class TopNQueryRunnerTest
                 TestQueryRunners.getPool(),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
                 ),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -136,7 +137,7 @@ public class TopNQueryRunnerTest
                 ),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
                 ),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -183,7 +184,10 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
+    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(runner),
+        chest
+    );
     return mergeRunner.run(query, context);
   }
 
@@ -346,7 +350,6 @@ public class TopNQueryRunnerTest
     );
     assertExpectedResults(expectedResults, query);
   }
-
 
   @Test
   public void testFullOnTopNOverUniques()
@@ -607,6 +610,120 @@ public class TopNQueryRunnerTest
         )
     );
     assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverFirstLastAggregatorChunkPeriod()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new LongFirstAggregatorFactory("first", "index"),
+                new LongLastAggregatorFactory("last", "index")
+            )
+        )
+        .context(ImmutableMap.<String, Object>of("chunkPeriod", "P1D"))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000L)
+                        .put("last", 1127L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800L)
+                        .put("last", 943L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100L)
+                        .put("last", 155L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1203L)
+                        .put("last", 1292L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1667L)
+                        .put("last", 1101L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 132L)
+                        .put("last", 114L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1124L)
+                        .put("last", 1366L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1166L)
+                        .put("last", 1063L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 153L)
+                        .put("last", 125L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1314L)
+                        .put("last", 1029L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1447L)
+                        .put("last", 780L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 135L)
+                        .put("last", 120L)
+                        .build()
+                )
+            )
+        )
+    );
+
+    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(query);
+    TestHelper.assertExpectedResults(expectedResults, retval);
   }
 
   @Test
@@ -3619,7 +3736,10 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> Runner = chest.mergeResults(chest.preMergeQueryDecoration(runner));
+    final QueryRunner<Result<TopNResultValue>> Runner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(chest.preMergeQueryDecoration(runner)),
+        chest
+    );
     return Runner.run(query, context);
   }
 

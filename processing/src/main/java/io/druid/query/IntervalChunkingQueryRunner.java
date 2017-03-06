@@ -29,6 +29,7 @@ import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -42,6 +43,8 @@ import java.util.concurrent.ExecutorService;
  */
 public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
 {
+  private static final DateTime EPOCH = new DateTime(0L);
+
   private final QueryRunner<T> baseRunner;
 
   private final QueryToolChest<T, Query<T>> toolChest;
@@ -65,7 +68,9 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final Period chunkPeriod = getChunkPeriod(query);
-    if (chunkPeriod.toStandardDuration().getMillis() == 0) {
+
+    // Check for non-empty chunkPeriod, avoiding toStandardDuration since that cannot handle periods like P1M.
+    if (EPOCH.plus(chunkPeriod).getMillis() == EPOCH.getMillis()) {
       return baseRunner.run(query, responseContext);
     }
 
