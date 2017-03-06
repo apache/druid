@@ -162,7 +162,7 @@ public class GroupByQueryRunnerTest
     @Override
     public int intermediateComputeSizeBytes()
     {
-      return 4 * 1024 * 1024;
+      return 10 * 1024 * 1024;
     }
 
     @Override
