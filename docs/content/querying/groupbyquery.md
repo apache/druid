@@ -136,6 +136,21 @@ merging is always single-threaded. Because the broker merges results using the i
 the full result set before returning any results. On both the data nodes and the broker, the merging index is fully
 on-heap by default, but it can optionally store aggregated values off-heap.
 
+#### Differences between v1 and v2
+
+Query API and results are compatible between the two engines; however, there are some differences from a cluster
+configuration perspective:
+
+- groupBy v1 merges results in heap, whereas groupBy v2 merges results off-heap. As a result, optimal configuration for
+your Druid nodes may involve less heap (-Xmx, -Xms) and more direct memory (-XX:MaxDirectMemorySize).
+- groupBy v1 imposes no limit on the number of concurrently running queries, whereas groupBy v2 controls memory usage
+by using a finite-sized merge buffer pool. By default, the number of merge buffers is 1/4 the number of processing
+threads. You can adjust this as necessary to balance concurrency and memory usage.
+- groupBy v1 supports caching on either the broker or historical nodes, whereas groupBy v2 only supports caching on
+historical nodes.
+- groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the broker, whereas groupBy v2
+ignores chunkPeriod.
+
 #### Alternatives
 
 There are some situations where other query types may be a better choice than groupBy.
