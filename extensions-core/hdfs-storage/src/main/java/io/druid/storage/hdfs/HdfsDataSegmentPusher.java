@@ -93,79 +93,87 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         storageDir
     );
 
-    Path tmpFile = new Path(String.format(
+    Path tmpIndexFile = new Path(String.format(
         "%s/%s/%s/%s_index.zip",
         fullyQualifiedStorageDirectory,
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
         segment.getShardSpec().getPartitionNum()
     ));
-    FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
+    FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
 
-    fs.mkdirs(tmpFile.getParent());
-    log.info("Compressing files from[%s] to [%s]", inDir, tmpFile);
+    fs.mkdirs(tmpIndexFile.getParent());
+    log.info("Compressing files from[%s] to [%s]", inDir, tmpIndexFile);
 
     final long size;
     final DataSegment dataSegment;
-    try (FSDataOutputStream out = fs.create(tmpFile)) {
+    try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
       size = CompressionUtils.zip(inDir, out);
-      Path outFile = new Path(String.format(
+      final Path outIndexFile = new Path(String.format(
           "%s/%s/%d_index.zip",
           fullyQualifiedStorageDirectory,
           storageDir,
           segment.getShardSpec().getPartitionNum()
       ));
 
-      final Path outDir = outFile.getParent();
-      dataSegment = createDescriptorFile(
-          segment.withLoadSpec(makeLoadSpec(outFile))
-                 .withSize(size)
-                 .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
-          tmpFile.getParent(),
-          fs,
+      final Path outDescriptorFile = new Path(String.format(
+          "%s/%s/%d_descriptor.json",
+          fullyQualifiedStorageDirectory,
+          storageDir,
           segment.getShardSpec().getPartitionNum()
+      ));
+
+      dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile))
+                           .withSize(size)
+                           .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
+
+      final Path tmpDescriptorFile = new Path(
+          tmpIndexFile.getParent(),
+          String.format("%s_descriptor.json", dataSegment.getShardSpec().getPartitionNum())
       );
 
+      log.info("Creating descriptor file at[%s]", tmpDescriptorFile);
+      ByteSource
+          .wrap(jsonMapper.writeValueAsBytes(dataSegment))
+          .copyTo(new HdfsOutputStreamSupplier(fs, tmpDescriptorFile));
+
       // Create parent if it does not exist, recreation is not an error
-      fs.mkdirs(outDir.getParent());
-      if (!HadoopFsWrapper.rename(fs, tmpFile.getParent(), outDir)) {
-        if (fs.exists(outDir)) {
-          log.info(
-              "Unable to rename temp directory[%s] to segment directory[%s]. It is already pushed by a replica task.",
-              tmpFile.getParent(),
-              outDir
-          );
-        } else {
-          throw new IOException(String.format(
-              "Failed to rename temp directory[%s] and segment directory[%s] is not present.",
-              tmpFile.getParent(),
-              outDir
-          ));
-        }
-      }
+      fs.mkdirs(outIndexFile.getParent());
+      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile);
+      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
     }
     finally {
       try {
-        if (fs.exists(tmpFile.getParent()) && !fs.delete(tmpFile.getParent(), true)) {
-          log.error("Failed to delete temp directory[%s]", tmpFile.getParent());
+        if (fs.exists(tmpIndexFile.getParent()) && !fs.delete(tmpIndexFile.getParent(), true)) {
+          log.error("Failed to delete temp directory[%s]", tmpIndexFile.getParent());
         }
       }
       catch (IOException ex) {
-        log.error(ex, "Failed to delete temp directory[%s]", tmpFile.getParent());
+        log.error(ex, "Failed to delete temp directory[%s]", tmpIndexFile.getParent());
       }
     }
 
     return dataSegment;
   }
 
-  private DataSegment createDescriptorFile(DataSegment segment, Path outDir, final FileSystem fs, final int partitionNumber) throws IOException
+  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
-    final Path descriptorFile = new Path(outDir, String.format("%s_descriptor.json", partitionNumber));
-    log.info("Creating descriptor file at[%s]", descriptorFile);
-    ByteSource
-        .wrap(jsonMapper.writeValueAsBytes(segment))
-        .copyTo(new HdfsOutputStreamSupplier(fs, descriptorFile));
-    return segment;
+    if (!HadoopFsWrapper.rename(fs, from, to)) {
+      if (fs.exists(to)) {
+        log.info(
+            "Unable to rename temp Index file[%s] to final segment path [%s]. "
+            + "It is already pushed by a replica task.",
+            from,
+            to
+        );
+      } else {
+        throw new IOException(String.format(
+            "Failed to rename temp Index file[%s] and final segment path[%s] is not present.",
+            from,
+            to
+        ));
+      }
+    }
   }
 
   private ImmutableMap<String, Object> makeLoadSpec(Path outFile)
