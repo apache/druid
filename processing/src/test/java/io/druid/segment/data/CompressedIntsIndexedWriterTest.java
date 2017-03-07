@@ -114,7 +114,7 @@ public class CompressedIntsIndexedWriterTest
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
 
     CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
-        ioPeon, "test", chunkFactor, byteOrder, compressionStrategy
+        "test", chunkFactor, byteOrder, compressionStrategy
     );
     CompressedIntsIndexedSupplier supplierFromList = CompressedIntsIndexedSupplier.fromList(
         Ints.asList(vals), chunkFactor, byteOrder, compressionStrategy
@@ -123,10 +123,9 @@ public class CompressedIntsIndexedWriterTest
     for (int val : vals) {
       writer.add(val);
     }
-    writer.close();
     long writtenLength = writer.getSerializedSize();
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-    writer.writeToChannel(outputChannel, smoosher);
+    writer.writeTo(outputChannel, smoosher);
     outputChannel.close();
     smoosher.close();
 
@@ -193,10 +192,9 @@ public class CompressedIntsIndexedWriterTest
           chunkFactor,
           compressionStrategy,
           new GenericIndexedWriter<>(
-              ioPeon, "test",
-              CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compressionStrategy,
-                                                                  chunkFactor
-              ), Longs.BYTES * 10000
+              "test",
+              CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compressionStrategy, chunkFactor),
+              Longs.BYTES * 10000
           )
       );
 
@@ -204,11 +202,10 @@ public class CompressedIntsIndexedWriterTest
       for (int val : vals) {
         writer.add(val);
       }
-      writer.close();
       final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
           "test", writer.getSerializedSize()
       );
-      writer.writeToChannel(channel, smoosher);
+      writer.writeTo(channel, smoosher);
       channel.close();
       smoosher.close();
 

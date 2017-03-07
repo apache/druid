@@ -19,11 +19,8 @@
 
 package io.druid.segment;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
-import com.google.common.io.OutputSupplier;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -40,11 +37,12 @@ import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 
 /**
  */
@@ -67,39 +65,40 @@ public class MetricHolder
     return retVal;
   }
 
-  public static void writeComplexMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, String typeName, GenericIndexedWriter column
-  ) throws IOException
+  public static void writeComplexMetric(File file, String name, String typeName, GenericIndexedWriter column)
+      throws IOException
   {
-    try (OutputStream out = outSupplier.getOutput()) {
-      out.write(version);
+    try (FileChannel out = FileChannel.open(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+      writeVersion(out);
       serializerUtils.writeString(out, name);
       serializerUtils.writeString(out, typeName);
-      final InputSupplier<InputStream> supplier = column.combineStreams();
-      try (InputStream in = supplier.getInput()) {
-        ByteStreams.copy(in, out);
-      }
+      column.writeTo(out, null);
     }
   }
 
-  public static void writeFloatMetric(
-      final ByteSink outSupplier, String name, FloatSupplierSerializer column
-  ) throws IOException
+  static void writeFloatMetric(File outFile, String name, FloatSupplierSerializer column) throws IOException
   {
-    outSupplier.write(version);
-    serializerUtils.writeString(toOutputSupplier(outSupplier), name);
-    serializerUtils.writeString(toOutputSupplier(outSupplier), "float");
-    column.closeAndConsolidate(outSupplier);
+    try (FileChannel out = FileChannel.open(outFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+      writeVersion(out);
+      serializerUtils.writeString(out, name);
+      serializerUtils.writeString(out, "float");
+      column.writeTo(out, null);
+    }
   }
 
-  public static void writeLongMetric(
-      ByteSink outSupplier, String name, LongSupplierSerializer column
-  ) throws IOException
+  public static void writeLongMetric(File outFile, String name, LongSupplierSerializer column) throws IOException
   {
-    outSupplier.write(version);
-    serializerUtils.writeString(toOutputSupplier(outSupplier), name);
-    serializerUtils.writeString(toOutputSupplier(outSupplier), "long");
-    column.closeAndConsolidate(outSupplier);
+    try (FileChannel out = FileChannel.open(outFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+      writeVersion(out);
+      serializerUtils.writeString(out, name);
+      serializerUtils.writeString(out, "long");
+      column.writeTo(out, null);
+    }
+  }
+
+  private static void writeVersion(FileChannel out) throws IOException
+  {
+    Channels.writeFully(out, ByteBuffer.wrap(version));
   }
 
   public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper) throws IOException
@@ -142,19 +141,6 @@ public class MetricHolder
     }
 
     return holder;
-  }
-
-  // This is only for guava14 compat. Eventually it should be able to be removed.
-  private static OutputSupplier<? extends OutputStream> toOutputSupplier(final ByteSink sink)
-  {
-    return new OutputSupplier<OutputStream>()
-    {
-      @Override
-      public OutputStream getOutput() throws IOException
-      {
-        return sink.openStream();
-      }
-    };
   }
 
   private final String name;

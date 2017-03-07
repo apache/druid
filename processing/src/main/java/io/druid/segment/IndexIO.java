@@ -42,10 +42,10 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -801,8 +801,8 @@ public class IndexIO
         final long numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16
                               + serializerUtils.getSerializedStringByteSize(segmentBitmapSerdeFactoryString);
         final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
-        cols.writeToChannel(writer);
-        dims9.writeToChannel(writer);
+        cols.writeTo(writer, v9Smoosher);
+        dims9.writeTo(writer, v9Smoosher);
         serializerUtils.writeLong(writer, dataInterval.getStartMillis());
         serializerUtils.writeLong(writer, dataInterval.getEndMillis());
         serializerUtils.writeString(writer, segmentBitmapSerdeFactoryString);
@@ -830,11 +830,11 @@ public class IndexIO
       ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
       serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
 
-      try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-          dimension, serdeficator.numBytes() + specBytes.size()
+      try(final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+          dimension, serdeficator.getSerializedSize() + specBytes.size()
       )) {
         specBytes.writeTo(channel);
-        serdeficator.write(channel, v9Smoosher);
+        serdeficator.writeTo(channel, v9Smoosher);
       }
     }
   }

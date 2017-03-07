@@ -24,7 +24,6 @@ import io.druid.data.input.InputRow;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
@@ -122,9 +121,9 @@ public class VarianceSerde extends ComplexMetricSerde
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  public GenericColumnSerializer getSerializer(String column)
   {
-    return LargeColumnSupportedComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
+    return LargeColumnSupportedComplexColumnSerializer.create(column, this.getObjectStrategy());
   }
 
 }

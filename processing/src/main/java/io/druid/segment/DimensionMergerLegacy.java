@@ -19,12 +19,7 @@
 
 package io.druid.segment;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.OutputSupplier;
-import io.druid.common.guava.FileOutputSupplier;
-
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
@@ -42,7 +37,7 @@ public interface DimensionMergerLegacy<EncodedKeyComponentType> extends Dimensio
    * @param valueEncodingFile Destination file
    * @throws IOException
    */
-  void writeValueMetadataToFile(FileOutputSupplier valueEncodingFile) throws IOException;
+  void writeValueMetadataToFile(File valueEncodingFile) throws IOException;
 
 
   /**
@@ -50,7 +45,7 @@ public interface DimensionMergerLegacy<EncodedKeyComponentType> extends Dimensio
    * @param rowValueOut Destination file
    * @throws IOException
    */
-  void writeRowValuesToFile(FileOutputSupplier rowValueOut) throws IOException;
+  void writeRowValuesToFile(File rowValueOut) throws IOException;
 
 
   /**
@@ -59,10 +54,7 @@ public interface DimensionMergerLegacy<EncodedKeyComponentType> extends Dimensio
    * @param spatialOut Destination file for spatial indexes
    * @throws IOException
    */
-  void writeIndexesToFiles(
-      ByteSink invertedOut,
-      OutputSupplier<FileOutputStream> spatialOut
-  ) throws IOException;
+  void writeIndexesToFiles(File invertedOut, File spatialOut) throws IOException;
 
 
   File makeDimFile() throws IOException;

@@ -19,49 +19,40 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializer
 {
-  private final IOPeon ioPeon;
   private final int sizePer;
   private final GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener;
   private final CompressedObjectStrategy.CompressionStrategy compression;
-  private final String metaFile;
 
-  private long metaCount = 0;
   private int numInserted = 0;
   private FloatBuffer endBuffer;
 
-  public BlockLayoutFloatSupplierSerializer(
-      IOPeon ioPeon,
+  BlockLayoutFloatSupplierSerializer(
       String filenameBase,
       ByteOrder order,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
-    this.ioPeon = ioPeon;
     this.sizePer = CompressedPools.BUFFER_SIZE / Floats.BYTES;
     this.flattener = new GenericIndexedWriter<>(
-        ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+        filenameBase,
+        CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
     );
-    this.metaFile = filenameBase + ".format";
     this.compression = compression;
 
     endBuffer = FloatBuffer.allocate(sizePer);
@@ -95,47 +86,40 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
   }
 
   @Override
-  public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
+  public long getSerializedSize() throws IOException
   {
-    close();
-    try (OutputStream out = consolidatedOut.openStream();
-         InputStream meta = ioPeon.makeInputStream(metaFile)) {
-      ByteStreams.copy(meta, out);
-      ByteStreams.copy(flattener.combineStreams(), out);
-    }
+    writeEndBuffer();
+    return metaSize() + flattener.getSerializedSize();
   }
 
   @Override
-  public void close() throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    endBuffer.limit(endBuffer.position());
-    endBuffer.rewind();
-    flattener.write(StupidResourceHolder.create(endBuffer));
-    endBuffer = null;
-    flattener.close();
+    writeEndBuffer();
 
-    try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
-      metaOut.write(CompressedFloatsIndexedSupplier.version);
-      metaOut.write(Ints.toByteArray(numInserted));
-      metaOut.write(Ints.toByteArray(sizePer));
-      metaOut.write(compression.getId());
-      metaOut.close();
-      metaCount = metaOut.getCount();
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(CompressedFloatsIndexedSupplier.version);
+    meta.putInt(numInserted);
+    meta.putInt(sizePer);
+    meta.put(compression.getId());
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    flattener.writeTo(channel, smoosher);
+  }
+
+  private void writeEndBuffer() throws IOException
+  {
+    if (endBuffer != null && numInserted > 0) {
+      endBuffer.limit(endBuffer.position());
+      endBuffer.rewind();
+      flattener.write(StupidResourceHolder.create(endBuffer));
+      endBuffer = null;
     }
   }
 
-  @Override
-  public long getSerializedSize()
+  private int metaSize()
   {
-    return metaCount + flattener.getSerializedSize();
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    try (InputStream meta = ioPeon.makeInputStream(metaFile)) {
-      ByteStreams.copy(Channels.newChannel(meta), channel);
-      flattener.writeToChannel(channel, smoosher);
-    }
+    return 1 + Ints.BYTES + Ints.BYTES + 1;
   }
 }

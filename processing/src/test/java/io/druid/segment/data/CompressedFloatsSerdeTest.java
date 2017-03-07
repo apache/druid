@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.io.ByteSink;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -31,7 +30,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
@@ -107,8 +105,7 @@ public class CompressedFloatsSerdeTest
 
   public void testWithValues(float[] values) throws Exception
   {
-    FloatSupplierSerializer serializer = CompressionFactory.getFloatSerializer(new IOPeonForTesting(), "test", order, compressionStrategy
-    );
+    FloatSupplierSerializer serializer = CompressionFactory.getFloatSerializer("test", order, compressionStrategy);
     serializer.open();
 
     for (float value : values) {
@@ -117,16 +114,7 @@ public class CompressedFloatsSerdeTest
     Assert.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    serializer.closeAndConsolidate(
-        new ByteSink()
-        {
-          @Override
-          public OutputStream openStream() throws IOException
-          {
-            return baos;
-          }
-        }
-    );
+    serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
@@ -178,7 +166,7 @@ public class CompressedFloatsSerdeTest
   private void testSupplierSerde(CompressedFloatsIndexedSupplier supplier, float[] vals) throws IOException
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    supplier.writeToChannel(Channels.newChannel(baos));
+    supplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);

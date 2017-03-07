@@ -31,15 +31,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import com.google.common.io.ByteSink;
-import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.druid.collections.CombiningIterable;
-import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
@@ -60,15 +56,14 @@ import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.LongSupplierSerializer;
-import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.serde.ComplexMetricColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.serde.Serializer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
@@ -84,6 +79,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -618,11 +614,6 @@ public class IndexMerger
       final File v8OutDir = new File(outDir, "v8-tmp");
       FileUtils.forceMkdir(v8OutDir);
       registerDeleteDirectory(closer, v8OutDir);
-      File tmpPeonFilesDir = new File(v8OutDir, "tmpPeonFiles");
-      FileUtils.forceMkdir(tmpPeonFilesDir);
-      registerDeleteDirectory(closer, tmpPeonFilesDir);
-      final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, true);
-      closer.register(ioPeon);
       /*************  Main index.drd file **************/
       progress.progress();
       long startTime = System.currentTimeMillis();
@@ -632,8 +623,8 @@ public class IndexMerger
            FileChannel channel = fileOutputStream.getChannel()) {
         channel.write(ByteBuffer.wrap(new byte[]{IndexIO.V8_VERSION}));
 
-        GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
-        GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
+        GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY).writeTo(channel, null);
+        GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.STRING_STRATEGY).writeTo(channel, null);
 
         DateTime minTime = new DateTime(JodaUtils.MAX_INSTANT);
         DateTime maxTime = new DateTime(JodaUtils.MIN_INSTANT);
@@ -654,21 +645,20 @@ public class IndexMerger
       progress.progress();
       startTime = System.currentTimeMillis();
 
-      final ArrayList<FileOutputSupplier> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final ArrayList<File> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
       final DimensionHandler[] handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
       final List<DimensionMerger> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerLegacy merger = handlers[i].makeLegacyMerger(
             indexSpec,
             v8OutDir,
-            ioPeon,
             dimCapabilities.get(i),
             progress
         );
         mergers.add(merger);
         merger.writeMergedValueMetadata(indexes);
 
-        FileOutputSupplier dimOut = new FileOutputSupplier(merger.makeDimFile(), true);
+        File dimOut = merger.makeDimFile();
         merger.writeValueMetadataToFile(dimOut);
         dimOuts.add(dimOut);
       }
@@ -689,7 +679,9 @@ public class IndexMerger
       );
 
       LongSupplierSerializer timeWriter = CompressionFactory.getLongSerializer(
-          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, indexSpec.getLongEncoding(),
+          "little_end_time",
+          IndexIO.BYTE_ORDER,
+          indexSpec.getLongEncoding(),
           CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
       );
 
@@ -702,10 +694,10 @@ public class IndexMerger
         ValueType type = valueTypes.get(metric);
         switch (type) {
           case LONG:
-            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression, longEncoding));
+            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, metCompression, longEncoding));
             break;
           case FLOAT:
-            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression));
+            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, metCompression));
             break;
           case COMPLEX:
             final String typeName = metricTypeNames.get(metric);
@@ -715,7 +707,7 @@ public class IndexMerger
               throw new ISE("Unknown type[%s]", typeName);
             }
 
-            metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+            metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, serde));
             break;
           default:
             throw new ISE("Unknown type[%s]", type);
@@ -778,8 +770,7 @@ public class IndexMerger
 
       final File timeFile = IndexIO.makeTimeFile(v8OutDir, IndexIO.BYTE_ORDER);
       timeFile.delete();
-      ByteSink out = Files.asByteSink(timeFile, FileWriteMode.APPEND);
-      timeWriter.closeAndConsolidate(out);
+      writeTo(timeWriter, timeFile);
       IndexIO.checkFileSize(timeFile);
 
       for (MetricColumnSerializer metWriter : metWriters) {
@@ -798,16 +789,14 @@ public class IndexMerger
 
       final File invertedFile = new File(v8OutDir, "inverted.drd");
       Files.touch(invertedFile);
-      out = Files.asByteSink(invertedFile, FileWriteMode.APPEND);
 
       final File geoFile = new File(v8OutDir, "spatial.drd");
       Files.touch(geoFile);
-      OutputSupplier<FileOutputStream> spatialOut = Files.newOutputStreamSupplier(geoFile, true);
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerLegacy legacyMerger = (DimensionMergerLegacy) mergers.get(i);
         legacyMerger.writeIndexes(rowNumConversions, closer);
-        legacyMerger.writeIndexesToFiles(out, spatialOut);
+        legacyMerger.writeIndexesToFiles(invertedFile, geoFile);
         legacyMerger.writeRowValuesToFile(dimOuts.get(i));
       }
       log.info("outDir[%s] completed inverted.drd and wrote dimensions in %,d millis.", v8OutDir, System.currentTimeMillis() - startTime);
@@ -884,6 +873,13 @@ public class IndexMerger
     }
     finally {
       closer.close();
+    }
+  }
+
+  static void writeTo(Serializer serializer, File outFile) throws IOException
+  {
+    try (FileChannel out = FileChannel.open(outFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+      serializer.writeTo(out, null);
     }
   }
 
@@ -1037,8 +1033,8 @@ public class IndexMerger
     try (FileChannel channel = new FileOutputStream(indexFile).getChannel()) {
       channel.write(ByteBuffer.wrap(new byte[]{versionId}));
 
-      availableDimensions.writeToChannel(channel);
-      availableMetrics.writeToChannel(channel);
+      availableDimensions.writeTo(channel, null);
+      availableMetrics.writeTo(channel, null);
       serializerUtils.writeString(
           channel, String.format("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
       );

@@ -142,7 +142,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
     final CompressedVSizeIntsIndexedSupplier theSupplier = CompressedVSizeIntsIndexedSupplier.fromList(
         Ints.asList(vals), Ints.max(vals), chunkSize, byteOrder, compressionStrategy
     );
-    theSupplier.writeToChannel(Channels.newChannel(baos));
+    theSupplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);

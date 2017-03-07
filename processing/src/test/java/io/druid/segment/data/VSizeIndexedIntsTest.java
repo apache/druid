@@ -52,7 +52,7 @@ public class VSizeIndexedIntsTest
     VSizeIndexedInts ints = VSizeIndexedInts.fromArray(array);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ints.writeToChannel(Channels.newChannel(baos));
+    ints.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(ints.getSerializedSize(), bytes.length);

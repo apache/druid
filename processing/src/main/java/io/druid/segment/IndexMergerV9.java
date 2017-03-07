@@ -25,14 +25,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.common.utils.JodaUtils;
-import io.druid.java.util.common.io.Closer;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
@@ -143,10 +142,7 @@ public class IndexMergerV9 extends IndexMerger
       final IOPeon ioPeon = new TmpFileIOPeon(tmpPeonFilesDir, false);
       closer.register(ioPeon);
       long startTime = System.currentTimeMillis();
-      ByteStreams.write(
-          Ints.toByteArray(IndexIO.V9_VERSION),
-          Files.newOutputStreamSupplier(new File(outDir, "version.bin"))
-      );
+      Files.asByteSink(new File(outDir, "version.bin")).write(Ints.toByteArray(IndexIO.V9_VERSION));
       log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
 
       progress.progress();
@@ -165,18 +161,13 @@ public class IndexMergerV9 extends IndexMerger
       final DimensionHandler[] handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
       final List<DimensionMerger> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
-        mergers.add(handlers[i].makeMerger(indexSpec, v9TmpDir, ioPeon, dimCapabilities.get(i), progress));
+        mergers.add(handlers[i].makeMerger(indexSpec, v9TmpDir, dimCapabilities.get(i), progress));
       }
 
       /************* Setup Dim Conversions **************/
       progress.progress();
       startTime = System.currentTimeMillis();
-      final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
-      final ArrayList<Boolean> dimensionSkipFlag = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      writeDimValueAndSetupDimConversion(
-          adapters, progress, mergedDimensions, mergers
-      );
+      writeDimValueAndSetupDimConversion(adapters, progress, mergedDimensions, mergers);
       log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
 
       /************* Walk through data sets, merge them, and write merged columns *************/
@@ -190,15 +181,13 @@ public class IndexMergerV9 extends IndexMerger
           handlers,
           mergers
       );
-      final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon, indexSpec);
+      final LongColumnSerializer timeWriter = setupTimeWriter(indexSpec);
       final ArrayList<GenericColumnSerializer> metWriters = setupMetricsWriters(
-          ioPeon, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec
+          mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec
       );
       final List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
 
-      mergeIndexesAndWriteColumns(
-          adapters, progress, theRows, timeWriter, metWriters, rowNumConversions, mergers
-      );
+      mergeIndexesAndWriteColumns(adapters, progress, theRows, timeWriter, metWriters, rowNumConversions, mergers);
 
       /************ Create Inverted Indexes and Finalize Build Columns *************/
       final String section = "build inverted index and columns";
@@ -220,9 +209,7 @@ public class IndexMergerV9 extends IndexMerger
 
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();
-      makeIndexBinary(
-          v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers
-      );
+      makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers);
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
       v9Smoosher.close();
@@ -287,8 +274,8 @@ public class IndexMergerV9 extends IndexMerger
                           + serializerUtils.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
     final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
-    cols.writeToChannel(writer);
-    dims.writeToChannel(writer);
+    cols.writeTo(writer, v9Smoosher);
+    dims.writeTo(writer, v9Smoosher);
 
     DateTime minTime = new DateTime(JodaUtils.MAX_INSTANT);
     DateTime maxTime = new DateTime(JodaUtils.MIN_INSTANT);
@@ -302,9 +289,7 @@ public class IndexMergerV9 extends IndexMerger
     serializerUtils.writeLong(writer, dataInterval.getStartMillis());
     serializerUtils.writeLong(writer, dataInterval.getEndMillis());
 
-    serializerUtils.writeString(
-        writer, bitmapSerdeFactoryType
-    );
+    serializerUtils.writeString(writer, bitmapSerdeFactoryType);
     writer.close();
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
@@ -330,7 +315,6 @@ public class IndexMergerV9 extends IndexMerger
       String metric = mergedMetrics.get(i);
       long metricStartTime = System.currentTimeMillis();
       GenericColumnSerializer writer = metWriters.get(i);
-      writer.close();
 
       final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
       ValueType type = metricsValueTypes.get(metric);
@@ -382,8 +366,6 @@ public class IndexMergerV9 extends IndexMerger
     progress.startSection(section);
     long startTime = System.currentTimeMillis();
 
-    timeWriter.close();
-
     final ColumnDescriptor serdeficator = ColumnDescriptor
         .builder()
         .setValueType(ValueType.LONG)
@@ -408,10 +390,11 @@ public class IndexMergerV9 extends IndexMerger
     ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
     serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
     try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-        columnName, serdeficator.numBytes() + specBytes.size()
+        columnName,
+        specBytes.size() + serdeficator.getSerializedSize()
     )) {
       specBytes.writeTo(channel);
-      serdeficator.write(channel, v9Smoosher);
+      serdeficator.writeTo(channel, v9Smoosher);
     }
   }
 
@@ -482,10 +465,11 @@ public class IndexMergerV9 extends IndexMerger
     progress.stopSection(section);
   }
 
-  private LongColumnSerializer setupTimeWriter(final IOPeon ioPeon, final IndexSpec indexSpec) throws IOException
+  private LongColumnSerializer setupTimeWriter(final IndexSpec indexSpec) throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
-        ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY,
+        "little_end_time",
+        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY,
         indexSpec.getLongEncoding()
     );
     // we will close this writer after we added all the timestamps
@@ -494,7 +478,6 @@ public class IndexMergerV9 extends IndexMerger
   }
 
   private ArrayList<GenericColumnSerializer> setupMetricsWriters(
-      final IOPeon ioPeon,
       final List<String> mergedMetrics,
       final Map<String, ValueType> metricsValueTypes,
       final Map<String, String> metricTypeNames,
@@ -509,10 +492,10 @@ public class IndexMergerV9 extends IndexMerger
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(ioPeon, metric, metCompression, longEncoding);
+          writer = LongColumnSerializer.create(metric, metCompression, longEncoding);
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
+          writer = FloatColumnSerializer.create(metric, metCompression);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
@@ -520,7 +503,7 @@ public class IndexMergerV9 extends IndexMerger
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }
-          writer = serde.getSerializer(ioPeon, metric);
+          writer = serde.getSerializer(metric);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);

@@ -19,16 +19,11 @@
 
 package io.druid.segment;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.OutputSupplier;
-import io.druid.common.guava.FileOutputSupplier;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.IOPeon;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements DimensionMergerLegacy<Long>
@@ -39,12 +34,11 @@ public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements 
       String dimensionName,
       IndexSpec indexSpec,
       File outDir,
-      IOPeon ioPeon,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
-    super(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
+    super(dimensionName, indexSpec, outDir, capabilities, progress);
   }
 
   @Override
@@ -52,7 +46,7 @@ public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements 
   {
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    serializerV8 = new LongMetricColumnSerializer(dimensionName, outDir, ioPeon, metCompression, longEncoding);
+    serializerV8 = new LongMetricColumnSerializer(dimensionName, outDir, metCompression, longEncoding);
     serializerV8.open();
   }
 
@@ -63,22 +57,20 @@ public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements 
   }
 
   @Override
-  public void writeValueMetadataToFile(FileOutputSupplier valueEncodingFile) throws IOException
+  public void writeValueMetadataToFile(File valueEncodingFile) throws IOException
   {
     // longs have no metadata to write
   }
 
   @Override
-  public void writeRowValuesToFile(FileOutputSupplier rowValueOut) throws IOException
+  public void writeRowValuesToFile(File rowValueOut) throws IOException
   {
     // closing the serializer writes its data to the file
-    serializerV8.closeFile(rowValueOut.getFile());
+    serializerV8.closeFile(rowValueOut);
   }
 
   @Override
-  public void writeIndexesToFiles(
-      ByteSink invertedOut, OutputSupplier<FileOutputStream> spatialOut
-  ) throws IOException
+  public void writeIndexesToFiles(File invertedOut, File spatialOut) throws IOException
   {
     // longs have no indices to write
   }

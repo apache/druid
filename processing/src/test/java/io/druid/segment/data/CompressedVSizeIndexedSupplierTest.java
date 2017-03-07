@@ -87,7 +87,7 @@ public class CompressedVSizeIndexedSupplierTest
   public void testSerde() throws IOException
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    indexedSupplier.writeToChannel(Channels.newChannel(baos));
+    indexedSupplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);

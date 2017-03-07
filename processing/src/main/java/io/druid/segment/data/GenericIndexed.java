@@ -22,12 +22,15 @@ package io.druid.segment.data;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.io.Channels;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.serde.Serializer;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.io.Closeable;
@@ -67,7 +70,7 @@ import java.util.Iterator;
  * value files are identified as: String.format("%s_value_%d", columnName, fileNumber)
  * number of value files == numElements/numberOfElementsPerValueFile
  */
-public class GenericIndexed<T> implements Indexed<T>
+public class GenericIndexed<T> implements Indexed<T>, Serializer
 {
   static final byte VERSION_ONE = 0x1;
   static final byte VERSION_TWO = 0x2;
@@ -309,6 +312,7 @@ public class GenericIndexed<T> implements Indexed<T>
     return IndexedIterable.create(this).iterator();
   }
 
+  @Override
   public long getSerializedSize()
   {
     if (!versionOne) {
@@ -317,10 +321,11 @@ public class GenericIndexed<T> implements Indexed<T>
     return getSerializedSizeVersionOne();
   }
 
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  @Override
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     if (versionOne) {
-      writeToChannelVersionOne(channel);
+      writeToVersionOne(channel);
     } else {
       throw new UnsupportedOperationException(
           "GenericIndexed serialization for V2 is unsupported. Use GenericIndexedWriter instead.");
@@ -494,11 +499,7 @@ public class GenericIndexed<T> implements Indexed<T>
 
   private long getSerializedSizeVersionOne()
   {
-    return theBuffer.remaining()
-           + 1 // version byte
-           + 1 // allowReverseLookup flag
-           + Ints.BYTES // numBytesUsed
-           + Ints.BYTES; // numElements
+    return metaSize() + theBuffer.remaining();
   }
 
   private T getVersionOne(int index)
@@ -517,6 +518,14 @@ public class GenericIndexed<T> implements Indexed<T>
       endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
     }
     return copyBufferAndGet(firstValueBuffer, startOffset, endOffset);
+  }
+
+  private int metaSize()
+  {
+    return 1 // version byte
+           + 1 // allowReverseLookup flag
+           + Ints.BYTES // numBytesUsed
+           + Ints.BYTES; // numElements
   }
 
   private BufferIndexed singleThreadedVersionOne()
@@ -553,15 +562,17 @@ public class GenericIndexed<T> implements Indexed<T>
     };
   }
 
-  private void writeToChannelVersionOne(WritableByteChannel channel) throws IOException
+  private void writeToVersionOne(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{
-        VERSION_ONE,
-        allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED
-    }));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + Ints.BYTES)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
-    channel.write(theBuffer.asReadOnlyBuffer());
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(VERSION_ONE);
+    meta.put(allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED);
+    meta.putInt(theBuffer.remaining() + 4);
+    meta.putInt(size);
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    Channels.writeFully(channel, theBuffer.asReadOnlyBuffer());
   }
 
 

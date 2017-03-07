@@ -112,7 +112,7 @@ public class CompressedVSizeIntsIndexedWriterTest
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
 
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
-        ioPeon, "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy
+        "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy
     );
     CompressedVSizeIntsIndexedSupplier supplierFromList = CompressedVSizeIntsIndexedSupplier.fromList(
         Ints.asList(vals), vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy
@@ -121,10 +121,9 @@ public class CompressedVSizeIntsIndexedWriterTest
     for (int val : vals) {
       writer.add(val);
     }
-    writer.close();
     long writtenLength = writer.getSerializedSize();
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-    writer.writeToChannel(outputChannel, smoosher);
+    writer.writeTo(outputChannel, smoosher);
     outputChannel.close();
     smoosher.close();
 
@@ -179,7 +178,6 @@ public class CompressedVSizeIntsIndexedWriterTest
 
     int maxValue = vals.length > 0 ? Ints.max(vals) : 0;
     GenericIndexedWriter genericIndexed = new GenericIndexedWriter<>(
-        ioPeon,
         "test",
         CompressedByteBufferObjectStrategy.getBufferForOrder(
             byteOrder,
@@ -190,7 +188,10 @@ public class CompressedVSizeIntsIndexedWriterTest
         Longs.BYTES * 10000
     );
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
-        ioPeon, "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy,
+        vals.length > 0 ? Ints.max(vals) : 0,
+        chunkSize,
+        byteOrder,
+        compressionStrategy,
         genericIndexed
     );
     writer.open();
@@ -198,12 +199,11 @@ public class CompressedVSizeIntsIndexedWriterTest
       writer.add(val);
     }
 
-    writer.close();
     final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
         "test",
         writer.getSerializedSize()
     );
-    writer.writeToChannel(channel, smoosher);
+    writer.writeTo(channel, smoosher);
     channel.close();
     smoosher.close();
 

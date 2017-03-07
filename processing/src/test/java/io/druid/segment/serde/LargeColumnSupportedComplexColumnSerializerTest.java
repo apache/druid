@@ -64,7 +64,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
 
           LargeColumnSupportedComplexColumnSerializer serializer = LargeColumnSupportedComplexColumnSerializer
-              .createWithColumnSize(peon, "test", serde.getObjectStrategy(), columnSize);
+              .createWithColumnSize("test", serde.getObjectStrategy(), columnSize);
 
           serializer.open();
           for (int i = 0; i < aCase; i++) {
@@ -74,13 +74,12 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             baseCollector.fold(collector);
             serializer.serialize(collector);
           }
-          serializer.close();
 
           try (final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
               "test",
               serializer.getSerializedSize()
           )) {
-            serializer.writeToChannel(channel, v9Smoosher);
+            serializer.writeTo(channel, v9Smoosher);
           }
         }
 

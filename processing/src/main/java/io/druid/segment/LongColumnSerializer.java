@@ -22,7 +22,6 @@ package io.druid.segment;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.IOException;
@@ -35,31 +34,27 @@ import java.nio.channels.WritableByteChannel;
 public class LongColumnSerializer implements GenericColumnSerializer
 {
   public static LongColumnSerializer create(
-      IOPeon ioPeon,
       String filenameBase,
       CompressedObjectStrategy.CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding
   )
   {
-    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
+    return new LongColumnSerializer(filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
   }
 
-  private final IOPeon ioPeon;
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
   private LongSupplierSerializer writer;
 
-  public LongColumnSerializer(
-      IOPeon ioPeon,
+  private LongColumnSerializer(
       String filenameBase,
       ByteOrder byteOrder,
       CompressedObjectStrategy.CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding
   )
   {
-    this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
@@ -70,7 +65,6 @@ public class LongColumnSerializer implements GenericColumnSerializer
   public void open() throws IOException
   {
     writer = CompressionFactory.getLongSerializer(
-        ioPeon,
         String.format("%s.long_column", filenameBase),
         byteOrder,
         encoding,
@@ -87,21 +81,14 @@ public class LongColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void close() throws IOException
-  {
-    writer.close();
-  }
-
-  @Override
-  public long getSerializedSize()
+  public long getSerializedSize() throws IOException
   {
     return writer.getSerializedSize();
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    writer.writeToChannel(channel, smoosher);
+    writer.writeTo(channel, smoosher);
   }
-
 }

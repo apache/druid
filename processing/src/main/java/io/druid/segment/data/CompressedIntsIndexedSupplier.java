@@ -24,8 +24,10 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
@@ -96,23 +98,31 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   }
 
   @Override
-  public long getSerializedSize()
+  public long getSerializedSize() throws IOException
+  {
+    return metaSize() + baseIntBuffers.getSerializedSize();
+  }
+
+  @Override
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(VERSION);
+    meta.putInt(totalSize);
+    meta.putInt(sizePer);
+    meta.put(compression.getId());
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    baseIntBuffers.writeTo(channel, smoosher);
+  }
+
+  private int metaSize()
   {
     return 1 + // version
            4 + // totalSize
            4 + // sizePer
-           1 + // compressionId
-           baseIntBuffers.getSerializedSize(); // data
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
-  {
-    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
-    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    baseIntBuffers.writeToChannel(channel);
+           1;  // compressionId
   }
 
   public CompressedIntsIndexedSupplier convertByteOrder(ByteOrder order)

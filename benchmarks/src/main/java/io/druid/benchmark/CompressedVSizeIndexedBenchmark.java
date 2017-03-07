@@ -117,7 +117,7 @@ public class CompressedVSizeIndexedBenchmark
                   }
                 }
             )
-        ).asWritableSupplier()
+        )
     );
     this.uncompressed = VSizeIndexed.readFromByteBuffer(bufferUncompressed);
 
@@ -159,7 +159,7 @@ public class CompressedVSizeIndexedBenchmark
       }
     };
 
-    writableSupplier.writeToChannel(channel);
+    writableSupplier.writeTo(channel, null);
     buffer.rewind();
     return buffer;
   }

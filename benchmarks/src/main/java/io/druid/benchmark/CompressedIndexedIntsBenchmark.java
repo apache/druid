@@ -81,13 +81,7 @@ public class CompressedIndexedIntsBenchmark
         null
     ).get();
 
-    final ByteBuffer bufferUncompressed = serialize(
-        new VSizeIndexedInts.VSizeIndexedIntsSupplier(
-            VSizeIndexedInts.fromArray(
-                vals
-            )
-        )
-    );
+    final ByteBuffer bufferUncompressed = serialize(VSizeIndexedInts.fromArray(vals));
     this.uncompressed = VSizeIndexedInts.readFromByteBuffer(bufferUncompressed);
 
     filter = new BitSet();
@@ -128,7 +122,7 @@ public class CompressedIndexedIntsBenchmark
       }
     };
 
-    writableSupplier.writeToChannel(channel);
+    writableSupplier.writeTo(channel, null);
     buffer.rewind();
     return buffer;
   }

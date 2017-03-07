@@ -19,7 +19,9 @@
 
 package io.druid.segment;
 
+import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -57,7 +59,7 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
   //values - indexed integers representing actual values in each row
   private final CompressedVSizeIntsIndexedSupplier valueSupplier;
 
-  CompressedVSizeIndexedSupplier(
+  private CompressedVSizeIndexedSupplier(
       CompressedVSizeIntsIndexedSupplier offsetSupplier,
       CompressedVSizeIntsIndexedSupplier valueSupplier
   )
@@ -67,17 +69,17 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
   }
 
   @Override
-  public long getSerializedSize()
+  public long getSerializedSize() throws IOException
   {
     return 1 + offsetSupplier.getSerializedSize() + valueSupplier.getSerializedSize();
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version}));
-    offsetSupplier.writeToChannel(channel);
-    valueSupplier.writeToChannel(channel);
+    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{version}));
+    offsetSupplier.writeTo(channel, smoosher);
+    valueSupplier.writeTo(channel, smoosher);
   }
 
   public static CompressedVSizeIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper fileMapper)

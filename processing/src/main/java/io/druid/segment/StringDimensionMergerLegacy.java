@@ -19,38 +19,26 @@
 
 package io.druid.segment;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.io.Closer;
-import io.druid.java.util.common.ByteBufferUtils;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferWriter;
-import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
-import io.druid.segment.data.IOPeon;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexedWriter;
 
-import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.IntBuffer;
-import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 public class StringDimensionMergerLegacy extends StringDimensionMergerV9 implements DimensionMergerLegacy<int[]>
@@ -58,24 +46,22 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
   private static final Logger log = new Logger(StringDimensionMergerLegacy.class);
 
   private VSizeIndexedWriter encodedValueWriterV8;
-  private File dictionaryFile;
 
   public StringDimensionMergerLegacy(
       String dimensionName,
       IndexSpec indexSpec,
       File outDir,
-      IOPeon ioPeon,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
-    super(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
+    super(dimensionName, indexSpec, outDir, capabilities, progress);
   }
 
   @Override
   protected void setupEncodedValueWriter() throws IOException
   {
-    encodedValueWriterV8 = new VSizeIndexedWriter(ioPeon, dimensionName, cardinality);
+    encodedValueWriterV8 = new VSizeIndexedWriter(cardinality);
     encodedValueWriterV8.open();
   }
 
@@ -91,66 +77,35 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    final SerializerUtils serializerUtils = new SerializerUtils();
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
     String bmpFilename = String.format("%s.inverted", dimensionName);
-    bitmapWriter = new GenericIndexedWriter<>(
-        ioPeon,
-        bmpFilename,
-        bitmapSerdeFactory.getObjectStrategy()
-    );
+    bitmapWriter = new GenericIndexedWriter<>(bmpFilename, bitmapSerdeFactory.getObjectStrategy());
     bitmapWriter.open();
-
-    final MappedByteBuffer dimValsMapped = Files.map(dictionaryFile);
-    closer.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        ByteBufferUtils.unmap(dimValsMapped);
-      }
-    });
-
-    if (!dimensionName.equals(serializerUtils.readString(dimValsMapped))) {
-      throw new ISE("dimensions[%s] didn't equate!?  This is a major WTF moment.", dimensionName);
-    }
-    Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
-    log.info("Starting dimension[%s] with cardinality[%,d]", dimensionName, dimVals.size());
-
-
-    final BitmapFactory bmpFactory = bitmapSerdeFactory.getBitmapFactory();
+    final BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
 
     RTree tree = null;
     spatialWriter = null;
     boolean hasSpatial = capabilities.hasSpatialIndexes();
     if (hasSpatial) {
-      String spatialFilename = String.format("%s.spatial", dimensionName);
-      spatialWriter = new ByteBufferWriter<>(
-          ioPeon, spatialFilename, new IndexedRTree.ImmutableRTreeObjectStrategy(bmpFactory)
-      );
+      spatialWriter = new ByteBufferWriter<>(new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory));
       spatialWriter.open();
-      tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bmpFactory), bmpFactory);
+      tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
     }
 
     IndexSeeker[] dictIdSeeker = toIndexSeekers(adapters, dimConversions, dimensionName);
 
     //Iterate all dim values's dictionary id in ascending order which in line with dim values's compare result.
-    for (int dictId = 0; dictId < dimVals.size(); dictId++) {
+    for (int dictId = 0; dictId < dictionarySize; dictId++) {
       progress.progress();
       mergeBitmaps(
           segmentRowNumConversions,
-          dimVals,
-          bmpFactory,
+          bitmapFactory,
           tree,
           hasSpatial,
           dictIdSeeker,
-          dictId,
-          adapters,
-          dimensionName,
-          nullRowsBitmap,
-          bitmapWriter
+          dictId
       );
     }
 
@@ -163,50 +118,44 @@ public class StringDimensionMergerLegacy extends StringDimensionMergerV9 impleme
   }
 
   @Override
-  public void writeValueMetadataToFile(final FileOutputSupplier valueEncodingFile) throws IOException
+  public void writeValueMetadataToFile(final File valueEncodingFile) throws IOException
   {
     final SerializerUtils serializerUtils = new SerializerUtils();
 
-    dictionaryWriter.close();
-    serializerUtils.writeString(valueEncodingFile, dimensionName);
-    ByteStreams.copy(dictionaryWriter.combineStreams(), valueEncodingFile);
-
-    // save this File reference, we will read from it later when building bitmap/spatial indexes
-    dictionaryFile = valueEncodingFile.getFile();
+    try (FileChannel out = open(valueEncodingFile)) {
+      serializerUtils.writeString(out, dimensionName);
+      dictionaryWriter.writeTo(out, null);
+    }
   }
 
-  @Override
-  public void writeRowValuesToFile(FileOutputSupplier rowValueFile) throws IOException
+  private static FileChannel open(File file) throws IOException
   {
-    encodedValueWriterV8.close();
-    ByteStreams.copy(encodedValueWriterV8.combineStreams(), rowValueFile);
+    return FileChannel.open(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
   }
 
   @Override
-  public void writeIndexesToFiles(
-      final ByteSink invertedIndexFile,
-      final OutputSupplier<FileOutputStream> spatialIndexFile
-  ) throws IOException
+  public void writeRowValuesToFile(File rowValueFile) throws IOException
+  {
+    try (FileChannel out = open(rowValueFile)) {
+      encodedValueWriterV8.writeTo(out, null);
+    }
+  }
+
+  @Override
+  public void writeIndexesToFiles(final File invertedIndexFile, final File spatialIndexFile) throws IOException
   {
     final SerializerUtils serializerUtils = new SerializerUtils();
-    final OutputSupplier<OutputStream> invertedIndexOutputSupplier = new OutputSupplier<OutputStream>()
-    {
-      @Override
-      public OutputStream getOutput() throws IOException
-      {
-        return invertedIndexFile.openStream();
-      }
-    };
 
-    bitmapWriter.close();
-    serializerUtils.writeString(invertedIndexOutputSupplier, dimensionName);
-    ByteStreams.copy(bitmapWriter.combineStreams(), invertedIndexOutputSupplier);
-
+    try (FileChannel invertedIndexOut = open(invertedIndexFile)) {
+      serializerUtils.writeString(invertedIndexOut, dimensionName);
+      bitmapWriter.writeTo(invertedIndexOut, null);
+    }
 
     if (capabilities.hasSpatialIndexes()) {
-      spatialWriter.close();
-      serializerUtils.writeString(spatialIndexFile, dimensionName);
-      ByteStreams.copy(spatialWriter.combineStreams(), spatialIndexFile);
+      try (FileChannel spatialIndexOut = open(spatialIndexFile)) {
+        serializerUtils.writeString(spatialIndexOut, dimensionName);
+        spatialWriter.writeTo(spatialIndexOut, null);
+      }
     }
   }
 

@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.io.Channels;
 import io.druid.segment.IndexIO;
 
 import java.io.IOException;
@@ -39,13 +40,11 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   private static final byte VERSION = CompressedIntsIndexedSupplier.VERSION;
 
   public static CompressedIntsIndexedWriter create(
-      final IOPeon ioPeon,
       final String filenameBase,
       final CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     return new CompressedIntsIndexedWriter(
-        ioPeon,
         filenameBase,
         CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
         IndexIO.BYTE_ORDER,
@@ -59,8 +58,7 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   private IntBuffer endBuffer;
   private int numInserted;
 
-  public CompressedIntsIndexedWriter(
-      final IOPeon ioPeon,
+  CompressedIntsIndexedWriter(
       final String filenameBase,
       final int chunkFactor,
       final ByteOrder byteOrder,
@@ -68,7 +66,8 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   )
   {
     this(chunkFactor, compression, new GenericIndexedWriter<>(
-        ioPeon, filenameBase, CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+        filenameBase,
+        CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
     ));
   }
 
@@ -104,38 +103,43 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   }
 
   @Override
-  public void close() throws IOException
+  public long getSerializedSize() throws IOException
   {
-    try {
-      if (numInserted > 0) {
-        endBuffer.limit(endBuffer.position());
-        endBuffer.rewind();
-        flattener.write(StupidResourceHolder.create(endBuffer));
-      }
-      endBuffer = null;
-    }
-    finally {
-      flattener.close();
-    }
+    writeEndBuffer();
+    return metaSize() + flattener.getSerializedSize();
   }
 
   @Override
-  public long getSerializedSize()
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
+    writeEndBuffer();
+
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(VERSION);
+    meta.putInt(numInserted);
+    meta.putInt(chunkFactor);
+    meta.put(compression.getId());
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    flattener.writeTo(channel, smoosher);
+  }
+
+  private void writeEndBuffer() throws IOException
+  {
+    if (endBuffer != null && numInserted > 0) {
+      endBuffer.limit(endBuffer.position());
+      endBuffer.rewind();
+      flattener.write(StupidResourceHolder.create(endBuffer));
+      endBuffer = null;
+    }
+  }
+
+  private int metaSize()
   {
     return 1 +             // version
            Ints.BYTES +    // numInserted
            Ints.BYTES +    // chunkFactor
-           1 +             // compression id
-           flattener.getSerializedSize();
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
-    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    flattener.writeToChannel(channel, smoosher);
+           1;              // compression id
   }
 }

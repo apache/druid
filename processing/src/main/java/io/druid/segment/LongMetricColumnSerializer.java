@@ -19,11 +19,8 @@
 
 package io.druid.segment;
 
-import com.google.common.io.FileWriteMode;
-import com.google.common.io.Files;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.File;
@@ -35,23 +32,20 @@ import java.io.IOException;
 public class LongMetricColumnSerializer implements MetricColumnSerializer
 {
   private final String metricName;
-  private final IOPeon ioPeon;
   private final File outDir;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
 
   private LongSupplierSerializer writer;
 
-  public LongMetricColumnSerializer(
+  LongMetricColumnSerializer(
       String metricName,
       File outDir,
-      IOPeon ioPeon,
       CompressedObjectStrategy.CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding
   )
   {
     this.metricName = metricName;
-    this.ioPeon = ioPeon;
     this.outDir = outDir;
     this.compression = compression;
     this.encoding = encoding;
@@ -61,9 +55,11 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = CompressionFactory.getLongSerializer(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, encoding, compression
+        String.format("%s_little", metricName),
+        IndexIO.BYTE_ORDER,
+        encoding,
+        compression
     );
-
     writer.open();
   }
 
@@ -85,9 +81,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   public void closeFile(final File outFile) throws IOException
   {
     outFile.delete();
-    MetricHolder.writeLongMetric(
-        Files.asByteSink(outFile, FileWriteMode.APPEND), metricName, writer
-    );
+    MetricHolder.writeLongMetric(outFile, metricName, writer);
     IndexIO.checkFileSize(outFile);
 
     writer = null;

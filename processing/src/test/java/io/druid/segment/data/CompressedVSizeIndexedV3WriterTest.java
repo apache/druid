@@ -115,50 +115,41 @@ public class CompressedVSizeIndexedV3WriterTest
   private void checkSerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
-    final IndexedMultivalue<IndexedInts> indexedMultivalue;
 
-    try (IOPeon ioPeon = new TmpFileIOPeon()) {
-      int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
-      CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
-          ioPeon, "offset", offsetChunkFactor, byteOrder, compressionStrategy
-      );
-      CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
-          ioPeon, "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy
-      );
-      CompressedVSizeIndexedV3Writer writer = new CompressedVSizeIndexedV3Writer(offsetWriter, valueWriter);
-      CompressedVSizeIndexedV3Supplier supplierFromIterable = CompressedVSizeIndexedV3Supplier.fromIterable(
-          Iterables.transform(
-              vals, new Function<int[], IndexedInts>()
-              {
-                @Nullable
-                @Override
-                public IndexedInts apply(@Nullable final int[] input)
-                {
-                  return ArrayBasedIndexedInts.of(input);
-                }
-              }
-          ), offsetChunkFactor, maxValue, byteOrder, compressionStrategy
-      );
-      writer.open();
-      for (int[] val : vals) {
-        writer.add(val);
-      }
-      writer.close();
-      long writtenLength = writer.getSerializedSize();
-      final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-      writer.writeToChannel(outputChannel, smoosher);
-      outputChannel.close();
-      smoosher.close();
+    int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
+    CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
+        "offset", offsetChunkFactor, byteOrder, compressionStrategy
+    );
+    CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
+        "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy
+    );
+    CompressedVSizeIndexedV3Writer writer = new CompressedVSizeIndexedV3Writer(offsetWriter, valueWriter);
+    CompressedVSizeIndexedV3Supplier supplierFromIterable = CompressedVSizeIndexedV3Supplier.fromIterable(
+        Iterables.transform(vals, ArrayBasedIndexedInts::of),
+        offsetChunkFactor,
+        maxValue,
+        byteOrder,
+        compressionStrategy
+    );
+    writer.open();
+    for (int[] val : vals) {
+      writer.add(val);
+    }
+    long writtenLength = writer.getSerializedSize();
+    final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
+    writer.writeTo(outputChannel, smoosher);
+    outputChannel.close();
+    smoosher.close();
 
-      assertEquals(writtenLength, supplierFromIterable.getSerializedSize());
+    assertEquals(writtenLength, supplierFromIterable.getSerializedSize());
 
-      // read from ByteBuffer and check values
-      CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
-          ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
-          byteOrder,
-          null
-      );
-      indexedMultivalue = supplierFromByteBuffer.get();
+    // read from ByteBuffer and check values
+    CompressedVSizeIndexedV3Supplier supplierFromByteBuffer = CompressedVSizeIndexedV3Supplier.fromByteBuffer(
+        ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
+        byteOrder,
+        null
+    );
+    try (final IndexedMultivalue<IndexedInts> indexedMultivalue = supplierFromByteBuffer.get()) {
       assertEquals(indexedMultivalue.size(), vals.size());
       for (int i = 0; i < vals.size(); ++i) {
         IndexedInts subVals = indexedMultivalue.get(i);
@@ -167,7 +158,6 @@ public class CompressedVSizeIndexedV3WriterTest
           assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }
-      CloseQuietly.close(indexedMultivalue);
     }
   }
 
@@ -248,7 +238,7 @@ public class CompressedVSizeIndexedV3WriterTest
           offsetChunkFactor,
           compressionStrategy,
           new GenericIndexedWriter<>(
-              ioPeon, "offset",
+              "offset",
               CompressedIntBufferObjectStrategy.getBufferForOrder(
                   byteOrder,
                   compressionStrategy,
@@ -259,7 +249,6 @@ public class CompressedVSizeIndexedV3WriterTest
       );
 
       GenericIndexedWriter genericIndexed = new GenericIndexedWriter<>(
-          ioPeon,
           "value",
           CompressedByteBufferObjectStrategy.getBufferForOrder(
               byteOrder,
@@ -270,8 +259,6 @@ public class CompressedVSizeIndexedV3WriterTest
           Longs.BYTES * 250000
       );
       CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
-          ioPeon,
-          "value",
           maxValue,
           valueChunkFactor,
           byteOrder,
@@ -283,13 +270,12 @@ public class CompressedVSizeIndexedV3WriterTest
       for (int[] val : vals) {
         writer.add(val);
       }
-      writer.close();
 
       final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
           "test",
           writer.getSerializedSize()
       );
-      writer.writeToChannel(channel, smoosher);
+      writer.writeTo(channel, smoosher);
       channel.close();
       smoosher.close();
       SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);

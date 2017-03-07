@@ -17,15 +17,23 @@
  * under the License.
  */
 
-package io.druid.segment;
-
-import io.druid.segment.serde.Serializer;
+package io.druid.io;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
-public interface GenericColumnSerializer extends Serializer
+public final class Channels
 {
-  public void open() throws IOException;
 
-  public void serialize(Object obj) throws IOException;
+  public static void writeFully(WritableByteChannel channel, ByteBuffer src) throws IOException
+  {
+    while (src.remaining() > 0) {
+      channel.write(src);
+    }
+  }
+
+  private Channels()
+  {
+  }
 }

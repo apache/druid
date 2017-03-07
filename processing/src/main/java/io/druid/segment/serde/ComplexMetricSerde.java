@@ -22,7 +22,6 @@ package io.druid.segment.serde;
 import com.google.common.base.Function;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
@@ -106,12 +105,11 @@ public abstract class ComplexMetricSerde
    * For large column (i.e columns greater than Integer.MAX) use
    * (@link LargeColumnSupportedComplexColumnSerializer)
    *
-   * @param peon IOPeon
    * @param column name of the column
    * @return an instance of GenericColumnSerializer used for serialization.
    */
-  public GenericColumnSerializer getSerializer(IOPeon peon, String column)
+  public GenericColumnSerializer getSerializer(String column)
   {
-    return ComplexColumnSerializer.create(peon, column, this.getObjectStrategy());
+    return ComplexColumnSerializer.create(column, this.getObjectStrategy());
   }
 }

@@ -17,15 +17,15 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.serde;
 
-import io.druid.segment.serde.Serializer;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
 
-public interface GenericColumnSerializer extends Serializer
+public interface Serializer
 {
-  public void open() throws IOException;
-
-  public void serialize(Object obj) throws IOException;
+  long getSerializedSize() throws IOException;
+  void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

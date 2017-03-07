@@ -25,7 +25,6 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 
 import java.io.File;
@@ -40,7 +39,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   protected final IndexSpec indexSpec;
   protected ColumnCapabilities capabilities;
   protected final File outDir;
-  protected IOPeon ioPeon;
 
   private FloatColumnSerializer serializer;
 
@@ -48,7 +46,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
       String dimensionName,
       IndexSpec indexSpec,
       File outDir,
-      IOPeon ioPeon,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -57,7 +54,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
     this.outDir = outDir;
-    this.ioPeon = ioPeon;
     this.progress = progress;
 
     try {
@@ -70,7 +66,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   protected void setupEncodedValueWriter() throws IOException
   {
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = FloatColumnSerializer.create(ioPeon, dimensionName, metCompression);
+    this.serializer = FloatColumnSerializer.create(dimensionName, metCompression);
     serializer.open();
   }
 
@@ -108,7 +104,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   @Override
   public ColumnDescriptor makeColumnDescriptor() throws IOException
   {
-    serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
     builder.addSerde(

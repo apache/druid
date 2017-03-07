@@ -19,41 +19,27 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteSink;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import io.druid.io.Channels;
+import io.druid.io.OutputBytes;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSerializer
 {
-  private final IOPeon ioPeon;
-  private final String valueFile;
-  private final String metaFile;
-  private CountingOutputStream valuesOut;
-  private long metaCount = 0;
+  private OutputBytes valuesOut;
 
   private final ByteBuffer orderBuffer;
 
   private int numInserted = 0;
 
-  public EntireLayoutFloatSupplierSerializer(
-      IOPeon ioPeon, String filenameBase, ByteOrder order
-  )
+  EntireLayoutFloatSupplierSerializer(ByteOrder order)
   {
-    this.ioPeon = ioPeon;
-    this.valueFile = filenameBase + ".value";
-    this.metaFile = filenameBase + ".format";
-
     orderBuffer = ByteBuffer.allocate(Floats.BYTES);
     orderBuffer.order(order);
   }
@@ -61,7 +47,7 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
   @Override
   public void open() throws IOException
   {
-    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(valueFile));
+    valuesOut = new OutputBytes();
   }
 
   @Override
@@ -80,44 +66,27 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
   }
 
   @Override
-  public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
+  public long getSerializedSize() throws IOException
   {
-    close();
-    try (OutputStream out = consolidatedOut.openStream();
-         InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream value = ioPeon.makeInputStream(valueFile)) {
-      ByteStreams.copy(meta, out);
-      ByteStreams.copy(value, out);
-    }
+    return metaSize() + valuesOut.size();
   }
 
   @Override
-  public void close() throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    valuesOut.close();
-    try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
-      metaOut.write(CompressedFloatsIndexedSupplier.version);
-      metaOut.write(Ints.toByteArray(numInserted));
-      metaOut.write(Ints.toByteArray(0));
-      metaOut.write(CompressedObjectStrategy.CompressionStrategy.NONE.getId());
-      metaOut.close();
-      metaCount = metaOut.getCount();
-    }
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(CompressedFloatsIndexedSupplier.version);
+    meta.putInt(numInserted);
+    meta.putInt(0);
+    meta.put(CompressedObjectStrategy.CompressionStrategy.NONE.getId());
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    valuesOut.writeTo(channel);
   }
 
-  @Override
-  public long getSerializedSize()
+  private int metaSize()
   {
-    return metaCount + valuesOut.getCount();
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    try (InputStream meta = ioPeon.makeInputStream(metaFile);
-         InputStream value = ioPeon.makeInputStream(valueFile)) {
-      ByteStreams.copy(Channels.newChannel(meta), channel);
-      ByteStreams.copy(Channels.newChannel(value), channel);
-    }
+    return 1 + Ints.BYTES + Ints.BYTES + 1;
   }
 }

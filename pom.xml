@@ -656,6 +656,8 @@
                 <artifactId>asm-commons</artifactId>
                 <version>5.2</version>
             </dependency>
+
+            <!-- Test Scope -->
             <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>

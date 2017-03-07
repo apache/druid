@@ -20,7 +20,6 @@
 package io.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSink;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.segment.column.ValueType;
@@ -31,17 +30,14 @@ import io.druid.segment.data.TmpFileIOPeon;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
@@ -153,7 +149,6 @@ public class FloatCompressionBenchmarkFileGenerator
 
         TmpFileIOPeon iopeon = new TmpFileIOPeon(true);
         FloatSupplierSerializer writer = CompressionFactory.getFloatSerializer(
-            iopeon,
             "float",
             ByteOrder.nativeOrder(),
             compression
@@ -170,18 +165,7 @@ public class FloatCompressionBenchmarkFileGenerator
           while ((line = br.readLine()) != null) {
             writer.add(Float.parseFloat(line));
           }
-          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          writer.closeAndConsolidate(
-              new ByteSink()
-              {
-                @Override
-                public OutputStream openStream() throws IOException
-                {
-                  return baos;
-                }
-              }
-          );
-          output.write(ByteBuffer.wrap(baos.toByteArray()));
+          writer.writeTo(output, null);
         }
         finally {
           iopeon.close();

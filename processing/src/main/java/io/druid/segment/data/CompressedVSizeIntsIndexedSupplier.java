@@ -26,8 +26,10 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Shorts;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
@@ -123,26 +125,34 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     }
   }
 
+  @Override
+  public long getSerializedSize() throws IOException
+  {
+    return metaSize() + baseBuffers.getSerializedSize();
+  }
 
   @Override
-  public long getSerializedSize()
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
+    meta.put(VERSION);
+    meta.put((byte) numBytes);
+    meta.putInt(totalSize);
+    meta.putInt(sizePer);
+    meta.put(compression.getId());
+    meta.flip();
+
+    Channels.writeFully(channel, meta);
+    baseBuffers.writeTo(channel, smoosher);
+  }
+
+  private int metaSize()
   {
     return 1 +             // version
            1 +             // numBytes
            Ints.BYTES + // totalSize
            Ints.BYTES + // sizePer
-           1 +             // compression id
-           baseBuffers.getSerializedSize(); // data
-  }
-
-  @Override
-  public void writeToChannel(WritableByteChannel channel) throws IOException
-  {
-    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
-    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    baseBuffers.writeToChannel(channel);
+           1;              // compression id
   }
 
   @VisibleForTesting

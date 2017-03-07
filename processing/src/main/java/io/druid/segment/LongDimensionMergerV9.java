@@ -26,7 +26,6 @@ import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 
 import java.io.File;
@@ -41,14 +40,12 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   protected final IndexSpec indexSpec;
   protected ColumnCapabilities capabilities;
   protected final File outDir;
-  protected IOPeon ioPeon;
   protected LongColumnSerializer serializer;
 
   public LongDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
       File outDir,
-      IOPeon ioPeon,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
@@ -57,7 +54,6 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
     this.outDir = outDir;
-    this.ioPeon = ioPeon;
     this.progress = progress;
 
     try {
@@ -71,7 +67,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   {
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    this.serializer = LongColumnSerializer.create(ioPeon, dimensionName, metCompression, longEncoding);
+    this.serializer = LongColumnSerializer.create(dimensionName, metCompression, longEncoding);
     serializer.open();
   }
 
@@ -109,7 +105,6 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   @Override
   public ColumnDescriptor makeColumnDescriptor() throws IOException
   {
-    serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);
     builder.addSerde(
