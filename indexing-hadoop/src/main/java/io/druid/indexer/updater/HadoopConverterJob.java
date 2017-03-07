@@ -528,9 +528,7 @@ public class HadoopConverterJob
       context.setStatus("CONVERTING");
       context.progress();
       final File outDir = new File(tmpDir, "out");
-      if (!outDir.mkdir() && (!outDir.exists() || !outDir.isDirectory())) {
-        throw new IOException(String.format("Could not create output directory [%s]", outDir));
-      }
+      FileUtils.forceMkdir(outDir);
       HadoopDruidConverterConfig.INDEX_MERGER.convert(
           inDir,
           outDir,
@@ -553,13 +551,25 @@ public class HadoopConverterJob
           finalSegmentTemplate,
           context.getConfiguration(),
           context,
-          context.getTaskAttemptID(),
           outDir,
-          JobHelper.makeSegmentOutputPath(
+          JobHelper.makeFileNamePath(
               baseOutputPath,
               outputFS,
-              finalSegmentTemplate
-          )
+              finalSegmentTemplate,
+              JobHelper.INDEX_ZIP
+          ),
+          JobHelper.makeFileNamePath(
+              baseOutputPath,
+              outputFS,
+              finalSegmentTemplate,
+              JobHelper.DESCRIPTOR_JSON
+          ),
+          JobHelper.makeTmpPath(
+              baseOutputPath,
+              outputFS,
+              finalSegmentTemplate,
+              context.getTaskAttemptID()
+              )
       );
       context.progress();
       context.setStatus("Finished PUSH");

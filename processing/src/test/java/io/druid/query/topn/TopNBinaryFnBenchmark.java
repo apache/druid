@@ -23,7 +23,7 @@ import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -116,7 +116,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
     );
     fn = new TopNBinaryFn(
         TopNResultMerger.identity,
-        Granularity.ALL,
+        Granularities.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
         100,

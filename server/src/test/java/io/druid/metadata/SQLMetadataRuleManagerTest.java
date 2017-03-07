@@ -74,8 +74,8 @@ public class SQLMetadataRuleManagerTest
     connector.createRulesTable();
     ruleManager = new SQLMetadataRuleManager(
         mapper,
-        Suppliers.ofInstance(new MetadataRuleManagerConfig()),
-        Suppliers.ofInstance(tablesConfig),
+        new MetadataRuleManagerConfig(),
+        tablesConfig,
         connector,
         auditManager
     );

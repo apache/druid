@@ -31,6 +31,7 @@ import io.druid.sql.calcite.rule.SelectRules;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.AggregateProjectPullUpConstantsRule;
@@ -201,6 +202,12 @@ public class Rules
     rules.addAll(CONSTANT_REDUCTION_RULES);
     rules.addAll(VOLCANO_ABSTRACT_RULES);
     rules.addAll(RELOPTUTIL_ABSTRACT_RULES);
+
+    if (!plannerConfig.isUseApproximateCountDistinct()) {
+      // We'll need this to expand COUNT DISTINCTs.
+      // Avoid AggregateExpandDistinctAggregatesRule.INSTANCE; it uses grouping sets and we don't support those.
+      rules.add(AggregateExpandDistinctAggregatesRule.JOIN);
+    }
 
     if (plannerConfig.isUseFallback()) {
       rules.add(DruidRelToBindableRule.instance());

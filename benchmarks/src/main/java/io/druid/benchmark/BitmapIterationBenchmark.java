@@ -165,7 +165,7 @@ public class BitmapIterationBenchmark
 
   /**
    * Benchmark of cumulative cost of construction of an immutable bitmap and then iterating over it. This is a pattern
-   * from realtime nodes, see {@link io.druid.segment.StringDimensionIndexer#fillBitmapsFromUnsortedEncodedArray}.
+   * from realtime nodes, see {@link io.druid.segment.StringDimensionIndexer#fillBitmapsFromUnsortedEncodedKeyComponent}.
    * However this benchmark is yet approximate and to be improved to better reflect actual workloads of realtime nodes.
    */
   @Benchmark

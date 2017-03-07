@@ -30,9 +30,9 @@ import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -167,7 +167,7 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(Granularity.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimSequential")
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
@@ -183,7 +183,7 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(Granularity.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
           .intervals(intervalSpec)
@@ -199,7 +199,7 @@ public class TopNBenchmark
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
           .dataSource("blah")
-          .granularity(Granularity.ALL)
+          .granularity(Granularities.ALL)
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
           .intervals(intervalSpec)
@@ -294,7 +294,7 @@ public class TopNBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),

@@ -22,8 +22,8 @@ package io.druid.query.timeboundary;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -114,7 +114,7 @@ public class TimeBoundaryQueryRunnerFactory
           legacyQuery.getQuerySegmentSpec().getIntervals(),
           Filters.toFilter(legacyQuery.getDimensionsFilter()), VirtualColumns.EMPTY,
           descending,
-          AllGranularity.getInstance(),
+          Granularities.ALL,
           this.skipToFirstMatching
       );
       final List<Result<DateTime>> resultList = Sequences.toList(

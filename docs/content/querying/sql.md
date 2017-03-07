@@ -93,7 +93,7 @@ This cached metadata is queryable through "INFORMATION_SCHEMA" tables. For examp
 datasource "foo", use the query:
 
 ```sql
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE SCHEMA_NAME = 'druid' AND TABLE_NAME = 'foo'
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'
 ```
 
 See the [INFORMATION_SCHEMA tables](#information_schema-tables) section below for details on the available metadata.
@@ -104,16 +104,18 @@ You can access table and column metadata through JDBC using `connection.getMetaD
 
 The following SQL queries and features may be executed using approximate algorithms:
 
-- `COUNT(DISTINCT col)` and `APPROX_COUNT_DISTINCT(col)` aggregations use
+- `COUNT(DISTINCT col)` and `APPROX_COUNT_DISTINCT(col)` aggregations by default use
 [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf), a fast approximate distinct counting
-algorithm. If you need exact distinct counts, you can instead use
-`SELECT COUNT(*) FROM (SELECT DISTINCT col FROM data_source)`, which will use a slower and more resource intensive exact
-algorithm.
+algorithm. To disable this behavior for `COUNT(DISTINCT col)`, and use exact distinct counts, set
+"useApproximateCountDistinct" to "false", either through query context or through broker configuration.
+`APPROX_COUNT_DISTINCT(col)` is always approximate, regardless of this setting.
 - TopN-style queries with a single grouping column, like
 `SELECT col1, SUM(col2) FROM data_source GROUP BY col1 ORDER BY SUM(col2) DESC LIMIT 100`, by default will be executed
 as [TopN queries](topnquery.html), which use an approximate algorithm. To disable this behavior, and use exact
 algorithms for topN-style queries, set "useApproximateTopN" to "false", either through query context or through broker
 configuration.
+
+In both cases, the exact algorithms are generally slower and more resource intensive.
 
 ### Time functions
 

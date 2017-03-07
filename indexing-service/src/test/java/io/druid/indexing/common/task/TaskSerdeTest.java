@@ -30,7 +30,7 @@ import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -180,7 +180,7 @@ public class TaskSerdeTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
@@ -245,7 +245,7 @@ public class TaskSerdeTest
                 null,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
-                    Granularity.DAY,
+                    Granularities.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
                 ),
@@ -298,6 +298,7 @@ public class TaskSerdeTest
         aggregators,
         true,
         indexSpec,
+        true,
         null
     );
 
@@ -333,6 +334,42 @@ public class TaskSerdeTest
     Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
     Assert.assertEquals(segments, task3.getSegments());
     Assert.assertEquals(aggregators, task3.getAggregators());
+  }
+
+  @Test
+  public void testSameIntervalMergeTaskSerde() throws Exception
+  {
+    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final SameIntervalMergeTask task = new SameIntervalMergeTask(
+        null,
+        "foo",
+        new Interval("2010-01-01/P1D"),
+        aggregators,
+        true,
+        indexSpec,
+        true,
+        null
+    );
+
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final SameIntervalMergeTask task2 = (SameIntervalMergeTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertEquals(task.getRollup(), task2.getRollup());
+    Assert.assertEquals(task.getBuildV9Directly(), task2.getBuildV9Directly());
+    Assert.assertEquals(task.getIndexSpec(), task2.getIndexSpec());
+    Assert.assertEquals(
+        task.getAggregators().get(0).getName(),
+        task2.getAggregators().get(0).getName()
+    );
   }
 
   @Test
@@ -435,7 +472,7 @@ public class TaskSerdeTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, Granularity.NONE, null),
+                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
                 jsonMapper
             ),
             new RealtimeIOConfig(
@@ -486,7 +523,7 @@ public class TaskSerdeTest
             .getTuningConfig().getWindowPeriod()
     );
     Assert.assertEquals(
-        Granularity.HOUR,
+        Granularities.HOUR,
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
     Assert.assertTrue(task.getRealtimeIngestionSchema().getTuningConfig().isReportParseExceptions());
@@ -529,6 +566,7 @@ public class TaskSerdeTest
             new CountAggregatorFactory("cnt")
         ),
         indexSpec,
+        true,
         null
     );
 
@@ -721,7 +759,7 @@ public class TaskSerdeTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-                Granularity.DAY,
+                Granularities.DAY,
                 null,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             ),

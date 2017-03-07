@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -176,7 +176,7 @@ public class QuantileSqlAggregatorTest
           Druids.newTimeseriesQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .aggregators(ImmutableList.of(
                     new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
                     new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
@@ -238,7 +238,7 @@ public class QuantileSqlAggregatorTest
           Druids.newTimeseriesQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .aggregators(ImmutableList.of(
                     new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null),
                     new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null),

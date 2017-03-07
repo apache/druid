@@ -430,10 +430,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         }
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedArray(row.getRaw(dimension));
+        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension));
 
         // Set column capabilities as data is coming in
-        if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthFromEncodedArray(dimsKey) > 1) {
+        if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
           capabilities.setHasMultipleValues(true);
         }
 
@@ -704,12 +704,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                   }
                   String dimensionName = dimensionDesc.getName();
                   DimensionHandler handler = dimensionDesc.getHandler();
-                  if (dim == null || handler.getLengthFromEncodedArray(dim) == 0) {
+                  if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
                     theVals.put(dimensionName, null);
                     continue;
                   }
                   final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                  Object rowVals = indexer.convertUnsortedEncodedArrayToActualArrayOrList(dim, DimensionIndexer.LIST);
+                  Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
                   theVals.put(dimensionName, rowVals);
                 }
 
@@ -894,7 +894,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
       for (int i = 0; i < dims.length; i++) {
         final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
-        if (!indexer.checkUnsortedEncodedArraysEqual(dims[i], that.dims[i])) {
+        if (!indexer.checkUnsortedEncodedKeyComponentsEqual(dims[i], that.dims[i])) {
           return false;
         }
       }
@@ -907,7 +907,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       int hash = (int) timestamp;
       for (int i = 0; i < dims.length; i++) {
         final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
-        hash = 31 * hash + indexer.getUnsortedEncodedArrayHashCode(dims[i]);
+        hash = 31 * hash + indexer.getUnsortedEncodedKeyComponentHashCode(dims[i]);
       }
       return hash;
     }
@@ -961,7 +961,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         }
 
         final DimensionIndexer indexer = dimensionDescs.get(index).getIndexer();
-        retVal = indexer.compareUnsortedEncodedArrays(lhsIdxs, rhsIdxs);
+        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
         ++index;
       }
 

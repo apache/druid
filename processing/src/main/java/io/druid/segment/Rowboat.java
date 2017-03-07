@@ -122,7 +122,7 @@ public class Rowboat implements Comparable<Rowboat>
       }
 
       DimensionHandler handler = handlers[index];
-      retVal = handler.compareSortedEncodedArrays(lhsVals, rhsVals);
+      retVal = handler.compareSortedEncodedKeyComponents(lhsVals, rhsVals);
       ++index;
     }
 

@@ -20,6 +20,8 @@
 package io.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -30,9 +32,9 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -49,6 +51,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
@@ -161,7 +164,7 @@ public class SelectBenchmark
                 .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
                 .metrics(Arrays.<String>asList())
                 .intervals(intervalSpec)
-                .granularity(Granularity.ALL)
+                .granularity(Granularities.ALL)
                 .descending(false);
 
       basicQueries.put("A", queryBuilderA);
@@ -227,12 +230,15 @@ public class SelectBenchmark
       qIndexes.add(qIndex);
     }
 
+    final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+
     factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator(),
+            selectConfigSupplier
         ),
-        new SelectQueryEngine(),
+        new SelectQueryEngine(selectConfigSupplier),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }
@@ -247,7 +253,7 @@ public class SelectBenchmark
   {
     return new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder()
-            .withQueryGranularity(Granularity.NONE)
+            .withQueryGranularity(Granularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
             .build(),
@@ -271,7 +277,7 @@ public class SelectBenchmark
     return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
-  // don't run this benchmark with a query that doesn't use QueryGranularity.ALL,
+  // don't run this benchmark with a query that doesn't use QueryGranularities.ALL,
   // this pagination function probably doesn't work correctly in that case.
   private SelectQuery incrementQueryPagination(SelectQuery query, SelectResultValue prevResult)
   {
