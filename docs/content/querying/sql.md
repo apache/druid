@@ -93,7 +93,7 @@ This cached metadata is queryable through "INFORMATION_SCHEMA" tables. For examp
 datasource "foo", use the query:
 
 ```sql
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE SCHEMA_NAME = 'druid' AND TABLE_NAME = 'foo'
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'
 ```
 
 See the [INFORMATION_SCHEMA tables](#information_schema-tables) section below for details on the available metadata.
