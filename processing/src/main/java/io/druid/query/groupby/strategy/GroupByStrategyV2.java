@@ -180,6 +180,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
+  public boolean doMergeResults(final GroupByQuery query)
+  {
+    return true;
+  }
+
+  @Override
   public QueryRunner<Row> createIntervalChunkingRunner(
       final IntervalChunkingQueryRunnerDecorator decorator,
       final QueryRunner<Row> runner,
