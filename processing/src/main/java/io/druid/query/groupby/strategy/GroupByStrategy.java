@@ -54,6 +54,11 @@ public interface GroupByStrategy
   boolean isCacheable(boolean willMergeRunners);
 
   /**
+   * Indicates if this query should undergo "mergeResults" or not.
+   */
+  boolean doMergeResults(final GroupByQuery query);
+
+  /**
    * Decorate a runner with an interval chunking decorator.
    */
   QueryRunner<Row> createIntervalChunkingRunner(
