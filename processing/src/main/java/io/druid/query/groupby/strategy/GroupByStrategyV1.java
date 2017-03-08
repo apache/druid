@@ -102,6 +102,12 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
+  public boolean doMergeResults(final GroupByQuery query)
+  {
+    return query.getContextBoolean(GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, true);
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
@@ -131,10 +137,10 @@ public class GroupByStrategyV1 implements GroupByStrategy
                 ImmutableMap.<String, Object>of(
                     "finalize", false,
                     //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                    //in the end when returning results to user.
+                    //in the end when returning results to user. (note this is only respected by groupBy v1)
                     GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
                     //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would return
-                    //merged results
+                    //merged results. (note this is only respected by groupBy v1)
                     GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
                     GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
                 )
