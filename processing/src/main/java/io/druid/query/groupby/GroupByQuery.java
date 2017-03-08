@@ -281,7 +281,7 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public Ordering getResultOrdering()
   {
-    final Ordering<Row> rowOrdering = getRowOrdering(false);
+    final Ordering<Row> rowOrdering = getRowOrdering(false, false);
 
     return Ordering.from(
         new Comparator<Object>()
@@ -300,11 +300,11 @@ public class GroupByQuery extends BaseQuery<Row>
     );
   }
 
-  public Ordering<Row> getRowOrdering(final boolean granular)
+  public Ordering<Row> getRowOrdering(final boolean granular, final boolean compatibilityMode)
   {
     final boolean sortByDimsFirst = getContextSortByDimsFirst();
 
-    final Comparator<Row> timeComparator = getTimeComparator(granular);
+    final Comparator<Row> timeComparator = getTimeComparator(granular, compatibilityMode);
 
     if (timeComparator == null) {
       return Ordering.from(
@@ -353,10 +353,24 @@ public class GroupByQuery extends BaseQuery<Row>
     }
   }
 
-  private Comparator<Row> getTimeComparator(boolean granular)
+  private Comparator<Row> getTimeComparator(boolean granular, boolean compatibilityMode)
   {
     if (Granularities.ALL.equals(granularity)) {
-      return null;
+      if (compatibilityMode) {
+        return new Comparator<Row>()
+        {
+          @Override
+          public int compare(Row lhs, Row rhs)
+          {
+            return Longs.compare(
+                granularity.bucketStart(lhs.getTimestamp()).getMillis(),
+                granularity.bucketStart(rhs.getTimestamp()).getMillis()
+            );
+          }
+        };
+      } else {
+        return null;
+      }
     } else if (granular) {
       return new Comparator<Row>()
       {

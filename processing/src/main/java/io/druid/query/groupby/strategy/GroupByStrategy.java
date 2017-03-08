@@ -54,6 +54,14 @@ public interface GroupByStrategy
   boolean isCacheable(boolean willMergeRunners);
 
   /**
+   * Indicates this strategy is compatible with GroupByStrategyV1 or not.
+   *
+   * @param compatibilityMode indicates whether to operate in compatibility mode or not
+   * @return true if this strategy is compatible with GroupByStrategyV1, otherwise false.
+   */
+  boolean isInCompatibilityMode(boolean compatibilityMode);
+
+  /**
    * Decorate a runner with an interval chunking decorator.
    */
   QueryRunner<Row> createIntervalChunkingRunner(

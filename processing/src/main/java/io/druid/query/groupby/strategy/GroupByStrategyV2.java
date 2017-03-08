@@ -180,6 +180,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
+  public boolean isInCompatibilityMode(boolean compatibilityMode)
+  {
+    return compatibilityMode;
+  }
+
+  @Override
   public QueryRunner<Row> createIntervalChunkingRunner(
       final IntervalChunkingQueryRunnerDecorator decorator,
       final QueryRunner<Row> runner,
@@ -209,7 +215,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
       @Override
       protected Ordering<Row> makeOrdering(Query<Row> queryParam)
       {
-        return ((GroupByQuery) queryParam).getRowOrdering(true);
+        return ((GroupByQuery) queryParam).getRowOrdering(true,
+            isInCompatibilityMode(query.getContextValue(GroupByQueryConfig.CTX_KEY_STRATEGY) == null ? true : false));
       }
 
       @Override

@@ -92,6 +92,12 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
+  public boolean isInCompatibilityMode(boolean compatibilityMode)
+  {
+    return false;
+  }
+
+  @Override
   public QueryRunner<Row> createIntervalChunkingRunner(
       final IntervalChunkingQueryRunnerDecorator decorator,
       final QueryRunner<Row> runner,
