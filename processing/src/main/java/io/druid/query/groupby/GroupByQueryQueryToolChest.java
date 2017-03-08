@@ -108,9 +108,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           return runner.run(query, responseContext);
         }
 
-        if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
+        final GroupByQuery groupByQuery = (GroupByQuery) query;
+        if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
           return initAndMergeGroupByResults(
-              (GroupByQuery) query,
+              groupByQuery,
               runner,
               responseContext
           );
@@ -181,7 +182,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           subquery.withOverriddenContext(
               ImmutableMap.<String, Object>of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                  //in the end when returning results to user.
+                  //in the end when returning results to user. (note this is only respected by groupBy v1)
                   GroupByQueryHelper.CTX_KEY_SORT_RESULTS,
                   false
               )
