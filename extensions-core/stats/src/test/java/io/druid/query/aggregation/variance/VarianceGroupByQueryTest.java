@@ -61,6 +61,7 @@ public class VarianceGroupByQueryTest
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
   private final String testName;
+  private final boolean compatibilityMode;
 
   @Parameterized.Parameters(name="{0}")
   public static Collection<?> constructorFeeder() throws IOException
@@ -68,12 +69,18 @@ public class VarianceGroupByQueryTest
     return GroupByQueryRunnerTest.constructorFeeder();
   }
 
-  public VarianceGroupByQueryTest(String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public VarianceGroupByQueryTest(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner,
+      boolean compatibilityMode)
   {
     this.testName = testName;
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
+    this.compatibilityMode = compatibilityMode;
   }
 
   @Test

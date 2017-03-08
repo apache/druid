@@ -151,6 +151,7 @@ import static org.junit.Assert.assertEquals;
 public class GroupByQueryRunnerTest
 {
   public static final ObjectMapper DEFAULT_MAPPER = new DefaultObjectMapper(new SmileFactory());
+  public static final List<Boolean> COMPATIBILITY_MODES = ImmutableList.of(true, false);
   public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
@@ -183,6 +184,7 @@ public class GroupByQueryRunnerTest
   private GroupByQueryRunnerFactory factory;
   private GroupByQueryConfig config;
   private final String testName;
+  private final boolean compatibilityMode;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -380,12 +382,15 @@ public class GroupByQueryRunnerTest
     for (GroupByQueryConfig config : testConfigs()) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        final String testName = String.format(
-            "config=%s, runner=%s",
-            config.toString(),
-            runner.toString()
-        );
-        constructors.add(new Object[]{testName, config, factory, runner});
+        for (boolean compatibilityMode : COMPATIBILITY_MODES) {
+          final String testName = String.format(
+              "config=%s, runner=%s, compatibilityMode=%s",
+              config.toString(),
+              runner.toString(),
+              compatibilityMode
+          );
+          constructors.add(new Object[] { testName, config, factory, runner, compatibilityMode });
+        }
       }
     }
 
@@ -393,13 +398,18 @@ public class GroupByQueryRunnerTest
   }
 
   public GroupByQueryRunnerTest(
-      String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner,
+      boolean compatibilityMode
   )
   {
     this.testName = testName;
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
+    this.compatibilityMode = compatibilityMode;
   }
 
   @Test
