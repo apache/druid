@@ -183,7 +183,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution`, `equalDistributionWithAffinity` and `javascript`.|fillCapacity|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
@@ -232,6 +232,18 @@ The workers with the least amount of tasks is assigned the task.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
+
+##### Equal Distribution With Affinity
+
+An affinity config can be provided.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`equalDistributionWithAffinity`.|required; must be `equalDistributionWithAffinity`|
+|`affinity`|Exactly same with `fillCapacityWithAffinity` 's affinity.|{}|
+
+Tasks will try to be assigned to preferred workers. Equal Distribution strategy is used if no preference for a datasource specified.
+
 
 ##### Javascript
 
