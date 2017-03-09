@@ -268,10 +268,14 @@ public final class SpecializationService
     }
   }
 
+  /**
+   * Accumulates the number of iterations during the last hour. (Window size = 1 hour)
+   */
   static class WindowedLoopIterationCounter<T> extends SpecializationState<T> implements Runnable
   {
     private final PerPrototypeClassState<T> perPrototypeClassState;
     private final SpecializationId specializationId;
+    /** A map with the number of iterations per each minute during the last hour */
     private final ConcurrentMap<Long, AtomicLong> perMinuteIterations = new ConcurrentHashMap<>();
     private final AtomicBoolean specializationScheduled = new AtomicBoolean(false);
 
@@ -298,14 +302,14 @@ public final class SpecializationService
         return;
       }
       if (loopIterations > triggerSpecializationIterationsThreshold ||
-          addAndGetTotalIterations(loopIterations) > triggerSpecializationIterationsThreshold) {
+          addAndGetTotalIterationsOverTheLastHour(loopIterations) > triggerSpecializationIterationsThreshold) {
         if (specializationScheduled.compareAndSet(false, true)) {
           classSpecializationExecutor.submit(this);
         }
       }
     }
 
-    private long addAndGetTotalIterations(long newIterations)
+    private long addAndGetTotalIterationsOverTheLastHour(long newIterations)
     {
       long currentMillis = System.currentTimeMillis();
       long currentMinute = TimeUnit.MILLISECONDS.toMinutes(currentMillis);
@@ -325,6 +329,7 @@ public final class SpecializationService
         }
       }
       if (!currentMinutePresent) {
+        // putIfAbsent resolves a race between query processing threads calling accountLoopIterations() concurrently
         AtomicLong existingValue = perMinuteIterations.putIfAbsent(currentMinute, new AtomicLong(newIterations));
         if (existingValue != null) {
           existingValue.addAndGet(newIterations);
