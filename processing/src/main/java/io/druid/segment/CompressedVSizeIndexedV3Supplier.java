@@ -29,14 +29,13 @@ import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.WritableSupplier;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * The format is mostly the same with CompressedVSizeIndexedSupplier(which has version 0x2, so we call it V2),
@@ -95,8 +94,8 @@ public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<Indexe
   )
   {
     Iterator<IndexedInts> objects = objectsIterable.iterator();
-    List<Integer> offsetList = new ArrayList<>();
-    List<Integer> values = new ArrayList<>();
+    IntArrayList offsetList = new IntArrayList();
+    IntArrayList values = new IntArrayList();
 
     int offset = 0;
     while (objects.hasNext()) {

@@ -22,13 +22,13 @@ package io.druid.segment.data;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
@@ -117,7 +117,7 @@ public class CompressedIntsIndexedWriterTest
         "test", chunkFactor, byteOrder, compressionStrategy
     );
     CompressedIntsIndexedSupplier supplierFromList = CompressedIntsIndexedSupplier.fromList(
-        Ints.asList(vals), chunkFactor, byteOrder, compressionStrategy
+        IntArrayList.wrap(vals), chunkFactor, byteOrder, compressionStrategy
     );
     writer.open();
     for (int val : vals) {

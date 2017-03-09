@@ -19,18 +19,19 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.List;
 
 /**
  */
@@ -45,18 +46,18 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public static VSizeIndexedInts fromArray(int[] array, int maxValue)
   {
-    return fromList(Ints.asList(array), maxValue);
+    return fromList(IntArrayList.wrap(array), maxValue);
   }
 
   public static VSizeIndexedInts empty()
   {
-    return fromList(Lists.<Integer>newArrayList(), 0);
+    return fromList(IntLists.EMPTY_LIST, 0);
   }
 
   /**
    * provide for performance reason.
    */
-  public static byte[] getBytesNoPaddingFromList(List<Integer> list, int maxValue)
+  public static byte[] getBytesNoPaddingFromList(IntList list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
@@ -66,7 +67,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return buffer.array();
   }
 
-  public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
+  public static VSizeIndexedInts fromList(IntList list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
@@ -76,11 +77,10 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
   }
 
-  private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
+  private static void writeToBuffer(ByteBuffer buffer, IntList list, int numBytes, int maxValue)
   {
-    int i = 0;
-    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
-    for (Integer val : list) {
+    for (int i = 0; i < list.size(); i++) {
+      int val = list.getInt(i);
       if (val < 0) {
         throw new IAE("integer values must be positive, got[%d], i[%d]", val, i);
       }
@@ -88,9 +88,9 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
         throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", val, maxValue, i);
       }
 
-      helperBuffer.putInt(0, val);
-      buffer.put(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
-      ++i;
+      for (int shift = 24, byteIndex = 0; byteIndex < numBytes; byteIndex++, shift -= 8) {
+        buffer.put((byte) (val >> shift));
+      }
     }
     buffer.position(0);
   }

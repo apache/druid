@@ -31,6 +31,7 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import java.io.IOException;
@@ -39,7 +40,6 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
-import java.util.List;
 
 public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
@@ -232,7 +232,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   }
 
   public static CompressedIntsIndexedSupplier fromList(
-      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final IntArrayList list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -261,18 +261,9 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                   @Override
                   public ResourceHolder<IntBuffer> next()
                   {
-                    IntBuffer retVal = IntBuffer.allocate(chunkFactor);
-
-                    if (chunkFactor > list.size() - position) {
-                      retVal.limit(list.size() - position);
-                    }
-                    final List<Integer> ints = list.subList(position, position + retVal.remaining());
-                    for(int value : ints) {
-                      retVal.put(value);
-                    }
-                    retVal.rewind();
-                    position += retVal.remaining();
-
+                    int blockSize = Math.min(list.size() - position, chunkFactor);
+                    IntBuffer retVal = IntBuffer.wrap(list.elements(), position, blockSize);
+                    position += blockSize;
                     return StupidResourceHolder.create(retVal);
                   }
 

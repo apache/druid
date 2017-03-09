@@ -24,11 +24,11 @@ import com.google.common.primitives.Ints;
 import io.druid.io.Channels;
 import io.druid.io.OutputBytes;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.List;
 
 /**
  * Streams arrays of objects out in the binary format described by VSizeIndexed
@@ -58,12 +58,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter
   }
 
   @Override
-  protected void addValues(List<Integer> val) throws IOException
-  {
-    write(val);
-  }
-
-  public void write(List<Integer> ints) throws IOException
+  protected void addValues(IntList ints) throws IOException
   {
     byte[] bytesToWrite = ints == null ? EMPTY_ARRAY : VSizeIndexedInts.getBytesNoPaddingFromList(ints, maxId);
 

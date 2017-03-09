@@ -24,12 +24,12 @@ import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.IndexIO;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Streams array of integers out in the binary format described by CompressedVSizeIndexedV3Supplier
@@ -37,8 +37,6 @@ import java.util.List;
 public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
 {
   private static final byte VERSION = CompressedVSizeIndexedV3Supplier.VERSION;
-
-  private static final List<Integer> EMPTY_LIST = new ArrayList<>();
 
   public static CompressedVSizeIndexedV3Writer create(
       final String filenameBase,
@@ -86,14 +84,14 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   }
 
   @Override
-  protected void addValues(List<Integer> vals) throws IOException
+  protected void addValues(IntList vals) throws IOException
   {
     if (vals == null) {
-      vals = EMPTY_LIST;
+      vals = IntLists.EMPTY_LIST;
     }
     offsetWriter.add(offset);
-    for (Integer val : vals) {
-      valueWriter.add(val);
+    for (int i = 0; i < vals.size(); i++) {
+      valueWriter.add(vals.getInt(i));
     }
     offset += vals.size();
   }

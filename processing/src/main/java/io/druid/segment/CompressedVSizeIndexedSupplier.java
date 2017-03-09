@@ -31,15 +31,15 @@ import io.druid.segment.data.IndexedIntsIterator;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.WritableSupplier;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * Format -
@@ -110,8 +110,8 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
   )
   {
     Iterator<IndexedInts> objects = objectsIterable.iterator();
-    List<Integer> offsetList = new ArrayList<>();
-    List<Integer> values = new ArrayList<>();
+    IntList offsetList = new IntArrayList();
+    IntList values = new IntArrayList();
 
     int offset = 0;
     while (objects.hasNext()) {

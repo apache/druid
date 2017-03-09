@@ -82,6 +82,8 @@ import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import it.unimi.dsi.fastutil.ints.AbstractIntList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
@@ -92,7 +94,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -563,7 +564,7 @@ public class IndexIO
             }
 
             int emptyStrIdx = dictionary.indexOf("");
-            List<Integer> singleValCol = null;
+            IntList singleValCol = null;
             VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
             GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
             ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
@@ -627,10 +628,10 @@ public class IndexIO
               }
 
               final VSizeIndexed finalMultiValCol = multiValCol;
-              singleValCol = new AbstractList<Integer>()
+              singleValCol = new AbstractIntList()
               {
                 @Override
-                public Integer get(int index)
+                public int getInt(int index)
                 {
                   final VSizeIndexedInts ints = finalMultiValCol.get(index);
                   return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);

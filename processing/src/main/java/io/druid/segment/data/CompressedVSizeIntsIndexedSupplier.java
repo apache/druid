@@ -34,6 +34,7 @@ import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -197,7 +198,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   }
 
   public static CompressedVSizeIntsIndexedSupplier fromList(
-      final List<Integer> list,
+      final IntList list,
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,

@@ -26,6 +26,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -117,7 +118,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
     vals = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16};
 
     supplier = CompressedVSizeIntsIndexedSupplier.fromList(
-        Ints.asList(vals),
+        IntArrayList.wrap(vals),
         Ints.max(vals),
         chunkSize,
         ByteOrder.nativeOrder(),
@@ -140,7 +141,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedVSizeIntsIndexedSupplier theSupplier = CompressedVSizeIntsIndexedSupplier.fromList(
-        Ints.asList(vals), Ints.max(vals), chunkSize, byteOrder, compressionStrategy
+        IntArrayList.wrap(vals), Ints.max(vals), chunkSize, byteOrder, compressionStrategy
     );
     theSupplier.writeTo(Channels.newChannel(baos), null);
 

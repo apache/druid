@@ -19,11 +19,11 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
-import java.util.List;
 
 public abstract class MultiValueIndexedIntsWriter implements IndexedIntsWriter
 {
@@ -33,13 +33,13 @@ public abstract class MultiValueIndexedIntsWriter implements IndexedIntsWriter
     if (obj == null) {
       addValues(null);
     } else if (obj instanceof int[]) {
-      addValues(Ints.asList((int[]) obj));
-    } else if (obj instanceof List) {
-      addValues((List<Integer>) obj);
+      addValues(IntArrayList.wrap((int[]) obj));
+    } else if (obj instanceof IntList) {
+      addValues((IntList) obj);
     } else {
       throw new IAE("unsupported multi-value type: " + obj.getClass());
     }
   }
 
-  protected abstract void addValues(List<Integer> vals) throws IOException;
+  protected abstract void addValues(IntList vals) throws IOException;
 }

@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -67,7 +68,7 @@ public class VSizeIndexedIntsWriterTest
     VSizeIndexedIntsWriter writer = new VSizeIndexedIntsWriter(maxValue);
 
     VSizeIndexedInts intsFromList = VSizeIndexedInts.fromList(
-        Ints.asList(vals), maxValue
+        IntArrayList.wrap(vals), maxValue
     );
     writer.open();
     for (int val : vals) {

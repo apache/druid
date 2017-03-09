@@ -1223,7 +1223,8 @@ public class IndexMerger
           Int2ObjectMap.Entry<IntSortedSet> entry = entryIterator.next();
 
           for (IntIterator setIterator = entry.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
-            retVal.addRow(entry.getIntKey(), setIterator.nextInt());
+            int rowNum = setIterator.nextInt();
+            retVal.addRow(entry.getIntKey(), rowNum);
           }
         }
       }
