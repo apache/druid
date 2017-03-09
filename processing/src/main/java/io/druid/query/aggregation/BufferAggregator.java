@@ -47,6 +47,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param buf byte buffer to initialize
    * @param position offset within the byte buffer for initialization
    */
+  @CalledFromHotLoop
   void init(ByteBuffer buf, int position);
 
   /**
