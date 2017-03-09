@@ -105,7 +105,7 @@ public final class SpecializationService
         @Override
         protected PerPrototypeClassState computeValue(Class<?> type)
         {
-          return PerPrototypeClassState.of(type);
+          return new PerPrototypeClassState<>(type);
         }
       };
 
@@ -137,11 +137,6 @@ public final class SpecializationService
 
   static class PerPrototypeClassState<T>
   {
-    static <T> PerPrototypeClassState<T> of(Class<T> prototypeClass)
-    {
-      return new PerPrototypeClassState<>(prototypeClass);
-    }
-
     private final Class<T> prototypeClass;
     private final ConcurrentMap<SpecializationId, SpecializationState<T>> specializationStates =
         new ConcurrentHashMap<>();
