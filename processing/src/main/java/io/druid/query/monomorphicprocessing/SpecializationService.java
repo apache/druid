@@ -92,7 +92,7 @@ public final class SpecializationService
    * to specialize class for the specific runtimeShape. The default value is chosen to be so that the specialized
    * class will likely be compiled with C2 HotSpot compiler with the default values of *BackEdgeThreshold options.
    */
-  private static final long triggerSpecializationIterationsThreshold =
+  private static final int triggerSpecializationIterationsThreshold =
       Integer.getInteger("triggerSpecializationIterationsThreshold", 10_000);
 
   private static final ExecutorService classSpecializationExecutor = Execs.singleThreaded("class-specialization-%d");
