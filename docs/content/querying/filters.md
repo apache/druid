@@ -392,20 +392,53 @@ The following matches dimension values in `[product_1, product_3, product_5]` fo
 }
 ```
 
+## Column types
+
+Druid supports filtering on timestamp, string, long, and float columns.
+
+Note that only string columns have bitmap indexes. Therefore, queries that filter on other column types will need to
+scan those columns.
+
+### Filtering on numeric columns
+
+When filtering on numeric columns, you can write filters as if they were strings. In most cases, your filter will be
+converted into a numeric predicate and will be applied to the numeric column values directly. In some cases (such as
+the "regex" filter) the numeric column values will be converted to strings during the scan.
+
+For example, filtering on a specific value, `myFloatColumn = 10.1`:
+
+```json
+"filter": {
+  "type": "selector",
+  "dimension": "myFloatColumn",
+  "value": "10.1"
+}
+```
+
+Filtering on a range of values, `10 <= myFloatColumn < 20`:
+
+```json
+"filter": {
+  "type": "bound",
+  "dimension": "myFloatColumn",
+  "ordering": "numeric",
+  "lowerBound": "10",
+  "lowerStrict": false,
+  "upperBound": "20",
+  "upperStrict": true
+}
+```
+
 ### Filtering on the Timestamp Column
-Filters can also be applied to the timestamp column. The timestamp column has long millisecond values.
 
-To refer to the timestamp column, use the string `__time` as the dimension name.
-
-The filter parameters (e.g., the selector value for the SelectorFilter) should be provided as Strings.
+Query filters can also be applied to the timestamp column. The timestamp column has long millisecond values. To refer
+to the timestamp column, use the string `__time` as the dimension name. Like numeric dimensions, timestamp filters
+should be specified as if the timestamp values were strings.
 
 If the user wishes to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.html#time-format-extraction-function) is useful.
 
-Note that the timestamp column does not have a bitmap index. Thus, filtering on timestamp in a query requires a scan of the column, and performance will be affected accordingly. If possible, excluding time ranges by specifying the query interval will be faster.
+For example, filtering on a long timestamp value:
 
-**Example**
-
-Filtering on a long timestamp value:
 ```json
 "filter": {
   "type": "selector",
@@ -415,6 +448,7 @@ Filtering on a long timestamp value:
 ```
 
 Filtering on day of week:
+
 ```json
 "filter": {
   "type": "selector",
@@ -430,6 +464,7 @@ Filtering on day of week:
 ```
 
 Filtering on a set of ISO 8601 intervals:
+
 ```json
 {
     "type" : "interval",

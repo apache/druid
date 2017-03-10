@@ -24,8 +24,11 @@ Below, we outline some best practices with schema design:
 
 If the user wishes to ingest a column as a numeric-typed dimension (Long or Float), it is necessary to specify the type of the column in the `dimensions` section of the `dimensionsSpec`. If the type is omitted, Druid will ingest a column as the default String type.
 
-See [Dimension Schema](../ingestion/index.html#dimension-schema) for more information.
+There are performance tradeoffs between string and numeric columns. Numeric columns are generally faster to group on
+than string columns. But unlike string columns, numeric columns don't have indexes, so they are generally slower to
+filter on.
 
+See [Dimension Schema](../ingestion/index.html#dimension-schema) for more information.
 
 ## High cardinality dimensions (e.g. unique IDs)
 
