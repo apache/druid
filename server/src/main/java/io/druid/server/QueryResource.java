@@ -167,7 +167,7 @@ public class QueryResource implements QueryCountStatsProvider
   public Response doPost(
       InputStream in,
       @QueryParam("pretty") String pretty,
-      @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
+      @Context final HttpServletRequest req // used to get request content-type,Accept header, remote address and AuthorizationInfo
   ) throws IOException
   {
     final long start = System.currentTimeMillis();
@@ -175,11 +175,11 @@ public class QueryResource implements QueryCountStatsProvider
     QueryToolChest toolChest = null;
     String queryId = null;
 
-    final ResponseContext context = createContext(req.getContentType(), pretty != null);
+    final ResponseContext context = createContext(req.getHeader("Accept"), pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      query = context.getObjectMapper().readValue(in, Query.class);
+      query = getMapperForRequest(req.getContentType()).readValue(in, Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
@@ -415,6 +415,12 @@ public class QueryResource implements QueryCountStatsProvider
                       APPLICATION_SMILE.equals(requestType);
     String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
     return new ResponseContext(contentType, isSmile ? smileMapper : jsonMapper, pretty);
+  }
+
+  protected ObjectMapper getMapperForRequest(String requestContentType) {
+    boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestContentType) ||
+        APPLICATION_SMILE.equals(requestContentType);
+    return isSmile ? smileMapper : jsonMapper;
   }
 
   protected static class ResponseContext

@@ -24,6 +24,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
@@ -44,6 +46,8 @@ import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizationInfo;
 import io.druid.server.security.Resource;
+
+import org.apache.http.HttpStatus;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -127,6 +131,7 @@ public class QueryResourceTest
   public void setup()
   {
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HDR_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryManager = new QueryManager();
@@ -168,6 +173,32 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
+  }
+
+  @Test
+  public void testGoodQueryWithSmileAcceptHeader() throws IOException
+  {
+    //Doing a replay of testServletRequest for teardown to succeed.
+    //We dont use testServletRequest in this testcase
+    EasyMock.replay(testServletRequest);
+
+    //Creating our own Smile Servlet request, as to not disturb the remaining tests.
+    // else refactoring required for this class. i know this kinda makes the class somewhat Dirty.
+    final HttpServletRequest smileRequest = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(smileRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
+    EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
+    EasyMock.expect(smileRequest.getHeader(QueryResource.HDR_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+
+    EasyMock.replay(smileRequest);
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        null /*pretty*/,
+        smileRequest
+    );
+    Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
+    Assert.assertNotNull(response);
+    EasyMock.verify(smileRequest);
   }
 
   @Test
