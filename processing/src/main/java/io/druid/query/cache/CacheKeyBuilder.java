@@ -37,6 +37,19 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * CacheKeyBuilder is a tool for easily generating cache keys of {@link Cacheable} objects.
+ *
+ * The layout of the serialized cache key is like below.
+ *
+ * +--------------------------------------------------------+
+ * | ID (1 byte)                                            |
+ * | type key (1 byte) | serialized value (variable length) |
+ * | type key (1 byte) | serialized value (variable length) |
+ * | ...                                                    |
+ * +--------------------------------------------------------+
+ *
+ */
 public class CacheKeyBuilder
 {
   static final byte BYTE_KEY = 0;
@@ -188,12 +201,28 @@ public class CacheKeyBuilder
     return this;
   }
 
+  /**
+   * Add a collection of strings to the cache key.
+   * Strings in the collection are concatenated with a separator of '0xFF',
+   * and they appear in the cache key in their input order.
+   *
+   * @param input a collection of strings to be included in the cache key
+   * @return this instance
+   */
   public CacheKeyBuilder appendStrings(Collection<String> input)
   {
     appendItem(STRING_LIST_KEY, stringCollectionToByteArray(input, true));
     return this;
   }
 
+  /**
+   * Add a collection of strings to the cache key.
+   * Strings in the collection are sorted by their byte representation and
+   * concatenated with a separator of '0xFF'.
+   *
+   * @param input a collection of strings to be included in the cache key
+   * @return this instance
+   */
   public CacheKeyBuilder appendStringsIgnoringOrder(Collection<String> input)
   {
     appendItem(STRING_LIST_KEY, stringCollectionToByteArray(input, false));
@@ -236,12 +265,28 @@ public class CacheKeyBuilder
     return this;
   }
 
+  /**
+   * Add a collection of Cacheables to the cache key.
+   * Cacheables in the collection are concatenated without any separator,
+   * and they appear in the cache key in their input order.
+   *
+   * @param input a collection of Cacheables to be included in the cache key
+   * @return this instance
+   */
   public CacheKeyBuilder appendCacheables(Collection<? extends Cacheable> input)
   {
     appendItem(CACHEABLE_LIST_KEY, cacheableCollectionToByteArray(input, true));
     return this;
   }
 
+  /**
+   * Add a collection of Cacheables to the cache key.
+   * Cacheables in the collection are sorted by their byte representation and
+   * concatenated without any separator.
+   *
+   * @param input a collection of Cacheables to be included in the cache key
+   * @return this instance
+   */
   public CacheKeyBuilder appendCacheablesIgnoringOrder(Collection<? extends Cacheable> input)
   {
     appendItem(CACHEABLE_LIST_KEY, cacheableCollectionToByteArray(input, false));
