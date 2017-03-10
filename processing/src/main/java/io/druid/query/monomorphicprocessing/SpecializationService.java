@@ -95,6 +95,12 @@ public final class SpecializationService
   private static final int triggerSpecializationIterationsThreshold =
       Integer.getInteger("triggerSpecializationIterationsThreshold", 10_000);
 
+  /**
+   * The maximum number of specializations, that this service is allowed to make. It's not unlimited because each
+   * specialization takes some JVM memory (machine code cache, byte code, etc.)
+   */
+  private static final int maxSpecializations = Integer.getInteger("maxSpecializations", 1000);
+
   private static final ExecutorService classSpecializationExecutor = Execs.singleThreaded("class-specialization-%d");
 
   private static final AtomicLong specializedClassCounter = new AtomicLong();
@@ -344,7 +350,21 @@ public final class SpecializationService
     {
       try {
         T specialized;
-        if (fakeSpecialize) {
+        if (specializedClassCounter.get() > maxSpecializations) {
+          // Don't specialize, just instantiate the prototype class and emit a warning.
+          // The "better" approach is probably to implement some kind of cache eviction from
+          // PerPrototypeClassState.specializationStates. But it might be that nobody ever hits even the current
+          // maxSpecializations limit, so implementing cache eviction is an unnecessary complexity.
+          specialized = perPrototypeClassState.prototypeClass.newInstance();
+          LOG.warn(
+              "SpecializationService couldn't make more than [%d] specializations. "
+              + "Not doing specialization for runtime shape[%s] and class remapping[%s], using the prototype class[%s]",
+              maxSpecializations,
+              specializationId.runtimeShape,
+              specializationId.classRemapping,
+              perPrototypeClassState.prototypeClass
+          );
+        } else if (fakeSpecialize) {
           specialized = perPrototypeClassState.prototypeClass.newInstance();
         } else {
           specialized = perPrototypeClassState.specialize(specializationId.classRemapping);
