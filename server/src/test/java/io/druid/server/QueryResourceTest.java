@@ -176,6 +176,54 @@ public class QueryResourceTest
   }
 
   @Test
+  public void testGoodQueryWithNullAcceptHeader() throws IOException
+  {
+    final String acceptHeader = null;
+    final String contentTypeHeader = MediaType.APPLICATION_JSON;
+    EasyMock.reset(testServletRequest);
+
+    EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
+    EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.HDR_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+
+    EasyMock.replay(testServletRequest);
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
+    //since accept header is null, the response content type should be same as the value of 'Content-Type' header
+    Assert.assertEquals(contentTypeHeader, (response.getMetadata().get("Content-Type").get(0)).toString());
+    Assert.assertNotNull(response);
+  }
+
+  @Test
+  public void testGoodQueryWithEmptyAcceptHeader() throws IOException
+  {
+    final String acceptHeader = "";
+    final String contentTypeHeader = MediaType.APPLICATION_JSON;
+    EasyMock.reset(testServletRequest);
+
+    EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
+    EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.HDR_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+
+    EasyMock.replay(testServletRequest);
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
+    //since accept header is empty, the response content type should be same as the value of 'Content-Type' header
+    Assert.assertEquals(contentTypeHeader, (response.getMetadata().get("Content-Type").get(0)).toString());
+    Assert.assertNotNull(response);
+  }
+
+  @Test
   public void testGoodQueryWithSmileAcceptHeader() throws IOException
   {
     //Doing a replay of testServletRequest for teardown to succeed.
@@ -197,6 +245,7 @@ public class QueryResourceTest
         smileRequest
     );
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, (response.getMetadata().get("Content-Type").get(0)).toString());
     Assert.assertNotNull(response);
     EasyMock.verify(smileRequest);
   }

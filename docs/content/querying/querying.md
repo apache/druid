@@ -24,6 +24,8 @@ The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
  curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:x-jackson-smile' -d @<query_json_file>
  ```
 
+Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
+
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries 
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build 
 more complex visualizations, multiple Druid queries may be required.

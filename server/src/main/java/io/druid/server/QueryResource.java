@@ -53,6 +53,8 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizationInfo;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
+
+import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -175,7 +177,12 @@ public class QueryResource implements QueryCountStatsProvider
     QueryToolChest toolChest = null;
     String queryId = null;
 
-    final ResponseContext context = createContext(req.getHeader("Accept"), pretty != null);
+    String acceptHeader = req.getHeader("Accept");
+    if (StringUtils.isEmpty(acceptHeader)) {
+      //default to content-type
+      acceptHeader = req.getContentType();
+    }
+    final ResponseContext context = createContext(acceptHeader, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
