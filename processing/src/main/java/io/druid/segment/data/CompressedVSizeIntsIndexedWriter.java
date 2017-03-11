@@ -53,7 +53,6 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
 
   private final int numBytes;
   private final int chunkFactor;
-  private final int chunkBytes;
   private final boolean isBigEndian;
   private final CompressionStrategy compression;
   private final GenericIndexedWriter<ByteBuffer> flattener;
@@ -93,13 +92,12 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   {
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
     this.chunkFactor = chunkFactor;
-    this.chunkBytes = chunkFactor * numBytes + CompressedVSizeIntsIndexedSupplier.bufferPadding(numBytes);
+    int chunkBytes = chunkFactor * numBytes;
     this.isBigEndian = byteOrder.equals(ByteOrder.BIG_ENDIAN);
     this.compression = compression;
     this.flattener = flattener;
     this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
-    this.endBuffer = compression.getCompressor().allocateInBuffer(chunkFactor).order(byteOrder);
-    this.endBuffer.limit(numBytes * chunkFactor);
+    this.endBuffer = compression.getCompressor().allocateInBuffer(chunkBytes).order(byteOrder);
     this.numInserted = 0;
   }
 
@@ -119,10 +117,8 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   protected void addValue(int val) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
-      endBuffer.rewind();
-      flattener.write(endBuffer);
       endBuffer.clear();
-      endBuffer.limit(numBytes * chunkFactor);
+      flattener.write(endBuffer);
     }
     intBuffer.putInt(0, val);
     if (isBigEndian) {

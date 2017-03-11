@@ -20,9 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
-import io.druid.common.utils.SerializerUtils;
 import io.druid.io.Channels;
-import io.druid.io.ZeroCopyByteArrayOutputStream;
+import io.druid.io.OutputBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -43,9 +42,8 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>, WritableSup
   {
     Iterator<VSizeIndexedInts> objects = objectsIterable.iterator();
     if (!objects.hasNext()) {
-      final ByteBuffer buffer = ByteBuffer.allocate(4).putInt(0);
-      buffer.flip();
-      return new VSizeIndexed(buffer, 4);
+      final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES).putInt(0, 0);
+      return new VSizeIndexed(buffer, Ints.BYTES);
     }
 
     int numBytes = -1;
@@ -59,29 +57,27 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>, WritableSup
       ++count;
     }
 
-    ZeroCopyByteArrayOutputStream headerBytes = new ZeroCopyByteArrayOutputStream(4 + (count * 4));
-    ZeroCopyByteArrayOutputStream valueBytes = new ZeroCopyByteArrayOutputStream();
-    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
+    OutputBytes headerBytes = new OutputBytes();
+    OutputBytes valueBytes = new OutputBytes();
     int offset = 0;
     try {
-      SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, count, helperBuffer);
+      headerBytes.writeInt(count);
 
       for (VSizeIndexedInts object : objectsIterable) {
         if (object.getNumBytes() != numBytes) {
           throw new ISE("val.numBytes[%s] != numBytesInValue[%s]", object.getNumBytes(), numBytes);
         }
-        byte[] bytes = object.getBytesNoPadding();
-        offset += bytes.length;
-        SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, offset, helperBuffer);
-        valueBytes.write(bytes);
+        offset += object.getNumBytesNoPadding();
+        headerBytes.writeInt(offset);
+        object.writeBytesNoPaddingTo(valueBytes);
       }
-      valueBytes.write(new byte[4 - numBytes]);
+      valueBytes.write(new byte[Ints.BYTES - numBytes]);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
 
-    ByteBuffer theBuffer = ByteBuffer.allocate(headerBytes.size() + valueBytes.size());
+    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(headerBytes.size() + valueBytes.size()));
     headerBytes.writeTo(theBuffer);
     valueBytes.writeTo(theBuffer);
     theBuffer.flip();

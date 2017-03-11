@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import io.druid.io.Channels;
+import io.druid.io.OutputBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -54,19 +55,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return fromList(IntLists.EMPTY_LIST, 0);
   }
 
-  /**
-   * provide for performance reason.
-   */
-  public static byte[] getBytesNoPaddingFromList(IntList list, int maxValue)
-  {
-    int numBytes = getNumBytesForMax(maxValue);
-
-    final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes));
-    writeToBuffer(buffer, list, numBytes, maxValue);
-
-    return buffer.array();
-  }
-
   public static VSizeIndexedInts fromList(IntList list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
@@ -79,6 +67,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   private static void writeToBuffer(ByteBuffer buffer, IntList list, int numBytes, int maxValue)
   {
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
     for (int i = 0; i < list.size(); i++) {
       int val = list.getInt(i);
       if (val < 0) {
@@ -88,9 +77,8 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
         throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", val, maxValue, i);
       }
 
-      for (int shift = 24, byteIndex = 0; byteIndex < numBytes; byteIndex++, shift -= 8) {
-        buffer.put((byte) (val >> shift));
-      }
+      helperBuffer.putInt(0, val);
+      buffer.put(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
     }
     buffer.position(0);
   }
@@ -143,12 +131,16 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return buffer.getInt(buffer.position() + (index * numBytes)) >>> bitsToShift;
   }
 
-  public byte[] getBytesNoPadding()
+  public int getNumBytesNoPadding()
   {
-    int bytesToTake = buffer.remaining() - (4 - numBytes);
-    byte[] bytes = new byte[bytesToTake];
-    buffer.asReadOnlyBuffer().get(bytes);
-    return bytes;
+    return buffer.remaining() - (Ints.BYTES - numBytes);
+  }
+
+  public void writeBytesNoPaddingTo(OutputBytes out)
+  {
+    ByteBuffer toWrite = buffer.slice();
+    toWrite.limit(toWrite.limit() - (Ints.BYTES - numBytes));
+    out.write(toWrite);
   }
 
   public byte[] getBytes()

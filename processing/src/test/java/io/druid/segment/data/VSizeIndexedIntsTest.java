@@ -19,9 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -64,17 +61,5 @@ public class VSizeIndexedIntsTest
     for (int i = 0; i < array.length; i++) {
       Assert.assertEquals(array[i], deserialized.get(i));
     }
-  }
-
-  @Test
-  public void testGetBytesNoPaddingfromList() throws Exception
-  {
-    final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
-    IntList list = IntArrayList.wrap(array);
-    int maxValue = Ints.max(array);
-    VSizeIndexedInts ints = VSizeIndexedInts.fromList(list, maxValue);
-    byte[] bytes1 = ints.getBytesNoPadding();
-    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingFromList(list, maxValue);
-    Assert.assertArrayEquals(bytes1, bytes2);
   }
 }

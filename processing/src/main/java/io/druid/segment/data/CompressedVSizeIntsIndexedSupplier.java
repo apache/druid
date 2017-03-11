@@ -54,7 +54,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseBuffers;
   private final CompressionStrategy compression;
 
-  CompressedVSizeIntsIndexedSupplier(
+  private CompressedVSizeIntsIndexedSupplier(
       int totalSize,
       int sizePer,
       int numBytes,
@@ -80,10 +80,10 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   {
     int maxSizePer = (CompressedPools.BUFFER_SIZE - bufferPadding(numBytes)) / numBytes;
     // round down to the nearest power of 2
-    return 1 << (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(maxSizePer));
+    return Integer.highestOneBit(maxSizePer);
   }
 
-  public static int bufferPadding(int numBytes)
+  static int bufferPadding(int numBytes)
   {
     // when numBytes == 3 we need to pad the buffer to allow reading an extra byte
     // beyond the end of the last value, since we use buffer.getInt() to read values.
@@ -170,7 +170,6 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       final int numBytes = buffer.get();
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      final int chunkBytes = sizePer * numBytes + bufferPadding(numBytes);
 
       final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
 
@@ -178,7 +177,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
           totalSize,
           sizePer,
           numBytes,
-          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression, chunkBytes)),
+          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression)),
           compression
       );
 
@@ -192,11 +191,11 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,
-      CompressionStrategy compression
+      final CompressionStrategy compression
   )
   {
     final int numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
-    final int chunkBytes = chunkFactor * numBytes + bufferPadding(numBytes);
+    final int chunkBytes = chunkFactor * numBytes;
 
     Preconditions.checkArgument(
         chunkFactor <= maxIntsInBufferForBytes(numBytes),
@@ -217,8 +216,9 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
                 return new Iterator<ByteBuffer>()
                 {
                   int position = 0;
-                  private final ByteBuffer retVal = ByteBuffer.allocate(chunkBytes).order(byteOrder);
-                  private final boolean isBigEndian = byteOrder == ByteOrder.BIG_ENDIAN;
+                  private final ByteBuffer retVal =
+                      compression.getCompressor().allocateInBuffer(chunkBytes).order(byteOrder);
+                  private final boolean isBigEndian = byteOrder.equals(ByteOrder.BIG_ENDIAN);
                   private final ByteBuffer helperBuf = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
 
                   @Override

@@ -65,11 +65,9 @@ public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializ
   public void add(float value) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
-      endBuffer.rewind();
-      flattener.write(endBuffer);
       endBuffer.clear();
+      flattener.write(endBuffer);
     }
-
     endBuffer.putFloat(value);
     ++numInserted;
   }

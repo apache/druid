@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Floats;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.guava.CloseQuietly;
 
@@ -44,7 +43,7 @@ public class BlockLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
   {
     baseFloatBuffers = GenericIndexed.read(
         fromBuffer,
-        new DecompressingByteBufferObjectStrategy(order, strategy, sizePer * Floats.BYTES)
+        new DecompressingByteBufferObjectStrategy(order, strategy)
     );
     this.totalSize = totalSize;
     this.sizePer = sizePer;

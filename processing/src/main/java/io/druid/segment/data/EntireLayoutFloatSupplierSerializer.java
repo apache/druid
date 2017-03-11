@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.io.Channels;
 import io.druid.io.OutputBytes;
@@ -34,14 +33,13 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
 {
   private OutputBytes valuesOut;
 
-  private final ByteBuffer orderBuffer;
+  private final boolean isLittleEndian;
 
   private int numInserted = 0;
 
   EntireLayoutFloatSupplierSerializer(ByteOrder order)
   {
-    orderBuffer = ByteBuffer.allocate(Floats.BYTES);
-    orderBuffer.order(order);
+    isLittleEndian = order.equals(ByteOrder.LITTLE_ENDIAN);
   }
 
   @Override
@@ -59,9 +57,12 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
   @Override
   public void add(float value) throws IOException
   {
-    orderBuffer.rewind();
-    orderBuffer.putFloat(value);
-    valuesOut.write(orderBuffer.array());
+    int valueBits = Float.floatToRawIntBits(value);
+    // OutputBytes are always big-endian, so need to reverse bytes
+    if (isLittleEndian) {
+      valueBits = Integer.reverseBytes(valueBits);
+    }
+    valuesOut.writeInt(valueBits);
     ++numInserted;
   }
 

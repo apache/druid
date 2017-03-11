@@ -197,13 +197,16 @@ public class GenericIndexedWriter<T> implements Serializer
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSize() + headerOut.size() + valuesOut.size();
+    if (requireMultipleFiles) {
+      return metaSize();
+    } else {
+      return metaSize() + headerOut.size() + valuesOut.size();
+    }
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    valuesOut.close();
     if (requireMultipleFiles) {
       closeMultiFiles(channel, smoosher);
     } else {
@@ -213,7 +216,6 @@ public class GenericIndexedWriter<T> implements Serializer
 
   private void writeToSingleFile(WritableByteChannel channel) throws IOException
   {
-    headerOut.close();
     final long numBytesWritten = headerOut.size() + valuesOut.size();
 
     Preconditions.checkState(
@@ -259,8 +261,7 @@ public class GenericIndexedWriter<T> implements Serializer
     }
 
     int bagSizePower = bagSizePower();
-    int metaSize = metaSize();
-    ByteBuffer meta = ByteBuffer.allocate(metaSize);
+    ByteBuffer meta = ByteBuffer.allocate(metaSize());
     meta.put(GenericIndexed.VERSION_TWO);
     meta.put(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
     meta.putInt(bagSizePower);
@@ -407,7 +408,6 @@ public class GenericIndexedWriter<T> implements Serializer
 
   private void initializeHeaderOutLong() throws IOException
   {
-    headerOut.close();
     headerOutLong = new LongArrayList();
     DataInput headerOutAsIntInput = new DataInputStream(headerOut.asInputStream());
     for (int i = 0; i < numWritten; i++) {

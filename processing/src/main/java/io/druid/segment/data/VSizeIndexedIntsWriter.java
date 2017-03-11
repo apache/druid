@@ -84,7 +84,7 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   private void writeBufPadding() throws IOException
   {
     if (!bufPaddingWritten) {
-      byte[] bufPadding = new byte[4 - numBytes];
+      byte[] bufPadding = new byte[Ints.BYTES - numBytes];
       valuesOut.write(bufPadding);
       bufPaddingWritten = true;
     }

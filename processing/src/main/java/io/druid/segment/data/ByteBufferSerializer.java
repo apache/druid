@@ -44,7 +44,7 @@ public class ByteBufferSerializer<T>
       throws IOException
   {
     byte[] toWrite = strategy.toBytes(obj);
-    Channels.writeFully(channel, ByteBuffer.allocate(Ints.BYTES).putInt(0, toWrite.length));
+    Channels.writeFully(channel, ByteBuffer.wrap(Ints.toByteArray(toWrite.length)));
     Channels.writeFully(channel, ByteBuffer.wrap(toWrite));
     return Ints.BYTES + (long) toWrite.length;
   }

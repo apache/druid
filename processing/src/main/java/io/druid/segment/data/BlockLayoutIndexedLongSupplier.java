@@ -44,9 +44,7 @@ public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
       CompressionStrategy strategy
   )
   {
-    baseLongBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(
-        order, strategy, reader.getNumBytes(sizePer)
-    ));
+    baseLongBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(order, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;

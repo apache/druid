@@ -91,7 +91,7 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   protected void addValue(int val) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
-      endBuffer.rewind();
+      endBuffer.clear();
       flattener.write(endBuffer);
     }
     endBuffer.putInt(val);

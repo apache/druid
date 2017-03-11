@@ -175,18 +175,20 @@ public enum CompressionStrategy
      * Allocates a buffer that should be passed to {@link #compress} method as input buffer. Different Compressors
      * require (or work more efficiently with) different kinds of buffers.
      */
-    ByteBuffer allocateInBuffer(int capacity)
+    ByteBuffer allocateInBuffer(int inputSize)
     {
-      return ByteBuffer.allocate(capacity);
+      return ByteBuffer.allocate(inputSize);
     }
 
     /**
      * Allocates a buffer that should be passed to {@link #compress} method as output buffer. Different Compressors
      * require (or work more efficiently with) different kinds of buffers.
+     *
+     * <p>Allocates a buffer that is always enough to compress a byte sequence of the given size.
      */
-    ByteBuffer allocateOutBuffer(int capacity)
+    ByteBuffer allocateOutBuffer(int inputSize)
     {
-      return ByteBuffer.allocate(capacity);
+      return ByteBuffer.allocate(inputSize);
     }
     /**
      * Returns a ByteBuffer with compressed contents of in between it's position and limit. It may be the provided out
@@ -263,15 +265,15 @@ public enum CompressionStrategy
     private static final LZFCompressor defaultCompressor = new LZFCompressor();
 
     @Override
-    public ByteBuffer allocateInBuffer(int capacity)
+    public ByteBuffer allocateInBuffer(int inputSize)
     {
-      return ByteBuffer.allocate(capacity);
+      return ByteBuffer.allocate(inputSize);
     }
 
     @Override
-    public ByteBuffer allocateOutBuffer(int capacity)
+    public ByteBuffer allocateOutBuffer(int inputSize)
     {
-      return ByteBuffer.allocate(capacity);
+      return ByteBuffer.allocate(LZFEncoder.estimateMaxWorkspaceSize(inputSize));
     }
 
     @Override
@@ -330,15 +332,15 @@ public enum CompressionStrategy
     private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestInstance().highCompressor();
 
     @Override
-    ByteBuffer allocateInBuffer(int capacity)
+    ByteBuffer allocateInBuffer(int inputSize)
     {
-      return ByteBuffer.allocateDirect(capacity);
+      return ByteBuffer.allocateDirect(inputSize);
     }
 
     @Override
-    ByteBuffer allocateOutBuffer(int capacity)
+    ByteBuffer allocateOutBuffer(int inputSize)
     {
-      return ByteBuffer.allocateDirect(capacity);
+      return ByteBuffer.allocateDirect(lz4High.maxCompressedLength(inputSize));
     }
 
     @Override

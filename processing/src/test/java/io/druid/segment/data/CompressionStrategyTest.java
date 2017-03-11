@@ -89,7 +89,7 @@ public class CompressionStrategyTest
     ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length);
     ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
     ByteBuffer output = ByteBuffer.allocate(originalData.length);
-    compressionStrategy.getDecompressor().decompress(compressed, compressed.array().length, output);
+    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
     byte[] checkArray = new byte[DATA_SIZER];
     output.get(checkArray);
     Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
@@ -102,8 +102,7 @@ public class CompressionStrategyTest
     ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length);
     ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
     ByteBuffer output = ByteBuffer.allocate(originalData.length);
-    compressionStrategy.getDecompressor()
-                       .decompress(compressed, compressed.array().length, output, originalData.length);
+    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output, originalData.length);
     byte[] checkArray = new byte[DATA_SIZER];
     output.get(checkArray);
     Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
@@ -115,7 +114,7 @@ public class CompressionStrategyTest
     ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length);
     ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
     ByteBuffer output = ByteBuffer.allocateDirect(originalData.length);
-    compressionStrategy.getDecompressor().decompress(compressed, compressed.array().length, output);
+    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
     byte[] checkArray = new byte[DATA_SIZER];
     output.get(checkArray);
     Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
@@ -145,7 +144,7 @@ public class CompressionStrategyTest
                   ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length);
                   ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
                   ByteBuffer output = ByteBuffer.allocate(originalData.length);
-                  compressionStrategy.getDecompressor().decompress(compressed, compressed.array().length, output);
+                  compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
                   byte[] checkArray = new byte[DATA_SIZER];
                   output.get(checkArray);
                   Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
@@ -182,7 +181,7 @@ public class CompressionStrategyTest
                   ByteBuffer output = ByteBuffer.allocate(originalData.length);
                   // TODO: Lambdas would be nice here whenever we use Java 8
                   compressionStrategy.getDecompressor()
-                                     .decompress(compressed, compressed.array().length, output, originalData.length);
+                                     .decompress(compressed, compressed.remaining(), output, originalData.length);
                   byte[] checkArray = new byte[DATA_SIZER];
                   output.get(checkArray);
                   Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);

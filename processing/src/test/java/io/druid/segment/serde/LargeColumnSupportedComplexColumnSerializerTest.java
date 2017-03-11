@@ -31,8 +31,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.IOPeon;
-import io.druid.segment.data.TmpFileIOPeon;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,8 +58,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
       for (int aCase : cases) {
         File tmpFile = FileUtils.getTempDirectory();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
-        try (IOPeon peon = new TmpFileIOPeon();
-             FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
+        try (FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
 
           LargeColumnSupportedComplexColumnSerializer serializer = LargeColumnSupportedComplexColumnSerializer
               .createWithColumnSize("test", serde.getObjectStrategy(), columnSize);

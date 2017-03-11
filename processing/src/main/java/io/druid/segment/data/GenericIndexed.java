@@ -154,7 +154,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
         buffers,
         GenericIndexedWriter.compressedByteBuffersWriteObjectStrategy(compression, bufferSize),
         false,
-        new DecompressingByteBufferObjectStrategy(order, compression, bufferSize)
+        new DecompressingByteBufferObjectStrategy(order, compression)
     );
   }
 
@@ -478,7 +478,6 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     OutputBytes headerOut = new OutputBytes();
     OutputBytes valuesOut = new OutputBytes();
     try {
-      int offset = 0;
       T prevVal = null;
       do {
         count++;
@@ -490,7 +489,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
         // for compatibility with the format, but this field is unused
         valuesOut.writeInt(0);
         strategy.writeTo(next, valuesOut);
-        headerOut.write(Ints.checkedCast(valuesOut.size()));
+        headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
         if (prevVal instanceof Closeable) {
           CloseQuietly.close((Closeable) prevVal);

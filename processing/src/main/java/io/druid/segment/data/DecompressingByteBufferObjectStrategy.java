@@ -29,13 +29,11 @@ public class DecompressingByteBufferObjectStrategy extends ObjectStrategy<Resour
 {
   private final ByteOrder order;
   private final CompressionStrategy.Decompressor decompressor;
-  private final int sizePerInBytes;
 
-  DecompressingByteBufferObjectStrategy(ByteOrder order, CompressionStrategy compression, int sizePerInBytes)
+  DecompressingByteBufferObjectStrategy(ByteOrder order, CompressionStrategy compression)
   {
     this.order = order;
     this.decompressor = compression.getDecompressor();
-    this.sizePerInBytes = sizePerInBytes;
   }
 
   @Override
@@ -45,11 +43,6 @@ public class DecompressingByteBufferObjectStrategy extends ObjectStrategy<Resour
     return (Class) ResourceHolder.class;
   }
 
-  private void decompress(ByteBuffer buffer, int numBytes, ByteBuffer buf)
-  {
-    decompressor.decompress(buffer, numBytes, buf, sizePerInBytes);
-  }
-
   @Override
   public ResourceHolder<ByteBuffer> fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
@@ -57,7 +50,10 @@ public class DecompressingByteBufferObjectStrategy extends ObjectStrategy<Resour
     final ByteBuffer buf = bufHolder.get();
     buf.clear();
 
-    decompress(buffer, numBytes, buf);
+    decompressor.decompress(buffer, numBytes, buf);
+    // Needed, because if e. g. if this compressed buffer contains 3-byte integers, it should be possible to getInt()
+    // from the buffer, including padding. See CompressedVSizeIntsIndexedSupplier.bufferPadding().
+    buf.limit(buf.capacity());
     return new ResourceHolder<ByteBuffer>()
     {
       @Override

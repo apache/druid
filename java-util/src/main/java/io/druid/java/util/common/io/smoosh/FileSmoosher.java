@@ -294,7 +294,12 @@ public class FileSmoosher implements Closeable
     return new SmooshedWriter()
     {
       private final GatheringByteChannel channel =
-          FileChannel.open(tmpFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+          FileChannel.open(
+              tmpFile.toPath(),
+              StandardOpenOption.WRITE,
+              StandardOpenOption.CREATE,
+              StandardOpenOption.TRUNCATE_EXISTING
+          );
 
       private int currOffset = 0;
 
