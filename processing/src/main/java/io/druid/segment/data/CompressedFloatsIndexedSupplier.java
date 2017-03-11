@@ -40,14 +40,14 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>,
   private final int sizePer;
   private final ByteBuffer buffer;
   private final Supplier<IndexedFloats> supplier;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
 
   CompressedFloatsIndexedSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer buffer,
       Supplier<IndexedFloats> supplier,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
@@ -104,18 +104,17 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>,
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      CompressionStrategy compression = CompressionStrategy.LZF;
       if (versionFromBuffer == version) {
         byte compressionId = buffer.get();
-        compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
+        compression = CompressionStrategy.forId(compressionId);
       }
       Supplier<IndexedFloats> supplier = CompressionFactory.getFloatSupplier(
           totalSize,
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
-          compression,
-          mapper
+          compression
       );
       return new CompressedFloatsIndexedSupplier(
           totalSize,

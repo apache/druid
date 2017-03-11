@@ -20,8 +20,8 @@
 package io.druid.segment;
 
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +44,7 @@ public class LongDimensionMergerLegacy extends LongDimensionMergerV9 implements 
   @Override
   protected void setupEncodedValueWriter() throws IOException
   {
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
     serializerV8 = new LongMetricColumnSerializer(dimensionName, outDir, metCompression, longEncoding);
     serializerV8.open();

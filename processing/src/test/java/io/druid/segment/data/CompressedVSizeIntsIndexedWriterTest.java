@@ -55,12 +55,12 @@ public class CompressedVSizeIntsIndexedWriterTest
 {
   private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
   private final IOPeon ioPeon = new TmpFileIOPeon();
-  private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
+  private final CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
   public CompressedVSizeIntsIndexedWriterTest(
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      CompressionStrategy compressionStrategy,
       ByteOrder byteOrder
   )
   {
@@ -72,7 +72,7 @@ public class CompressedVSizeIntsIndexedWriterTest
   public static Iterable<Object[]> compressionStrategiesAndByteOrders()
   {
     Set<List<Object>> combinations = Sets.cartesianProduct(
-        Sets.newHashSet(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
+        Sets.newHashSet(CompressionStrategy.noNoneValues()),
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 
@@ -133,8 +133,7 @@ public class CompressedVSizeIntsIndexedWriterTest
     // read from ByteBuffer and check values
     CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
         ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
-        byteOrder,
-        null
+        byteOrder
     );
     IndexedInts indexedInts = supplierFromByteBuffer.get();
     for (int i = 0; i < vals.length; ++i) {
@@ -177,15 +176,9 @@ public class CompressedVSizeIntsIndexedWriterTest
     File tmpDirectory = FileUtils.getTempDirectory();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
-    int maxValue = vals.length > 0 ? Ints.max(vals) : 0;
-    GenericIndexedWriter genericIndexed = new GenericIndexedWriter<>(
+    GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
         "test",
-        CompressedByteBufferObjectStrategy.getBufferForOrder(
-            byteOrder,
-            compressionStrategy,
-            chunkSize * VSizeIndexedInts.getNumBytesForMax(maxValue)
-            + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue))
-        ),
+        compressionStrategy,
         Longs.BYTES * 10000
     );
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
@@ -212,8 +205,7 @@ public class CompressedVSizeIntsIndexedWriterTest
 
     CompressedVSizeIntsIndexedSupplier supplierFromByteBuffer = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
         mapper.mapFile("test"),
-        byteOrder,
-        mapper
+        byteOrder
     );
 
     IndexedInts indexedInts = supplierFromByteBuffer.get();

@@ -47,7 +47,7 @@ public class CompressedFloatsSerdeTest
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressedObjectStrategy.CompressionStrategy strategy : CompressedObjectStrategy.CompressionStrategy.values()) {
+    for (CompressionStrategy strategy : CompressionStrategy.values()) {
       data.add(new Object[]{strategy, ByteOrder.BIG_ENDIAN});
       data.add(new Object[]{strategy, ByteOrder.LITTLE_ENDIAN});
     }
@@ -56,7 +56,7 @@ public class CompressedFloatsSerdeTest
 
   private static final double DELTA = 0.00001;
 
-  protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
+  protected final CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
   private final float values0[] = {};
@@ -72,7 +72,7 @@ public class CompressedFloatsSerdeTest
   };
 
   public CompressedFloatsSerdeTest(
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      CompressionStrategy compressionStrategy,
       ByteOrder order
   )
   {

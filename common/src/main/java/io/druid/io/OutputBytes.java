@@ -181,6 +181,17 @@ public final class OutputBytes extends OutputStream implements WritableByteChann
     }
   }
 
+  public void writeTo(ByteBuffer out)
+  {
+    for (int i = 0; i <= headBufferIndex; i++) {
+      ByteBuffer buffer = buffers.get(i);
+      buffer.flip();
+      out.put(buffer);
+      // switch back to the initial state
+      buffer.limit(buffer.capacity());
+    }
+  }
+
   public InputStream asInputStream() throws IOException
   {
     Function<ByteBuffer, ByteSource> byteBufferToByteSource = buf -> new ByteSource()

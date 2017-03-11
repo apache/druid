@@ -34,8 +34,8 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -68,8 +68,8 @@ public class IndexIOTest
   private static Interval DEFAULT_INTERVAL = Interval.parse("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 

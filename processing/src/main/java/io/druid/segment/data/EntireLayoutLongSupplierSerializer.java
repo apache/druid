@@ -76,7 +76,7 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
     meta.put(CompressedLongsIndexedSupplier.version);
     meta.putInt(numInserted);
     meta.putInt(0);
-    writer.putMeta(meta, CompressedObjectStrategy.CompressionStrategy.NONE);
+    writer.putMeta(meta, CompressionStrategy.NONE);
     meta.flip();
 
     Channels.writeFully(channel, meta);

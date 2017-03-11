@@ -20,8 +20,8 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.FloatSupplierSerializer;
 
 import java.io.IOException;
@@ -30,24 +30,17 @@ import java.nio.channels.WritableByteChannel;
 
 public class FloatColumnSerializer implements GenericColumnSerializer
 {
-  public static FloatColumnSerializer create(
-      String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression
-  )
+  public static FloatColumnSerializer create(String filenameBase, CompressionStrategy compression)
   {
     return new FloatColumnSerializer(filenameBase, IndexIO.BYTE_ORDER, compression);
   }
 
   private final String filenameBase;
   private final ByteOrder byteOrder;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
   private FloatSupplierSerializer writer;
 
-  private FloatColumnSerializer(
-      String filenameBase,
-      ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
-  )
+  private FloatColumnSerializer(String filenameBase, ByteOrder byteOrder, CompressionStrategy compression)
   {
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;

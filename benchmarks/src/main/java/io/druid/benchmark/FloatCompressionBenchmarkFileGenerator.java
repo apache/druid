@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.FloatSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 
@@ -48,10 +48,10 @@ import java.util.Map;
 public class FloatCompressionBenchmarkFileGenerator
 {
   public static final int ROW_NUM = 5000000;
-  public static final List<CompressedObjectStrategy.CompressionStrategy> compressions =
+  public static final List<CompressionStrategy> compressions =
       ImmutableList.of(
-          CompressedObjectStrategy.CompressionStrategy.LZ4,
-          CompressedObjectStrategy.CompressionStrategy.NONE
+          CompressionStrategy.LZ4,
+          CompressionStrategy.NONE
       );
 
   private static String dirPath = "floatCompress/";
@@ -140,7 +140,7 @@ public class FloatCompressionBenchmarkFileGenerator
 
     // create compressed files using all combinations of CompressionStrategy and FloatEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
-      for (CompressedObjectStrategy.CompressionStrategy compression : compressions) {
+      for (CompressionStrategy compression : compressions) {
         String name = entry.getKey() + "-" + compression.toString();
         System.out.print(name + ": ");
         File compFile = new File(dir, name);

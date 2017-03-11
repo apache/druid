@@ -37,7 +37,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 {
   private final String filenameBase;
   private final ByteOrder order;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
   private LongList tempOut = null;
 
   private int numInserted = 0;
@@ -53,7 +53,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
   IntermediateLongSupplierSerializer(
       String filenameBase,
       ByteOrder order,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressionStrategy compression
   )
   {
     this.filenameBase = filenameBase;
@@ -111,7 +111,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
       writer = new LongsLongEncodingWriter(order);
     }
 
-    if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
+    if (compression == CompressionStrategy.NONE) {
       delegate = new EntireLayoutLongSupplierSerializer(writer);
     } else {
       delegate = new BlockLayoutLongSupplierSerializer(filenameBase, order, writer, compression);

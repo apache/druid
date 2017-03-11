@@ -43,7 +43,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
   private final int sizePer;
   private final ByteBuffer buffer;
   private final Supplier<IndexedLongs> supplier;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingFormat encoding;
 
   CompressedLongsIndexedSupplier(
@@ -51,7 +51,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
       int sizePer,
       ByteBuffer buffer,
       Supplier<IndexedLongs> supplier,
-      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionStrategy compression,
       CompressionFactory.LongEncodingFormat encoding
   )
   {
@@ -115,7 +115,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      CompressionStrategy compression = CompressionStrategy.LZF;
       CompressionFactory.LongEncodingFormat encoding = CompressionFactory.LEGACY_LONG_ENCODING_FORMAT;
       if (versionFromBuffer == version) {
         byte compressionId = buffer.get();
@@ -123,7 +123,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
           encoding = CompressionFactory.LongEncodingFormat.forId(buffer.get());
           compressionId = CompressionFactory.clearEncodingFlag(compressionId);
         }
-        compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
+        compression = CompressionStrategy.forId(compressionId);
       }
       Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(
           totalSize,
@@ -131,8 +131,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>, S
           buffer.asReadOnlyBuffer(),
           order,
           encoding,
-          compression,
-          fileMapper
+          compression
       );
       return new CompressedLongsIndexedSupplier(
           totalSize,

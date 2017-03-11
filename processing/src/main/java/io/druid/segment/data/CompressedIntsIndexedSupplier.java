@@ -19,16 +19,15 @@
 
 package io.druid.segment.data;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidResourceHolder;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.CompressedPools;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -49,14 +48,14 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
 
   private final int totalSize;
   private final int sizePer;
-  private final GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final GenericIndexed<ResourceHolder<ByteBuffer>> baseIntBuffers;
+  private final CompressionStrategy compression;
 
   CompressedIntsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers,
-      CompressedObjectStrategy.CompressionStrategy compression
+      GenericIndexed<ResourceHolder<ByteBuffer>> baseIntBuffers,
+      CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
@@ -125,46 +124,24 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
            1;  // compressionId
   }
 
-  public CompressedIntsIndexedSupplier convertByteOrder(ByteOrder order)
-  {
-    return new CompressedIntsIndexedSupplier(
-        totalSize,
-        sizePer,
-        GenericIndexed.fromIterable(baseIntBuffers, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
-        compression
-    );
-  }
-
-  /**
-   * For testing.  Do not use unless you like things breaking
-   */
-  GenericIndexed<ResourceHolder<IntBuffer>> getBaseIntBuffers()
+  @VisibleForTesting
+  GenericIndexed<?> getBaseIntBuffers()
   {
     return baseIntBuffers;
   }
 
-  public static CompressedIntsIndexedSupplier fromByteBuffer(
-      ByteBuffer buffer,
-      ByteOrder order,
-      SmooshedFileMapper fileMapper
-  )
+  public static CompressedIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
-          buffer.get()
-      );
+      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
       return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,
-          GenericIndexed.read(
-              buffer,
-              CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer),
-              fileMapper
-          ),
+          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression, sizePer * Ints.BYTES)),
           compression
       );
     }
@@ -172,13 +149,8 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
-  {
-    return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression);
-  }
-
   public static CompressedIntsIndexedSupplier fromIntBuffer(
-      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, final CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -188,15 +160,18 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return new CompressedIntsIndexedSupplier(
         buffer.remaining(),
         chunkFactor,
-        GenericIndexed.fromIterable(
-            new Iterable<ResourceHolder<IntBuffer>>()
+        GenericIndexed.ofCompressedByteBuffers(
+            new Iterable<ByteBuffer>()
             {
               @Override
-              public Iterator<ResourceHolder<IntBuffer>> iterator()
+              public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ResourceHolder<IntBuffer>>()
+                return new Iterator<ByteBuffer>()
                 {
-                  IntBuffer myBuffer = buffer.asReadOnlyBuffer();
+                  final IntBuffer myBuffer = buffer.asReadOnlyBuffer();
+                  final ByteBuffer retVal =
+                      compression.getCompressor().allocateInBuffer(chunkFactor * Ints.BYTES).order(byteOrder);
+                  final IntBuffer retValAsIntBuffer = retVal.asIntBuffer();
 
                   @Override
                   public boolean hasNext()
@@ -205,16 +180,17 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                   }
 
                   @Override
-                  public ResourceHolder<IntBuffer> next()
+                  public ByteBuffer next()
                   {
-                    IntBuffer retVal = myBuffer.asReadOnlyBuffer();
-
+                    int initialLimit = myBuffer.limit();
                     if (chunkFactor < myBuffer.remaining()) {
-                      retVal.limit(retVal.position() + chunkFactor);
+                      myBuffer.limit(myBuffer.position() + chunkFactor);
                     }
-                    myBuffer.position(myBuffer.position() + retVal.remaining());
-
-                    return StupidResourceHolder.create(retVal);
+                    retValAsIntBuffer.clear();
+                    retValAsIntBuffer.put(myBuffer);
+                    myBuffer.limit(initialLimit);
+                    retVal.clear().limit(retValAsIntBuffer.position() * Ints.BYTES);
+                    return retVal;
                   }
 
                   @Override
@@ -225,14 +201,16 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                 };
               }
             },
-            CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+            compression,
+            chunkFactor * Ints.BYTES,
+            byteOrder
         ),
         compression
     );
   }
 
   public static CompressedIntsIndexedSupplier fromList(
-      final IntArrayList list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final IntArrayList list , final int chunkFactor, final ByteOrder byteOrder, final CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -242,14 +220,16 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return new CompressedIntsIndexedSupplier(
         list.size(),
         chunkFactor,
-        GenericIndexed.fromIterable(
-            new Iterable<ResourceHolder<IntBuffer>>()
+        GenericIndexed.ofCompressedByteBuffers(
+            new Iterable<ByteBuffer>()
             {
               @Override
-              public Iterator<ResourceHolder<IntBuffer>> iterator()
+              public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ResourceHolder<IntBuffer>>()
+                return new Iterator<ByteBuffer>()
                 {
+                  private final ByteBuffer retVal =
+                      compression.getCompressor().allocateInBuffer(chunkFactor * Ints.BYTES).order(byteOrder);
                   int position = 0;
 
                   @Override
@@ -259,12 +239,15 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                   }
 
                   @Override
-                  public ResourceHolder<IntBuffer> next()
+                  public ByteBuffer next()
                   {
                     int blockSize = Math.min(list.size() - position, chunkFactor);
-                    IntBuffer retVal = IntBuffer.wrap(list.elements(), position, blockSize);
-                    position += blockSize;
-                    return StupidResourceHolder.create(retVal);
+                    retVal.clear();
+                    for (int limit = position + blockSize; position < limit; position++) {
+                      retVal.putInt(list.getInt(position));
+                    }
+                    retVal.flip();
+                    return retVal;
                   }
 
                   @Override
@@ -275,7 +258,9 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
                 };
               }
             },
-            CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+            compression,
+            chunkFactor * Ints.BYTES,
+            byteOrder
         ),
         compression
     );
@@ -283,10 +268,10 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
 
   private class CompressedIndexedInts implements IndexedInts
   {
-    final Indexed<ResourceHolder<IntBuffer>> singleThreadedIntBuffers = baseIntBuffers.singleThreaded();
+    final Indexed<ResourceHolder<ByteBuffer>> singleThreadedIntBuffers = baseIntBuffers.singleThreaded();
 
     int currIndex = -1;
-    ResourceHolder<IntBuffer> holder;
+    ResourceHolder<ByteBuffer> holder;
     IntBuffer buffer;
 
     @Override
@@ -349,7 +334,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     {
       CloseQuietly.close(holder);
       holder = singleThreadedIntBuffers.get(bufferNum);
-      buffer = holder.get();
+      buffer = holder.get().asIntBuffer();
       currIndex = bufferNum;
     }
 

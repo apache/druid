@@ -21,9 +21,10 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import io.druid.collections.ResourceHolder;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.io.Channels;
-import io.druid.io.ZeroCopyByteArrayOutputStream;
+import io.druid.io.OutputBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -142,9 +143,24 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     return fromIterable(Arrays.asList(objects), strategy);
   }
 
+  static GenericIndexed<ResourceHolder<ByteBuffer>> ofCompressedByteBuffers(
+      Iterable<ByteBuffer> buffers,
+      CompressionStrategy compression,
+      int bufferSize,
+      ByteOrder order
+  )
+  {
+    return fromIterableVersionOne(
+        buffers,
+        GenericIndexedWriter.compressedByteBuffersWriteObjectStrategy(compression, bufferSize),
+        false,
+        new DecompressingByteBufferObjectStrategy(order, compression, bufferSize)
+    );
+  }
+
   public static <T> GenericIndexed<T> fromIterable(Iterable<T> objectsIterable, ObjectStrategy<T> strategy)
   {
-    return fromIterableVersionOne(objectsIterable, strategy);
+    return fromIterableVersionOne(objectsIterable, strategy, true, strategy);
   }
 
   static int getNumberOfFilesRequired(int bagSize, long numWritten)
@@ -443,21 +459,24 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     );
   }
 
-  private static <T> GenericIndexed<T> fromIterableVersionOne(Iterable<T> objectsIterable, ObjectStrategy<T> strategy)
+  private static <T, U> GenericIndexed<U> fromIterableVersionOne(
+      Iterable<T> objectsIterable,
+      ObjectStrategy<T> strategy,
+      boolean allowReverseLookup,
+      ObjectStrategy<U> resultObjectStrategy
+  )
   {
     Iterator<T> objects = objectsIterable.iterator();
     if (!objects.hasNext()) {
       final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES).putInt(0);
       buffer.flip();
-      return new GenericIndexed<>(buffer, strategy, true);
+      return new GenericIndexed<>(buffer, resultObjectStrategy, allowReverseLookup);
     }
 
-    boolean allowReverseLookup = true;
     int count = 0;
 
-    ZeroCopyByteArrayOutputStream headerBytes = new ZeroCopyByteArrayOutputStream();
-    ZeroCopyByteArrayOutputStream valueBytes = new ZeroCopyByteArrayOutputStream();
-    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
+    OutputBytes headerOut = new OutputBytes();
+    OutputBytes valuesOut = new OutputBytes();
     try {
       int offset = 0;
       T prevVal = null;
@@ -468,11 +487,10 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
           allowReverseLookup = false;
         }
 
-        final byte[] bytes = strategy.toBytes(next);
-        offset += Ints.BYTES + bytes.length;
-        SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, offset, helperBuffer);
-        SerializerUtils.writeBigEndianIntToOutputStream(valueBytes, bytes.length, helperBuffer);
-        valueBytes.write(bytes);
+        // for compatibility with the format, but this field is unused
+        valuesOut.writeInt(0);
+        strategy.writeTo(next, valuesOut);
+        headerOut.write(Ints.checkedCast(valuesOut.size()));
 
         if (prevVal instanceof Closeable) {
           CloseQuietly.close((Closeable) prevVal);
@@ -488,13 +506,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       throw new RuntimeException(e);
     }
 
-    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.BYTES + headerBytes.size() + valueBytes.size());
+    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(Ints.BYTES + headerOut.size() + valuesOut.size()));
     theBuffer.putInt(count);
-    headerBytes.writeTo(theBuffer);
-    valueBytes.writeTo(theBuffer);
+    headerOut.writeTo(theBuffer);
+    valuesOut.writeTo(theBuffer);
     theBuffer.flip();
 
-    return new GenericIndexed<>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
+    return new GenericIndexed<>(theBuffer.asReadOnlyBuffer(), resultObjectStrategy, allowReverseLookup);
   }
 
   private long getSerializedSizeVersionOne()

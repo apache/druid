@@ -65,13 +65,13 @@ public class CompressedVSizeIndexedV3WriterTest
   };
   private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
   private final IOPeon ioPeon = new TmpFileIOPeon();
-  private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
+  private final CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private List<int[]> vals;
 
   public CompressedVSizeIndexedV3WriterTest(
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      CompressionStrategy compressionStrategy,
       ByteOrder byteOrder
   )
   {
@@ -83,7 +83,7 @@ public class CompressedVSizeIndexedV3WriterTest
   public static Iterable<Object[]> compressionStrategiesAndByteOrders()
   {
     Set<List<Object>> combinations = Sets.cartesianProduct(
-        Sets.newHashSet(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
+        Sets.newHashSet(CompressionStrategy.noNoneValues()),
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 
@@ -236,26 +236,18 @@ public class CompressedVSizeIndexedV3WriterTest
     try (IOPeon ioPeon = new TmpFileIOPeon()) {
       CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
           offsetChunkFactor,
+          byteOrder,
           compressionStrategy,
-          new GenericIndexedWriter<>(
+          GenericIndexedWriter.ofCompressedByteBuffers(
               "offset",
-              CompressedIntBufferObjectStrategy.getBufferForOrder(
-                  byteOrder,
-                  compressionStrategy,
-                  offsetChunkFactor
-              ),
+              compressionStrategy,
               Longs.BYTES * 250000
           )
       );
 
-      GenericIndexedWriter genericIndexed = new GenericIndexedWriter<>(
+      GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
           "value",
-          CompressedByteBufferObjectStrategy.getBufferForOrder(
-              byteOrder,
-              compressionStrategy,
-              valueChunkFactor * VSizeIndexedInts.getNumBytesForMax(maxValue)
-              + CompressedVSizeIntsIndexedSupplier.bufferPadding(VSizeIndexedInts.getNumBytesForMax(maxValue))
-          ),
+          compressionStrategy,
           Longs.BYTES * 250000
       );
       CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(

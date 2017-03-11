@@ -19,12 +19,15 @@
 
 package io.druid.segment.data;
 
+import io.druid.io.OutputBytes;
+
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
-public interface ObjectStrategy<T> extends Comparator<T>
+public abstract class ObjectStrategy<T> implements Comparator<T>
 {
-  public Class<? extends T> getClazz();
+  public abstract Class<? extends T> getClazz();
 
   /**
    * Convert values from their underlying byte representation.
@@ -39,6 +42,11 @@ public interface ObjectStrategy<T> extends Comparator<T>
    * @param numBytes number of bytes used to store the value, starting at buffer.position()
    * @return an object created from the given byte buffer representation
    */
-  public T fromByteBuffer(ByteBuffer buffer, int numBytes);
-  public byte[] toBytes(T val);
+  public abstract T fromByteBuffer(ByteBuffer buffer, int numBytes);
+  public abstract byte[] toBytes(T val);
+
+  public void writeTo(T val, OutputBytes out) throws IOException
+  {
+    out.write(toBytes(val));
+  }
 }

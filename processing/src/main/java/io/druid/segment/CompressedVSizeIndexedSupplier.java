@@ -24,8 +24,8 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsIterator;
 import io.druid.segment.data.IndexedIterable;
@@ -89,13 +89,11 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
     if (versionFromBuffer == version) {
       CompressedVSizeIntsIndexedSupplier offsetSupplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
           buffer,
-          order,
-          fileMapper
+          order
       );
       CompressedVSizeIntsIndexedSupplier valueSupplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
           buffer,
-          order,
-          fileMapper
+          order
       );
       return new CompressedVSizeIndexedSupplier(offsetSupplier, valueSupplier);
     }
@@ -106,7 +104,7 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
       Iterable<IndexedInts> objectsIterable,
       int maxValue,
       final ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressionStrategy compression
   )
   {
     Iterator<IndexedInts> objects = objectsIterable.iterator();

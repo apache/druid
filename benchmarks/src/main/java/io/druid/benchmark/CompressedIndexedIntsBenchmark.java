@@ -19,8 +19,8 @@
 
 package io.druid.benchmark;
 
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
@@ -72,13 +72,12 @@ public class CompressedIndexedIntsBenchmark
             IntArrayList.wrap(vals),
             bound - 1,
             CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(bytes),
-            ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
+            ByteOrder.nativeOrder(), CompressionStrategy.LZ4
         )
     );
     this.compressed = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
         bufferCompressed,
-        ByteOrder.nativeOrder(),
-        null
+        ByteOrder.nativeOrder()
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(VSizeIndexedInts.fromArray(vals));

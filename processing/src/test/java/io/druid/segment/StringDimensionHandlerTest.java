@@ -26,8 +26,8 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -50,8 +50,8 @@ public class StringDimensionHandlerTest
 
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 

@@ -27,7 +27,7 @@ import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
 
-public class SketchObjectStrategy implements ObjectStrategy
+public class SketchObjectStrategy extends ObjectStrategy
 {
 
   private static final byte[] EMPTY_BYTES = new byte[]{};

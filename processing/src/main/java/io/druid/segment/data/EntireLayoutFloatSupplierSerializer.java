@@ -78,7 +78,7 @@ public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSeriali
     meta.put(CompressedFloatsIndexedSupplier.version);
     meta.putInt(numInserted);
     meta.putInt(0);
-    meta.put(CompressedObjectStrategy.CompressionStrategy.NONE.getId());
+    meta.put(CompressionStrategy.NONE.getId());
     meta.flip();
 
     Channels.writeFully(channel, meta);

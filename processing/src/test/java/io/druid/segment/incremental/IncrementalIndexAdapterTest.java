@@ -22,8 +22,8 @@ package io.druid.segment.incremental;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
@@ -37,8 +37,8 @@ public class IncrementalIndexAdapterTest
 {
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
       new ConciseBitmapSerdeFactory(),
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
+      CompressionStrategy.LZ4,
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 

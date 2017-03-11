@@ -66,7 +66,7 @@ public class CompressedVSizeIndexedSupplierTest
               }
             }
         ), 20, ByteOrder.nativeOrder(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4
+        CompressionStrategy.LZ4
     );
   }
 

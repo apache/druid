@@ -20,8 +20,8 @@
 package io.druid.segment;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
 {
   public static LongColumnSerializer create(
       String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding
   )
   {
@@ -44,14 +44,14 @@ public class LongColumnSerializer implements GenericColumnSerializer
 
   private final String filenameBase;
   private final ByteOrder byteOrder;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
   private LongSupplierSerializer writer;
 
   private LongColumnSerializer(
       String filenameBase,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding
   )
   {

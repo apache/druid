@@ -24,7 +24,7 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 
 import java.io.File;
@@ -65,7 +65,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
 
   protected void setupEncodedValueWriter() throws IOException
   {
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     this.serializer = FloatColumnSerializer.create(dimensionName, metCompression);
     serializer.open();
   }

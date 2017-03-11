@@ -56,12 +56,13 @@ public class CompressedIntsIndexedWriterTest
   private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
   private static final int[] CHUNK_FACTORS = new int[]{1, 2, 100, CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER};
   private final IOPeon ioPeon = new TmpFileIOPeon();
-  private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
+  private final CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
+
   public CompressedIntsIndexedWriterTest(
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      CompressionStrategy compressionStrategy,
       ByteOrder byteOrder
   )
   {
@@ -73,7 +74,7 @@ public class CompressedIntsIndexedWriterTest
   public static Iterable<Object[]> compressionStrategiesAndByteOrders()
   {
     Set<List<Object>> combinations = Sets.cartesianProduct(
-        Sets.newHashSet(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
+        Sets.newHashSet(CompressionStrategy.noNoneValues()),
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 
@@ -134,8 +135,7 @@ public class CompressedIntsIndexedWriterTest
     // read from ByteBuffer and check values
     CompressedIntsIndexedSupplier supplierFromByteBuffer = CompressedIntsIndexedSupplier.fromByteBuffer(
         ByteBuffer.wrap(IOUtils.toByteArray(ioPeon.makeInputStream("output"))),
-        byteOrder,
-        null
+        byteOrder
     );
     IndexedInts indexedInts = supplierFromByteBuffer.get();
     assertEquals(vals.length, indexedInts.size());
@@ -190,10 +190,11 @@ public class CompressedIntsIndexedWriterTest
 
       CompressedIntsIndexedWriter writer = new CompressedIntsIndexedWriter(
           chunkFactor,
+          byteOrder,
           compressionStrategy,
-          new GenericIndexedWriter<>(
+          GenericIndexedWriter.ofCompressedByteBuffers(
               "test",
-              CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compressionStrategy, chunkFactor),
+              compressionStrategy,
               Longs.BYTES * 10000
           )
       );
@@ -214,8 +215,7 @@ public class CompressedIntsIndexedWriterTest
       // read from ByteBuffer and check values
       CompressedIntsIndexedSupplier supplierFromByteBuffer = CompressedIntsIndexedSupplier.fromByteBuffer(
           mapper.mapFile("test"),
-          byteOrder,
-          mapper
+          byteOrder
       );
       IndexedInts indexedInts = supplierFromByteBuffer.get();
       assertEquals(vals.length, indexedInts.size());

@@ -90,8 +90,7 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     }
   }.nullsFirst();
 
-  private static class ImmutableRoaringBitmapObjectStrategy
-      implements ObjectStrategy<ImmutableBitmap>
+  private static class ImmutableRoaringBitmapObjectStrategy extends ObjectStrategy<ImmutableBitmap>
   {
     @Override
     public Class<ImmutableBitmap> getClazz()

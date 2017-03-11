@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.FloatSupplierSerializer;
 
 import java.io.File;
@@ -32,14 +32,14 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
 {
   private final String metricName;
   private final File outDir;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
 
   private FloatSupplierSerializer writer;
 
   FloatMetricColumnSerializer(
       String metricName,
       File outDir,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressionStrategy compression
   )
   {
     this.metricName = metricName;

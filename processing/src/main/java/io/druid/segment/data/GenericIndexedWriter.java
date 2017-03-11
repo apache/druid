@@ -47,6 +47,66 @@ public class GenericIndexedWriter<T> implements Serializer
 {
   private static int PAGE_SIZE = 4096;
 
+  static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
+      final String filenameBase,
+      final CompressionStrategy compressionStrategy,
+      final int bufferSize
+  )
+  {
+    GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
+        filenameBase,
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize)
+    );
+    writer.objectsSorted = false;
+    return writer;
+  }
+
+  static ObjectStrategy<ByteBuffer> compressedByteBuffersWriteObjectStrategy(
+      final CompressionStrategy compressionStrategy,
+      final int bufferSize
+  )
+  {
+    return new ObjectStrategy<ByteBuffer>()
+    {
+      private final CompressionStrategy.Compressor compressor = compressionStrategy.getCompressor();
+      private final ByteBuffer compressedDataBuffer = compressor.allocateOutBuffer(bufferSize);
+
+      @Override
+      public Class<ByteBuffer> getClazz()
+      {
+        return ByteBuffer.class;
+      }
+
+      @Override
+      public ByteBuffer fromByteBuffer(ByteBuffer buffer, int numBytes)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public byte[] toBytes(ByteBuffer val)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void writeTo(ByteBuffer val, OutputBytes out) throws IOException
+      {
+        compressedDataBuffer.clear();
+        int valPos = val.position();
+        out.write(compressor.compress(val, compressedDataBuffer));
+        val.position(valPos);
+      }
+
+      @Override
+      public int compare(ByteBuffer o1, ByteBuffer o2)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+
   private final String filenameBase;
   private final ObjectStrategy<T> strategy;
   private final int fileSizeLimit;
@@ -114,11 +174,9 @@ public class GenericIndexedWriter<T> implements Serializer
       objectsSorted = false;
     }
 
-    byte[] bytesToWrite = strategy.toBytes(objectToWrite);
-
     ++numWritten;
-    valuesOut.writeInt(bytesToWrite.length);
-    valuesOut.write(bytesToWrite);
+    valuesOut.writeInt(0);
+    strategy.writeTo(objectToWrite, valuesOut);
 
     if (!requireMultipleFiles) {
       headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
@@ -131,7 +189,9 @@ public class GenericIndexedWriter<T> implements Serializer
       initializeHeaderOutLong();
     }
 
-    prevObject = objectToWrite;
+    if (objectsSorted) {
+      prevObject = objectToWrite;
+    }
   }
 
   @Override

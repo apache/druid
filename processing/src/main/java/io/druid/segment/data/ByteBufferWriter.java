@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import io.druid.io.OutputBytes;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.serde.Serializer;
@@ -49,9 +50,9 @@ public class ByteBufferWriter<T> implements Serializer
 
   public void write(T objectToWrite) throws IOException
   {
-    byte[] bytesToWrite = strategy.toBytes(objectToWrite);
-    headerOut.writeInt(bytesToWrite.length);
-    valueOut.write(bytesToWrite);
+    long sizeBefore = valueOut.size();
+    strategy.writeTo(objectToWrite, valueOut);
+    headerOut.writeInt(Ints.checkedCast(valueOut.size() - sizeBefore));
   }
 
   @Override

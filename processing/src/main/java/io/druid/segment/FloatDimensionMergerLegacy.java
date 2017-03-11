@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionStrategy;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +43,7 @@ public class FloatDimensionMergerLegacy extends FloatDimensionMergerV9 implement
   @Override
   protected void setupEncodedValueWriter() throws IOException
   {
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     serializerV8 = new FloatMetricColumnSerializer(dimensionName, outDir, metCompression);
     serializerV8.open();
   }

@@ -41,7 +41,7 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   public static CompressedVSizeIndexedV3Writer create(
       final String filenameBase,
       final int maxValue,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressionStrategy compression
   )
   {
     return new CompressedVSizeIndexedV3Writer(

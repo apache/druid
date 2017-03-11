@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 
@@ -48,9 +48,10 @@ import java.util.Map;
 public class LongCompressionBenchmarkFileGenerator
 {
   public static final int ROW_NUM = 5000000;
-  public static final List<CompressedObjectStrategy.CompressionStrategy> compressions =
-      ImmutableList.of(CompressedObjectStrategy.CompressionStrategy.LZ4,
-                       CompressedObjectStrategy.CompressionStrategy.NONE);
+  public static final List<CompressionStrategy> compressions =
+      ImmutableList.of(
+          CompressionStrategy.LZ4,
+          CompressionStrategy.NONE);
   public static final List<CompressionFactory.LongEncodingStrategy> encodings =
       ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
@@ -131,7 +132,7 @@ public class LongCompressionBenchmarkFileGenerator
 
     // create compressed files using all combinations of CompressionStrategy and LongEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
-      for (CompressedObjectStrategy.CompressionStrategy compression : compressions) {
+      for (CompressionStrategy compression : compressions) {
         for (CompressionFactory.LongEncodingStrategy encoding : encodings) {
           String name = entry.getKey() + "-" + compression.toString() + "-" + encoding.toString();
           System.out.print(name + ": ");

@@ -67,8 +67,7 @@ public class IndexedRTree implements Comparable<IndexedRTree>
     return immutableRTree;
   }
 
-  public static class ImmutableRTreeObjectStrategy
-      implements ObjectStrategy<ImmutableRTree>
+  public static class ImmutableRTreeObjectStrategy extends ObjectStrategy<ImmutableRTree>
   {
     private final BitmapFactory bitmapFactory;
 

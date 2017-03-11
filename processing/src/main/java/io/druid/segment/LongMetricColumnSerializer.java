@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.File;
@@ -33,7 +33,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
 {
   private final String metricName;
   private final File outDir;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionStrategy compression;
   private final CompressionFactory.LongEncodingStrategy encoding;
 
   private LongSupplierSerializer writer;
@@ -41,7 +41,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   LongMetricColumnSerializer(
       String metricName,
       File outDir,
-      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding
   )
   {

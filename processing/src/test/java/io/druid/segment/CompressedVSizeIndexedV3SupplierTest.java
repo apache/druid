@@ -21,8 +21,8 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedSupplierTest;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -58,7 +58,7 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
               }
             }
         ), 2, 20, ByteOrder.nativeOrder(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4
+        CompressionStrategy.LZ4
     );
   }
 

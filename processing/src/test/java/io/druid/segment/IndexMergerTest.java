@@ -48,8 +48,8 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
@@ -105,8 +105,8 @@ public class IndexMergerTest
                     new RoaringBitmapSerdeFactory(null),
                     new ConciseBitmapSerdeFactory()
                 ),
-                EnumSet.allOf(CompressedObjectStrategy.CompressionStrategy.class),
-                ImmutableSet.copyOf(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
+                EnumSet.allOf(CompressionStrategy.class),
+                ImmutableSet.copyOf(CompressionStrategy.noNoneValues()),
                 EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class)
             )
         ), new Function<List<?>, Object[]>()
@@ -123,8 +123,8 @@ public class IndexMergerTest
 
   static IndexSpec makeIndexSpec(
       BitmapSerdeFactory bitmapSerdeFactory,
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
       CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
@@ -147,8 +147,8 @@ public class IndexMergerTest
   public IndexMergerTest(
       boolean useV9,
       BitmapSerdeFactory bitmapSerdeFactory,
-      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
+      CompressionStrategy compressionStrategy,
+      CompressionStrategy dimCompressionStrategy,
       CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
@@ -614,12 +614,12 @@ public class IndexMergerTest
 
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
         CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
         CompressionFactory.LongEncodingStrategy.AUTO :
         CompressionFactory.LongEncodingStrategy.LONGS
@@ -758,12 +758,12 @@ public class IndexMergerTest
 
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
-        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressedObjectStrategy.CompressionStrategy.LZF :
-        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
+        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressionStrategy.LZF :
+        CompressionStrategy.LZ4,
         CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
         CompressionFactory.LongEncodingStrategy.AUTO :
         CompressionFactory.LongEncodingStrategy.LONGS
@@ -794,11 +794,11 @@ public class IndexMergerTest
     );
   }
 
-  private void assertDimCompression(QueryableIndex index, CompressedObjectStrategy.CompressionStrategy expectedStrategy)
+  private void assertDimCompression(QueryableIndex index, CompressionStrategy expectedStrategy)
       throws Exception
   {
     // Java voodoo
-    if (expectedStrategy == null || expectedStrategy == CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED) {
+    if (expectedStrategy == null || expectedStrategy == CompressionStrategy.UNCOMPRESSED) {
       return;
     }
 
