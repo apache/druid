@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package io.druid.data.input;
+package io.druid.data.input.protobuf;
 
+import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
@@ -68,16 +69,16 @@ public class ProtoBufInputRowParserTest
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 07, 12, 9, 30);
     ProtoTestEventWrapper.ProtoTestEvent event = ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
-                                                                      .setDescription("description")
-                                                                      .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
-                                                                      .setId(4711L)
-                                                                      .setIsValid(true)
-                                                                      .setSomeOtherId(4712)
-                                                                      .setTimestamp(dateTime.toString())
-                                                                      .setSomeFloatColumn(47.11F)
-                                                                      .setSomeIntColumn(815)
-                                                                      .setSomeLongColumn(816L)
-                                                                      .build();
+                                                                                     .setDescription("description")
+                                                                                     .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
+                                                                                     .setId(4711L)
+                                                                                     .setIsValid(true)
+                                                                                     .setSomeOtherId(4712)
+                                                                                     .setTimestamp(dateTime.toString())
+                                                                                     .setSomeFloatColumn(47.11F)
+                                                                                     .setSomeIntColumn(815)
+                                                                                     .setSomeLongColumn(816L)
+                                                                                     .build();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     event.writeTo(out);
