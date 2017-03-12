@@ -119,6 +119,7 @@
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/parquet-extensions</module>
+        <module>extensions-contrib/protobuf-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
