@@ -22,6 +22,12 @@
 
   <dependencies>
     <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-common</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
       <version>${protobuf.version}</version>
@@ -32,16 +38,11 @@
       <version>${protobuf.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-indexing-hadoop</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
+      <groupId>com.github.os72</groupId>
+      <artifactId>protobuf-dynamic</artifactId>
+      <version>0.9.3</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client</artifactId>
-      <scope>provided</scope>
-    </dependency>
+    <!-- test -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

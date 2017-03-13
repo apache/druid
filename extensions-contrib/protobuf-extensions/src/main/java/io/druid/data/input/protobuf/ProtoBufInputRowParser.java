@@ -22,11 +22,10 @@ package io.druid.data.input.protobuf;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Throwables;
+import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -34,30 +33,38 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 @JsonTypeName("protobuf")
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
-  private static final Logger log = new Logger(ProtoBufInputRowParser.class);
+  //private static final Logger log = new Logger(ProtoBufInputRowParser.class);
 
   private final ParseSpec parseSpec;
   private Parser<String, Object> parser;
-  private final String descriptorFileInClasspath;
+  private final String descriptorFilePath;
+  private final String protoMessageType;
+  private Descriptor descriptor;
+
 
   @JsonCreator
   public ProtoBufInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("descriptor") String descriptorFileInClasspath
+      @JsonProperty("descriptor") String descriptorFilePath,
+      @JsonProperty("protoMessageType") String protoMessageType
   ) {
     this.parseSpec = parseSpec;
-    this.descriptorFileInClasspath = descriptorFileInClasspath;
+    this.descriptorFilePath = descriptorFilePath;
+    this.protoMessageType = protoMessageType;
     this.parser = parseSpec.makeParser();
+    this.descriptor = getDescriptor(descriptorFilePath);
   }
 
   @Override
@@ -67,24 +74,20 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
 
   @Override
   public ProtoBufInputRowParser withParseSpec(ParseSpec parseSpec) {
-    return new ProtoBufInputRowParser(parseSpec, descriptorFileInClasspath);
+    return new ProtoBufInputRowParser(parseSpec, descriptorFilePath, protoMessageType);
   }
 
   @Override
   public InputRow parse(ByteBuffer input) {
-    final Descriptor descriptor = getDescriptor(descriptorFileInClasspath);
-    DynamicMessage message;
+    String json;
     try {
-      message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
-    } catch (InvalidProtocolBufferException e) {
-      throw new ParseException(e, "Invalid protobuf exception");
-    }
-    String json = null;
-    try {
+      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
       json = JsonFormat.printer().print(message);
+      // log.trace(json);
     } catch (InvalidProtocolBufferException e) {
-      e.printStackTrace();
+      throw new ParseException(e, "Protobuf message could not be parsed");
     }
+
     Map<String, Object> record = parser.parse(json);
     return new MapBasedInputRow(
         parseSpec.getTimestampSpec().extractTimestamp(record),
@@ -93,17 +96,43 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
     );
   }
 
-  private Descriptor getDescriptor(String descriptorFileInClassPath) {
-    try {
-      InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFileInClassPath);
-      FileDescriptorSet set = FileDescriptorSet.parseFrom(fin);
-      FileDescriptor file = FileDescriptor.buildFrom(
-          set.getFile(0), new FileDescriptor[]
-              {}
-      );
-      return file.getMessageTypes().get(0);
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
+  private Descriptor getDescriptor(String descriptorFilePath) {
+    InputStream fin;
+
+    fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
+    if (fin == null) {
+      URL url = null;
+      try {
+        url = new URL(descriptorFilePath);
+      } catch (MalformedURLException e) {
+        throw new ParseException(e, "descriptor has to be in the classpath or URL:" + descriptorFilePath);
+      }
+      try {
+        fin = url.openConnection().getInputStream();
+      } catch (IOException e) {
+        throw new ParseException(e, "Cannot open descriptor file: " + url.toString());
+      }
     }
+
+    DynamicSchema dynamicSchema = null;
+    try {
+      dynamicSchema = DynamicSchema.parseFrom(fin);
+    } catch (Descriptors.DescriptorValidationException e) {
+      throw new ParseException(e, "Invalid descriptor file: " + descriptorFilePath);
+    } catch (IOException e) {
+      throw new ParseException(e, "Cannot read " + descriptorFilePath);
+    }
+
+    Descriptor desc = dynamicSchema.getMessageDescriptor(protoMessageType);
+    if (desc == null) {
+      throw new ParseException(new NullPointerException(),
+                               String.format(
+                                   "ProtoBuf message type %s not found in the specified descriptor.  Available messages types are %s",
+                                   protoMessageType,
+                                   dynamicSchema.getMessageTypes()
+                               )
+      );
+    }
+    return desc;
   }
 }

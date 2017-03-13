@@ -30,7 +30,9 @@ import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -39,13 +41,12 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class ProtoBufInputRowParserTest
-{
+public class ProtoBufInputRowParserTest {
+  private ParseSpec parseSpec;
 
-  @Test
-  public void testParse() throws Exception
-  {
-    ParseSpec parseSpec = new JSONParseSpec(
+  @Before
+  public void setUp() throws Exception {
+    parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
         new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
             new StringDimensionSchema("event"),
@@ -63,8 +64,37 @@ public class ProtoBufInputRowParserTest
         ), null
     );
 
+  }
+
+  @Test
+  public void testShortMessageType() throws Exception {
+    //configure parser with desc file, and specify which file name to use
+    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "file:///tmp/ec.desc", "sailfish_accesslog");
+
+  }
+
+
+  @Test
+  public void testLongMessageType() throws Exception {
+    //configure parser with desc file, and specify which file name to use
+    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
+
+  }
+
+
+  @Test(expected = ParseException.class)
+  public void testBadProto() throws Exception {
     //configure parser with desc file
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc");
+    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "BadName");
+
+  }
+
+
+  @Test
+  public void testParse() throws Exception {
+
+    //configure parser with desc file
+    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 07, 12, 9, 30);
@@ -112,8 +142,7 @@ public class ProtoBufInputRowParserTest
     assertEquals(816.0F, row.getFloatMetric("someLongColumn"), 0.0);
   }
 
-  private void assertDimensionEquals(InputRow row, String dimension, Object expected)
-  {
+  private void assertDimensionEquals(InputRow row, String dimension, Object expected) {
     List<String> values = row.getDimension(dimension);
     assertEquals(1, values.size());
     assertEquals(expected, values.get(0));
