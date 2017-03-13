@@ -69,7 +69,7 @@ public class ProtoBufInputRowParserTest {
   @Test
   public void testShortMessageType() throws Exception {
     //configure parser with desc file, and specify which file name to use
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "file:///tmp/ec.desc", "sailfish_accesslog");
+    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
   }
 
