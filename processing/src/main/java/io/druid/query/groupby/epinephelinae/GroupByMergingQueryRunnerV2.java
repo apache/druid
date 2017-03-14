@@ -52,10 +52,10 @@ import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
-import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import java.io.Closeable;
@@ -313,7 +313,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       for (Boolean result : results) {
         if (!result) {
           future.cancel(true);
-          throw new ResourceLimitExceededException("Grouping resources exhausted");
+          throw GroupByQueryHelper.throwAccumulationResourceLimitExceededException();
         }
       }
     }

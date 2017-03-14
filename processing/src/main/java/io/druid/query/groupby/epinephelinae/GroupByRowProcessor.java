@@ -33,12 +33,12 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.FilteredSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Query;
-import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 import io.druid.query.groupby.resource.GroupByQueryResource;
@@ -168,7 +168,7 @@ public class GroupByRowProcessor
                   accumulator
               );
               if (retVal != grouper) {
-                throw new ResourceLimitExceededException("Grouping resources exhausted");
+                throw GroupByQueryHelper.throwAccumulationResourceLimitExceededException();
               }
 
               return RowBasedGrouperHelper.makeGrouperIterator(
