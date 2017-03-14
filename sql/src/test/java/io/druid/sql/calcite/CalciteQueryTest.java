@@ -68,6 +68,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.lookup.RegisteredLookupExtractionFn;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.select.PagingSpec;
@@ -1350,7 +1351,7 @@ public class CalciteQueryTest
   public void testExpressionAggregations() throws Exception
   {
     testQuery(
-        "SELECT SUM(cnt * 3), LN(SUM(cnt) + SUM(m1)) FROM druid.foo",
+        "SELECT SUM(cnt * 3), LN(SUM(cnt) + SUM(m1)), SUM(cnt) / 0.25 FROM druid.foo",
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1361,14 +1362,18 @@ public class CalciteQueryTest
                       new LongSumAggregatorFactory("a1", "cnt", null),
                       new DoubleSumAggregatorFactory("a2", "m1", null)
                   ))
-                  .postAggregators(ImmutableList.<PostAggregator>of(
-                      new ExpressionPostAggregator("a3", "log((\"a1\" + \"a2\"))")
+                  .postAggregators(ImmutableList.of(
+                      new ExpressionPostAggregator("a3", "log((\"a1\" + \"a2\"))"),
+                      new ArithmeticPostAggregator("a4", "quotient", ImmutableList.of(
+                          new FieldAccessPostAggregator(null, "a1"),
+                          new ConstantPostAggregator(null, 0.25)
+                      ))
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{18L, 3.295836866004329}
+            new Object[]{18L, 3.295836866004329, 24.0}
         )
     );
   }
@@ -3108,6 +3113,94 @@ public class CalciteQueryTest
             new Object[]{1, 2L},
             new Object[]{3, 2L},
             new Object[]{4, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterAndGroupByLookup() throws Exception
+  {
+    final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        false,
+        true
+    );
+
+    testQuery(
+        "SELECT LOOKUP(dim1, 'lookyloo'), COUNT(*) FROM foo\n"
+        + "WHERE LOOKUP(dim1, 'lookyloo') <> 'xxx'\n"
+        + "GROUP BY LOOKUP(dim1, 'lookyloo')",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(
+                            NOT(SELECTOR(
+                                "dim1",
+                                "xxx",
+                                extractionFn
+                            ))
+                        )
+                        .setDimensions(
+                            DIMS(
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d0",
+                                    ValueType.STRING,
+                                    extractionFn
+                                )
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            AGGS(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 5L},
+            new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountDistinctOfLookup() throws Exception
+  {
+    final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        false,
+        true
+    );
+
+    testQuery(
+        "SELECT COUNT(DISTINCT LOOKUP(dim1, 'lookyloo')) FROM foo",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(
+                      new CardinalityAggregatorFactory(
+                          "a0",
+                          ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
+                          false
+                      )
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
         )
     );
   }

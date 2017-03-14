@@ -129,6 +129,16 @@ Druid's SQL language supports a number of time operations, including:
 By default, time operations use the UTC time zone. You can change the time zone for time operations by setting the
 connection context parameter "sqlTimeZone" to the name of the time zone, like "America/Los_Angeles".
 
+### Query-time lookups
+
+Druid [query-time lookups](lookups.html) can be accessed through the `LOOKUP(expression, lookupName)` function. The
+"lookupName" must refer to a lookup you have registered with Druid's lookup framework. For example, the following
+query can be used to perform a groupBy on looked-up values:
+
+```sql
+SELECT LOOKUP(col, 'my_lookup') AS col_with_lookup FROM data_source GROUP BY LOOKUP(col, 'my_lookup')
+```
+
 ### Subqueries
 
 Druid's SQL layer supports many types of subqueries, including the ones listed below.
@@ -231,7 +241,6 @@ language. Some unsupported SQL features include:
 Additionally, some Druid features are not supported by the SQL language. Some unsupported Druid features include:
 
 - [Multi-value dimensions](multi-value-dimensions.html).
-- [Query-time lookups](lookups.html).
 - [DataSketches](../development/extensions-core/datasketches-aggregators.html).
 
 ## Third-party SQL libraries
