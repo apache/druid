@@ -297,9 +297,10 @@ public class RealtimeIndexTask extends AbstractTask
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
-    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
-    // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
-    // NOTE: "same" segment.
+    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
+    // NOTE: (partitionNum_index.zip for HDFS data storage) and descriptor.json (partitionNum_descriptor.json for
+    // NOTE: HDFS data storage) to mismatch, or it can cause historical nodes to load different instances of
+    // NOTE: the "same" segment.
     final PlumberSchool plumberSchool = new RealtimePlumberSchool(
         toolbox.getEmitter(),
         toolbox.getQueryRunnerFactoryConglomerate(),

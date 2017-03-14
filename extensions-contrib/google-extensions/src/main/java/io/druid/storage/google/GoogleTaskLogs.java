@@ -62,8 +62,8 @@ public class GoogleTaskLogs implements TaskLogs {
 
     try {
       if (!storage.exists(config.getBucket(), taskKey)) {
-				return Optional.absent();
-			}
+        return Optional.absent();
+      }
 
       final long length = storage.size(config.getBucket(), taskKey);
 
@@ -101,11 +101,11 @@ public class GoogleTaskLogs implements TaskLogs {
     return config.getPrefix() + "/" + taskid.replaceAll(":", "_");
   }
 
-	@Override
-	public void killAll() throws IOException
-	{
-		throw new UnsupportedOperationException("not implemented");
-	}
+  @Override
+  public void killAll() throws IOException
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
 
   @Override
   public void killOlderThan(long timestamp) throws IOException

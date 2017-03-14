@@ -27,7 +27,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.JsonConfigProvider;
@@ -57,7 +56,7 @@ public class InsertSegment extends GuiceRunnable
   @Option(name = "--workingDir", description = "The directory path where segments are stored. This tool will recursively look for segments underneath this directory and insert/update these segments in metdata storage.", required = true)
   private String workingDirPath;
 
-  @Option(name = "--updateDescriptor", description = "if set to true, this tool will update loadSpec field in descriptor.json if the path in loadSpec is different from where desciptor.json was found. Default value is true", required = false)
+  @Option(name = "--updateDescriptor", description = "if set to true, this tool will update loadSpec field in descriptor.json (partitionNum_descriptor.json for HDFS data storage) if the path in loadSpec is different from where desciptor.json (partitionNum_descriptor.json for HDFS data storage) was found. Default value is true", required = false)
   private String updateDescriptor;
 
   private ObjectMapper mapper;

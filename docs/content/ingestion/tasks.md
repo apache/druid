@@ -186,6 +186,24 @@ The grammar is:
 }
 ```
 
+### Same Interval Merge Task
+
+Same Interval Merge task is a shortcut of merge task, all segments in the interval are going to be merged.
+
+The grammar is:
+
+```json
+{
+    "type": "same_interval_merge",
+    "id": <task_id>,
+    "dataSource": <task_datasource>,
+    "aggregations": <list of aggregators>,
+    "rollup": <whether or not to rollup data during a merge>,
+    "buildV9Directly": <true or false, default true>,
+    "interval": <DataSegment objects in this interval are going to be merged>
+}
+```
+
 Segment Destroying Tasks
 ------------------------
 

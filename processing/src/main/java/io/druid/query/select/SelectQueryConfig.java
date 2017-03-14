@@ -17,16 +17,35 @@
  * under the License.
  */
 
-package io.druid.data.input;
-/**
- * Committer includes a Runnable and a Jackson-serialized metadata object containing the offset
- */
-public interface Committer extends Runnable
+package io.druid.query.select;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class SelectQueryConfig
 {
-    /**
-     * @return A json serialized representation of commit metadata,
-     * which needs to be serialized and deserialized by Jackson.
-     * Commit metadata can be a complex type, but we recommend keeping it to List/Map/"Primitive JSON" types
-     * */
-    public Object getMetadata();
+  public static String ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
+
+  @JsonProperty
+  private boolean enableFromNextDefault = true;
+
+  @JsonCreator
+  public SelectQueryConfig(
+      @JsonProperty("enableFromNextDefault") Boolean enableFromNextDefault
+  )
+  {
+    if (enableFromNextDefault != null) {
+      this.enableFromNextDefault = enableFromNextDefault.booleanValue();
+    }
+  }
+
+  public boolean getEnableFromNextDefault()
+  {
+    return enableFromNextDefault;
+  }
+
+  public void setEnableFromNextDefault(boolean enableFromNextDefault)
+  {
+    this.enableFromNextDefault = enableFromNextDefault;
+  }
 }
