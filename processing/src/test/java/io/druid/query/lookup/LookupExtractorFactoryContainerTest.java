@@ -60,6 +60,21 @@ public class LookupExtractorFactoryContainerTest
     );
   }
 
+  @Test
+  public void testReplaces() throws Exception
+  {
+    LookupExtractorFactoryContainer l0 = new LookupExtractorFactoryContainer(null, new TestLookupExtractorFactory());
+    LookupExtractorFactoryContainer l1 = new LookupExtractorFactoryContainer(null, new TestLookupExtractorFactory());
+    LookupExtractorFactoryContainer l2 = new LookupExtractorFactoryContainer("v0", new TestLookupExtractorFactory());
+    LookupExtractorFactoryContainer l3 = new LookupExtractorFactoryContainer("v1", new TestLookupExtractorFactory());
+
+    Assert.assertTrue(l0.replaces(l1));
+    Assert.assertFalse(l1.replaces(l2));
+    Assert.assertTrue(l2.replaces(l1));
+    Assert.assertFalse(l2.replaces(l3));
+    Assert.assertTrue(l3.replaces(l2));
+  }
+
   @JsonTypeName("test")
   static class TestLookupExtractorFactory implements LookupExtractorFactory
   {

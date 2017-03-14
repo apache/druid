@@ -20,14 +20,17 @@
 package io.druid.concurrent;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
 /**
  */
-public class Threads
+public final class Threads
 {
-  public final static Thread createThread(String name, Runnable runnable, boolean isDaemon)
+  private Threads(){}
+
+  public static Thread createThread(String name, Runnable runnable, boolean isDaemon)
   {
-    Preconditions.checkArgument(name != null && !name.isEmpty(), "name null/empty");
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(name), "name null/empty");
     Preconditions.checkNotNull(runnable, "null runnable");
 
     Thread t = new Thread(runnable);

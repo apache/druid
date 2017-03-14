@@ -52,6 +52,7 @@ import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactory;
+import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.query.lookup.LookupIntrospectHandler;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -293,45 +294,48 @@ public class CalciteTests
 
               final LookupReferencesManager mock = EasyMock.createMock(LookupReferencesManager.class);
               EasyMock.expect(mock.get(EasyMock.eq("lookyloo"))).andReturn(
-                  new LookupExtractorFactory()
-                  {
-                    @Override
-                    public boolean start()
-                    {
-                      throw new UnsupportedOperationException();
-                    }
+                  new LookupExtractorFactoryContainer(
+                      "v0",
+                      new LookupExtractorFactory()
+                      {
+                        @Override
+                        public boolean start()
+                        {
+                          throw new UnsupportedOperationException();
+                        }
 
-                    @Override
-                    public boolean close()
-                    {
-                      throw new UnsupportedOperationException();
-                    }
+                        @Override
+                        public boolean close()
+                        {
+                          throw new UnsupportedOperationException();
+                        }
 
-                    @Override
-                    public boolean replaces(@Nullable final LookupExtractorFactory other)
-                    {
-                      throw new UnsupportedOperationException();
-                    }
+                        @Override
+                        public boolean replaces(@Nullable final LookupExtractorFactory other)
+                        {
+                          throw new UnsupportedOperationException();
+                        }
 
-                    @Nullable
-                    @Override
-                    public LookupIntrospectHandler getIntrospectHandler()
-                    {
-                      throw new UnsupportedOperationException();
-                    }
+                        @Nullable
+                        @Override
+                        public LookupIntrospectHandler getIntrospectHandler()
+                        {
+                          throw new UnsupportedOperationException();
+                        }
 
-                    @Override
-                    public LookupExtractor get()
-                    {
-                      return new MapLookupExtractor(
-                          ImmutableMap.of(
-                              "a", "xa",
-                              "abc", "xabc"
-                          ),
-                          false
-                      );
-                    }
-                  }
+                        @Override
+                        public LookupExtractor get()
+                        {
+                          return new MapLookupExtractor(
+                              ImmutableMap.of(
+                                  "a", "xa",
+                                  "abc", "xabc"
+                              ),
+                              false
+                          );
+                        }
+                      }
+                  )
               ).anyTimes();
               EasyMock.replay(mock);
               binder.bind(LookupReferencesManager.class).toInstance(mock);

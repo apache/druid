@@ -52,8 +52,8 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
   public boolean close();
 
   /**
-   * This method is deprecated and is not removed only to allow 0.9.x to 0.10.x transition. It is not used
-   * on a cluster that is running 0.10.x. It will be removed in the next release.
+   * This method is deprecated and is not removed only to allow 0.10.0 to 0.10.1 transition. It is not used
+   * on a cluster that is running 0.10.1. It will be removed in a later release.
    */
   @Deprecated
   boolean replaces(@Nullable LookupExtractorFactory other);

@@ -39,7 +39,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,7 +64,8 @@ public class LookupReferencesManager
   @VisibleForTesting
   final BlockingQueue<Notice> queue = new LinkedBlockingDeque<>(10000);
 
-  private final LookupSnapshotTaker lookupSnapshotTaker;
+  @VisibleForTesting
+  final LookupSnapshotTaker lookupSnapshotTaker;
 
   @VisibleForTesting
   final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -104,18 +104,7 @@ public class LookupReferencesManager
     try {
       LOG.info("LookupReferencesManager is starting.");
 
-      if (lookupSnapshotTaker != null) {
-        final List<LookupBean> lookupBeanList = lookupSnapshotTaker.pullExistingSnapshot();
-        for (LookupBean lookupBean : lookupBeanList) {
-          LookupExtractorFactoryContainer container = lookupBean.getContainer();
-
-          if (container.getLookupExtractorFactory().start()) {
-            lookupMap.put(lookupBean.getName(), container);
-          } else {
-            throw new ISE("Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
-          }
-        }
-      }
+      loadSnapshot();
 
       if (!testMode) {
         mainThread = Threads.createThread(
@@ -214,7 +203,7 @@ public class LookupReferencesManager
 
     try {
       if (!queue.offer(new LoadNotice(lookupName, lookupExtractorFactoryContainer), 1, TimeUnit.MILLISECONDS)) {
-        throw new ISE("notice queue add timedout to add [%s] lookup drop notice", lookupName);
+        throw new ISE("notice queue add timedout to add [%s] lookup load notice", lookupName);
       }
     } catch (InterruptedException ex) {
       throw new ISE(ex, "failed to add [%s] lookup load notice", lookupName);
@@ -248,9 +237,7 @@ public class LookupReferencesManager
     Map<String, LookupExtractorFactoryContainer> lookupsToLoad = new HashMap<>();
     Set<String> lookupsToDrop = new HashSet<>();
 
-    Iterator<Notice> iter = queue.iterator();
-    while (iter.hasNext()) {
-      Notice notice = iter.next();
+    for (Notice notice : queue) {
       if (notice instanceof LoadNotice) {
         LoadNotice loadNotice = (LoadNotice) notice;
         lookupsToLoad.put(loadNotice.lookupName, loadNotice.lookupExtractorFactoryContainer);
@@ -276,6 +263,22 @@ public class LookupReferencesManager
       }
 
       lookupSnapshotTaker.takeSnapshot(lookups);
+    }
+  }
+
+  private void loadSnapshot()
+  {
+    if (lookupSnapshotTaker != null) {
+      final List<LookupBean> lookupBeanList = lookupSnapshotTaker.pullExistingSnapshot();
+      for (LookupBean lookupBean : lookupBeanList) {
+        LookupExtractorFactoryContainer container = lookupBean.getContainer();
+
+        if (container.getLookupExtractorFactory().start()) {
+          lookupMap.put(lookupBean.getName(), container);
+        } else {
+          throw new ISE("Failed to start lookup [%s]:[%s]", lookupBean.getName(), container);
+        }
+      }
     }
   }
 
@@ -315,9 +318,7 @@ public class LookupReferencesManager
 
       old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
-      }
+      LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
       takeSnapshot();
 
@@ -346,9 +347,7 @@ public class LookupReferencesManager
       if (lookupExtractorFactoryContainer != null) {
         takeSnapshot();
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
-        }
+        LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
         if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().close()) {
           throw new ISE("close method returned false for lookup [%s]:[%s]", lookupName, lookupExtractorFactoryContainer);

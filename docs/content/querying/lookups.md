@@ -308,9 +308,9 @@ Lookup implementations can provide some introspection capabilities by implementi
 
 For instance you can list all the keys/values of a map based lookup by issuing a `GET` request to `/druid/lookups/v1/introspect/{lookupId}/keys"` or `/druid/lookups/v1/introspect/{lookupId}/values"`
  
-## Druid version 0.9.2 to 0.10.0 upgrade/downgrade
+## Druid version 0.10.0 to 0.10.1 upgrade/downgrade
 Overall druid cluster lookups configuration is persisted in metadata store and also individual lookup nodes optionally persist a snapshot of loaded lookups on disk.
-If upgrading from druid version 0.9.2 to 0.10.0, then migration for all persisted metadata is handled automatically.
-If downgrading from 0.10.0 to 0.9.2 then lookups updates done via coordinator while 0.10.0 was running, might be lost.
+If upgrading from druid version 0.10.0 to 0.10.1, then migration for all persisted metadata is handled automatically.
+If downgrading from 0.10.1 to 0.9.0 then lookups updates done via coordinator while 0.10.1 was running, would be lost.
 
  

@@ -72,6 +72,21 @@ public class LookupExtractorFactoryMapContainerTest
     Assert.assertEquals(testContainer, actual);
   }
 
+  @Test
+  public void testReplaces() throws Exception
+  {
+    LookupExtractorFactoryMapContainer l0 = new LookupExtractorFactoryMapContainer(null, ImmutableMap.of());
+    LookupExtractorFactoryMapContainer l1 = new LookupExtractorFactoryMapContainer(null, ImmutableMap.of());
+    LookupExtractorFactoryMapContainer l2 = new LookupExtractorFactoryMapContainer("V2", ImmutableMap.of());
+    LookupExtractorFactoryMapContainer l3 = new LookupExtractorFactoryMapContainer("V3", ImmutableMap.of());
+
+    Assert.assertFalse(l0.replaces(l1));
+    Assert.assertFalse(l1.replaces(l2));
+    Assert.assertTrue(l2.replaces(l1));
+    Assert.assertFalse(l2.replaces(l3));
+    Assert.assertTrue(l3.replaces(l2));
+  }
+
   //test interchangeability with LookupExtractorFactoryContainer
   //read and write as LookupExtractorFactoryContainer
   //then read as LookupExtractorFactoryMapContainer

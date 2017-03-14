@@ -30,7 +30,7 @@ class LookupBean
   private final LookupExtractorFactoryContainer container;
   private final String name;
 
-  //to support rollback from 0.10.0 to 0.9.2 if necessary
+  //to support rollback from 0.10.1 to 0.9.0 if necessary
   @Deprecated
   private final LookupExtractorFactory factory;
 
@@ -38,12 +38,12 @@ class LookupBean
   @JsonCreator
   public LookupBean(
       @JsonProperty("name") String name,
-      //kept for backward compatibility with druid ver <= 0.9.2 persisted snapshots
+      //kept for backward compatibility with druid ver <= 0.10.0 persisted snapshots
       @Deprecated @JsonProperty("factory") LookupExtractorFactory factory,
       @JsonProperty("container") LookupExtractorFactoryContainer container
   )
   {
-    Preconditions.checkArgument(factory == null ^ container == null, "only one of factory or container should exist");
+    Preconditions.checkArgument(factory != null || container != null, "either one of factory or container must exist");
 
     this.name = name;
     this.container = container != null ? container : new LookupExtractorFactoryContainer(null, factory);

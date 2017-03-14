@@ -58,6 +58,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -132,6 +133,27 @@ public class LookupCoordinatorManagerTest
   {
     SERVICE_EMITTER.flush();
     EVENT_EMITS.set(0L);
+
+    EasyMock.reset(configManager);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.<TypeReference>anyObject(),
+            EasyMock.<AtomicReference>isNull()
+        )
+    ).andReturn(
+        new AtomicReference<>(null)
+    ).anyTimes();
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
+            EasyMock.<TypeReference>anyObject(),
+            EasyMock.<AtomicReference>isNull()
+        )
+    ).andReturn(
+        new AtomicReference<>(null)
+    ).anyTimes();
+    EasyMock.replay(configManager);
   }
 
   @After
@@ -550,9 +572,42 @@ public class LookupCoordinatorManagerTest
         return null;
       }
     };
+    manager.start();
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     expectedException.expect(ISE.class);
     manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo);
+  }
+
+  @Test
+  public void testUpdateLookupsInitialization() throws Exception
+  {
+    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        client,
+        discoverer,
+        mapper,
+        configManager,
+        lookupCoordinatorManagerConfig
+    )
+    {
+      @Override
+      public Map<String, Map<String, LookupExtractorFactoryMapContainer>> getKnownLookups()
+      {
+        return null;
+      }
+    };
+    manager.start();
+
+    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
+    EasyMock.reset(configManager);
+    EasyMock.expect(
+        configManager.set(
+                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.eq(EMPTY_TIERED_LOOKUP),
+                        EasyMock.eq(auditInfo)
+                    )).andReturn(true).once();
+    EasyMock.replay(configManager);
+    manager.updateLookups(EMPTY_TIERED_LOOKUP, auditInfo);
+    EasyMock.verify(configManager);
   }
 
   @Test
@@ -572,6 +627,8 @@ public class LookupCoordinatorManagerTest
         return EMPTY_TIERED_LOOKUP;
       }
     };
+    manager.start();
+
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
@@ -616,6 +673,7 @@ public class LookupCoordinatorManagerTest
         );
       }
     };
+    manager.start();
     final LookupExtractorFactoryMapContainer newSpec = new LookupExtractorFactoryMapContainer(
         "v1",
         ImmutableMap.<String, Object>of("prop", "new")
@@ -676,6 +734,7 @@ public class LookupCoordinatorManagerTest
         );
       }
     };
+    manager.start();
     final LookupExtractorFactoryMapContainer newSpec = new LookupExtractorFactoryMapContainer(
         "v1",
         ImmutableMap.<String, Object>of("prop", "new")
@@ -718,7 +777,7 @@ public class LookupCoordinatorManagerTest
         return TIERED_LOOKUP_MAP_V0;
       }
     };
-
+    manager.start();
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
@@ -748,7 +807,7 @@ public class LookupCoordinatorManagerTest
         return TIERED_LOOKUP_MAP_V0;
       }
     };
-
+    manager.start();
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
 
     try {
@@ -784,6 +843,7 @@ public class LookupCoordinatorManagerTest
         );
       }
     };
+    manager.start();
     final LookupExtractorFactoryMapContainer newSpec = new LookupExtractorFactoryMapContainer(
         "v1",
         ImmutableMap.<String, Object>of("prop", "new")
@@ -838,6 +898,7 @@ public class LookupCoordinatorManagerTest
         ));
       }
     };
+    manager.start();
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
@@ -882,6 +943,7 @@ public class LookupCoordinatorManagerTest
         );
       }
     };
+    manager.start();
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     Assert.assertFalse(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
   }
@@ -903,6 +965,7 @@ public class LookupCoordinatorManagerTest
         return null;
       }
     };
+    manager.start();
     final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     Assert.assertFalse(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
   }
@@ -986,46 +1049,7 @@ public class LookupCoordinatorManagerTest
   }
 
   @Test
-  public void testStart() throws Exception
-  {
-    EasyMock.reset(configManager);
-
-    EasyMock.expect(configManager.watch(
-        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-        EasyMock.<TypeReference>anyObject(),
-        EasyMock.<AtomicReference>isNull()
-    )).andReturn(new AtomicReference<List<LookupExtractorFactoryMapContainer>>(null)).once();
-
-    EasyMock.expect(configManager.watch(
-                        EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
-                        EasyMock.<TypeReference>anyObject(),
-                        EasyMock.<AtomicReference>isNull()
-                    )).andReturn(new AtomicReference<List<Map<String, Object>>>(null)).once();
-
-    EasyMock.replay(configManager);
-
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        new LookupCoordinatorManagerConfig(){
-          @Override
-          public long getPeriod(){
-            return 1;
-          }
-        }
-    );
-    manager.start();
-    manager.start();
-    Assert.assertTrue(manager.backgroundManagerIsRunning());
-    Assert.assertNull(manager.getKnownLookups());
-    Assert.assertFalse(manager.waitForBackgroundTermination(10));
-    EasyMock.verify(configManager);
-  }
-
-  @Test
-  public void testStop() throws Exception
+  public void testStartStop() throws Exception
   {
     EasyMock.reset(configManager);
 
@@ -1050,18 +1074,24 @@ public class LookupCoordinatorManagerTest
         configManager,
         lookupCoordinatorManagerConfig
     );
+
+    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     manager.start();
+    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
+
     manager.stop();
-    manager.stop();
+    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     Assert.assertTrue(manager.waitForBackgroundTermination(10));
     Assert.assertFalse(manager.backgroundManagerIsRunning());
+
     EasyMock.verify(configManager);
   }
 
   @Test
-  public void testStartTooMuch() throws Exception
+  public void testMultipleStartStop() throws Exception
   {
     EasyMock.reset(configManager);
 
@@ -1069,13 +1099,8 @@ public class LookupCoordinatorManagerTest
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
                         EasyMock.<TypeReference>anyObject(),
                         EasyMock.<AtomicReference>isNull()
-                    )).andReturn(new AtomicReference<List<LookupExtractorFactoryMapContainer>>(null)).once();
-
-    EasyMock.expect(configManager.watch(
-                        EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
-                        EasyMock.<TypeReference>anyObject(),
-                        EasyMock.<AtomicReference>isNull()
-                    )).andReturn(new AtomicReference<List<Map<String, Object>>>(null)).once();
+                    )).andReturn(
+        new AtomicReference<>(Collections.EMPTY_MAP)).anyTimes();
 
     EasyMock.replay(configManager);
 
@@ -1086,30 +1111,40 @@ public class LookupCoordinatorManagerTest
         configManager,
         lookupCoordinatorManagerConfig
     );
+
+    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
     manager.start();
+    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
+
     manager.stop();
-    expectedException.expect(new BaseMatcher<Throwable>()
-    {
-      @Override
-      public boolean matches(Object o)
-      {
-        return o instanceof ISE && ((ISE) o).getMessage().equals("Cannot restart after stop!");
-      }
+    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.waitForBackgroundTermination(10));
+    Assert.assertFalse(manager.backgroundManagerIsRunning());
 
-      @Override
-      public void describeTo(Description description)
-      {
+    manager.start();
+    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.backgroundManagerIsRunning());
+    Assert.assertFalse(manager.waitForBackgroundTermination(10));
 
-      }
-    });
-    try {
-      manager.start();
-    }
-    finally {
-      EasyMock.verify(configManager);
-    }
+    manager.stop();
+    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.waitForBackgroundTermination(10));
+    Assert.assertFalse(manager.backgroundManagerIsRunning());
+
+    manager.start();
+    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.backgroundManagerIsRunning());
+    Assert.assertFalse(manager.waitForBackgroundTermination(10));
+
+    manager.stop();
+    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.waitForBackgroundTermination(10));
+    Assert.assertFalse(manager.backgroundManagerIsRunning());
+
+    EasyMock.verify(configManager);
   }
 
   @Test

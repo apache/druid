@@ -605,8 +605,6 @@ public class DruidCoordinator
               }
           );
         }
-
-        lookupCoordinatorManager.start();
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to become leader")

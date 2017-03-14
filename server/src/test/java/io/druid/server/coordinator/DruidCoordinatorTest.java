@@ -47,6 +47,7 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -192,7 +193,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidNode,
         loadManagementPeons,
         null,
-        new CostBalancerStrategyFactory()
+        new CostBalancerStrategyFactory(),
+        EasyMock.createNiceMock(LookupCoordinatorManager.class)
     );
   }
 

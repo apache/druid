@@ -160,6 +160,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class).in(LazySingleton.class);
 
+            binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(DruidCoordinator.class);
 
             binder.bind(ListenerDiscoverer.class).in(ManageLifecycle.class);
