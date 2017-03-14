@@ -215,7 +215,7 @@ public class SqlResourceTest
         new SqlQuery(
             "SELECT DISTINCT dim1 FROM foo",
             ImmutableMap.<String, Object>of(
-                "bufferGrouperMaxSize", 1
+                "maxMergingDictionarySize", 1
             )
         )
     ).lhs;
