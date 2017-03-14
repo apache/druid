@@ -19,41 +19,36 @@
 
 package io.druid.sql.calcite.expression;
 
+import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlFunction;
 
 import java.util.List;
 
-public interface ExpressionConversion
+public interface SqlExtractionOperator
 {
   /**
-   * SQL kind that this converter knows how to convert.
+   * Returns the SQL operator corresponding to this aggregation function. Should be a singleton.
    *
-   * @return sql kind
+   * @return operator
    */
-  SqlKind sqlKind();
+  SqlFunction calciteFunction();
 
   /**
-   * Operator name, if {@link #sqlKind()} is {@code OTHER_FUNCTION}.
+   * Returns the Druid {@link RowExtraction} corresponding to a SQL {@code RexNode}.
    *
-   * @return operator name, or null
-   */
-  String operatorName();
-
-  /**
-   * Translate a row-expression to a Druid column reference. Note that this signature will probably need to change
-   * once we support extractions from multiple columns.
-   *
-   * @param converter      converter that can be used to convert sub-expressions
+   * @param operatorTable  Operator table that can be used to convert sub-expressions
    * @param plannerContext SQL planner context
    * @param rowOrder       order of fields in the Druid rows to be extracted from
    * @param expression     expression meant to be applied on top of the table
    *
    * @return (columnName, extractionFn) or null
+   *
+   * @see ExpressionConversion#convert(ExpressionConverter, PlannerContext, List, RexNode)
    */
   RowExtraction convert(
-      ExpressionConverter converter,
+      DruidOperatorTable operatorTable,
       PlannerContext plannerContext,
       List<String> rowOrder,
       RexNode expression

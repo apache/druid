@@ -22,32 +22,28 @@ package io.druid.sql.calcite.expression;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
+import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 import java.util.List;
 
-public class ExtractExpressionConversion extends AbstractExpressionConversion
+public class ExtractExtractionOperator implements SqlExtractionOperator
 {
-  private static final ExtractExpressionConversion INSTANCE = new ExtractExpressionConversion();
-
-  private ExtractExpressionConversion()
+  @Override
+  public SqlFunction calciteFunction()
   {
-    super(SqlKind.EXTRACT);
-  }
-
-  public static ExtractExpressionConversion instance()
-  {
-    return INSTANCE;
+    return SqlStdOperatorTable.EXTRACT;
   }
 
   @Override
   public RowExtraction convert(
-      final ExpressionConverter converter,
+      final DruidOperatorTable operatorTable,
       final PlannerContext plannerContext,
       final List<String> rowOrder,
       final RexNode expression
@@ -59,7 +55,7 @@ public class ExtractExpressionConversion extends AbstractExpressionConversion
     final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
     final RexNode expr = call.getOperands().get(1);
 
-    final RowExtraction rex = converter.convert(plannerContext, rowOrder, expr);
+    final RowExtraction rex = Expressions.toRowExtraction(operatorTable, plannerContext, rowOrder, expr);
     if (rex == null) {
       return null;
     }

@@ -43,6 +43,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
+import io.druid.sql.calcite.expression.SqlExtractionOperator;
 import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -130,9 +131,8 @@ public class QuantileSqlAggregatorTest
         )
     );
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.<SqlAggregator>of(
-            new QuantileSqlAggregator()
-        )
+        ImmutableSet.<SqlAggregator>of(new QuantileSqlAggregator()),
+        ImmutableSet.<SqlExtractionOperator>of()
     );
     plannerFactory = new PlannerFactory(rootSchema, walker, operatorTable, plannerConfig);
   }

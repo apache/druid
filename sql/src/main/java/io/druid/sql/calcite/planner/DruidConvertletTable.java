@@ -68,7 +68,7 @@ public class DruidConvertletTable implements SqlRexConvertletTable
   {
     if (call.getKind() == SqlKind.EXTRACT && call.getOperandList().get(1).getKind() != SqlKind.LITERAL) {
       // Avoid using the standard convertlet for EXTRACT(TIMEUNIT FROM col), since we want to handle it directly
-      // in ExtractExpressionConversion.
+      // in ExtractExtractionOperator.
       return BYPASS_CONVERTLET;
     } else {
       final SqlRexConvertlet convertlet = table.get(call.getOperator());

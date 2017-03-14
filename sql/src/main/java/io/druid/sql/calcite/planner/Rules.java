@@ -215,13 +215,13 @@ public class Rules
 
     // Druid-specific rules.
     rules.add(new DruidTableScanRule(queryMaker));
-    rules.add(DruidFilterRule.instance());
+    rules.add(new DruidFilterRule(operatorTable));
 
     if (plannerConfig.getMaxSemiJoinRowsInMemory() > 0) {
       rules.add(DruidSemiJoinRule.instance());
     }
 
-    rules.addAll(SelectRules.rules());
+    rules.addAll(SelectRules.rules(operatorTable));
     rules.addAll(GroupByRules.rules(operatorTable));
 
     return rules.build();
