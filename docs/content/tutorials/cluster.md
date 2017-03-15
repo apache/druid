@@ -121,7 +121,7 @@ druid.indexer.logs.s3Prefix=druid/indexing-logs
 
 In `conf/druid/_common/common.runtime.properties`,
 
-- Set `druid.extensions.loadList=["io.druid.extensions:druid-hdfs-storage"]`.
+- Set `druid.extensions.loadList=["druid-hdfs-storage"]`.
 
 - Comment out the configurations for local storage under "Deep Storage" and "Indexing service logs".
 
