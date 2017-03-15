@@ -136,7 +136,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.4.0</version>
+                <version>0.4.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -657,7 +657,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>3.3</version>
+                <version>3.4</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -821,7 +821,7 @@
                             <signature>
                                 <groupId>org.codehaus.mojo.signature
                                 </groupId>
-                                <artifactId>java17</artifactId>
+                                <artifactId>java18</artifactId>
                                 <version>1.0</version>
                             </signature>
                             <ignores>
@@ -986,6 +986,14 @@
                         <format>xml</format>
                         <!-- aggregated reports for multi-module projects -->
                         <aggregate>true</aggregate>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                          <source>1.8</source>
+                          <target>1.8</target>
                     </configuration>
                 </plugin>
             </plugins>

@@ -20,6 +20,8 @@
 package io.druid.query.select;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -109,9 +111,17 @@ public class SelectQueryRunnerTest
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
+  private static final boolean DEFAULT_FROM_NEXT = true;
+  private static final SelectQueryConfig config = new SelectQueryConfig(true);
+  {
+    config.setEnableFromNextDefault(DEFAULT_FROM_NEXT);
+  }
+  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(config);
+
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
-      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+      configSupplier
   );
 
   @Parameterized.Parameters(name = "{0}:descending={1}")
@@ -121,14 +131,13 @@ public class SelectQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new SelectQueryRunnerFactory(
                 toolChest,
-                new SelectQueryEngine(),
+                new SelectQueryEngine(configSupplier),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         ),
         Arrays.asList(false, true)
     );
   }
-
   private final QueryRunner runner;
   private final boolean descending;
 
@@ -194,7 +203,7 @@ public class SelectQueryRunnerTest
       Assert.assertEquals(offset, pagingIdentifiers.get(QueryRunnerTestHelper.segmentId).intValue());
 
       Map<String, Integer> next = PagingSpec.next(pagingIdentifiers, descending);
-      query = query.withPagingSpec(new PagingSpec(next, 3));
+      query = query.withPagingSpec(new PagingSpec(next, 3, false));
     }
 
     query = newTestQuery().intervals(I_0112_0114).build();

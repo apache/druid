@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
@@ -210,7 +209,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Float key, boolean asList)
   {
-    return ImmutableList.of(key);
+    return key;
   }
 
   @Override

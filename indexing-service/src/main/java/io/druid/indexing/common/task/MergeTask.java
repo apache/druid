@@ -104,6 +104,18 @@ public class MergeTask extends MergeTaskBase
     return "merge";
   }
 
+  @JsonProperty
+  public Boolean getRollup()
+  {
+    return rollup;
+  }
+
+  @JsonProperty
+  public IndexSpec getIndexSpec()
+  {
+    return indexSpec;
+  }
+
   @JsonProperty("aggregations")
   public List<AggregatorFactory> getAggregators()
   {

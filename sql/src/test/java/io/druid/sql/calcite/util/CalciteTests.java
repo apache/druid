@@ -20,10 +20,14 @@
 package io.druid.sql.calcite.util;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -41,15 +45,21 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupExtractorFactory;
+import io.druid.query.lookup.LookupIntrospectHandler;
+import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
@@ -65,19 +75,24 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
+import io.druid.sql.calcite.expression.SqlExtractionOperator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.guice.SqlModule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Utility functions for Calcite tests.
@@ -88,6 +103,7 @@ public class CalciteTests
   public static final String DATASOURCE2 = "foo2";
 
   private static final String TIMESTAMP_COLUMN = "t";
+  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
 
   private static final QueryRunnerFactoryConglomerate CONGLOMERATE = new DefaultQueryRunnerFactoryConglomerate(
       ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
@@ -105,9 +121,10 @@ public class CalciteTests
               new SelectQueryRunnerFactory(
                   new SelectQueryQueryToolChest(
                       TestHelper.getObjectMapper(),
-                      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                      selectConfigSupplier
                   ),
-                  new SelectQueryEngine(),
+                  new SelectQueryEngine(selectConfigSupplier),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               )
           )
@@ -265,7 +282,78 @@ public class CalciteTests
 
   public static DruidOperatorTable createOperatorTable()
   {
-    return new DruidOperatorTable(ImmutableSet.<SqlAggregator>of(new ApproxCountDistinctSqlAggregator()));
+    try {
+      final Injector injector = Guice.createInjector(
+          new Module()
+          {
+            @Override
+            public void configure(final Binder binder)
+            {
+              // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
+
+              final LookupReferencesManager mock = EasyMock.createMock(LookupReferencesManager.class);
+              EasyMock.expect(mock.get(EasyMock.eq("lookyloo"))).andReturn(
+                  new LookupExtractorFactory()
+                  {
+                    @Override
+                    public boolean start()
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public boolean close()
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public boolean replaces(@Nullable final LookupExtractorFactory other)
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Nullable
+                    @Override
+                    public LookupIntrospectHandler getIntrospectHandler()
+                    {
+                      throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public LookupExtractor get()
+                    {
+                      return new MapLookupExtractor(
+                          ImmutableMap.of(
+                              "a", "xa",
+                              "abc", "xabc"
+                          ),
+                          false
+                      );
+                    }
+                  }
+              ).anyTimes();
+              EasyMock.replay(mock);
+              binder.bind(LookupReferencesManager.class).toInstance(mock);
+            }
+          }
+      );
+      final Set<SqlAggregator> aggregators = new HashSet<>();
+      final Set<SqlExtractionOperator> extractionOperators = new HashSet<>();
+
+      for (Class<? extends SqlAggregator> clazz : SqlModule.DEFAULT_AGGREGATOR_CLASSES) {
+        aggregators.add(injector.getInstance(clazz));
+      }
+
+      for (Class<? extends SqlExtractionOperator> clazz : SqlModule.DEFAULT_EXTRACTION_OPERATOR_CLASSES) {
+        extractionOperators.add(injector.getInstance(clazz));
+      }
+
+      return new DruidOperatorTable(aggregators, extractionOperators);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   public static DruidSchema createMockSchema(

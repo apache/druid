@@ -17,30 +17,35 @@
  * under the License.
  */
 
-package io.druid.sql.guice;
+package io.druid.query.select;
 
-import com.google.inject.Binder;
-import com.google.inject.multibindings.Multibinder;
-import io.druid.sql.calcite.aggregation.SqlAggregator;
-import io.druid.sql.calcite.expression.SqlExtractionOperator;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SqlBindings
+public class SelectQueryConfig
 {
-  public static void addAggregator(
-      final Binder binder,
-      final Class<? extends SqlAggregator> aggregatorClass
+  public static String ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
+
+  @JsonProperty
+  private boolean enableFromNextDefault = true;
+
+  @JsonCreator
+  public SelectQueryConfig(
+      @JsonProperty("enableFromNextDefault") Boolean enableFromNextDefault
   )
   {
-    final Multibinder<SqlAggregator> setBinder = Multibinder.newSetBinder(binder, SqlAggregator.class);
-    setBinder.addBinding().to(aggregatorClass);
+    if (enableFromNextDefault != null) {
+      this.enableFromNextDefault = enableFromNextDefault.booleanValue();
+    }
   }
 
-  public static void addExtractionOperator(
-      final Binder binder,
-      final Class<? extends SqlExtractionOperator> clazz
-  )
+  public boolean getEnableFromNextDefault()
   {
-    final Multibinder<SqlExtractionOperator> setBinder = Multibinder.newSetBinder(binder, SqlExtractionOperator.class);
-    setBinder.addBinding().to(clazz);
+    return enableFromNextDefault;
+  }
+
+  public void setEnableFromNextDefault(boolean enableFromNextDefault)
+  {
+    this.enableFromNextDefault = enableFromNextDefault;
   }
 }

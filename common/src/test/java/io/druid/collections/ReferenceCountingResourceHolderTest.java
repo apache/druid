@@ -91,12 +91,6 @@ public class ReferenceCountingResourceHolderTest
   @Test(timeout = 60_000)
   public void testResourceHandlerClearedByJVM() throws InterruptedException
   {
-    if (System.getProperty("java.version").startsWith("1.7")) {
-      // This test is unreliable on Java 7, probably GC is not triggered by System.gc(). It is not a problem because
-      // this test should ever pass on any version of Java to prove that ReferenceCountingResourceHolder doesn't
-      // introduce leaks itself and actually cleans the leaked resources.
-      return;
-    }
     long initialLeakedResources = ReferenceCountingResourceHolder.leakedResources();
     final AtomicBoolean released = new AtomicBoolean(false);
     makeReleasingHandler(released); // Don't store the handler in a variable and don't close it, the object leaked
@@ -106,12 +100,6 @@ public class ReferenceCountingResourceHolderTest
   @Test(timeout = 60_000)
   public void testResourceHandlerWithReleaserClearedByJVM() throws InterruptedException
   {
-    if (System.getProperty("java.version").startsWith("1.7")) {
-      // This test is unreliable on Java 7, probably GC is not triggered by System.gc(). It is not a problem because
-      // this test should ever pass on any version of Java to prove that ReferenceCountingResourceHolder doesn't
-      // introduce leaks itself and actually cleans the leaked resources.
-      return;
-    }
     long initialLeakedResources = ReferenceCountingResourceHolder.leakedResources();
     final AtomicBoolean released = new AtomicBoolean(false);
     // createDanglingReleaser() need to be a separate method because otherwise JVM preserves a ref to Holder on stack

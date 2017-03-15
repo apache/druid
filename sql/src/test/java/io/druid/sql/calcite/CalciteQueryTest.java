@@ -68,6 +68,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.lookup.RegisteredLookupExtractionFn;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.select.PagingSpec;
@@ -120,6 +121,14 @@ public class CalciteQueryTest
     public int getMaxTopNLimit()
     {
       return 0;
+    }
+  };
+  private static final PlannerConfig PLANNER_CONFIG_NO_HLL = new PlannerConfig()
+  {
+    @Override
+    public boolean isUseApproximateCountDistinct()
+    {
+      return false;
     }
   };
   private static final PlannerConfig PLANNER_CONFIG_SELECT_PAGING = new PlannerConfig()
@@ -718,6 +727,22 @@ public class CalciteQueryTest
 
     for (final String query : queries) {
       assertQueryIsUnplannable(query);
+    }
+  }
+
+  @Test
+  public void testUnplannableExactCountDistinctQueries() throws Exception
+  {
+    // All of these queries are unplannable in exact COUNT DISTINCT mode.
+
+    final List<String> queries = ImmutableList.of(
+        "SELECT COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo", // two COUNT DISTINCTs, same query
+        "SELECT dim1, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim1", // two COUNT DISTINCTs
+        "SELECT COUNT(distinct unique_dim1) FROM druid.foo" // COUNT DISTINCT on sketch cannot be exact
+    );
+
+    for (final String query : queries) {
+      assertQueryIsUnplannable(PLANNER_CONFIG_NO_HLL, query);
     }
   }
 
@@ -1326,7 +1351,7 @@ public class CalciteQueryTest
   public void testExpressionAggregations() throws Exception
   {
     testQuery(
-        "SELECT SUM(cnt * 3), LN(SUM(cnt) + SUM(m1)) FROM druid.foo",
+        "SELECT SUM(cnt * 3), LN(SUM(cnt) + SUM(m1)), SUM(cnt) / 0.25 FROM druid.foo",
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1337,14 +1362,18 @@ public class CalciteQueryTest
                       new LongSumAggregatorFactory("a1", "cnt", null),
                       new DoubleSumAggregatorFactory("a2", "m1", null)
                   ))
-                  .postAggregators(ImmutableList.<PostAggregator>of(
-                      new ExpressionPostAggregator("a3", "log((\"a1\" + \"a2\"))")
+                  .postAggregators(ImmutableList.of(
+                      new ExpressionPostAggregator("a3", "log((\"a1\" + \"a2\"))"),
+                      new ArithmeticPostAggregator("a4", "quotient", ImmutableList.of(
+                          new FieldAccessPostAggregator(null, "a1"),
+                          new ConstantPostAggregator(null, 0.25)
+                      ))
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{18L, 3.295836866004329}
+            new Object[]{18L, 3.295836866004329, 24.0}
         )
     );
   }
@@ -1865,6 +1894,116 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{6L, 3L, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testExactCountDistinct() throws Exception
+  {
+    // When HLL is disabled, do exact count distinct through a nested query.
+
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT COUNT(distinct dim2) FROM druid.foo",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new CountAggregatorFactory("a0")
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testApproxCountDistinctWhenHllDisabled() throws Exception
+  {
+    // When HLL is disabled, APPROX_COUNT_DISTINCT is still approximate.
+
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      AGGS(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              DIMS(new DefaultDimensionSpec("dim2", null)),
+                              false
+                          )
+                      )
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testExactCountDistinctWithGroupingAndOtherAggregators() throws Exception
+  {
+    // When HLL is disabled, do exact count distinct through a nested query.
+
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT dim2, SUM(cnt), COUNT(distinct dim1) FROM druid.foo GROUP BY dim2",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(DIMS(
+                                                new DefaultDimensionSpec("dim2", "d0"),
+                                                new DefaultDimensionSpec("dim1", "d1")
+                                            ))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0", "d0")))
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("a0", "a0"),
+                            new CountAggregatorFactory("a1")
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 3L, 3L},
+            new Object[]{"a", 2L, 2L},
+            new Object[]{"abc", 1L, 1L}
         )
     );
   }
@@ -2844,7 +2983,12 @@ public class CalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(
                             DIMS(
-                                new ExtractionDimensionSpec("dim1", "d0", ValueType.FLOAT, new BucketExtractionFn(1.0, 0.0))
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d0",
+                                    ValueType.FLOAT,
+                                    new BucketExtractionFn(1.0, 0.0)
+                                )
                             )
                         )
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
@@ -2969,6 +3113,94 @@ public class CalciteQueryTest
             new Object[]{1, 2L},
             new Object[]{3, 2L},
             new Object[]{4, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterAndGroupByLookup() throws Exception
+  {
+    final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        false,
+        true
+    );
+
+    testQuery(
+        "SELECT LOOKUP(dim1, 'lookyloo'), COUNT(*) FROM foo\n"
+        + "WHERE LOOKUP(dim1, 'lookyloo') <> 'xxx'\n"
+        + "GROUP BY LOOKUP(dim1, 'lookyloo')",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(
+                            NOT(SELECTOR(
+                                "dim1",
+                                "xxx",
+                                extractionFn
+                            ))
+                        )
+                        .setDimensions(
+                            DIMS(
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d0",
+                                    ValueType.STRING,
+                                    extractionFn
+                                )
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            AGGS(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 5L},
+            new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testCountDistinctOfLookup() throws Exception
+  {
+    final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        false,
+        true
+    );
+
+    testQuery(
+        "SELECT COUNT(DISTINCT LOOKUP(dim1, 'lookyloo')) FROM foo",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(
+                      new CardinalityAggregatorFactory(
+                          "a0",
+                          ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
+                          false
+                      )
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
         )
     );
   }
