@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
 
@@ -115,4 +116,14 @@ public interface BufferAggregator extends HotLoopCallee
    * Release any resources used by the aggregator
    */
   void close();
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>The default implementation inspects nothing. Classes that implement {@code BufferAggregator} are encouraged to
+   * override this method, following the specification of {@link HotLoopCallee#inspectRuntimeShape}.
+   */
+  default void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+  }
 }
