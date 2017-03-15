@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -36,12 +39,12 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.tools.ValidationException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.ws.rs.core.Response;
@@ -53,9 +56,6 @@ import java.util.Map;
 public class SqlResourceTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -92,7 +92,7 @@ public class SqlResourceTest
   {
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery("SELECT COUNT(*) AS cnt FROM druid.foo", null)
-    );
+    ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -107,7 +107,7 @@ public class SqlResourceTest
   {
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery("SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1", null)
-    );
+    ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -125,7 +125,7 @@ public class SqlResourceTest
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             ImmutableMap.<String, Object>of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles")
         )
-    );
+    ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -140,7 +140,7 @@ public class SqlResourceTest
   {
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1", null)
-    );
+    ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -155,7 +155,7 @@ public class SqlResourceTest
   {
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2", null)
-    );
+    ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -172,7 +172,7 @@ public class SqlResourceTest
   {
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", null)
-    );
+    ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -188,43 +188,65 @@ public class SqlResourceTest
   @Test
   public void testCannotValidate() throws Exception
   {
-    expectedException.expect(QueryInterruptedException.class);
-    expectedException.expectMessage("Column 'dim3' not found in any table");
+    final QueryInterruptedException exception = doPost(new SqlQuery("SELECT dim3 FROM druid.foo", null)).lhs;
 
-    doPost(
-        new SqlQuery("SELECT dim3 FROM druid.foo", null)
-    );
-
-    Assert.fail();
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
+    Assert.assertEquals(ValidationException.class.getName(), exception.getErrorClass());
+    Assert.assertTrue(exception.getMessage().contains("Column 'dim3' not found in any table"));
   }
 
   @Test
   public void testCannotConvert() throws Exception
   {
-    expectedException.expect(QueryInterruptedException.class);
-    expectedException.expectMessage("Cannot build plan for query: SELECT TRIM(dim1) FROM druid.foo");
-
     // TRIM unsupported
-    doPost(new SqlQuery("SELECT TRIM(dim1) FROM druid.foo", null));
+    final QueryInterruptedException exception = doPost(new SqlQuery("SELECT TRIM(dim1) FROM druid.foo", null)).lhs;
 
-    Assert.fail();
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
+    Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
+    Assert.assertTrue(exception.getMessage().contains("Cannot build plan for query: SELECT TRIM(dim1) FROM druid.foo"));
   }
 
-  private List<Map<String, Object>> doPost(final SqlQuery query) throws Exception
+  @Test
+  public void testResourceLimitExceeded() throws Exception
+  {
+    final QueryInterruptedException exception = doPost(
+        new SqlQuery(
+            "SELECT DISTINCT dim1 FROM foo",
+            ImmutableMap.<String, Object>of(
+                "maxMergingDictionarySize", 1
+            )
+        )
+    ).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.RESOURCE_LIMIT_EXCEEDED);
+    Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
+  }
+
+  // Returns either an error or a result.
+  private Pair<QueryInterruptedException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {
     final Response response = resource.doPost(query);
     if (response.getStatus() == 200) {
       final StreamingOutput output = (StreamingOutput) response.getEntity();
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
       output.write(baos);
-      return JSON_MAPPER.readValue(
-          baos.toByteArray(),
-          new TypeReference<List<Map<String, Object>>>()
-          {
-          }
+      return Pair.of(
+          null,
+          JSON_MAPPER.<List<Map<String, Object>>>readValue(
+              baos.toByteArray(),
+              new TypeReference<List<Map<String, Object>>>()
+              {
+              }
+          )
       );
     } else {
-      throw JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryInterruptedException.class);
+      return Pair.of(
+          JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryInterruptedException.class),
+          null
+      );
     }
   }
 }

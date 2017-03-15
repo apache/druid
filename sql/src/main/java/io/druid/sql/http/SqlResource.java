@@ -22,6 +22,7 @@ package io.druid.sql.http;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
@@ -84,6 +85,74 @@ public class SqlResource
     try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
       plannerResult = planner.plan(sqlQuery.getQuery());
       timeZone = planner.getPlannerContext().getTimeZone();
+
+      // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
+      final List<RelDataTypeField> fieldList = plannerResult.rowType().getFieldList();
+      final boolean[] timeColumns = new boolean[fieldList.size()];
+      final boolean[] dateColumns = new boolean[fieldList.size()];
+      for (int i = 0; i < fieldList.size(); i++) {
+        final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
+        timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
+        dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
+      }
+
+      final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
+
+      try {
+        return Response.ok(
+            new StreamingOutput()
+            {
+              @Override
+              public void write(final OutputStream outputStream) throws IOException, WebApplicationException
+              {
+                Yielder<Object[]> yielder = yielder0;
+
+                try (final JsonGenerator jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream)) {
+                  jsonGenerator.writeStartArray();
+
+                  while (!yielder.isDone()) {
+                    final Object[] row = yielder.get();
+                    jsonGenerator.writeStartObject();
+                    for (int i = 0; i < fieldList.size(); i++) {
+                      final Object value;
+
+                      if (timeColumns[i]) {
+                        value = ISODateTimeFormat.dateTime().print(
+                            Calcites.calciteTimestampToJoda((long) row[i], timeZone)
+                        );
+                      } else if (dateColumns[i]) {
+                        value = ISODateTimeFormat.dateTime().print(
+                            Calcites.calciteDateToJoda((int) row[i], timeZone)
+                        );
+                      } else {
+                        value = row[i];
+                      }
+
+                      jsonGenerator.writeObjectField(fieldList.get(i).getName(), value);
+                    }
+                    jsonGenerator.writeEndObject();
+                    yielder = yielder.next(null);
+                  }
+
+                  jsonGenerator.writeEndArray();
+                  jsonGenerator.flush();
+
+                  // End with CRLF
+                  outputStream.write('\r');
+                  outputStream.write('\n');
+                }
+                finally {
+                  yielder.close();
+                }
+              }
+            }
+        ).build();
+      }
+      catch (Throwable e) {
+        // make sure to close yielder if anything happened before starting to serialize the response.
+        yielder0.close();
+        throw Throwables.propagate(e);
+      }
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
@@ -101,66 +170,5 @@ public class SqlResource
                      .entity(jsonMapper.writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(exceptionToReport)))
                      .build();
     }
-
-    // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
-    final List<RelDataTypeField> fieldList = plannerResult.rowType().getFieldList();
-    final boolean[] timeColumns = new boolean[fieldList.size()];
-    final boolean[] dateColumns = new boolean[fieldList.size()];
-    for (int i = 0; i < fieldList.size(); i++) {
-      final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
-      timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
-      dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
-    }
-
-    final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
-
-    return Response.ok(
-        new StreamingOutput()
-        {
-          @Override
-          public void write(final OutputStream outputStream) throws IOException, WebApplicationException
-          {
-            Yielder<Object[]> yielder = yielder0;
-
-            try (final JsonGenerator jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream)) {
-              jsonGenerator.writeStartArray();
-
-              while (!yielder.isDone()) {
-                final Object[] row = yielder.get();
-                jsonGenerator.writeStartObject();
-                for (int i = 0; i < fieldList.size(); i++) {
-                  final Object value;
-
-                  if (timeColumns[i]) {
-                    value = ISODateTimeFormat.dateTime().print(
-                        Calcites.calciteTimestampToJoda((long) row[i], timeZone)
-                    );
-                  } else if (dateColumns[i]) {
-                    value = ISODateTimeFormat.dateTime().print(
-                        Calcites.calciteDateToJoda((int) row[i], timeZone)
-                    );
-                  } else {
-                    value = row[i];
-                  }
-
-                  jsonGenerator.writeObjectField(fieldList.get(i).getName(), value);
-                }
-                jsonGenerator.writeEndObject();
-                yielder = yielder.next(null);
-              }
-
-              jsonGenerator.writeEndArray();
-              jsonGenerator.flush();
-
-              // End with CRLF
-              outputStream.write('\r');
-              outputStream.write('\n');
-            }
-            finally {
-              yielder.close();
-            }
-          }
-        }
-    ).build();
   }
 }
