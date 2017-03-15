@@ -166,13 +166,7 @@ public final class SpecializationService
       if (alreadyExistingState != null) {
         return alreadyExistingState;
       }
-      WindowedLoopIterationCounter<T> windowedCounter = new WindowedLoopIterationCounter<>(
-          this,
-          specializationId
-      );
-      // putIfAbsent() resolves race between threads calling getSpecializationState() concurrently
-      alreadyExistingState = specializationStates.putIfAbsent(specializationId, windowedCounter);
-      return alreadyExistingState != null ? alreadyExistingState : windowedCounter;
+      return specializationStates.computeIfAbsent(specializationId, id -> new WindowedLoopIterationCounter<>(this, id));
     }
 
     T specialize(ImmutableMap<Class<?>, Class<?>> classRemapping)
@@ -335,11 +329,7 @@ public final class SpecializationService
         }
       }
       if (!currentMinutePresent) {
-        // putIfAbsent resolves a race between query processing threads calling accountLoopIterations() concurrently
-        AtomicLong existingValue = perMinuteIterations.putIfAbsent(currentMinute, new AtomicLong(newIterations));
-        if (existingValue != null) {
-          existingValue.addAndGet(newIterations);
-        }
+        perMinuteIterations.computeIfAbsent(currentMinute, AtomicLong::new).addAndGet(newIterations);
         totalIterations += newIterations;
       }
       return totalIterations;
