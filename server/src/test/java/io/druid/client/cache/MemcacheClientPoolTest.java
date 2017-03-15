@@ -57,12 +57,6 @@ public class MemcacheClientPoolTest
   @Test
   public void testClientLeakDetected() throws InterruptedException
   {
-    if (System.getProperty("java.version").startsWith("1.7")) {
-      // This test is unreliable on Java 7, probably GC is not triggered by System.gc(). It is not a problem because
-      // this test should ever pass on any version of Java to prove that MemcacheClientPool doesn't introduce leaks
-      // itself.
-      return;
-    }
     long initialLeakedClients = MemcacheClientPool.leakedClients();
     createDanglingClient();
     // Wait until Closer runs

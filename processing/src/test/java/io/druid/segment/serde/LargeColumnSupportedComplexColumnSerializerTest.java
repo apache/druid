@@ -56,35 +56,33 @@ public class LargeColumnSupportedComplexColumnSerializerTest
         2500 * Longs.BYTES
     };
 
-    for (int k = 0; k < columnSizes.length; k++) {
-      for (int j = 0; j < cases.length; j++) {
-        IOPeon peon = new TmpFileIOPeon();
+    for (int columnSize : columnSizes) {
+      for (int aCase : cases) {
         File tmpFile = FileUtils.getTempDirectory();
-        final FileSmoosher v9Smoosher = new FileSmoosher(tmpFile);
-
-        LargeColumnSupportedComplexColumnSerializer serializer = LargeColumnSupportedComplexColumnSerializer
-            .createWithColumnSize(peon, "test", serde.getObjectStrategy(), columnSizes[k]);
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
+        try (IOPeon peon = new TmpFileIOPeon();
+             FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
 
-        serializer.open();
-        for (int i = 0; i < cases[j]; i++) {
-          HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-          byte[] hashBytes = fn.hashLong(i).asBytes();
-          collector.add(hashBytes);
-          baseCollector.fold(collector);
-          serializer.serialize(collector);
+          LargeColumnSupportedComplexColumnSerializer serializer = LargeColumnSupportedComplexColumnSerializer
+              .createWithColumnSize(peon, "test", serde.getObjectStrategy(), columnSize);
+
+          serializer.open();
+          for (int i = 0; i < aCase; i++) {
+            HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+            byte[] hashBytes = fn.hashLong(i).asBytes();
+            collector.add(hashBytes);
+            baseCollector.fold(collector);
+            serializer.serialize(collector);
+          }
+          serializer.close();
+
+          try (final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+              "test",
+              serializer.getSerializedSize()
+          )) {
+            serializer.writeToChannel(channel, v9Smoosher);
+          }
         }
-        serializer.close();
-
-        final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-            "test",
-            serializer.getSerializedSize()
-        );
-        serializer.writeToChannel(channel, v9Smoosher);
-
-        channel.close();
-        peon.close();
-        v9Smoosher.close();
 
         SmooshedFileMapper mapper = Smoosh.map(tmpFile);
         final ColumnBuilder builder = new ColumnBuilder()
@@ -97,7 +95,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
         ComplexColumn complexColumn = column.getComplexColumn();
         HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
-        for (int i = 0; i < cases[j]; i++) {
+        for (int i = 0; i < aCase; i++) {
           collector.fold((HyperLogLogCollector) complexColumn.getRowValue(i));
         }
         Assert.assertEquals(baseCollector.estimateCardinality(), collector.estimateCardinality(), 0.0);

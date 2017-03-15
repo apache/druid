@@ -78,7 +78,7 @@ public class TimeBoundaryQueryTest
     );
 
 
-    Assert.assertEquals(1, serdeQuery.getContextValue("priority"));
+    Assert.assertEquals(new Integer(1), serdeQuery.getContextValue("priority"));
     Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("populateCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
