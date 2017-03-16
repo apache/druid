@@ -253,6 +253,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       }
     }
 
+    // Optionally dump all used segmentIds in processing this query
+    if (BaseQuery.getContextDumpSegmentList(query, false)) {
+      List<String> segmentIds = new ArrayList<>(segments.size());
+      for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
+        segmentIds.add(segment.rhs.getSegmentIdWithoutDataSource());
+      }
+      responseContext.put("segments", segmentIds);
+    }
+
     final byte[] queryCacheKey;
 
     if ((populateCache || useCache) // implies strategy != null

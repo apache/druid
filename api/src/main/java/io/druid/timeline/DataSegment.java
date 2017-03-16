@@ -48,7 +48,7 @@ import java.util.Map;
  */
 public class DataSegment implements Comparable<DataSegment>
 {
-  public static String delimiter = "_";
+  public final static String DELIMITER = "_";
   private final Integer binaryVersion;
   private static final Interner<String> interner = Interners.newWeakInterner();
   private static final Function<String, String> internFun = new Function<String, String>()
@@ -70,18 +70,43 @@ public class DataSegment implements Comparable<DataSegment>
   {
     StringBuilder sb = new StringBuilder();
 
-    sb.append(dataSource).append(delimiter)
-      .append(start).append(delimiter)
-      .append(end).append(delimiter)
-      .append(version);
-
-    if (shardSpec.getPartitionNum() != 0) {
-      sb.append(delimiter).append(shardSpec.getPartitionNum());
-    }
+    sb.append(dataSource).append(DELIMITER);
+    updateBuilderWithSegmentIdWithoutDataSource(sb, start, end, version, shardSpec.getPartitionNum());
 
     return sb.toString();
   }
 
+  private static void updateBuilderWithSegmentIdWithoutDataSource(
+      StringBuilder sb,
+      DateTime start,
+      DateTime end,
+      String version,
+      int partitionNum
+  )
+  {
+    sb.append(start).append(DELIMITER)
+      .append(end).append(DELIMITER)
+      .append(version);
+
+    if (partitionNum != 0) {
+      sb.append(DELIMITER).append(partitionNum);
+    }
+  }
+
+  public static String makeDataSegmentIdentifierWithoutDataSource(
+      DateTime start,
+      DateTime end,
+      String version,
+      int partitionNum
+  )
+  {
+    StringBuilder sb = new StringBuilder();
+
+    updateBuilderWithSegmentIdWithoutDataSource(sb, start, end, version, partitionNum);
+
+    return sb.toString();
+  }
+  
   private final String dataSource;
   private final Interval interval;
   private final String version;

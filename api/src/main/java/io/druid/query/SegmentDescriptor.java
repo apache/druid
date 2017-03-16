@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 /**
@@ -84,6 +85,16 @@ public class SegmentDescriptor
     }
 
     return true;
+  }
+
+  public String getSegmentIdWithoutDataSource()
+  {
+    return DataSegment.makeDataSegmentIdentifierWithoutDataSource(
+        interval.getStart(),
+        interval.getEnd(),
+        version,
+        partitionNumber
+    );
   }
 
   @Override
