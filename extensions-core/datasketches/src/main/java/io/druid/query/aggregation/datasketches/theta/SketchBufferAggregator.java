@@ -40,7 +40,7 @@ public class SketchBufferAggregator implements BufferAggregator
   private final int size;
   private final int maxIntermediateSize;
   private final Map<Integer, Union> unions = new HashMap<>(); //position in BB -> Union Object
-  private IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
   {
@@ -126,12 +126,8 @@ public class SketchBufferAggregator implements BufferAggregator
     Union newUnion = (Union) SetOperation.wrap(mem);
 
     Union union = unions.get(oldPosition);
-    if (union != null) {
-      unions.remove(oldPosition);
-      unions.put(newPosition, newUnion);
-    } else {
-      unions.put(newPosition, newUnion);
-    }
+    unions.remove(oldPosition);
+    unions.put(newPosition, newUnion);
 
   }
 

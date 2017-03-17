@@ -36,7 +36,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class BufferGrouperTestForSketchAggregation
+public class BufferGrouperUsingSketchMergeAggregatorFactoryTest
 {
   private static BufferGrouper<Integer> makeGrouper(
       TestColumnSelectorFactory columnSelectorFactory,

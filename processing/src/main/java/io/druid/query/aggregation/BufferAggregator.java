@@ -129,11 +129,18 @@ public interface BufferAggregator extends HotLoopCallee
 
   /*
    * Relocates any cached objects.
+   * If underlying ByteBuffer used for aggregation buffer relocates to a new ByteBuffer, positional caches(if any)
+   * built on top of old ByteBuffer can not be used for further {@link BufferAggregator#aggregate(ByteBuffer, int)}
+   * calls. This method tells the BufferAggregator that the cached objects at a certain location has been relocated to
+   * a different location.
+   *
+   * Only used if there is any positional caches/objects in the BufferAggregator implementation.
+   *
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
-   * @param oldPostition old position of an item in old ByteBuffer.
-   * @param newPosition  new position of an item in new ByteBuffer.
-   * @param newBuffer    ByteBuffer to be used.
+   * @param oldPostition old position of a cached object before aggregation buffer relocates to a new ByteBuffer.
+   * @param newPosition  new position of a cached object after aggregation buffer relocates to a new ByteBuffer.
+   * @param newBuffer    new aggregation buffer.
    */
   default void relocate(int oldPostition, int newPosition, ByteBuffer newBuffer)
   {
