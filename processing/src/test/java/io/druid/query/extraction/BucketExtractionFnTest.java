@@ -32,6 +32,7 @@ public class BucketExtractionFnTest
   public void testApply()
   {
     BucketExtractionFn extractionFn1 = new BucketExtractionFn(100.0, 0.5);
+    Assert.assertEquals("1200.5", extractionFn1.apply((Object) "1234.99"));
     Assert.assertEquals("1200.5", extractionFn1.apply("1234.99"));
     Assert.assertEquals("0.5", extractionFn1.apply("1"));
     Assert.assertEquals("0.5", extractionFn1.apply("100"));
@@ -69,7 +70,7 @@ public class BucketExtractionFnTest
     final ObjectMapper objectMapper = new DefaultObjectMapper();
 
     final String json1 = "{ \"type\" : \"bucket\", \"size\" : \"2\", \"offset\" : \"0.5\" }";
-    BucketExtractionFn extractionFn1 = (BucketExtractionFn)objectMapper.readValue(json1, ExtractionFn.class);
+    BucketExtractionFn extractionFn1 = (BucketExtractionFn) objectMapper.readValue(json1, ExtractionFn.class);
     Assert.assertEquals(2, extractionFn1.getSize(), DELTA);
     Assert.assertEquals(0.5, extractionFn1.getOffset(), DELTA);
 
@@ -82,7 +83,7 @@ public class BucketExtractionFnTest
     );
 
     final String json2 = "{ \"type\" : \"bucket\"}";
-    BucketExtractionFn extractionFn2 = (BucketExtractionFn)objectMapper.readValue(json2, ExtractionFn.class);
+    BucketExtractionFn extractionFn2 = (BucketExtractionFn) objectMapper.readValue(json2, ExtractionFn.class);
     Assert.assertEquals(1, extractionFn2.getSize(), DELTA);
     Assert.assertEquals(0, extractionFn2.getOffset(), DELTA);
 
