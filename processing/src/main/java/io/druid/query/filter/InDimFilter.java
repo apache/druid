@@ -37,6 +37,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.filter.InFilter;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -281,6 +282,9 @@ public class InDimFilter implements DimFilter
           LongArrayList longs = new LongArrayList(values.size());
           for (String value : values) {
             Long longValue = GuavaUtils.tryParseLong(value);
+            if (longValue == null) {
+              longValue = DimensionHandlerUtils.getIntegralFromFloatString(value);
+            }
             if (longValue != null) {
               longs.add(longValue);
             }

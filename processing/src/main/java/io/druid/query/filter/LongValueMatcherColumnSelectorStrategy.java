@@ -28,7 +28,10 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
   @Override
   public ValueMatcher makeValueMatcher(final LongColumnSelector selector, final String value)
   {
-    final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
+    Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
+    if (matchVal == null) {
+      matchVal = DimensionHandlerUtils.getIntegralFromFloatString(value);
+    }
     if (matchVal == null) {
       return BooleanValueMatcher.of(false);
     }

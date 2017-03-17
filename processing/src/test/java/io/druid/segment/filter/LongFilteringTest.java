@@ -140,6 +140,21 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
+        new SelectorDimFilter(LONG_COLUMN, "3.0", null),
+        ImmutableList.<String>of("3")
+    );
+
+    assertFilterMatches(
+        new SelectorDimFilter(LONG_COLUMN, "3.000001", null),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        new SelectorDimFilter(LONG_COLUMN, "3.0000001", null),
+        ImmutableList.<String>of("3")
+    );
+
+    assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
@@ -150,7 +165,37 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
+        new BoundDimFilter(LONG_COLUMN, "2.0", "5.0", false, false, null, null, StringComparators.NUMERIC),
+        ImmutableList.<String>of("2", "3", "4", "5")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(LONG_COLUMN, "2.0", "5.0", true, true, null, null, StringComparators.NUMERIC),
+        ImmutableList.<String>of("3", "4")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(LONG_COLUMN, "1.9", "5.9", true, true, null, null, StringComparators.NUMERIC),
+        ImmutableList.<String>of("2", "3", "4", "5")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(LONG_COLUMN, "2.1", "5.9", false, false, null, null, StringComparators.NUMERIC),
+        ImmutableList.<String>of("3", "4", "5")
+    );
+
+    assertFilterMatches(
         new InDimFilter(LONG_COLUMN, Arrays.asList("2", "4", "8"), null),
+        ImmutableList.<String>of("2", "4")
+    );
+
+    assertFilterMatches(
+        new InDimFilter(LONG_COLUMN, Arrays.asList("2.000001", "4.000001"), null),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        new InDimFilter(LONG_COLUMN, Arrays.asList("2.0000001", "4.0000001"), null),
         ImmutableList.<String>of("2", "4")
     );
 

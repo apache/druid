@@ -352,9 +352,15 @@ public class BoundDimFilter implements DimFilter
           if (hasLowerBound()) {
             final Long lowerLong = GuavaUtils.tryParseLong(lower);
             if (lowerLong == null) {
-              // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
-              hasLowerLongBound = false;
-              lowerLongBound = 0L;
+              final Float lowerFloat = Floats.tryParse(lower);
+              if (lowerFloat != null) {
+                hasLowerLongBound = true;
+                lowerLongBound = getLongLowerBoundFromFloat(lowerFloat);
+              } else {
+                // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
+                hasLowerLongBound = false;
+                lowerLongBound = 0L;
+              }
             } else {
               hasLowerLongBound = true;
               lowerLongBound = lowerLong;
@@ -367,10 +373,16 @@ public class BoundDimFilter implements DimFilter
           if (hasUpperBound()) {
             Long upperLong = GuavaUtils.tryParseLong(upper);
             if (upperLong == null) {
-              // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
-              matchesNothing = true;
-              hasUpperLongBound = false;
-              upperLongBound = 0L;
+              Float upperFloat = Floats.tryParse(upper);
+              if (upperFloat != null) {
+                hasUpperLongBound = true;
+                upperLongBound = getLongUpperBoundFromFloat(upperFloat);
+              } else {
+                // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
+                matchesNothing = true;
+                hasUpperLongBound = false;
+                upperLongBound = 0L;
+              }
             } else {
               hasUpperLongBound = true;
               upperLongBound = upperLong;
@@ -396,6 +408,24 @@ public class BoundDimFilter implements DimFilter
       }
     }
     return new BoundLongPredicateSupplier();
+  }
+
+  private long getLongLowerBoundFromFloat(float floatBound)
+  {
+    if (lowerStrict) {
+      return (long) Math.floor(floatBound);
+    } else {
+      return (long) Math.ceil(floatBound);
+    }
+  }
+
+  private long getLongUpperBoundFromFloat(float floatBound)
+  {
+    if (upperStrict) {
+      return (long) Math.ceil(floatBound);
+    } else {
+      return (long) Math.floor(floatBound);
+    }
   }
 
   private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()

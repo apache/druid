@@ -263,4 +263,20 @@ public final class DimensionHandlerUtils
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
   }
+
+  public static Long getIntegralFromFloatString(String floatStr)
+  {
+    Float f = Floats.tryParse(floatStr);
+    if (f == null) {
+      return null;
+    }
+
+    float asFloat = f;
+    long asLong = (long) asFloat;
+    if (asFloat == asLong) {
+      return asLong;
+    } else {
+      return null;
+    }
+  }
 }
