@@ -60,7 +60,7 @@ public class BucketExtractionFn implements ExtractionFn
     if (value instanceof Number) {
       return bucket(((Number) value).doubleValue());
     } else if (value instanceof String) {
-      return apply(value);
+      return apply((String) value);
     }
     return null;
   }
