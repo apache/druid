@@ -50,7 +50,7 @@ public class DruidCoordinatorRuntimeParams
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategy balancerStrategy;
 
-  public DruidCoordinatorRuntimeParams(
+  private DruidCoordinatorRuntimeParams(
       long startTime,
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
