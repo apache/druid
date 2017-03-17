@@ -126,4 +126,17 @@ public interface BufferAggregator extends HotLoopCallee
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
   }
+
+  /*
+   * Relocates any cached objects.
+   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
+   *
+   * @param oldPostition old position of an item in old ByteBuffer.
+   * @param newPosition  new position of an item in new ByteBuffer.
+   * @param newBuffer    ByteBuffer to be used.
+   */
+  default void relocate(int oldPostition, int newPosition, ByteBuffer newBuffer)
+  {
+  }
+
 }

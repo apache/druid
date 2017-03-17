@@ -31,6 +31,7 @@ import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 public class SketchBufferAggregator implements BufferAggregator
@@ -38,10 +39,8 @@ public class SketchBufferAggregator implements BufferAggregator
   private final ObjectColumnSelector selector;
   private final int size;
   private final int maxIntermediateSize;
-
-  private NativeMemory nm;
-
   private final Map<Integer, Union> unions = new HashMap<>(); //position in BB -> Union Object
+  private IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
   {
@@ -53,11 +52,8 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    if (nm == null) {
-      nm = new NativeMemory(buf);
-    }
-
-    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
+    NativeMemory nativeMemory = getNativeMemory(buf);
+    Memory mem = new MemoryRegion(nativeMemory, position, maxIntermediateSize);
     unions.put(position, (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION));
   }
 
@@ -89,6 +85,7 @@ public class SketchBufferAggregator implements BufferAggregator
   {
     Union union = unions.get(position);
     if (union == null) {
+      NativeMemory nm = getNativeMemory(buf);
       Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
       union = (Union) SetOperation.wrap(mem);
       unions.put(position, union);
@@ -119,4 +116,33 @@ public class SketchBufferAggregator implements BufferAggregator
   {
     inspector.visit("selector", selector);
   }
+
+  @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer newBuffer)
+  {
+    NativeMemory nm = getNativeMemory(newBuffer);
+
+    Memory mem = new MemoryRegion(nm, newPosition, maxIntermediateSize);
+    Union newUnion = (Union) SetOperation.wrap(mem);
+
+    Union union = unions.get(oldPosition);
+    if (union != null) {
+      unions.remove(oldPosition);
+      unions.put(newPosition, newUnion);
+    } else {
+      unions.put(newPosition, newUnion);
+    }
+
+  }
+
+  private NativeMemory getNativeMemory(ByteBuffer buffer)
+  {
+    NativeMemory nm = nmCache.get(buffer);
+    if (nm == null) {
+      nm = new NativeMemory(buffer);
+      nmCache.put(buffer, nm);
+    }
+    return nm;
+  }
+
 }

@@ -430,8 +430,9 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
 
     for (int oldBucket = 0; oldBucket < buckets; oldBucket++) {
       if (isUsed(oldBucket)) {
+        int oldPosition = oldBucket * bucketSize;
         entryBuffer.limit((oldBucket + 1) * bucketSize);
-        entryBuffer.position(oldBucket * bucketSize);
+        entryBuffer.position(oldPosition);
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
@@ -442,8 +443,13 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
           throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
         }
 
-        newTableBuffer.position(newBucket * bucketSize);
+        int newPostition = newBucket * bucketSize;
+        newTableBuffer.position(newPostition);
         newTableBuffer.put(entryBuffer);
+
+        for (int i = 0; i < aggregators.length; i++) {
+          aggregators[i].relocate(oldPosition + aggregatorOffsets[i], newPostition + aggregatorOffsets[i], newTableBuffer);
+        }
 
         buffer.putInt(tableArenaSize + newSize * Ints.BYTES, newBucket * bucketSize);
         newSize++;
