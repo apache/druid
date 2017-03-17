@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -104,5 +105,11 @@ public class HistogramBufferAggregator implements BufferAggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 }

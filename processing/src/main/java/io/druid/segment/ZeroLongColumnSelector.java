@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 public final class ZeroLongColumnSelector implements LongColumnSelector
 {
   private static final ZeroLongColumnSelector INSTANCE = new ZeroLongColumnSelector();
@@ -37,5 +39,10 @@ public final class ZeroLongColumnSelector implements LongColumnSelector
   public long get()
   {
     return 0;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
   }
 }

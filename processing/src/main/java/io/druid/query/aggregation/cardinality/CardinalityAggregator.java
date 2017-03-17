@@ -19,12 +19,13 @@
 
 package io.druid.query.aggregation.cardinality;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
 
 import java.util.List;
@@ -32,48 +33,59 @@ import java.util.List;
 public class CardinalityAggregator implements Aggregator
 {
   private final String name;
-  private final List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList;
+  private final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses;
   private final boolean byRow;
 
   public static final HashFunction hashFn = Hashing.murmur3_128();
 
-  protected static void hashRow(
-      List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
+  static void hashRow(
+      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
       HyperLogLogCollector collector
   )
   {
     final Hasher hasher = hashFn.newHasher();
-    for (int k = 0; k < selectorPlusList.size(); ++k) {
+    for (int k = 0; k < selectorPluses.length; ++k) {
       if (k != 0) {
         hasher.putByte((byte) 0);
       }
 
-      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> selectorPlus = selectorPlusList.get(k);
+      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> selectorPlus = selectorPluses[k];
       selectorPlus.getColumnSelectorStrategy().hashRow(selectorPlus.getSelector(), hasher);
     }
     collector.add(hasher.hash().asBytes());
   }
 
-  protected static void hashValues(
-      List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
+  static void hashValues(
+      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
       HyperLogLogCollector collector
   )
   {
-    for (final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+    for (final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy> selectorPlus : selectorPluses) {
       selectorPlus.getColumnSelectorStrategy().hashValues(selectorPlus.getSelector(), collector);
     }
   }
 
   private HyperLogLogCollector collector;
 
-  public CardinalityAggregator(
+  @VisibleForTesting
+  @SuppressWarnings("unchecked")
+  CardinalityAggregator(
       String name,
       List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
       boolean byRow
   )
   {
+    this(name, selectorPlusList.toArray(new ColumnSelectorPlus[] {}), byRow);
+  }
+
+  CardinalityAggregator(
+      String name,
+      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
+      boolean byRow
+  )
+  {
     this.name = name;
-    this.selectorPlusList = selectorPlusList;
+    this.selectorPluses = selectorPluses;
     this.collector = HyperLogLogCollector.makeLatestCollector();
     this.byRow = byRow;
   }
@@ -82,9 +94,9 @@ public class CardinalityAggregator implements Aggregator
   public void aggregate()
   {
     if (byRow) {
-      hashRow(selectorPlusList, collector);
+      hashRow(selectorPluses, collector);
     } else {
-      hashValues(selectorPlusList, collector);
+      hashValues(selectorPluses, collector);
     }
   }
 
@@ -115,7 +127,7 @@ public class CardinalityAggregator implements Aggregator
   @Override
   public Aggregator clone()
   {
-    return new CardinalityAggregator(name, selectorPlusList, byRow);
+    return new CardinalityAggregator(name, selectorPluses, byRow);
   }
 
   @Override

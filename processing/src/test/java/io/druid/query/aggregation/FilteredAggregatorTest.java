@@ -36,6 +36,7 @@ import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
@@ -166,6 +167,11 @@ public class FilteredAggregatorTest
                       }
                     }
                   };
+                }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
                 }
               }
           );

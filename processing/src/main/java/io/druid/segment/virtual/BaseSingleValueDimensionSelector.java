@@ -21,6 +21,7 @@ package io.druid.segment.virtual;
 
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
@@ -31,6 +32,7 @@ import java.util.Objects;
 
 public abstract class BaseSingleValueDimensionSelector implements DimensionSelector
 {
+  @CalledFromHotLoop
   protected abstract String getValue();
 
   @Override
