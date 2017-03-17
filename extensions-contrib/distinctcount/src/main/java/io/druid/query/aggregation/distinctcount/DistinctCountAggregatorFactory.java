@@ -83,7 +83,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return new EmptyDistinctCountBufferAggregator();
+      return EmptyDistinctCountBufferAggregator.instance();
     } else {
       return new DistinctCountBufferAggregator(makeDimensionSelector(columnFactory));
     }

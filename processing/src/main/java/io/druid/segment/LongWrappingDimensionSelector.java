@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
 public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelector
@@ -41,5 +42,12 @@ public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelec
     } else {
       return extractionFn.apply(selector.get());
     }
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+    inspector.visit("extractionFn", extractionFn);
   }
 }

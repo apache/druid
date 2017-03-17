@@ -20,12 +20,20 @@
 package io.druid.query.aggregation.datasketches.theta;
 
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
 
-public class EmptySketchBufferAggregator implements BufferAggregator
+public final class EmptySketchBufferAggregator implements BufferAggregator
 {
-  public EmptySketchBufferAggregator()
+  private static final EmptySketchBufferAggregator INSTANCE = new EmptySketchBufferAggregator();
+
+  public static EmptySketchBufferAggregator instance()
+  {
+    return INSTANCE;
+  }
+
+  private EmptySketchBufferAggregator()
   {
   }
 
@@ -59,6 +67,11 @@ public class EmptySketchBufferAggregator implements BufferAggregator
 
   @Override
   public void close()
+  {
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
   }
 }

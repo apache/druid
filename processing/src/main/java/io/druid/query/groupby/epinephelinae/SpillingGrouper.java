@@ -28,7 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.query.QueryInterruptedException;
+import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import net.jpountz.lz4.LZ4BlockInputStream;
@@ -200,9 +200,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       outFile = out.getFile();
       final Iterator<Entry<KeyType>> it = grouper.iterator(true);
       while (it.hasNext()) {
-        if (Thread.interrupted()) {
-          throw new QueryInterruptedException(new InterruptedException());
-        }
+        BaseQuery.checkInterrupted();
 
         jsonGenerator.writeObject(it.next());
       }

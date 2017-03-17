@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -90,5 +91,10 @@ public class NullDimensionSelector implements DimensionSelector, IdLookup
   public int lookupId(String name)
   {
     return Strings.isNullOrEmpty(name) ? 0 : -1;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
   }
 }

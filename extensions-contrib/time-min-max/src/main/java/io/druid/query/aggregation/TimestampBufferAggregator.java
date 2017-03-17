@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -79,7 +80,14 @@ public class TimestampBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void close() {
+  public void close()
+  {
+  }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+    inspector.visit("comparator", comparator);
   }
 }

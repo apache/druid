@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.ArrayBasedIndexedInts;
@@ -131,5 +132,12 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
   public IdLookup idLookup()
   {
     return selector.idLookup();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+    inspector.visit("predicate", predicate);
   }
 }

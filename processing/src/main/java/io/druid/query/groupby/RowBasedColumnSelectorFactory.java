@@ -27,6 +27,7 @@ import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -164,6 +165,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         {
           return null;
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("row", row);
+          inspector.visit("extractionFn", extractionFn);
+        }
       };
     } else {
       return new DimensionSelector()
@@ -289,6 +297,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         {
           return null;
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("row", row);
+          inspector.visit("extractionFn", extractionFn);
+        }
       };
     }
   }
@@ -296,17 +311,26 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public FloatColumnSelector makeFloatColumnSelector(final String columnName)
   {
+    abstract class RowBasedFloatColumnSelector implements FloatColumnSelector
+    {
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("row", row);
+      }
+    }
     if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-      return new FloatColumnSelector()
+      class TimeFloatColumnSelector extends RowBasedFloatColumnSelector
       {
         @Override
         public float get()
         {
           return (float) row.get().getTimestampFromEpoch();
         }
-      };
+      }
+      return new TimeFloatColumnSelector();
     } else {
-      return new FloatColumnSelector()
+      return new RowBasedFloatColumnSelector()
       {
         @Override
         public float get()
@@ -320,17 +344,26 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public LongColumnSelector makeLongColumnSelector(final String columnName)
   {
+    abstract class RowBasedLongColumnSelector implements LongColumnSelector
+    {
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("row", row);
+      }
+    }
     if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-      return new LongColumnSelector()
+      class TimeLongColumnSelector extends RowBasedLongColumnSelector
       {
         @Override
         public long get()
         {
           return row.get().getTimestampFromEpoch();
         }
-      };
+      }
+      return new TimeLongColumnSelector();
     } else {
-      return new LongColumnSelector()
+      return new RowBasedLongColumnSelector()
       {
         @Override
         public long get()

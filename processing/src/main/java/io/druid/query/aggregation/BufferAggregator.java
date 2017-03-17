@@ -19,6 +19,10 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.HotLoopCallee;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -29,7 +33,7 @@ import java.nio.ByteBuffer;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
  */
-public interface BufferAggregator
+public interface BufferAggregator extends HotLoopCallee
 {
   /**
    * Initializes the buffer location
@@ -44,6 +48,7 @@ public interface BufferAggregator
    * @param buf byte buffer to initialize
    * @param position offset within the byte buffer for initialization
    */
+  @CalledFromHotLoop
   void init(ByteBuffer buf, int position);
 
   /**
@@ -57,6 +62,7 @@ public interface BufferAggregator
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the current aggregate value is stored
    */
+  @CalledFromHotLoop
   void aggregate(ByteBuffer buf, int position);
 
   /**
@@ -110,4 +116,14 @@ public interface BufferAggregator
    * Release any resources used by the aggregator
    */
   void close();
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>The default implementation inspects nothing. Classes that implement {@code BufferAggregator} are encouraged to
+   * override this method, following the specification of {@link HotLoopCallee#inspectRuntimeShape}.
+   */
+  default void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+  }
 }

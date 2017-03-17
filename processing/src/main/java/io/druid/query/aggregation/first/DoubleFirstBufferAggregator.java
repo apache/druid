@@ -22,6 +22,7 @@ package io.druid.query.aggregation.first;
 import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
@@ -78,5 +79,12 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("timeSelector", timeSelector);
+    inspector.visit("valueSelector", valueSelector);
   }
 }

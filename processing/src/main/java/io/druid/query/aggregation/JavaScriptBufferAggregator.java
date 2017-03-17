@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -73,5 +74,12 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   @Override
   public void close() {
     script.close();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selectorList", selectorList);
+    inspector.visit("script", script);
   }
 }

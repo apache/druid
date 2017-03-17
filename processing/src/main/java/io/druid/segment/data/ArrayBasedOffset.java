@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
 /**
  */
 public class ArrayBasedOffset implements Offset
@@ -66,5 +68,10 @@ public class ArrayBasedOffset implements Offset
     final ArrayBasedOffset retVal = new ArrayBasedOffset(ints);
     retVal.currIndex = currIndex;
     return retVal;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
   }
 }

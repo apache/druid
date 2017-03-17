@@ -29,6 +29,7 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
@@ -137,6 +138,12 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
               buf.putLong(position, pair.lhs);
               buf.putLong(position + Longs.BYTES, pair.rhs);
             }
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("selector", selector);
           }
         };
       }

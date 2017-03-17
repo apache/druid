@@ -21,7 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.TestLongColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,7 +42,7 @@ public class MetricManipulatorFnsTest
     final ArrayList<Object[]> constructorArrays = new ArrayList<>();
     final long longVal = 13789;
     LongMinAggregator longMinAggregator = new LongMinAggregator(
-        new LongColumnSelector()
+        new TestLongColumnSelector()
         {
           @Override
           public long get()
@@ -81,7 +81,7 @@ public class MetricManipulatorFnsTest
 
     LongSumAggregatorFactory longSumAggregatorFactory = new LongSumAggregatorFactory(NAME, FIELD);
     LongSumAggregator longSumAggregator = new LongSumAggregator(
-        new LongColumnSelector()
+        new TestLongColumnSelector()
         {
           @Override
           public long get()

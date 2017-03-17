@@ -639,6 +639,16 @@
                 <version>0.5.18</version>
             </dependency>
             <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>5.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm-commons</artifactId>
+                <version>5.2</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
@@ -815,10 +825,11 @@
                                 <version>1.0</version>
                             </signature>
                             <ignores>
-                                <!-- Some of our code uses DirectBuffer & Cleaner directly, which are not part of
+                                <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->
                                 <ignore>sun.nio.ch.DirectBuffer</ignore>
                                 <ignore>sun.misc.Cleaner</ignore>
+                                <ignore>sun.misc.Unsafe</ignore>
                             </ignores>
                         </configuration>
                     </execution>

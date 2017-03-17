@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import io.druid.collections.bitmap.BitSetBitmapFactory;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.segment.data.Offset;
@@ -81,7 +82,8 @@ public class BitmapOffsetTest
       mutable.add(val);
     }
 
-    final BitmapOffset offset = new BitmapOffset(factory, factory.makeImmutableBitmap(mutable), descending);
+    ImmutableBitmap bitmap = factory.makeImmutableBitmap(mutable);
+    final BitmapOffset offset = BitmapOffset.of(bitmap, descending, bitmap.size());
     final int[] expected = descending ? TEST_VALS_FLIP : TEST_VALS;
 
     int count = 0;

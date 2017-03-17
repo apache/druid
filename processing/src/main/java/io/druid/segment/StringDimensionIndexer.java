@@ -32,6 +32,7 @@ import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.Indexed;
@@ -540,6 +541,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           );
         }
         return getEncodedValue(name, false);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("currEntry", currEntry);
       }
     }
     return new IndexerDimensionSelector();

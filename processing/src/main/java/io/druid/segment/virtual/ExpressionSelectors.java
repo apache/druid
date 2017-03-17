@@ -21,6 +21,7 @@ package io.druid.segment.virtual;
 
 import io.druid.math.expr.Expr;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -56,6 +57,12 @@ public class ExpressionSelectors
         final Number number = baseSelector.get();
         return number != null ? number.longValue() : nullValue;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("baseSelector", baseSelector);
+      }
     }
     return new ExpressionLongColumnSelector();
   }
@@ -74,6 +81,12 @@ public class ExpressionSelectors
       {
         final Number number = baseSelector.get();
         return number != null ? number.floatValue() : nullValue;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("baseSelector", baseSelector);
       }
     }
     return new ExpressionFloatColumnSelector();
@@ -96,6 +109,12 @@ public class ExpressionSelectors
           final Number number = baseSelector.get();
           return number == null ? null : String.valueOf(number);
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("baseSelector", baseSelector);
+        }
       }
       return new DefaultExpressionDimensionSelector();
     } else {
@@ -105,6 +124,12 @@ public class ExpressionSelectors
         protected String getValue()
         {
           return extractionFn.apply(baseSelector.get());
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("baseSelector", baseSelector);
         }
       }
       return new ExtractionExpressionDimensionSelector();

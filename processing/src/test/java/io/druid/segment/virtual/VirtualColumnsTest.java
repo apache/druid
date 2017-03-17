@@ -30,6 +30,7 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
@@ -37,6 +38,8 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TestFloatColumnSelector;
+import io.druid.segment.TestLongColumnSelector;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ColumnCapabilities;
@@ -355,6 +358,11 @@ public class VirtualColumnsTest
             }
           };
         }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+        }
       };
 
       return dimensionSpec.decorate(dimensionSelector);
@@ -364,7 +372,7 @@ public class VirtualColumnsTest
     public FloatColumnSelector makeFloatColumnSelector(String columnName, ColumnSelectorFactory factory)
     {
       final LongColumnSelector selector = makeLongColumnSelector(columnName, factory);
-      return new FloatColumnSelector()
+      return new TestFloatColumnSelector()
       {
         @Override
         public float get()
@@ -380,7 +388,7 @@ public class VirtualColumnsTest
       final String subColumn = VirtualColumns.splitColumnName(columnName).rhs;
       final Long boxed = subColumn == null ? null : Longs.tryParse(subColumn);
       final long theLong = boxed == null ? -1 : boxed;
-      return new LongColumnSelector()
+      return new TestLongColumnSelector()
       {
         @Override
         public long get()

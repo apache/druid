@@ -17,49 +17,49 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+package io.druid.query.aggregation;
 
-/**
- */
-public class StartLimitedOffset implements Offset
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.FloatColumnSelector;
+
+import java.nio.ByteBuffer;
+
+public abstract class DoubleBufferAggregator implements BufferAggregator
 {
-  private final Offset baseOffset;
-  private final int limit;
+  protected final FloatColumnSelector selector;
 
-  public StartLimitedOffset(
-      Offset baseOffset,
-      int limit
-  )
+  DoubleBufferAggregator(FloatColumnSelector selector)
   {
-    this.baseOffset = baseOffset;
-    this.limit = limit;
-
-    while (baseOffset.withinBounds() && baseOffset.getOffset() < limit) {
-      baseOffset.increment();
-    }
+    this.selector = selector;
   }
 
   @Override
-  public void increment()
+  public Object get(ByteBuffer buf, int position)
   {
-    baseOffset.increment();
+    return buf.getDouble(position);
   }
 
   @Override
-  public boolean withinBounds()
+  public float getFloat(ByteBuffer buf, int position)
   {
-    return baseOffset.withinBounds();
+    return (float) buf.getDouble(position);
   }
 
   @Override
-  public Offset clone()
+  public long getLong(ByteBuffer buf, int position)
   {
-    return new StartLimitedOffset(baseOffset.clone(), limit);
+    return (long) buf.getDouble(position);
   }
 
   @Override
-  public int getOffset()
+  public void close()
   {
-    return baseOffset.getOffset();
+    // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 }

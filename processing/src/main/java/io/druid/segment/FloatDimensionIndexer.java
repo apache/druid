@@ -22,6 +22,7 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -115,6 +116,11 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         float floatVal = (Float) dims[dimIndex];
         return (long) floatVal;
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+      }
     }
 
     return new IndexerLongColumnSelector();
@@ -139,6 +145,11 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         }
 
         return (Float) dims[dimIndex];
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
       }
     }
 
