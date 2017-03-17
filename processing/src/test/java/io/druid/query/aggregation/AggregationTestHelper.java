@@ -79,7 +79,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
-import org.junit.Assert;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
