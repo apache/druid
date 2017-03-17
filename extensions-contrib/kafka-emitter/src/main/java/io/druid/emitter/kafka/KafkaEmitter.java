@@ -95,18 +95,23 @@ public class KafkaEmitter implements Emitter {
   }
 
   private Producer<String, String> setKafkaProducer() {
-    Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-    Properties props = new Properties();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-    props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
-    props.putAll(config.getKafkaProducerConfig());
-    queueMemoryBound = (props.containsKey(ProducerConfig.BUFFER_MEMORY_CONFIG) ?
-        Long.parseLong(props.getProperty(ProducerConfig.BUFFER_MEMORY_CONFIG)) : queueMemoryBound);
+      Properties props = new Properties();
+      props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
+      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+      props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
+      props.putAll(config.getKafkaProducerConfig());
+      queueMemoryBound = (props.containsKey(ProducerConfig.BUFFER_MEMORY_CONFIG) ?
+                          Long.parseLong(props.getProperty(ProducerConfig.BUFFER_MEMORY_CONFIG)) : queueMemoryBound);
 
-    return new KafkaProducer<>(props);
+      return new KafkaProducer<>(props);
+    } finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
   }
 
   @Override
