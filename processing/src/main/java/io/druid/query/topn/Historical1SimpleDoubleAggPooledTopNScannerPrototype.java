@@ -62,7 +62,7 @@ public class Historical1SimpleDoubleAggPooledTopNScannerPrototype
           aggregator.aggregate(resultsBuffer, position, metric);
         } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
           positions[dimIndex] = positionToAllocate;
-          aggregator.putFirst(resultsBuffer, position, metric);
+          aggregator.putFirst(resultsBuffer, positionToAllocate, metric);
           positionToAllocate += aggregatorSize;
         }
       }
