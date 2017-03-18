@@ -81,6 +81,7 @@ import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
@@ -502,7 +503,7 @@ public class IndexIO
       try {
         SmooshedFileMapper v8SmooshedFiles = closer.register(Smoosh.map(v8Dir));
 
-        v9Dir.mkdirs();
+        FileUtils.forceMkdir(v9Dir);
         final FileSmoosher v9Smoosher = closer.register(new FileSmoosher(v9Dir));
 
         ByteStreams.write(Ints.toByteArray(9), Files.newOutputStreamSupplier(new File(v9Dir, "version.bin")));

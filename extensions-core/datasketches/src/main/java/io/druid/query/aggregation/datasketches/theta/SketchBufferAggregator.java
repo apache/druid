@@ -26,6 +26,7 @@ import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
@@ -113,4 +114,9 @@ public class SketchBufferAggregator implements BufferAggregator
     unions.clear();
   }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+  }
 }

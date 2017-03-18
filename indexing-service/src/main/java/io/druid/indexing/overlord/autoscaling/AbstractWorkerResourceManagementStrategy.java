@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.autoscaling;
 
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.LifecycleLock;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -38,9 +39,7 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
 
   private final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig;
   private final ScheduledExecutorService exec;
-  private final Object lock = new Object();
-
-  private volatile boolean started = false;
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   protected AbstractWorkerResourceManagementStrategy(
       ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
@@ -54,10 +53,10 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
   @Override
   public void startManagement(final WorkerTaskRunner runner)
   {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
+    if (!lifecycleLock.canStart()) {
+      return;
+    }
+    try {
 
       log.info("Started Resource Management Scheduler");
 
@@ -98,9 +97,10 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
             }
           }
       );
-
-      started = true;
-
+      lifecycleLock.started();
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
@@ -111,14 +111,11 @@ public abstract class AbstractWorkerResourceManagementStrategy implements Resour
   @Override
   public void stopManagement()
   {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
-      log.info("Stopping Resource Management Scheduler");
-      exec.shutdown();
-      started = false;
+    if (!lifecycleLock.canStop()) {
+      return;
     }
+    log.info("Stopping Resource Management Scheduler");
+    exec.shutdown();
   }
 
 }

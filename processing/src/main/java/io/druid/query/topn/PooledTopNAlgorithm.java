@@ -19,13 +19,18 @@
 
 package io.druid.query.topn;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.BaseQuery;
 import io.druid.query.ColumnSelectorPlus;
+import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.monomorphicprocessing.SpecializationService;
+import io.druid.query.monomorphicprocessing.SpecializationState;
+import io.druid.query.monomorphicprocessing.StringRuntimeShape;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -40,6 +45,19 @@ import java.util.Arrays;
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
 {
+  /** Non-final fields for testing, see TopNQueryRunnerTest */
+  @VisibleForTesting
+  static boolean specializeGeneric1AggPooledTopN =
+      !Boolean.getBoolean("dontSpecializeGeneric1AggPooledTopN");
+  @VisibleForTesting
+  static boolean specializeGeneric2AggPooledTopN =
+      !Boolean.getBoolean("dontSpecializeGeneric2AggPooledTopN");
+
+  private static final Generic1AggPooledTopNScanner defaultGeneric1AggScanner =
+      new Generic1AggPooledTopNScannerPrototype();
+  private static final Generic2AggPooledTopNScanner defaultGeneric2AggScanner =
+      new Generic2AggPooledTopNScannerPrototype();
+
   private final Capabilities capabilities;
   private final TopNQuery query;
   private final StupidPool<ByteBuffer> bufferPool;
@@ -166,6 +184,75 @@ public class PooledTopNAlgorithm
   {
     return makeBufferAggregators(params.getCursor(), query.getAggregatorSpecs());
   }
+
+  @Override
+  protected void scanAndAggregate(
+      final PooledTopNParams params,
+      final int[] positions,
+      final BufferAggregator[] theAggregators,
+      final int numProcessed
+  )
+  {
+    final Cursor cursor = params.getCursor();
+    if (specializeGeneric1AggPooledTopN && theAggregators.length == 1) {
+      scanAndAggregateGeneric1Agg(params, positions, theAggregators[0], cursor);
+    } else if (specializeGeneric2AggPooledTopN && theAggregators.length == 2) {
+      scanAndAggregateGeneric2Agg(params, positions, theAggregators, cursor);
+    } else {
+      scanAndAggregateDefault(params, positions, theAggregators);
+    }
+    BaseQuery.checkInterrupted();
+  }
+
+  private static void scanAndAggregateGeneric1Agg(
+      PooledTopNParams params,
+      int[] positions,
+      BufferAggregator aggregator,
+      Cursor cursor
+  )
+  {
+    String runtimeShape = StringRuntimeShape.of(aggregator);
+    Class<? extends Generic1AggPooledTopNScanner> prototypeClass = Generic1AggPooledTopNScannerPrototype.class;
+    SpecializationState<Generic1AggPooledTopNScanner> specializationState = SpecializationService
+        .getSpecializationState(prototypeClass, runtimeShape);
+    Generic1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(defaultGeneric1AggScanner);
+    long scannedRows = scanner.scanAndAggregate(
+        params.getDimSelector(),
+        aggregator,
+        params.getAggregatorSizes()[0],
+        cursor,
+        positions,
+        params.getResultsBuf()
+    );
+    specializationState.accountLoopIterations(scannedRows);
+  }
+
+  private static void scanAndAggregateGeneric2Agg(
+      PooledTopNParams params,
+      int[] positions,
+      BufferAggregator[] theAggregators,
+      Cursor cursor
+  )
+  {
+    String runtimeShape = StringRuntimeShape.of(theAggregators);
+    Class<? extends Generic2AggPooledTopNScanner> prototypeClass = Generic2AggPooledTopNScannerPrototype.class;
+    SpecializationState<Generic2AggPooledTopNScanner> specializationState = SpecializationService
+        .getSpecializationState(prototypeClass, runtimeShape);
+    Generic2AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(defaultGeneric2AggScanner);
+    int[] aggregatorSizes = params.getAggregatorSizes();
+    long scannedRows = scanner.scanAndAggregate(
+        params.getDimSelector(),
+        theAggregators[0],
+        aggregatorSizes[0],
+        theAggregators[1],
+        aggregatorSizes[1],
+        cursor,
+        positions,
+        params.getResultsBuf()
+    );
+    specializationState.accountLoopIterations(scannedRows);
+  }
+
   /**
    * Use aggressive loop unrolling to aggregate the data
    *
@@ -184,12 +271,10 @@ public class PooledTopNAlgorithm
    * still optimizes the high quantity of aggregate queries which benefit greatly from any speed improvements
    * (they simply take longer to start with).
    */
-  @Override
-  protected void scanAndAggregate(
+  private static void scanAndAggregateDefault(
       final PooledTopNParams params,
       final int[] positions,
-      final BufferAggregator[] theAggregators,
-      final int numProcessed
+      final BufferAggregator[] theAggregators
   )
   {
     if (params.getCardinality() < 0) {
@@ -211,8 +296,7 @@ public class PooledTopNAlgorithm
     final int aggSize = theAggregators.length;
     final int aggExtra = aggSize % AGG_UNROLL_COUNT;
     int currentPosition = 0;
-
-    while (!cursor.isDone()) {
+    while (!cursor.isDoneOrInterrupted()) {
       final IndexedInts dimValues = dimSelector.getRow();
 
       final int dimSize = dimValues.size();
@@ -393,7 +477,7 @@ public class PooledTopNAlgorithm
             currentPosition
         );
       }
-      cursor.advance();
+      cursor.advanceUninterruptibly();
     }
   }
 

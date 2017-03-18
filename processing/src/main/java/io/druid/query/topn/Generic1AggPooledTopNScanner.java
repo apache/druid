@@ -17,47 +17,27 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.query.topn;
 
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.Offset;
+import io.druid.query.aggregation.BufferAggregator;
+import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
 
-/**
-*/
-class IndexedIntsOffset implements Offset
+import java.nio.ByteBuffer;
+
+public interface Generic1AggPooledTopNScanner
 {
-  int currRow;
-  private final IndexedInts invertedIndex;
-
-  public IndexedIntsOffset(IndexedInts invertedIndex)
-  {
-    this.invertedIndex = invertedIndex;
-    currRow = 0;
-  }
-
-  @Override
-  public void increment()
-  {
-    ++currRow;
-  }
-
-  @Override
-  public boolean withinBounds()
-  {
-    return currRow < invertedIndex.size();
-  }
-
-  @Override
-  public Offset clone()
-  {
-    final IndexedIntsOffset retVal = new IndexedIntsOffset(invertedIndex);
-    retVal.currRow = currRow;
-    return retVal;
-  }
-
-  @Override
-  public int getOffset()
-  {
-    return invertedIndex.get(currRow);
-  }
+  /**
+   * @param aggregatorSize number of bytes required by aggregator for a single aggregation
+   * @param positions a cache for positions in resultsBuffer, where specific (indexed) dimension values are aggregated
+   * @return number of scanned rows, i. e. number of steps made with the given cursor
+   */
+  long scanAndAggregate(
+      DimensionSelector dimensionSelector,
+      BufferAggregator aggregator,
+      int aggregatorSize,
+      Cursor cursor,
+      int[] positions,
+      ByteBuffer resultsBuffer
+  );
 }

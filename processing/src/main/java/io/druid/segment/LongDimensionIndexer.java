@@ -19,10 +19,10 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -115,6 +115,11 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
         return (Long) dims[dimIndex];
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+      }
     }
 
     return new IndexerLongColumnSelector();
@@ -140,6 +145,11 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
         long longVal = (Long) dims[dimIndex];
         return (float) longVal;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
       }
     }
 
@@ -199,7 +209,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Long key, boolean asList)
   {
-    return ImmutableList.of(key);
+    return key;
   }
 
   @Override

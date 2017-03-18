@@ -17,41 +17,49 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.expression;
+package io.druid.query.aggregation;
 
-import org.apache.calcite.sql.SqlKind;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.LongColumnSelector;
 
-public abstract class AbstractExpressionConversion implements ExpressionConversion
+import java.nio.ByteBuffer;
+
+public abstract class LongBufferAggregator implements BufferAggregator
 {
-  private final SqlKind kind;
-  private final String operatorName;
+  protected final LongColumnSelector selector;
 
-  public AbstractExpressionConversion(SqlKind kind)
+  LongBufferAggregator(LongColumnSelector selector)
   {
-    this(kind, null);
-  }
-
-  public AbstractExpressionConversion(SqlKind kind, String operatorName)
-  {
-    this.kind = kind;
-    this.operatorName = operatorName;
-
-    if (kind == SqlKind.OTHER_FUNCTION && operatorName == null) {
-      throw new NullPointerException("operatorName must be non-null for kind OTHER_FUNCTION");
-    } else if (kind != SqlKind.OTHER_FUNCTION && operatorName != null) {
-      throw new NullPointerException("operatorName must be non-null for kind " + kind);
-    }
+    this.selector = selector;
   }
 
   @Override
-  public SqlKind sqlKind()
+  public Object get(ByteBuffer buf, int position)
   {
-    return kind;
+    return buf.getLong(position);
   }
 
   @Override
-  public String operatorName()
+  public float getFloat(ByteBuffer buf, int position)
   {
-    return operatorName;
+    return (float) buf.getLong(position);
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position);
+  }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 }

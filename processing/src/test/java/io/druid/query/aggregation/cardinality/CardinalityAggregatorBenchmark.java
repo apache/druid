@@ -44,7 +44,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
-  List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> dimInfoList;
+  ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] dimInfos;
   ByteBuffer buf;
   int pos;
 
@@ -93,12 +93,9 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
         (DimensionSelector) dim1
     );
 
-    dimInfoList = Lists.newArrayList(dimInfo1);
+    dimInfos = new ColumnSelectorPlus[] {dimInfo1};
 
-    agg = new CardinalityBufferAggregator(
-        dimInfoList,
-        byRow
-    );
+    agg = new CardinalityBufferAggregator(dimInfos, byRow);
 
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",

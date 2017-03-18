@@ -39,20 +39,22 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
@@ -107,6 +109,23 @@ public class TopNQueryRunnerTest
   @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
+    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
+    List<Object[]> parameters = new ArrayList<>();
+    for (int i = 0; i < 8; i++) {
+      for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
+        Object[] params = new Object[4];
+        params[0] = firstParameter;
+        params[1] = (i & 1) != 0;
+        params[2] = (i & 2) != 0;
+        params[3] = (i & 4) != 0;
+        parameters.add(params);
+      }
+    }
+    return parameters;
+  }
+
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners() throws IOException
+  {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
         QueryRunnerTestHelper.makeQueryRunners(
@@ -114,7 +133,7 @@ public class TopNQueryRunnerTest
                 TestQueryRunners.getPool(),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
                 ),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -136,26 +155,59 @@ public class TopNQueryRunnerTest
                 ),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
                 ),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
     );
-
-    return QueryRunnerTestHelper.transformToConstructionFeeder(retVal);
+    return retVal;
   }
 
   private final QueryRunner<Result<TopNResultValue>> runner;
+  private final boolean duplicateSingleAggregatorQueries;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   public TopNQueryRunnerTest(
-      QueryRunner<Result<TopNResultValue>> runner
+      QueryRunner<Result<TopNResultValue>> runner,
+      boolean specializeGeneric1AggPooledTopN,
+      boolean specializeGeneric2AggPooledTopN,
+      boolean duplicateSingleAggregatorQueries
   )
   {
     this.runner = runner;
+    PooledTopNAlgorithm.specializeGeneric1AggPooledTopN = specializeGeneric1AggPooledTopN;
+    PooledTopNAlgorithm.specializeGeneric2AggPooledTopN = specializeGeneric2AggPooledTopN;
+    this.duplicateSingleAggregatorQueries = duplicateSingleAggregatorQueries;
+  }
+
+  private List<AggregatorFactory> duplicateAggregators(AggregatorFactory aggregatorFactory, AggregatorFactory duplicate)
+  {
+    if (duplicateSingleAggregatorQueries) {
+      return ImmutableList.of(aggregatorFactory, duplicate);
+    } else {
+      return Collections.singletonList(aggregatorFactory);
+    }
+  }
+
+  private List<Map<String, Object>> withDuplicateResults(
+      List<? extends Map<String, Object>> results,
+      String key,
+      String duplicateKey
+  )
+  {
+    if (!duplicateSingleAggregatorQueries) {
+      return (List<Map<String, Object>>) results;
+    }
+    List<Map<String, Object>> resultsWithDuplicates = new ArrayList<>();
+    for (Map<String, Object> result : results) {
+      resultsWithDuplicates.add(
+          ImmutableMap.<String, Object>builder().putAll(result).put(duplicateKey, result.get(key)).build()
+      );
+    }
+    return resultsWithDuplicates;
   }
 
   private Sequence<Result<TopNResultValue>> assertExpectedResults(
@@ -183,7 +235,10 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
+    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(runner),
+        chest
+    );
     return mergeRunner.run(query, context);
   }
 
@@ -346,7 +401,6 @@ public class TopNQueryRunnerTest
     );
     assertExpectedResults(expectedResults, query);
   }
-
 
   @Test
   public void testFullOnTopNOverUniques()
@@ -607,6 +661,120 @@ public class TopNQueryRunnerTest
         )
     );
     assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverFirstLastAggregatorChunkPeriod()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new LongFirstAggregatorFactory("first", "index"),
+                new LongLastAggregatorFactory("last", "index")
+            )
+        )
+        .context(ImmutableMap.<String, Object>of("chunkPeriod", "P1D"))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000L)
+                        .put("last", 1127L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800L)
+                        .put("last", 943L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100L)
+                        .put("last", 155L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1203L)
+                        .put("last", 1292L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1667L)
+                        .put("last", 1101L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 132L)
+                        .put("last", 114L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1124L)
+                        .put("last", 1366L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1166L)
+                        .put("last", 1063L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 153L)
+                        .put("last", 125L)
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1314L)
+                        .put("last", 1029L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 1447L)
+                        .put("last", 780L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 135L)
+                        .put("last", 120L)
+                        .build()
+                )
+            )
+        )
+    );
+
+    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(query);
+    TestHelper.assertExpectedResults(expectedResults, retval);
   }
 
   @Test
@@ -2875,6 +3043,10 @@ public class TopNQueryRunnerTest
   @Test
   public void testTopNQueryByComplexMetric()
   {
+    ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec(
+        QueryRunnerTestHelper.qualityDimension,
+        QueryRunnerTestHelper.qualityDimension
+    ));
     TopNQuery query =
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.dataSource)
@@ -2883,37 +3055,33 @@ public class TopNQueryRunnerTest
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
             .intervals(QueryRunnerTestHelper.firstToThird)
-            .aggregators(
-                Lists.<AggregatorFactory>newArrayList(
-                    new CardinalityAggregatorFactory(
-                        "numVals",
-                        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec(
-                            QueryRunnerTestHelper.qualityDimension,
-                            QueryRunnerTestHelper.qualityDimension
-                        )),
-                        false
-                    )
-                )
-            )
+            .aggregators(duplicateAggregators(
+                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
+                new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
+            ))
             .build();
 
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
-                        "market", "spot",
-                        "numVals", 9.019833517963864d
+                withDuplicateResults(
+                    Arrays.<Map<String, Object>>asList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "spot",
+                            "numVals", 9.019833517963864d
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "total_market",
+                            "numVals", 2.000977198748901d
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "upfront",
+                            "numVals", 2.000977198748901d
+                        )
                     ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "total_market",
-                        "numVals", 2.000977198748901d
-                    ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "upfront",
-                        "numVals", 2.000977198748901d
-                    )
+                    "numVals",
+                    "numVals1"
                 )
             )
         )
@@ -2931,6 +3099,11 @@ public class TopNQueryRunnerTest
                                                         QueryRunnerTestHelper.marketDimension,
                                                         helloFn);
 
+    ImmutableList<DimensionSpec> aggregatorDimensionSpecs = ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec(
+        QueryRunnerTestHelper.qualityDimension,
+        QueryRunnerTestHelper.qualityDimension,
+        helloFn
+    ));
     TopNQuery query =
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.dataSource)
@@ -2939,30 +3112,25 @@ public class TopNQueryRunnerTest
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
             .intervals(QueryRunnerTestHelper.firstToThird)
-            .aggregators(
-                Lists.<AggregatorFactory>newArrayList(
-                    new CardinalityAggregatorFactory(
-                        "numVals",
-                        ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec(
-                            QueryRunnerTestHelper.qualityDimension,
-                            QueryRunnerTestHelper.qualityDimension,
-                            helloFn
-                        )),
-                        false
-                    )
-                )
-            )
+            .aggregators(duplicateAggregators(
+                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs,false),
+                new CardinalityAggregatorFactory("numVals1",aggregatorDimensionSpecs,false)
+            ))
             .build();
 
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
-                        "market", "hello",
-                        "numVals", 1.0002442201269182d
-                    )
+                withDuplicateResults(
+                    Collections.singletonList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "hello",
+                            "numVals", 1.0002442201269182d
+                        )
+                    ),
+                    "numVals",
+                    "numVals1"
                 )
             )
         )
@@ -3450,21 +3618,28 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.secondOnly)
-        .aggregators(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+        .aggregators(duplicateAggregators(
+            QueryRunnerTestHelper.rowsCount,
+            new CountAggregatorFactory("rows1")
+        ))
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             new DateTime("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.asList(
-                    ImmutableMap.<String, Object>of(
-                        "market", "spot",
-                        "rows", 9L
+                withDuplicateResults(
+                    Arrays.asList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "spot",
+                            "rows", 9L
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "total_market",
+                            "rows", 2L
+                        )
                     ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "total_market",
-                        "rows", 2L
-                    )
+                    "rows",
+                    "rows1"
                 )
             )
         )
@@ -3482,21 +3657,28 @@ public class TopNQueryRunnerTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.secondOnly)
-        .aggregators(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+        .aggregators(duplicateAggregators(
+            QueryRunnerTestHelper.rowsCount,
+            new CountAggregatorFactory("rows1")
+        ))
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             new DateTime("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.asList(
-                    ImmutableMap.<String, Object>of(
-                        "market", "spot",
-                        "rows", 9L
+                withDuplicateResults(
+                    Arrays.asList(
+                        ImmutableMap.<String, Object>of(
+                            "market", "spot",
+                            "rows", 9L
+                        ),
+                        ImmutableMap.<String, Object>of(
+                            "market", "total_market",
+                            "rows", 2L
+                        )
                     ),
-                    ImmutableMap.<String, Object>of(
-                        "market", "total_market",
-                        "rows", 2L
-                    )
+                    "rows",
+                    "rows1"
                 )
             )
         )
@@ -3619,7 +3801,10 @@ public class TopNQueryRunnerTest
         new TopNQueryConfig(),
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    final QueryRunner<Result<TopNResultValue>> Runner = chest.mergeResults(chest.preMergeQueryDecoration(runner));
+    final QueryRunner<Result<TopNResultValue>> Runner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(chest.preMergeQueryDecoration(runner)),
+        chest
+    );
     return Runner.run(query, context);
   }
 

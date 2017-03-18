@@ -26,11 +26,12 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.QueryInterruptedException;
+import io.druid.query.BaseQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
@@ -273,8 +274,31 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 while (baseIter.hasNext()) {
-                  if (Thread.interrupted()) {
-                    throw new QueryInterruptedException(new InterruptedException());
+                  BaseQuery.checkInterrupted();
+
+                  currEntry.set(baseIter.next());
+
+                  if (filterMatcher.matches()) {
+                    return;
+                  }
+                }
+
+                if (!filterMatcher.matches()) {
+                  done = true;
+                }
+              }
+
+              @Override
+              public void advanceUninterruptibly()
+              {
+                if (!baseIter.hasNext()) {
+                  done = true;
+                  return;
+                }
+
+                while (baseIter.hasNext()) {
+                  if (Thread.currentThread().isInterrupted()) {
+                    return;
                   }
 
                   currEntry.set(baseIter.next());
@@ -306,6 +330,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
+              public boolean isDoneOrInterrupted()
+              {
+                return isDone() || Thread.currentThread().isInterrupted();
+              }
+
+              @Override
               public void reset()
               {
                 baseIter = cursorIterable.iterator();
@@ -316,9 +346,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   Iterators.advance(baseIter, numAdvanced);
                 }
 
-                if (Thread.interrupted()) {
-                  throw new QueryInterruptedException(new InterruptedException());
-                }
+                BaseQuery.checkInterrupted();
 
                 boolean foundMatched = false;
                 while (baseIter.hasNext()) {
@@ -414,6 +442,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   {
                     return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
                   }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
+                  }
                 };
               }
 
@@ -425,14 +459,20 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 if (columnName.equals(Column.TIME_COLUMN_NAME)) {
-                  return new LongColumnSelector()
+                  class TimeLongColumnSelector implements LongColumnSelector
                   {
                     @Override
                     public long get()
                     {
                       return currEntry.getKey().getTimestamp();
                     }
-                  };
+
+                    @Override
+                    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                    {
+                    }
+                  }
+                  return new TimeLongColumnSelector();
                 }
 
                 final Integer dimIndex = index.getDimensionIndex(columnName);
@@ -461,6 +501,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         currEntry.getValue(),
                         metricIndex
                     );
+                  }
+
+                  @Override
+                  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                  {
+                    inspector.visit("index", index);
                   }
                 };
               }

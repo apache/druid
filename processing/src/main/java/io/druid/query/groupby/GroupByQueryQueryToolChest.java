@@ -119,9 +119,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           return runner.run(query, responseContext);
         }
 
-        if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
+        final GroupByQuery groupByQuery = (GroupByQuery) query;
+        if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
           return initAndMergeGroupByResults(
-              (GroupByQuery) query,
+              groupByQuery,
               runner,
               responseContext
           );
@@ -192,7 +193,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           subquery.withOverriddenContext(
               ImmutableMap.<String, Object>of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                  //in the end when returning results to user.
+                  //in the end when returning results to user. (note this is only respected by groupBy v1)
                   GroupByQueryHelper.CTX_KEY_SORT_RESULTS,
                   false
               )
@@ -323,47 +324,52 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public QueryRunner<Row> preMergeQueryDecoration(final QueryRunner<Row> runner)
   {
     return new SubqueryQueryRunner<>(
-        intervalChunkingQueryRunnerDecorator.decorate(
-            new QueryRunner<Row>()
-            {
-              @Override
-              public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
-              {
-                GroupByQuery groupByQuery = (GroupByQuery) query;
-                if (groupByQuery.getDimFilter() != null) {
-                  groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
-                }
-                final GroupByQuery delegateGroupByQuery = groupByQuery;
-                ArrayList<DimensionSpec> dimensionSpecs = new ArrayList<>();
-                Set<String> optimizedDimensions = ImmutableSet.copyOf(
-                    Iterables.transform(
-                        extractionsToRewrite(delegateGroupByQuery),
-                        new Function<DimensionSpec, String>()
-                        {
-                          @Override
-                          public String apply(DimensionSpec input)
-                          {
-                            return input.getDimension();
-                          }
-                        }
-                    )
+        new QueryRunner<Row>()
+        {
+          @Override
+          public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+          {
+            GroupByQuery groupByQuery = (GroupByQuery) query;
+            if (groupByQuery.getDimFilter() != null) {
+              groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
+            }
+            final GroupByQuery delegateGroupByQuery = groupByQuery;
+            ArrayList<DimensionSpec> dimensionSpecs = new ArrayList<>();
+            Set<String> optimizedDimensions = ImmutableSet.copyOf(
+                Iterables.transform(
+                    extractionsToRewrite(delegateGroupByQuery),
+                    new Function<DimensionSpec, String>()
+                    {
+                      @Override
+                      public String apply(DimensionSpec input)
+                      {
+                        return input.getDimension();
+                      }
+                    }
+                )
+            );
+            for (DimensionSpec dimensionSpec : delegateGroupByQuery.getDimensions()) {
+              if (optimizedDimensions.contains(dimensionSpec.getDimension())) {
+                dimensionSpecs.add(
+                    new DefaultDimensionSpec(dimensionSpec.getDimension(), dimensionSpec.getOutputName())
                 );
-                for (DimensionSpec dimensionSpec : delegateGroupByQuery.getDimensions()) {
-                  if (optimizedDimensions.contains(dimensionSpec.getDimension())) {
-                    dimensionSpecs.add(
-                        new DefaultDimensionSpec(dimensionSpec.getDimension(), dimensionSpec.getOutputName())
-                    );
-                  } else {
-                    dimensionSpecs.add(dimensionSpec);
-                  }
-                }
-                return runner.run(
-                    delegateGroupByQuery.withDimensionSpecs(dimensionSpecs),
-                    responseContext
-                );
+              } else {
+                dimensionSpecs.add(dimensionSpec);
               }
-            }, this
-        )
+            }
+
+            return strategySelector.strategize(delegateGroupByQuery)
+                                   .createIntervalChunkingRunner(
+                                       intervalChunkingQueryRunnerDecorator,
+                                       runner,
+                                       GroupByQueryQueryToolChest.this
+                                   )
+                                   .run(
+                                       delegateGroupByQuery.withDimensionSpecs(dimensionSpecs),
+                                       responseContext
+                                   );
+          }
+        }
     );
   }
 
