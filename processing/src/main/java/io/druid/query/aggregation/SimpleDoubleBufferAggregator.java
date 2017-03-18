@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.FloatColumnSelector;
 
@@ -43,8 +44,10 @@ public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
    * aggregator.init(buf, position);
    * aggregator.aggregate(buf, position, value);
    */
+  @CalledFromHotLoop
   public abstract void putFirst(ByteBuffer buf, int position, double value);
 
+  @CalledFromHotLoop
   public abstract void aggregate(ByteBuffer buf, int position, double value);
 
   @Override
