@@ -65,27 +65,33 @@ public class BufferGrouperUsingSketchMergeAggregatorFactoryTest
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 100000, 2);
-    final int expectedMaxSize = 5;
+    try {
+      final int expectedMaxSize = 5;
 
-    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
-    UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
-    updateSketch.update(1);
+      SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+      UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
+      updateSketch.update(1);
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
+      columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
 
-    for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      for (int i = 0; i < expectedMaxSize; i++) {
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      }
+
+      updateSketch.update(3);
+      columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
+
+      for (int i = 0; i < expectedMaxSize; i++) {
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+      }
+
+      Object[] holders = Lists.newArrayList(grouper.iterator(true)).get(0).getValues();
+
+      Assert.assertEquals(2.0d, ((SketchHolder) holders[0]).getEstimate(), 0);
     }
-
-    updateSketch.update(3);
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
-
-    for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i));
+    finally {
+      grouper.close();
     }
-
-    Object[] holders = Lists.newArrayList(grouper.iterator(true)).get(0).getValues();
-
-    Assert.assertEquals(2.0d, ((SketchHolder) holders[0]).getEstimate(), 0);
   }
+
 }

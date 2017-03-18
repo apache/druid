@@ -28,18 +28,18 @@ import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ObjectColumnSelector;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.Map;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
   private final ObjectColumnSelector selector;
   private final int size;
   private final int maxIntermediateSize;
-  private final Map<Integer, Union> unions = new HashMap<>(); //position in BB -> Union Object
+  private final Int2ObjectMap<Union> unions = new Int2ObjectOpenHashMap<>();
   private final IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
@@ -125,7 +125,6 @@ public class SketchBufferAggregator implements BufferAggregator
     Memory mem = new MemoryRegion(nm, newPosition, maxIntermediateSize);
     Union newUnion = (Union) SetOperation.wrap(mem);
 
-    Union union = unions.get(oldPosition);
     unions.remove(oldPosition);
     unions.put(newPosition, newUnion);
 

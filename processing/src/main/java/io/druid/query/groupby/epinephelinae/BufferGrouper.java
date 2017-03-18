@@ -443,12 +443,16 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
           throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
         }
 
-        int newPostition = newBucket * bucketSize;
-        newTableBuffer.position(newPostition);
+        int newPosition = newBucket * bucketSize;
+        newTableBuffer.position(newPosition);
         newTableBuffer.put(entryBuffer);
 
         for (int i = 0; i < aggregators.length; i++) {
-          aggregators[i].relocate(oldPosition + aggregatorOffsets[i], newPostition + aggregatorOffsets[i], newTableBuffer);
+          aggregators[i].relocate(
+              oldPosition + aggregatorOffsets[i],
+              newPosition + aggregatorOffsets[i],
+              newTableBuffer
+          );
         }
 
         buffer.putInt(tableArenaSize + newSize * Ints.BYTES, newBucket * bucketSize);

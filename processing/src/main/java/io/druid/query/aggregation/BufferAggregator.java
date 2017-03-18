@@ -138,11 +138,11 @@ public interface BufferAggregator extends HotLoopCallee
    *
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
-   * @param oldPostition old position of a cached object before aggregation buffer relocates to a new ByteBuffer.
+   * @param oldPosition old position of a cached object before aggregation buffer relocates to a new ByteBuffer.
    * @param newPosition  new position of a cached object after aggregation buffer relocates to a new ByteBuffer.
    * @param newBuffer    new aggregation buffer.
    */
-  default void relocate(int oldPostition, int newPosition, ByteBuffer newBuffer)
+  default void relocate(int oldPosition, int newPosition, ByteBuffer newBuffer)
   {
   }
 
