@@ -82,11 +82,11 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
       return true;
     }
 
-    if (o.getClass() == IntervalBroadcastDistributionRule.class) {
-      IntervalBroadcastDistributionRule that = (IntervalBroadcastDistributionRule) o;
-      return interval.equals(that.interval) && colocateDataSource.equals(that.colocateDataSource);
+    if (o == null || o.getClass() != getClass()) {
+      return false;
     }
 
-    return false;
+    IntervalBroadcastDistributionRule that = (IntervalBroadcastDistributionRule) o;
+    return interval.equals(that.interval) && colocateDataSource.equals(that.colocateDataSource);
   }
 }

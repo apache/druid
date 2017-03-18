@@ -84,11 +84,11 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
       return true;
     }
 
-    if (o.getClass() == PeriodBroadcastDistributionRule.class) {
-      PeriodBroadcastDistributionRule that = (PeriodBroadcastDistributionRule) o;
-      return period.equals(that.period) && colocateDataSource.equals(that.colocateDataSource);
+    if (o == null || o.getClass() != getClass()) {
+      return false;
     }
 
-    return false;
+    PeriodBroadcastDistributionRule that = (PeriodBroadcastDistributionRule) o;
+    return period.equals(that.period) && colocateDataSource.equals(that.colocateDataSource);
   }
 }

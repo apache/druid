@@ -74,11 +74,11 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
       return true;
     }
 
-    if (o.getClass() == ForeverBroadcastDistributionRule.class) {
-      ForeverBroadcastDistributionRule that = (ForeverBroadcastDistributionRule) o;
-      return colocateDataSource.equals(that.colocateDataSource);
+    if (o == null || o.getClass() != getClass()) {
+      return false;
     }
 
-    return false;
+    ForeverBroadcastDistributionRule that = (ForeverBroadcastDistributionRule) o;
+    return colocateDataSource.equals(that.colocateDataSource);
   }
 }
