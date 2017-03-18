@@ -33,6 +33,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -266,17 +267,21 @@ public final class DimensionHandlerUtils
 
   public static Long getIntegralFromFloatString(String floatStr)
   {
-    Float f = Floats.tryParse(floatStr);
-    if (f == null) {
+    BigDecimal convertedBD;
+    try {
+      convertedBD = new BigDecimal(floatStr);
+    } catch (NumberFormatException nfe) {
       return null;
     }
 
-    float asFloat = f;
-    long asLong = (long) asFloat;
-    if (asFloat == asLong) {
-      return asLong;
-    } else {
+    long asLong;
+    try {
+      asLong = convertedBD.longValueExact();
+    } catch (ArithmeticException ae) {
+      // indicates there was a non-integral part, or the BigDecimal was too big for a long
       return null;
     }
+
+    return asLong;
   }
 }

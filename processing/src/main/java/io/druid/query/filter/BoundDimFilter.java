@@ -35,6 +35,8 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.filter.BoundFilter;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -343,23 +345,32 @@ public class BoundDimFilter implements DimFilter
             return;
           }
 
-          final boolean hasLowerLongBound;
-          final boolean hasUpperLongBound;
-          final long lowerLongBound;
-          final long upperLongBound;
+          boolean hasLowerLongBound;
+          boolean hasUpperLongBound;
+          long lowerLongBound;
+          long upperLongBound;
           boolean matchesNothing = false;
 
           if (hasLowerBound()) {
             final Long lowerLong = GuavaUtils.tryParseLong(lower);
             if (lowerLong == null) {
-              final Float lowerFloat = Floats.tryParse(lower);
-              if (lowerFloat != null) {
-                hasLowerLongBound = true;
-                lowerLongBound = getLongLowerBoundFromFloat(lowerFloat);
-              } else {
+              BigDecimal lowerBigDecimal = getBigDecimalLowerBoundFromFloatString(lower);
+              if (lowerBigDecimal == null) {
                 // Unparseable values fall before all actual numbers, so all numbers will match the lower bound.
                 hasLowerLongBound = false;
                 lowerLongBound = 0L;
+              } else {
+                try {
+                  lowerLongBound = lowerBigDecimal.longValueExact();
+                  hasLowerLongBound = true;
+                } catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+                  hasLowerLongBound = false;
+                  lowerLongBound = 0L;
+                  if (lowerBigDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                    // positive lower bound, > all longs, will match nothing
+                    matchesNothing = true;
+                  }
+                }
               }
             } else {
               hasLowerLongBound = true;
@@ -373,15 +384,24 @@ public class BoundDimFilter implements DimFilter
           if (hasUpperBound()) {
             Long upperLong = GuavaUtils.tryParseLong(upper);
             if (upperLong == null) {
-              Float upperFloat = Floats.tryParse(upper);
-              if (upperFloat != null) {
-                hasUpperLongBound = true;
-                upperLongBound = getLongUpperBoundFromFloat(upperFloat);
-              } else {
+              BigDecimal upperBigDecimal = getBigDecimalUpperBoundFromFloatString(upper);
+              if (upperBigDecimal == null) {
                 // Unparseable values fall before all actual numbers, so no numbers can match the upper bound.
                 matchesNothing = true;
                 hasUpperLongBound = false;
                 upperLongBound = 0L;
+              } else {
+                try {
+                  upperLongBound = upperBigDecimal.longValueExact();
+                  hasUpperLongBound = true;
+                } catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+                  hasUpperLongBound = false;
+                  upperLongBound = 0L;
+                  if (upperBigDecimal.compareTo(BigDecimal.ZERO) < 0) {
+                    // negative upper bound, < all longs,  will match nothing
+                    matchesNothing = true;
+                  }
+                }
               }
             } else {
               hasUpperLongBound = true;
@@ -410,22 +430,40 @@ public class BoundDimFilter implements DimFilter
     return new BoundLongPredicateSupplier();
   }
 
-  private long getLongLowerBoundFromFloat(float floatBound)
+  private BigDecimal getBigDecimalLowerBoundFromFloatString(String floatStr)
   {
-    if (lowerStrict) {
-      return (long) Math.floor(floatBound);
-    } else {
-      return (long) Math.ceil(floatBound);
+    BigDecimal convertedBD;
+    try {
+      convertedBD = new BigDecimal(floatStr);
+    } catch (NumberFormatException nfe) {
+      return null;
     }
+
+    if (lowerStrict) {
+      convertedBD = convertedBD.setScale(0, RoundingMode.FLOOR);
+    } else {
+      convertedBD = convertedBD.setScale(0, RoundingMode.CEILING);
+    }
+
+    return convertedBD;
   }
 
-  private long getLongUpperBoundFromFloat(float floatBound)
+  private BigDecimal getBigDecimalUpperBoundFromFloatString(String floatStr)
   {
-    if (upperStrict) {
-      return (long) Math.ceil(floatBound);
-    } else {
-      return (long) Math.floor(floatBound);
+    BigDecimal convertedBD;
+    try {
+      convertedBD = new BigDecimal(floatStr);
+    } catch (NumberFormatException nfe) {
+      return null;
     }
+
+    if (upperStrict) {
+      convertedBD = convertedBD.setScale(0, RoundingMode.CEILING);
+    } else {
+      convertedBD = convertedBD.setScale(0, RoundingMode.FLOOR);
+    }
+
+    return convertedBD;
   }
 
   private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
