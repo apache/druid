@@ -360,13 +360,17 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
 
     final Granularity granularity = query.getGranularity();
+
+    // A paged select query using a UnionDataSource will return pagingIdentifiers from segments in more than one
+    // dataSource which confuses subsequent queries and causes a failure. To avoid this, filter only the paging keys
+    // that are applicable to this dataSource so that each dataSource in a union query gets the appropriate keys.
     final Iterable<String> filteredPagingKeys = Iterables.filter(
         paging.keySet(), new Predicate<String>()
         {
           @Override
           public boolean apply(String input)
           {
-            return input.startsWith(String.format("%s_", dataSource));
+            return DataSegmentUtils.valueOf(dataSource, input) != null;
           }
         }
     );

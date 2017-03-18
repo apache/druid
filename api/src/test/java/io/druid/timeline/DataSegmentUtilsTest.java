@@ -103,21 +103,21 @@ public class DataSegmentUtilsTest
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(dataSource, desc.toString()));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidFormat0()
   {
-    DataSegmentUtils.valueOf("ds", "datasource_2015-01-02T00:00:00.000Z_2014-10-20T00:00:00.000Z_version");
+    Assert.assertNull(DataSegmentUtils.valueOf("ds", "datasource_2015-01-02T00:00:00.000Z_2014-10-20T00:00:00.000Z_version"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidFormat1()
   {
-    DataSegmentUtils.valueOf("datasource", "datasource_invalid_interval_version");
+    Assert.assertNull(DataSegmentUtils.valueOf("datasource", "datasource_invalid_interval_version"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidFormat2()
   {
-    DataSegmentUtils.valueOf("datasource", "datasource_2015-01-02T00:00:00.000Z_version");
+    Assert.assertNull(DataSegmentUtils.valueOf("datasource", "datasource_2015-01-02T00:00:00.000Z_version"));
   }
 }
