@@ -21,10 +21,8 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
@@ -72,17 +70,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   {
     builder.setDimension(
         DruidMetrics.INTERVAL,
-        Lists.transform(
-            query.getIntervals(),
-            new Function<Interval, String>()
-            {
-              @Override
-              public String apply(Interval input)
-              {
-                return input.toString();
-              }
-            }
-        ).toArray(new String[query.getIntervals().size()])
+        query.getIntervals().stream().map(Interval::toString).toArray(String[]::new)
     );
   }
 
