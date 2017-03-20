@@ -2046,6 +2046,44 @@ public class TopNQueryRunnerTest
     assertExpectedResults(expectedResults, query);
   }
 
+  @Test
+  public void testTopNDimExtractionNoAggregators()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new RegexDimExtractionFn("(.)", false, null)
+            )
+        )
+        .metric(new LexicographicTopNMetricSpec(QueryRunnerTestHelper.marketDimension))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "s"
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "t"
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "u"
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
 
   @Test
   public void testTopNDimExtractionFastTopNOptimalWithReplaceMissing()
