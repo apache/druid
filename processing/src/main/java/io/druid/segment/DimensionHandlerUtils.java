@@ -33,6 +33,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -232,12 +233,11 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
-      try {
-        return GuavaUtils.tryParseLong((String) valObj);
+      Long val = GuavaUtils.tryParseLong((String) valObj);
+      if (val == null) {
+        val = DimensionHandlerUtils.getIntegralFromFloatString((String) valObj);
       }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse value[%s] as long", valObj);
-      }
+      return val;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -254,17 +254,23 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
-      try {
-        return Floats.tryParse((String) valObj);
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse value[%s] as float", valObj);
-      }
+      return Floats.tryParse((String) valObj);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
   }
 
+  /**
+   * Convert a string representing a floating point value to a long.
+   *
+   * If the floating point value is not an exact integral value (e.g. 42.0), or if the floating point value
+   * is too large to be contained within a long, this function returns null.
+   *
+   * @param floatStr string representing a floating point value
+   * @return long integral equivalent of floatStr, returns  null for non-integral floats and floats outside
+   *         of the values representable by longs
+   */
+  @Nullable
   public static Long getIntegralFromFloatString(String floatStr)
   {
     BigDecimal convertedBD;
@@ -274,14 +280,11 @@ public final class DimensionHandlerUtils
       return null;
     }
 
-    long asLong;
     try {
-      asLong = convertedBD.longValueExact();
+      return convertedBD.longValueExact();
     } catch (ArithmeticException ae) {
       // indicates there was a non-integral part, or the BigDecimal was too big for a long
       return null;
     }
-
-    return asLong;
   }
 }

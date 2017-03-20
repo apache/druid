@@ -30,9 +30,6 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
   {
     Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
     if (matchVal == null) {
-      matchVal = DimensionHandlerUtils.getIntegralFromFloatString(value);
-    }
-    if (matchVal == null) {
       return BooleanValueMatcher.of(false);
     }
     final long matchValLong = matchVal;

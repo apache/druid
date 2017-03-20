@@ -35,6 +35,7 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.filter.BoundFilter;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
@@ -430,6 +431,7 @@ public class BoundDimFilter implements DimFilter
     return new BoundLongPredicateSupplier();
   }
 
+  @Nullable
   private BigDecimal getBigDecimalLowerBoundFromFloatString(String floatStr)
   {
     BigDecimal convertedBD;
@@ -440,14 +442,13 @@ public class BoundDimFilter implements DimFilter
     }
 
     if (lowerStrict) {
-      convertedBD = convertedBD.setScale(0, RoundingMode.FLOOR);
+      return convertedBD.setScale(0, RoundingMode.FLOOR);
     } else {
-      convertedBD = convertedBD.setScale(0, RoundingMode.CEILING);
+      return convertedBD.setScale(0, RoundingMode.CEILING);
     }
-
-    return convertedBD;
   }
 
+  @Nullable
   private BigDecimal getBigDecimalUpperBoundFromFloatString(String floatStr)
   {
     BigDecimal convertedBD;
@@ -458,12 +459,10 @@ public class BoundDimFilter implements DimFilter
     }
 
     if (upperStrict) {
-      convertedBD = convertedBD.setScale(0, RoundingMode.CEILING);
+      return convertedBD.setScale(0, RoundingMode.CEILING);
     } else {
-      convertedBD = convertedBD.setScale(0, RoundingMode.FLOOR);
+      return convertedBD.setScale(0, RoundingMode.FLOOR);
     }
-
-    return convertedBD;
   }
 
   private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
