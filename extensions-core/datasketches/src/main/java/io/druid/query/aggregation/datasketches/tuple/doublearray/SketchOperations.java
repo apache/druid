@@ -38,47 +38,47 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
  */
 public class SketchOperations {
 
-	public static final ArrayOfDoublesSketch EMPTY_SKETCH = new ArrayOfDoublesUpdatableSketchBuilder()
-			.setNominalEntries(16384).setResizeFactor(ResizeFactor.X2).setNumberOfValues(1).build();
+    public static final ArrayOfDoublesSketch EMPTY_SKETCH = new ArrayOfDoublesUpdatableSketchBuilder()
+            .setNominalEntries(16384).setResizeFactor(ResizeFactor.X2).setNumberOfValues(1).build();
 
-	public static ArrayOfDoublesUpdatableSketch createSketch(int size, int valuesCount, Object key, Object values) {
-		ArrayOfDoublesUpdatableSketch sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(size)
-				.setResizeFactor(ResizeFactor.X2).setNumberOfValues(valuesCount).build();
-		String KeyStr = (String) key;
-		double[] valuesAry = (double[]) values;
-		double[] finalValuesAry = new double[valuesCount];
-		System.arraycopy(valuesAry, 0, finalValuesAry, 0, valuesAry.length);
-		sketch.update(KeyStr, finalValuesAry);
-		return sketch;
-	}
+    public static ArrayOfDoublesUpdatableSketch createSketch(int size, int valuesCount, Object key, Object values) {
+        ArrayOfDoublesUpdatableSketch sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(size)
+                .setResizeFactor(ResizeFactor.X2).setNumberOfValues(valuesCount).build();
+        String KeyStr = (String) key;
+        double[] valuesAry = (double[]) values;
+        double[] finalValuesAry = new double[valuesCount];
+        System.arraycopy(valuesAry, 0, finalValuesAry, 0, valuesAry.length);
+        sketch.update(KeyStr, finalValuesAry);
+        return sketch;
+    }
 
-	public static ArrayOfDoublesSketch deserialize(Object serializedSketch) {
-		if (serializedSketch instanceof String) {
-			return deserializeFromBase64EncodedString((String) serializedSketch);
-		} else if (serializedSketch instanceof byte[]) {
-			return deserializeFromByteArray((byte[]) serializedSketch);
-		} else if (serializedSketch instanceof ArrayOfDoublesSketch) {
-			return (ArrayOfDoublesSketch) serializedSketch;
-		}
+    public static ArrayOfDoublesSketch deserialize(Object serializedSketch) {
+        if (serializedSketch instanceof String) {
+            return deserializeFromBase64EncodedString((String) serializedSketch);
+        } else if (serializedSketch instanceof byte[]) {
+            return deserializeFromByteArray((byte[]) serializedSketch);
+        } else if (serializedSketch instanceof ArrayOfDoublesSketch) {
+            return (ArrayOfDoublesSketch) serializedSketch;
+        }
 
-		throw new IllegalStateException(
-				"Object is not of a type that can deserialize to sketch: " + serializedSketch.getClass());
-	}
+        throw new IllegalStateException(
+                "Object is not of a type that can deserialize to sketch: " + serializedSketch.getClass());
+    }
 
-	public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(String str) {
-		return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(Charsets.UTF_8)));
-	}
+    public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(String str) {
+        return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(Charsets.UTF_8)));
+    }
 
-	public static ArrayOfDoublesSketch deserializeFromByteArray(byte[] data) {
-		return deserializeFromMemory(new NativeMemory(data));
-	}
+    public static ArrayOfDoublesSketch deserializeFromByteArray(byte[] data) {
+        return deserializeFromMemory(new NativeMemory(data));
+    }
 
-	public static ArrayOfDoublesSketch deserializeFromMemory(Memory mem) {
-		if (Sketch.getSerializationVersion(mem) < 3) {
-			return ArrayOfDoublesSketches.heapifySketch(mem);
-		} else {
-			return ArrayOfDoublesSketches.wrapSketch(mem);
-		}
-	}
+    public static ArrayOfDoublesSketch deserializeFromMemory(Memory mem) {
+        if (Sketch.getSerializationVersion(mem) < 3) {
+            return ArrayOfDoublesSketches.heapifySketch(mem);
+        } else {
+            return ArrayOfDoublesSketches.wrapSketch(mem);
+        }
+    }
 
 }

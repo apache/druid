@@ -21,18 +21,9 @@ package io.druid.query.aggregation.datasketches.tuple.doublearray.aggregator;
 
 import java.util.List;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import com.yahoo.sketches.ResizeFactor;
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 
-import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 
@@ -51,10 +42,10 @@ public class SketchUnionAggregator extends SketchAggregator {
         this.union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildUnion();
     }
 
-	@Override
-	public void update(Object key) {
-		updateUnion(union, key);
-	}
+    @Override
+    public void update(Object key) {
+        updateUnion(union, key);
+    }
 
     @Override
     public void reset() {
@@ -68,7 +59,7 @@ public class SketchUnionAggregator extends SketchAggregator {
 
     @Override
     public void close() {
-    	union = null;
+        union = null;
     }
 
 

@@ -42,7 +42,7 @@ import io.druid.segment.ObjectColumnSelector;
 @SuppressWarnings({"rawtypes"})
 public abstract class SketchAggregator implements Aggregator {
 
-	protected static final Logger logger = new Logger(SketchAggregator.class);
+    protected static final Logger logger = new Logger(SketchAggregator.class);
 
     protected final List<FloatColumnSelector> selectors;
     protected final ObjectColumnSelector selector;
@@ -61,16 +61,16 @@ public abstract class SketchAggregator implements Aggregator {
 
     @Override
     public void aggregate() {
-    	Object key = selector.get();
-    	double[] values = new double[selectors.size()];
-    	for(int i=0;i<values.length;i++){
-    		values[i] = selectors.get(i).get();
-    	}
-    	
-        if (key instanceof String  ) {
-        	key = SketchOperations.createSketch(this.size,this.valuesCount,key,values);
+        Object key = selector.get();
+        double[] values = new double[selectors.size()];
+        for(int i=0;i<values.length;i++){
+            values[i] = selectors.get(i).get();
         }
-    	update(key);
+
+        if (key instanceof String  ) {
+            key = SketchOperations.createSketch(this.size,this.valuesCount,key,values);
+        }
+        update(key);
 
     }
     
@@ -91,12 +91,12 @@ public abstract class SketchAggregator implements Aggregator {
 
     public synchronized  static void updateUnion(ArrayOfDoublesUnion union, Object key) {
         if(key == null){
-        	return;
+            return;
         }
-    	if(key instanceof ArrayOfDoublesSketch){
-        	union.update((ArrayOfDoublesSketch)key);
+        if(key instanceof ArrayOfDoublesSketch){
+            union.update((ArrayOfDoublesSketch)key);
         }else if(key instanceof Memory){
-        	union.update(SketchOperations.deserializeFromMemory((Memory)key));
+            union.update(SketchOperations.deserializeFromMemory((Memory)key));
         }else{
             throw new IAE("Illegal type received while tuple sketch merging [%s]", key.getClass());
         }
@@ -104,9 +104,9 @@ public abstract class SketchAggregator implements Aggregator {
     
     public synchronized  static void updateIntersection(ArrayOfDoublesIntersection intersection, Object key,ArrayOfDoublesCombiner combiner) {
         if(key instanceof ArrayOfDoublesSketch){
-        	intersection.update((ArrayOfDoublesSketch)key,combiner);
+            intersection.update((ArrayOfDoublesSketch)key,combiner);
         }else if(key instanceof Memory){
-        	intersection.update(SketchOperations.deserializeFromMemory((Memory)key),combiner);
+            intersection.update(SketchOperations.deserializeFromMemory((Memory)key),combiner);
         }else{
             throw new IAE("Illegal type received while tuple sketch merging [%s]", key.getClass());
         }
@@ -114,40 +114,40 @@ public abstract class SketchAggregator implements Aggregator {
     
     public static ArrayOfDoublesSketch parseSketch(Object key){
         if(key instanceof ArrayOfDoublesSketch){
-        	return (ArrayOfDoublesSketch)key;
+            return (ArrayOfDoublesSketch)key;
         }else if(key instanceof Memory){
-        	return SketchOperations.deserializeFromMemory((Memory)key);
+            return SketchOperations.deserializeFromMemory((Memory)key);
         }else{
             throw new IAE("Illegal type received while tuple sketch parsing [%s]", key.getClass());
         }
     }
     
     public static ArrayOfDoublesCombiner max = new ArrayOfDoublesCombiner(){
-		@Override
-		public double[] combine(double[] a, double[] b) {
-			if(a==null || a.length==0){
-				return b;
-			}
-			double[] c = new double[a.length];
-			for(int i=0;i<c.length;i++){
-				c[i] = Math.max(a[i], b[i]);
-			}
-			return c;
-		}
+        @Override
+        public double[] combine(double[] a, double[] b) {
+            if(a==null || a.length==0){
+                return b;
+            }
+            double[] c = new double[a.length];
+            for(int i=0;i<c.length;i++){
+                c[i] = Math.max(a[i], b[i]);
+            }
+            return c;
+        }
     };
     
     public static ArrayOfDoublesCombiner min = new ArrayOfDoublesCombiner(){
-		@Override
-		public double[] combine(double[] a, double[] b) {
-			if(a==null || a.length==0){
-				return b;
-			}
-			double[] c = new double[a.length];
-			for(int i=0;i<c.length;i++){
-				c[i] = Math.min(a[i], b[i]);
-			}
-			return c;
-		}
+        @Override
+        public double[] combine(double[] a, double[] b) {
+            if(a==null || a.length==0){
+                return b;
+            }
+            double[] c = new double[a.length];
+            for(int i=0;i<c.length;i++){
+                c[i] = Math.min(a[i], b[i]);
+            }
+            return c;
+        }
     };
 
 }

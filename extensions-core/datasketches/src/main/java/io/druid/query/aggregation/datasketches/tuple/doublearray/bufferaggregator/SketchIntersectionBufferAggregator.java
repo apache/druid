@@ -20,29 +20,13 @@
 package io.druid.query.aggregation.datasketches.tuple.doublearray.bufferaggregator;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import com.yahoo.sketches.ResizeFactor;
-import com.yahoo.memory.Memory;
-import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Union;
 import com.yahoo.sketches.tuple.ArrayOfDoublesAnotB;
 import com.yahoo.sketches.tuple.ArrayOfDoublesCombiner;
 import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.datasketches.tuple.doublearray.aggregator.SketchAggregator;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -55,36 +39,36 @@ import io.druid.segment.ObjectColumnSelector;
 @SuppressWarnings({ "rawtypes", "unused" })
 public abstract class SketchIntersectionBufferAggregator extends SketchUnionBufferAggregator {
 
-	public SketchIntersectionBufferAggregator(ObjectColumnSelector selector, List<FloatColumnSelector> selectors, int size,
-			int valuesCount,int maxIntermediateSize) {
-		super(selector, selectors, size, valuesCount, maxIntermediateSize);
-	}
+    public SketchIntersectionBufferAggregator(ObjectColumnSelector selector, List<FloatColumnSelector> selectors, int size,
+            int valuesCount,int maxIntermediateSize) {
+        super(selector, selectors, size, valuesCount, maxIntermediateSize);
+    }
 
 
-	@Override
-	public void update(ByteBuffer buf,int position,Object key) {
-		ArrayOfDoublesSketch sketch = SketchAggregator.parseSketch(key);
-		
-		ArrayOfDoublesUnion union = unions.get(position);
-		
-		ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildIntersection();
-		intersection.update(sketch, getCombiner());
-		intersection.update(union.getResult(), getCombiner());
-		
-		ArrayOfDoublesAnotB anotb = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
-		anotb.update(union.getResult(), sketch);
-		
-		ArrayOfDoublesAnotB bnota = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
-		bnota.update(sketch,union.getResult());
-		
-		union.reset();
-		union.update(intersection.getResult());
-		union.update(anotb.getResult());
-		union.update(bnota.getResult());
-		
-	}
+    @Override
+    public void update(ByteBuffer buf,int position,Object key) {
+        ArrayOfDoublesSketch sketch = SketchAggregator.parseSketch(key);
+
+        ArrayOfDoublesUnion union = unions.get(position);
+
+        ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildIntersection();
+        intersection.update(sketch, getCombiner());
+        intersection.update(union.getResult(), getCombiner());
+
+        ArrayOfDoublesAnotB anotb = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
+        anotb.update(union.getResult(), sketch);
+
+        ArrayOfDoublesAnotB bnota = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
+        bnota.update(sketch,union.getResult());
+
+        union.reset();
+        union.update(intersection.getResult());
+        union.update(anotb.getResult());
+        union.update(bnota.getResult());
+
+    }
 
     public abstract ArrayOfDoublesCombiner getCombiner();
 
-	
+
 }

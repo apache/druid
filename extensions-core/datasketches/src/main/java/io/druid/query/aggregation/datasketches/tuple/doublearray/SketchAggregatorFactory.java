@@ -118,7 +118,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory {
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{"
-        		+ "fieldName='" + fieldName + '\''
+                + "fieldName='" + fieldName + '\''
                 + ", fieldNames='" + fieldNames + '\''
                 + ", name='" + name + '\''
                 + ", size=" + size
@@ -146,7 +146,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory {
             return false;
         }
         if(!fieldName.equals(that.fieldName)){
-        	return false;
+            return false;
         }
         return fieldNames.equals(that.fieldNames);
 

@@ -24,22 +24,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import com.yahoo.sketches.ResizeFactor;
 import com.yahoo.memory.Memory;
 import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Union;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.datasketches.tuple.doublearray.aggregator.SketchAggregator;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -52,46 +41,46 @@ import io.druid.segment.ObjectColumnSelector;
 @SuppressWarnings({ "rawtypes", "unused" })
 public class SketchUnionBufferAggregator extends SketchBufferAggregator {
 
-	protected final Map<Integer, ArrayOfDoublesUnion> unions = new HashMap<>(); 
+    protected final Map<Integer, ArrayOfDoublesUnion> unions = new HashMap<>();
 
-	public SketchUnionBufferAggregator(ObjectColumnSelector selector, List<FloatColumnSelector> selectors, int size,
-			int valuesCount,int maxIntermediateSize) {
-		super(selector, selectors, size, valuesCount, maxIntermediateSize);
-	}
+    public SketchUnionBufferAggregator(ObjectColumnSelector selector, List<FloatColumnSelector> selectors, int size,
+            int valuesCount,int maxIntermediateSize) {
+        super(selector, selectors, size, valuesCount, maxIntermediateSize);
+    }
 
-	@Override
-	public void register(int position,Memory mem) {
-		unions.put(position, new ArrayOfDoublesSetOperationBuilder().setMemory(mem).setNominalEntries(size).setNumberOfValues(valuesCount).buildUnion());
-		
-	}
+    @Override
+    public void register(int position,Memory mem) {
+        unions.put(position, new ArrayOfDoublesSetOperationBuilder().setMemory(mem).setNominalEntries(size).setNumberOfValues(valuesCount).buildUnion());
 
-	@Override
-	public void update(ByteBuffer buf,int position,Object key) {
-    	SketchAggregator.updateUnion(getUnion(buf,position),key);
-	}
+    }
 
-	
-
-	@Override
-	public Object get(ByteBuffer buf, int position) {
-		return getUnion(buf, position).getResult();
-	}
+    @Override
+    public void update(ByteBuffer buf,int position,Object key) {
+        SketchAggregator.updateUnion(getUnion(buf,position),key);
+    }
 
 
-	@Override
-	public void close() {
-		unions.clear();
-	}
 
-	// Note that this is not threadsafe and I don't think it needs to be
-	private ArrayOfDoublesUnion getUnion(ByteBuffer buf, int position) {
-		ArrayOfDoublesUnion union = unions.get(position);
-		if (union == null) {
-		    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
-		    union = new ArrayOfDoublesSetOperationBuilder().setMemory(mem).setNominalEntries(this.size).setNumberOfValues(this.valuesCount).buildUnion();
-			unions.put(position, union);
-		}
-		return union;
-	}
-	
+    @Override
+    public Object get(ByteBuffer buf, int position) {
+        return getUnion(buf, position).getResult();
+    }
+
+
+    @Override
+    public void close() {
+        unions.clear();
+    }
+
+    // Note that this is not threadsafe and I don't think it needs to be
+    private ArrayOfDoublesUnion getUnion(ByteBuffer buf, int position) {
+        ArrayOfDoublesUnion union = unions.get(position);
+        if (union == null) {
+            Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
+            union = new ArrayOfDoublesSetOperationBuilder().setMemory(mem).setNominalEntries(this.size).setNumberOfValues(this.valuesCount).buildUnion();
+            unions.put(position, union);
+        }
+        return union;
+    }
+
 }

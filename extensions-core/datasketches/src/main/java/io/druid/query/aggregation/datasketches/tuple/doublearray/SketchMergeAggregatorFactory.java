@@ -26,13 +26,11 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.IAE;
-import com.yahoo.sketches.ResizeFactor;
 import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -88,12 +86,12 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
     @SuppressWarnings({"rawtypes" })
     @Override
     public Aggregator factorize(ColumnSelectorFactory metricFactory) {
-    	ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    	List<FloatColumnSelector> selectors = new ArrayList<>();
-    	for(String fieldName : fieldNames){
-        	FloatColumnSelector s = metricFactory.makeFloatColumnSelector(fieldName);    		
-        	selectors.add(s);
-    	}
+        ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
+        List<FloatColumnSelector> selectors = new ArrayList<>();
+        for(String fieldName : fieldNames){
+            FloatColumnSelector s = metricFactory.makeFloatColumnSelector(fieldName);
+            selectors.add(s);
+        }
 
         if (selector==null || selectors.isEmpty()) {
             return new EmptySketchAggregator(name);
@@ -101,37 +99,37 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
         
         switch(this.valuesFunction){
         case FUNC_SUM:
-        	return new SketchUnionAggregator(name, selector,selectors, size,valuesCount);
+            return new SketchUnionAggregator(name, selector,selectors, size,valuesCount);
         case FUNC_MAX:
-        	return new SketchMaxAggregator(name, selector, selectors, size, valuesCount);
+            return new SketchMaxAggregator(name, selector, selectors, size, valuesCount);
         case FUNC_MIN:
-        	return new SketchMinAggregator(name, selector, selectors, size, valuesCount);
+            return new SketchMinAggregator(name, selector, selectors, size, valuesCount);
         default:
-        	throw new IAE("not support this function "+this.valuesFunction);
+            throw new IAE("not support this function "+this.valuesFunction);
         }
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory) {
-    	ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    	List<FloatColumnSelector> selectors = new ArrayList<>();
-    	for(String fieldName : fieldNames){
-        	FloatColumnSelector s = metricFactory.makeFloatColumnSelector(fieldName);    		
-        	selectors.add(s);
-    	}
+        ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
+        List<FloatColumnSelector> selectors = new ArrayList<>();
+        for(String fieldName : fieldNames){
+            FloatColumnSelector s = metricFactory.makeFloatColumnSelector(fieldName);
+            selectors.add(s);
+        }
         if (selector==null || selectors.isEmpty()) {
             return new EmptySketchBufferAggregator();
         }
         switch(this.valuesFunction){
         case FUNC_SUM:
-        	return new SketchUnionBufferAggregator(selector,selectors, size, valuesCount,getMaxIntermediateSize());
+            return new SketchUnionBufferAggregator(selector,selectors, size, valuesCount,getMaxIntermediateSize());
         case FUNC_MAX:
-        	return new SketchMaxBufferAggregator(selector,selectors, size, valuesCount,getMaxIntermediateSize());
+            return new SketchMaxBufferAggregator(selector,selectors, size, valuesCount,getMaxIntermediateSize());
         case FUNC_MIN:
-        	return new SketchMinBufferAggregator(selector,selectors, size, valuesCount,getMaxIntermediateSize());
+            return new SketchMinBufferAggregator(selector,selectors, size, valuesCount,getMaxIntermediateSize());
         default:
-        	throw new IAE("not support this function "+this.valuesFunction);
+            throw new IAE("not support this function "+this.valuesFunction);
         }
     }
 
@@ -198,32 +196,32 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
     
     @JsonProperty
     public String getValuesFunction(){
-    	return valuesFunction;
+        return valuesFunction;
     }
     
     @Override
     public Object combine(Object lhs, Object rhs) {
         switch(this.valuesFunction){
         case FUNC_SUM:{
-        	ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(this.valuesCount).buildUnion();
+            ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(this.valuesCount).buildUnion();
             SketchAggregator.updateUnion(union, lhs);
             SketchAggregator.updateUnion(union, rhs);
             return union.getResult();
         }
         case FUNC_MAX:{
-        	ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(this.valuesCount).buildIntersection();
+            ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(this.valuesCount).buildIntersection();
             SketchAggregator.updateIntersection(intersection, lhs,SketchAggregator.max);
             SketchAggregator.updateIntersection(intersection, rhs,SketchAggregator.max);
             return intersection.getResult();
         }
         case FUNC_MIN:{
-        	ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(this.valuesCount).buildIntersection();
+            ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(this.valuesCount).buildIntersection();
             SketchAggregator.updateIntersection(intersection, lhs,SketchAggregator.min);
             SketchAggregator.updateIntersection(intersection, rhs,SketchAggregator.min);
             return intersection.getResult();
         }
         default:
-        	throw new IAE("not support this function "+this.valuesFunction);
+            throw new IAE("not support this function "+this.valuesFunction);
         }
 
     }
@@ -239,26 +237,26 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
     public Object finalizeComputation(Object object) {
         if (shouldFinalize) {
              if(object instanceof ArrayOfDoublesSketch){
-            	 ArrayOfDoublesSketch tuple=(ArrayOfDoublesSketch)object;
+                 ArrayOfDoublesSketch tuple=(ArrayOfDoublesSketch)object;
                  
                  double theta=tuple.getTheta();
                  ArrayOfDoublesSketchIterator it = tuple.iterator();
                  StringBuilder sb = new StringBuilder();
                  sb.append("{");
                  while(it.next()){
-                	 sb.append("[");
-                	 for(double v : it.getValues()){
-                		 long est = Math.round(v/theta);
-                		 sb.append(est+",");
-                	 }
-                	 if(sb.charAt(sb.length()-1) == ','){
-                		 sb.deleteCharAt(sb.length()-1);
-                	 }
-                	 sb.append("],");
+                     sb.append("[");
+                     for(double v : it.getValues()){
+                         long est = Math.round(v/theta);
+                         sb.append(est+",");
+                     }
+                     if(sb.charAt(sb.length()-1) == ','){
+                         sb.deleteCharAt(sb.length()-1);
+                     }
+                     sb.append("],");
                  }
-            	 if(sb.charAt(sb.length()-1) == ','){
-            		 sb.deleteCharAt(sb.length()-1);
-            	 }
+                 if(sb.charAt(sb.length()-1) == ','){
+                     sb.deleteCharAt(sb.length()-1);
+                 }
                  sb.append("}");
                  return String.format("{\"total\":%s,\"detail\":%s}",tuple.getEstimate(),sb.toString());
              }
@@ -298,7 +296,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
             return false;
         }
         if (!valuesFunction.equals(that.valuesFunction)){
-        	return false;
+            return false;
         }
         return isInputTupleSketch == that.isInputTupleSketch;
 
@@ -317,7 +315,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
     @Override
     public String toString() {
         return "SketchMergeAggregatorFactory{"
-        		 + "fieldName=" + fieldName
+                 + "fieldName=" + fieldName
                 + ", fieldNames=" + fieldNames
                 + ", name=" + name
                 + ", size=" + size

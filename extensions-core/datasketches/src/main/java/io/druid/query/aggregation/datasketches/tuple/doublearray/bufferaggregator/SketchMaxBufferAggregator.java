@@ -19,29 +19,9 @@
 
 package io.druid.query.aggregation.datasketches.tuple.doublearray.bufferaggregator;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import com.yahoo.sketches.ResizeFactor;
-import com.yahoo.memory.Memory;
-import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Union;
 import com.yahoo.sketches.tuple.ArrayOfDoublesCombiner;
-import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.datasketches.tuple.doublearray.aggregator.SketchAggregator;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -54,14 +34,14 @@ import io.druid.segment.ObjectColumnSelector;
 @SuppressWarnings({ "rawtypes", "unused" })
 public class SketchMaxBufferAggregator extends SketchIntersectionBufferAggregator{
 
-	public SketchMaxBufferAggregator(ObjectColumnSelector selector, List<FloatColumnSelector> selectors, int size,
-			int valuesCount, int maxIntermediateSize) {
-		super(selector, selectors, size, valuesCount, maxIntermediateSize);
-	}
+    public SketchMaxBufferAggregator(ObjectColumnSelector selector, List<FloatColumnSelector> selectors, int size,
+            int valuesCount, int maxIntermediateSize) {
+        super(selector, selectors, size, valuesCount, maxIntermediateSize);
+    }
 
-	@Override
-	public ArrayOfDoublesCombiner getCombiner() {
-		return SketchAggregator.max;
-	}
-	
+    @Override
+    public ArrayOfDoublesCombiner getCombiner() {
+        return SketchAggregator.max;
+    }
+
 }

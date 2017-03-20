@@ -19,24 +19,11 @@
 
 package io.druid.query.aggregation.datasketches.tuple.doublearray.aggregator;
 
-import java.util.List;
-
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
-import com.yahoo.sketches.ResizeFactor;
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.tuple.ArrayOfDoublesAnotB;
-import com.yahoo.sketches.tuple.ArrayOfDoublesCombiner;
-import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-
-import io.druid.query.aggregation.Aggregator;
+import com.yahoo.sketches.tuple.*;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+
+import java.util.List;
 
 /**
  * 
@@ -51,26 +38,26 @@ public abstract class SketchIntersectionAggregator extends SketchUnionAggregator
 
     }
 
-	@Override
-	public void update(Object key) {
-		ArrayOfDoublesSketch sketch = parseSketch(key);
-		
-		ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildIntersection();
-		intersection.update(sketch, getCombiner());
-		intersection.update(union.getResult(), getCombiner());
-		
-		ArrayOfDoublesAnotB anotb = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
-		anotb.update(union.getResult(), sketch);
-		
-		ArrayOfDoublesAnotB bnota = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
-		bnota.update(sketch,union.getResult());
-		
-		union.reset();
-		union.update(intersection.getResult());
-		union.update(anotb.getResult());
-		union.update(bnota.getResult());
-		
-	}
+    @Override
+    public void update(Object key) {
+        ArrayOfDoublesSketch sketch = parseSketch(key);
+
+        ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildIntersection();
+        intersection.update(sketch, getCombiner());
+        intersection.update(union.getResult(), getCombiner());
+
+        ArrayOfDoublesAnotB anotb = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
+        anotb.update(union.getResult(), sketch);
+
+        ArrayOfDoublesAnotB bnota = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(size).setNumberOfValues(valuesCount).buildAnotB();
+        bnota.update(sketch,union.getResult());
+
+        union.reset();
+        union.update(intersection.getResult());
+        union.update(anotb.getResult());
+        union.update(bnota.getResult());
+
+    }
 
 
     public abstract ArrayOfDoublesCombiner getCombiner();
