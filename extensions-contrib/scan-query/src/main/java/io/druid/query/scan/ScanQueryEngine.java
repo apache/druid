@@ -60,7 +60,7 @@ public class ScanQueryEngine
   )
   {
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) != null) {
-      int count = (int) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+      long count = (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
       if (count >= query.getLimit()) {
         return Sequences.empty();
       }
@@ -104,9 +104,9 @@ public class ScanQueryEngine
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
 
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) == null) {
-      responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0);
+      responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0L);
     }
-    final int limit = query.getLimit() - (int) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+    final long limit = query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
     return Sequences.concat(
         Sequences.map(
             adapter.makeCursors(
@@ -145,7 +145,7 @@ public class ScanQueryEngine
                         final int batchSize = query.getBatchSize();
                         return new Iterator<ScanResultValue>()
                         {
-                          private int offset = 0;
+                          private long offset = 0;
 
                           @Override
                           public boolean hasNext()
@@ -159,7 +159,7 @@ public class ScanQueryEngine
                             if (System.currentTimeMillis() >= timeoutAt) {
                               throw new QueryInterruptedException(new TimeoutException());
                             }
-                            int lastOffset = offset;
+                            long lastOffset = offset;
                             Object events = null;
                             String resultFormat = query.getResultFormat();
                             if (ScanQuery.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
@@ -171,7 +171,7 @@ public class ScanQueryEngine
                             }
                             responseContext.put(
                                 ScanQueryRunnerFactory.CTX_COUNT,
-                                (int) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) + (offset - lastOffset)
+                                (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) + (offset - lastOffset)
                             );
                             responseContext.put(
                                 ScanQueryRunnerFactory.CTX_TIMEOUT_AT,
