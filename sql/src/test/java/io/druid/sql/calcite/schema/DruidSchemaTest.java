@@ -38,6 +38,7 @@ import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.util.TestServerInventoryView;
+import io.druid.sql.calcite.view.NoopViewManager;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -148,7 +149,8 @@ public class DruidSchemaTest
     schema = new DruidSchema(
         walker,
         new TestServerInventoryView(walker.getSegments()),
-        PLANNER_CONFIG_DEFAULT
+        PLANNER_CONFIG_DEFAULT,
+        new NoopViewManager()
     );
 
     schema.start();

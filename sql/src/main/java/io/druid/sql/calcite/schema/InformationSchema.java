@@ -21,8 +21,11 @@ package io.druid.sql.calcite.schema;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.table.RowSignature;
@@ -39,16 +42,19 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 
 public class InformationSchema extends AbstractSchema
 {
   public static final String NAME = "INFORMATION_SCHEMA";
 
+  private static final String EMPTY_CATALOG = "";
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
   private static final String COLUMNS_TABLE = "COLUMNS";
@@ -126,7 +132,7 @@ public class InformationSchema extends AbstractSchema
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
                   return new Object[]{
-                      "", // CATALOG_NAME
+                      EMPTY_CATALOG, // CATALOG_NAME
                       subSchema.getName(), // SCHEMA_NAME
                       null, // SCHEMA_OWNER
                       null, // DEFAULT_CHARACTER_SET_CATALOG
@@ -174,21 +180,44 @@ public class InformationSchema extends AbstractSchema
                 public Iterable<Object[]> apply(final String schemaName)
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
-                  final Set<String> tableNames = subSchema.getTableNames();
-                  return FluentIterable.from(tableNames).transform(
-                      new Function<String, Object[]>()
-                      {
-                        @Override
-                        public Object[] apply(final String tableName)
-                        {
-                          return new Object[]{
-                              null, // TABLE_CATALOG
-                              schemaName, // TABLE_SCHEMA
-                              tableName, // TABLE_NAME
-                              subSchema.getTable(tableName).getJdbcTableType().toString() // TABLE_TYPE
-                          };
-                        }
-                      }
+                  return Iterables.filter(
+                      Iterables.concat(
+                          FluentIterable.from(subSchema.getTableNames()).transform(
+                              new Function<String, Object[]>()
+                              {
+                                @Override
+                                public Object[] apply(final String tableName)
+                                {
+                                  return new Object[]{
+                                      EMPTY_CATALOG, // TABLE_CATALOG
+                                      schemaName, // TABLE_SCHEMA
+                                      tableName, // TABLE_NAME
+                                      subSchema.getTable(tableName).getJdbcTableType().toString() // TABLE_TYPE
+                                  };
+                                }
+                              }
+                          ),
+                          FluentIterable.from(subSchema.getFunctionNames()).transform(
+                              new Function<String, Object[]>()
+                              {
+                                @Override
+                                public Object[] apply(final String functionName)
+                                {
+                                  if (getView(subSchema, functionName) != null) {
+                                    return new Object[]{
+                                        EMPTY_CATALOG, // TABLE_CATALOG
+                                        schemaName, // TABLE_SCHEMA
+                                        functionName, // TABLE_NAME
+                                        "VIEW" // TABLE_TYPE
+                                    };
+                                  } else {
+                                    return null;
+                                  }
+                                }
+                              }
+                          )
+                      ),
+                      Predicates.notNull()
                   );
                 }
               }
@@ -230,50 +259,49 @@ public class InformationSchema extends AbstractSchema
                 public Iterable<Object[]> apply(final String schemaName)
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
-                  final Set<String> tableNames = subSchema.getTableNames();
                   final JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl(TYPE_SYSTEM);
-                  return FluentIterable.from(tableNames).transformAndConcat(
-                      new Function<String, Iterable<Object[]>>()
-                      {
-                        @Override
-                        public Iterable<Object[]> apply(final String tableName)
-                        {
-                          return FluentIterable
-                              .from(subSchema.getTable(tableName).getRowType(typeFactory).getFieldList())
-                              .transform(
-                                  new Function<RelDataTypeField, Object[]>()
+
+                  return Iterables.concat(
+                      Iterables.filter(
+                          Iterables.concat(
+                              FluentIterable.from(subSchema.getTableNames()).transform(
+                                  new Function<String, Iterable<Object[]>>()
                                   {
                                     @Override
-                                    public Object[] apply(final RelDataTypeField field)
+                                    public Iterable<Object[]> apply(final String tableName)
                                     {
-                                      final RelDataType type = field.getType();
-                                      boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(type.getSqlTypeName());
-                                      boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(type.getSqlTypeName());
-                                      boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(type.getSqlTypeName());
-                                      return new Object[]{
-                                          "", // TABLE_CATALOG
-                                          schemaName, // TABLE_SCHEMA
-                                          tableName, // TABLE_NAME
-                                          field.getName(), // COLUMN_NAME
-                                          String.valueOf(field.getIndex()), // ORDINAL_POSITION
-                                          "", // COLUMN_DEFAULT
-                                          type.isNullable() ? "YES" : "NO", // IS_NULLABLE
-                                          type.getSqlTypeName().toString(), // DATA_TYPE
-                                          null, // CHARACTER_MAXIMUM_LENGTH
-                                          null, // CHARACTER_OCTET_LENGTH
-                                          isNumeric ? String.valueOf(type.getPrecision()) : null, // NUMERIC_PRECISION
-                                          isNumeric ? "10" : null, // NUMERIC_PRECISION_RADIX
-                                          isNumeric ? String.valueOf(type.getScale()) : null, // NUMERIC_SCALE
-                                          isDateTime ? String.valueOf(type.getPrecision()) : null, // DATETIME_PRECISION
-                                          isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
-                                          isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
-                                          type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
-                                      };
+                                      return generateColumnMetadata(
+                                          schemaName,
+                                          tableName,
+                                          subSchema.getTable(tableName),
+                                          typeFactory
+                                      );
                                     }
                                   }
-                              );
-                        }
-                      }
+                              ),
+                              FluentIterable.from(subSchema.getFunctionNames()).transform(
+                                  new Function<String, Iterable<Object[]>>()
+                                  {
+                                    @Override
+                                    public Iterable<Object[]> apply(final String functionName)
+                                    {
+                                      final TableMacro viewMacro = getView(subSchema, functionName);
+                                      if (viewMacro == null) {
+                                        return null;
+                                      }
+
+                                      return generateColumnMetadata(
+                                          schemaName,
+                                          functionName,
+                                          viewMacro.apply(ImmutableList.of()),
+                                          typeFactory
+                                      );
+                                    }
+                                  }
+                              )
+                          ),
+                          Predicates.notNull()
+                      )
                   );
                 }
               }
@@ -299,5 +327,78 @@ public class InformationSchema extends AbstractSchema
     {
       return TableType.SYSTEM_TABLE;
     }
+
+    @Nullable
+    private Iterable<Object[]> generateColumnMetadata(
+        final String schemaName,
+        final String tableName,
+        final Table table,
+        final RelDataTypeFactory typeFactory
+    )
+    {
+      if (table == null) {
+        return null;
+      }
+
+      return FluentIterable
+          .from(table.getRowType(typeFactory).getFieldList())
+          .transform(
+              new Function<RelDataTypeField, Object[]>()
+              {
+                @Override
+                public Object[] apply(final RelDataTypeField field)
+                {
+                  final RelDataType type = field.getType();
+                  boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(type.getSqlTypeName());
+                  boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(type.getSqlTypeName());
+                  boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(type.getSqlTypeName());
+                  return new Object[]{
+                      EMPTY_CATALOG, // TABLE_CATALOG
+                      schemaName, // TABLE_SCHEMA
+                      tableName, // TABLE_NAME
+                      field.getName(), // COLUMN_NAME
+                      String.valueOf(field.getIndex()), // ORDINAL_POSITION
+                      "", // COLUMN_DEFAULT
+                      type.isNullable() ? "YES" : "NO", // IS_NULLABLE
+                      type.getSqlTypeName().toString(), // DATA_TYPE
+                      null, // CHARACTER_MAXIMUM_LENGTH
+                      null, // CHARACTER_OCTET_LENGTH
+                      isNumeric ? String.valueOf(type.getPrecision()) : null, // NUMERIC_PRECISION
+                      isNumeric ? "10" : null, // NUMERIC_PRECISION_RADIX
+                      isNumeric ? String.valueOf(type.getScale()) : null, // NUMERIC_SCALE
+                      isDateTime ? String.valueOf(type.getPrecision()) : null, // DATETIME_PRECISION
+                      isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
+                      isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
+                      type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
+                  };
+                }
+              }
+          );
+    }
+  }
+
+  /**
+   * Return a view macro that may or may not be defined in a certain schema. If it's not defined, returns null.
+   *
+   * @param schemaPlus   schema
+   * @param functionName function name
+   *
+   * @return view, or null
+   */
+  @Nullable
+  private static TableMacro getView(final SchemaPlus schemaPlus, final String functionName)
+  {
+    // Look for a zero-arg function that is also a TableMacro. The returned value
+    // is never null so we don't need to check for that.
+    final Collection<org.apache.calcite.schema.Function> functions =
+        schemaPlus.getFunctions(functionName);
+
+    for (org.apache.calcite.schema.Function function : functions) {
+      if (function.getParameters().isEmpty() && function instanceof TableMacro) {
+        return (TableMacro) function;
+      }
+    }
+
+    return null;
   }
 }

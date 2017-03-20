@@ -23,8 +23,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
@@ -50,7 +52,10 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
+import io.druid.sql.calcite.view.DruidViewMacro;
+import io.druid.sql.calcite.view.ViewManager;
 import io.druid.timeline.DataSegment;
+import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.joda.time.DateTime;
@@ -73,6 +78,7 @@ public class DruidSchema extends AbstractSchema
   private final QuerySegmentWalker walker;
   private final TimelineServerView serverView;
   private final PlannerConfig config;
+  private final ViewManager viewManager;
   private final ExecutorService cacheExec;
   private final ConcurrentMap<String, Table> tables;
 
@@ -92,12 +98,14 @@ public class DruidSchema extends AbstractSchema
   public DruidSchema(
       final QuerySegmentWalker walker,
       final TimelineServerView serverView,
-      final PlannerConfig config
+      final PlannerConfig config,
+      final ViewManager viewManager
   )
   {
     this.walker = Preconditions.checkNotNull(walker, "walker");
     this.serverView = Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
+    this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
     this.tables = Maps.newConcurrentMap();
   }
@@ -272,6 +280,16 @@ public class DruidSchema extends AbstractSchema
   protected Map<String, Table> getTableMap()
   {
     return ImmutableMap.copyOf(tables);
+  }
+
+  @Override
+  protected Multimap<String, Function> getFunctionMultimap()
+  {
+    final ImmutableMultimap.Builder<String, Function> builder = ImmutableMultimap.builder();
+    for (Map.Entry<String, DruidViewMacro> entry : viewManager.getViews().entrySet()) {
+      builder.put(entry);
+    }
+    return builder.build();
   }
 
   private DruidTable computeTable(final String dataSource)
