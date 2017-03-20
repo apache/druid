@@ -227,7 +227,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
     }
 
     /**
-     * Finalize the computation on sketch object and returns estimate from underlying
+     * Finalize the computation on sketch object and returns estimate and details from underlying
      * sketch.
      *
      * @param object the sketch object
