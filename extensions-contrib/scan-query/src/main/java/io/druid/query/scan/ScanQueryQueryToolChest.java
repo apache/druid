@@ -50,7 +50,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       )
       {
         ScanQuery scanQuery = (ScanQuery) query;
-        if (scanQuery.getLimit() == Integer.MAX_VALUE) {
+        if (scanQuery.getLimit() == Long.MAX_VALUE) {
           return runner.run(query, responseContext);
         }
         return new BaseSequence<>(
