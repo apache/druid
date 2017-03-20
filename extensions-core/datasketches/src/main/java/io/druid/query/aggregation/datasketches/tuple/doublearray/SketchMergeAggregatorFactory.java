@@ -238,16 +238,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
         if (shouldFinalize) {
              if(object instanceof ArrayOfDoublesSketch){
                  ArrayOfDoublesSketch tuple=(ArrayOfDoublesSketch)object;
-                 
-                 double theta=tuple.getTheta();
+
                  ArrayOfDoublesSketchIterator it = tuple.iterator();
                  StringBuilder sb = new StringBuilder();
                  sb.append("{");
                  while(it.next()){
                      sb.append("[");
                      for(double v : it.getValues()){
-                         long est = Math.round(v/theta);
-                         sb.append(est+",");
+                         sb.append(v+",");
                      }
                      if(sb.charAt(sb.length()-1) == ','){
                          sb.deleteCharAt(sb.length()-1);
@@ -258,7 +256,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory {
                      sb.deleteCharAt(sb.length()-1);
                  }
                  sb.append("}");
-                 return String.format("{\"total\":%s,\"detail\":%s}",tuple.getEstimate(),sb.toString());
+                 return String.format("{\"total\":%s,\"theta\":%s,\"detail\":%s}",tuple.getEstimate(),tuple.getTheta(),sb.toString());
              }
              throw new IAE("not support this class "+object.getClass());
         } else {
