@@ -19,7 +19,11 @@
 
 package io.druid.query.aggregation.datasketches.tuple.doublearray.aggregator;
 
-import com.yahoo.sketches.tuple.*;
+import com.yahoo.sketches.tuple.ArrayOfDoublesAnotB;
+import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
+import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
+import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import com.yahoo.sketches.tuple.ArrayOfDoublesCombiner;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 
