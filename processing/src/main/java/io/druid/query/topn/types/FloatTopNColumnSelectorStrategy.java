@@ -93,7 +93,7 @@ public class FloatTopNColumnSelectorStrategy
   {
     for (Int2ObjectMap.Entry<Aggregator[]> entry : aggregatesStore.int2ObjectEntrySet()) {
       Aggregator[] aggs = entry.getValue();
-      if (aggs != null && aggs.length > 0) {
+      if (aggs != null) {
         Object[] vals = new Object[aggs.length];
         for (int i = 0; i < aggs.length; i++) {
           vals[i] = aggs[i].get();
