@@ -74,13 +74,12 @@ public class DataSegmentUtils
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
     if (!identifier.startsWith(String.format("%s_", dataSource))) {
-      LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
+
     String remaining = identifier.substring(dataSource.length() + 1);
     String[] splits = remaining.split(DataSegment.delimiter);
     if (splits.length < 3) {
-      LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
 
@@ -99,7 +98,6 @@ public class DataSegmentUtils
           trail
       );
     } catch (IllegalArgumentException e) {
-      LOGGER.warn(e, "Failed to parse identifier [%s]", identifier);
       return null;
     }
   }
