@@ -58,13 +58,13 @@ When submitting a pull request (PR), please use the following guidelines:
   git commit -a
   ```
 
-1. Periodically rebase your changes
+1. Before submitting a pull request, periodically rebase your changes
 
   ```
   git pull --rebase
   ```
 
-1. When done, combine ("squash") related commits into a single one
+1. Before submitting a pull request, combine ("squash") related commits into a single one
 
   ```
   git rebase -i upstream/master
@@ -96,24 +96,24 @@ When submitting a pull request (PR), please use the following guidelines:
 
 1. Addressing code review comments
 
-  Repeat steps 5. through 7. to address any code review comments and
-  rebase your changes if necessary.
-
-  Push your updated changes to update the pull request
+  Address code review comments by committing changes and pushing them to your feature
+  branch.
 
   ```
-  git push origin [--force] feature-xxx
+  git push origin feature-xxx
   ```
 
-  `--force` may be necessary to overwrite your existing pull request in case your
-  commit history was changed when performing the rebase.
-
-  Note: Be careful when using `--force` since you may lose data if you are not careful.
+  If your pull request shows conflicts with master, merge master into your feature branch
+  and resolve the conflicts. After resolving conflicts, push your branch again.
 
   ```
-  git push origin --force feature-xxx
+  git merge master
   ```
 
+  Avoid rebasing and force pushes after submitting a pull request, since these make it
+  difficult for reviewers to see what you've changed in response to their reviews. The Druid
+  committer that merges your change will rebase and squash it into a single commit before
+  committing it to master.
 
 # FAQ
 
