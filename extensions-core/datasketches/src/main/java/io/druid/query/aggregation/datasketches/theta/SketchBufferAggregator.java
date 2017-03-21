@@ -99,9 +99,9 @@ public class SketchBufferAggregator implements BufferAggregator
     Int2ObjectMap<Union> unionMap = unions.get(buf);
     if (unionMap == null) {
       unionMap = new Int2ObjectOpenHashMap<>();
+      unions.put(buf, unionMap);
     }
     unionMap.put(position, union);
-    unions.put(buf, unionMap);
     return union;
   }
 
