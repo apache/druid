@@ -233,11 +233,7 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
-      Long val = GuavaUtils.tryParseLong((String) valObj);
-      if (val == null) {
-        val = DimensionHandlerUtils.getIntegralFromFloatString((String) valObj);
-      }
-      return val;
+      return DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -261,28 +257,36 @@ public final class DimensionHandlerUtils
   }
 
   /**
-   * Convert a string representing a floating point value to a long.
+   * Convert a string representing a decimal value to a long.
    *
-   * If the floating point value is not an exact integral value (e.g. 42.0), or if the floating point value
+   * If the decimal value is not an exact integral value (e.g. 42.0), or if the decimal value
    * is too large to be contained within a long, this function returns null.
    *
-   * @param floatStr string representing a floating point value
-   * @return long integral equivalent of floatStr, returns  null for non-integral floats and floats outside
-   *         of the values representable by longs
+   * @param decimalStr string representing a decimal value
+   *
+   * @return long equivalent of decimalStr, returns null for non-integral decimals and integral decimal values outside
+   * of the values representable by longs
    */
   @Nullable
-  public static Long getIntegralFromFloatString(String floatStr)
+  public static Long getExactLongFromDecimalString(String decimalStr)
   {
+    final Long val = GuavaUtils.tryParseLong(decimalStr);
+    if (val != null) {
+      return val;
+    }
+
     BigDecimal convertedBD;
     try {
-      convertedBD = new BigDecimal(floatStr);
-    } catch (NumberFormatException nfe) {
+      convertedBD = new BigDecimal(decimalStr);
+    }
+    catch (NumberFormatException nfe) {
       return null;
     }
 
     try {
       return convertedBD.longValueExact();
-    } catch (ArithmeticException ae) {
+    }
+    catch (ArithmeticException ae) {
       // indicates there was a non-integral part, or the BigDecimal was too big for a long
       return null;
     }

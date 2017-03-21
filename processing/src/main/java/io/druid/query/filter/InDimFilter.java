@@ -32,7 +32,6 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Floats;
-import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -281,10 +280,7 @@ public class InDimFilter implements DimFilter
 
           LongArrayList longs = new LongArrayList(values.size());
           for (String value : values) {
-            Long longValue = GuavaUtils.tryParseLong(value);
-            if (longValue == null) {
-              longValue = DimensionHandlerUtils.getIntegralFromFloatString(value);
-            }
+            final Long longValue = DimensionHandlerUtils.getExactLongFromDecimalString(value);
             if (longValue != null) {
               longs.add(longValue);
             }
