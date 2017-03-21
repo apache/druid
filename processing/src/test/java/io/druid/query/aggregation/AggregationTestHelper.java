@@ -614,7 +614,7 @@ public class AggregationTestHelper
     newBuf.position(7574);
     newBuf.put(theBytes);
     newBuf.position(0);
-    agg.relocate(0, 7574, newBuf, myBuf);
+    agg.relocate(0, 7574, myBuf, newBuf);
     results[1] = (T) agg.get(newBuf, 7574);
     return results;
   }

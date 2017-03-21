@@ -451,8 +451,8 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
           aggregators[i].relocate(
               oldPosition + aggregatorOffsets[i],
               newPosition + aggregatorOffsets[i],
-              newTableBuffer,
-              tableBuffer
+              tableBuffer,
+              newTableBuffer
           );
         }
 

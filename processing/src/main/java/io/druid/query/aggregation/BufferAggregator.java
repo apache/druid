@@ -24,7 +24,6 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 /**
  * A BufferAggregator is an object that can aggregate metrics into a ByteBuffer.  Its aggregation-related methods
@@ -143,11 +142,11 @@ public interface BufferAggregator extends HotLoopCallee
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
    * @param oldPosition old position of a cached object before aggregation buffer relocates to a new ByteBuffer.
-   * @param newPosition  new position of a cached object after aggregation buffer relocates to a new ByteBuffer.
-   * @param newBuffer    new aggregation buffer.
-   * @param newBuffer    new aggregation buffer.
+   * @param newPosition new position of a cached object after aggregation buffer relocates to a new ByteBuffer.
+   * @param oldBuffer old aggregation buffer.
+   * @param newBuffer new aggregation buffer.
    */
-  default void relocate(int oldPosition, int newPosition, ByteBuffer newBuffer, ByteBuffer oldBuffer)
+  default void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
   }
 

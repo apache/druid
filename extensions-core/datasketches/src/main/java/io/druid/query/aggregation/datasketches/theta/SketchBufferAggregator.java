@@ -81,11 +81,12 @@ public class SketchBufferAggregator implements BufferAggregator
   //Note that this is not threadsafe and I don't think it needs to be
   private Union getUnion(ByteBuffer buf, int position)
   {
-    Union union = unions.get(buf) != null ? unions.get(buf).get(position) : null;
-    if (union == null) {
-      union = createNewUnion(buf, position, true);
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    Union union = unionMap != null ? unionMap.get(position) : null;
+    if (union != null) {
+      return union;
     }
-    return union;
+    return createNewUnion(buf, position, true);
   }
 
   private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
@@ -95,7 +96,10 @@ public class SketchBufferAggregator implements BufferAggregator
     Union union = isWrapped
                   ? (Union) SetOperation.wrap(mem)
                   : (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION);
-    Int2ObjectMap<Union> unionMap = unions.get(buf) != null ? unions.get(buf) : new Int2ObjectOpenHashMap<>();
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    if (unionMap == null) {
+      unionMap = new Int2ObjectOpenHashMap<>();
+    }
     unionMap.put(position, union);
     unions.put(buf, unionMap);
     return union;
@@ -126,9 +130,17 @@ public class SketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void relocate(int oldPosition, int newPosition, ByteBuffer newBuffer, ByteBuffer oldBuffer)
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
     createNewUnion(newBuffer, newPosition, true);
+    Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
+    if (unionMap != null) {
+      unionMap.remove(oldPosition);
+      if (unionMap.isEmpty()) {
+        unions.remove(oldBuffer);
+        nmCache.remove(oldBuffer);
+      }
+    }
   }
 
   private NativeMemory getNativeMemory(ByteBuffer buffer)
