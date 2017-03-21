@@ -37,6 +37,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -70,6 +71,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
@@ -188,6 +191,8 @@ public class RealtimeIndexTask extends AbstractTask
     if (this.plumber != null) {
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
     }
+
+    setupTimeoutAlert();
 
     boolean normalExit = true;
 
@@ -516,6 +521,40 @@ public class RealtimeIndexTask extends AbstractTask
     public void publishSegment(DataSegment segment) throws IOException
     {
       taskToolbox.publishSegments(ImmutableList.of(segment));
+    }
+  }
+
+  private void setupTimeoutAlert()
+  {
+    Object obj = RealtimeIndexTask.this.getContextValue("alertTimeout");
+    if (obj == null) {
+      return;
+    }
+
+    long timeout = parseLong(obj);
+
+    Timer timer = new Timer("RealtimeIndexTask-Timer", true);
+    timer.schedule(
+        new TimerTask()
+        {
+          @Override
+          public void run()
+          {
+            log.makeAlert("RealtimeIndexTask hasn't finished in configured time [%d] ms.", timeout);
+          }
+        },
+        timeout
+    );
+  }
+
+  private long parseLong(Object obj)
+  {
+    if (obj instanceof Number) {
+      return ((Number) obj).longValue();
+    } else if (obj instanceof String) {
+      return Long.parseLong((String) obj);
+    } else {
+      throw new RE("given object[%s] could not be parsed into long.", obj.getClass().getName());
     }
   }
 }
