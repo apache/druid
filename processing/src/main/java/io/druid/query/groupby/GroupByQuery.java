@@ -55,11 +55,14 @@ import io.druid.query.groupby.orderby.LimitSpec;
 import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
+import io.druid.query.ordering.StringComparator;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -374,6 +377,8 @@ public class GroupByQuery extends BaseQuery<Row>
     final List<String> orderedFieldNames = new ArrayList<>();
     final Set<Integer> dimsInOrderBy = new HashSet<>();
     final List<Boolean> needsReverseList = new ArrayList<>();
+    final List<Boolean> isNumericField = Lists.newArrayList();
+    final List<StringComparator> comparators = Lists.newArrayList();
 
     for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
       boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
@@ -383,6 +388,9 @@ public class GroupByQuery extends BaseQuery<Row>
         orderedFieldNames.add(dim.getOutputName());
         dimsInOrderBy.add(dimIndex);
         needsReverseList.add(needsReverse);
+        final ValueType type = dimensions.get(dimIndex).getOutputType();
+        isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+        comparators.add(orderSpec.getDimensionComparator());
       }
     }
 
@@ -390,6 +398,9 @@ public class GroupByQuery extends BaseQuery<Row>
       if (!dimsInOrderBy.contains(i)) {
         orderedFieldNames.add(dimensions.get(i).getOutputName());
         needsReverseList.add(false);
+        final ValueType type = dimensions.get(i).getOutputType();
+        isNumericField.add(type == ValueType.LONG || type == ValueType.FLOAT);
+        comparators.add(StringComparators.LEXICOGRAPHIC);
       }
     }
 
@@ -402,7 +413,14 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public int compare(Row lhs, Row rhs)
             {
-              return compareDimsForLimitPushDown(orderedFieldNames, needsReverseList, lhs, rhs);
+              return compareDimsForLimitPushDown(
+                  orderedFieldNames,
+                  needsReverseList,
+                  isNumericField,
+                  comparators,
+                  lhs,
+                  rhs
+              );
             }
           }
       );
@@ -413,7 +431,14 @@ public class GroupByQuery extends BaseQuery<Row>
             @Override
             public int compare(Row lhs, Row rhs)
             {
-              final int cmp = compareDimsForLimitPushDown(orderedFieldNames, needsReverseList, lhs, rhs);
+              final int cmp = compareDimsForLimitPushDown(
+                  orderedFieldNames,
+                  needsReverseList,
+                  isNumericField,
+                  comparators,
+                  lhs,
+                  rhs
+              );
               if (cmp != 0) {
                 return cmp;
               }
@@ -435,7 +460,14 @@ public class GroupByQuery extends BaseQuery<Row>
                 return timeCompare;
               }
 
-              return compareDimsForLimitPushDown(orderedFieldNames, needsReverseList, lhs, rhs);
+              return compareDimsForLimitPushDown(
+                  orderedFieldNames,
+                  needsReverseList,
+                  isNumericField,
+                  comparators,
+                  lhs,
+                  rhs
+              );
             }
           }
       );
@@ -536,22 +568,42 @@ public class GroupByQuery extends BaseQuery<Row>
     return 0;
   }
 
-  private static int compareDimsForLimitPushDown(List<String> fields, List<Boolean> needsReverseList, Row lhs, Row rhs)
+  private static int compareDimsForLimitPushDown(
+      final List<String> fields,
+      final List<Boolean> needsReverseList,
+      final List<Boolean> isNumericField,
+      final List<StringComparator> comparators,
+      Row lhs,
+      Row rhs
+  )
   {
     for (int i = 0; i < fields.size(); i++) {
       final String fieldName = fields.get(i);
+      final StringComparator comparator = comparators.get(i);
 
       final int dimCompare;
+
+      Object lhsObj;
+      Object rhsObj;
       if (needsReverseList.get(i)) {
-        dimCompare = NATURAL_NULLS_FIRST.compare(
-            rhs.getRaw(fieldName),
-            lhs.getRaw(fieldName)
-        );
+        lhsObj = rhs.getRaw(fieldName);
+        rhsObj = lhs.getRaw(fieldName);
       } else {
-        dimCompare = NATURAL_NULLS_FIRST.compare(
-            lhs.getRaw(fieldName),
-            rhs.getRaw(fieldName)
-        );
+        lhsObj = lhs.getRaw(fieldName);
+        rhsObj = rhs.getRaw(fieldName);
+      }
+
+      if (isNumericField.get(i)) {
+        if (comparator == StringComparators.NUMERIC) {
+          dimCompare = NATURAL_NULLS_FIRST.compare(
+              rhs.getRaw(fieldName),
+              lhs.getRaw(fieldName)
+          );
+        } else {
+          dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
+        }
+      } else {
+        dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }
 
       if (dimCompare != 0) {

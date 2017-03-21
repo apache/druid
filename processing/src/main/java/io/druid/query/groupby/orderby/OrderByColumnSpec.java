@@ -153,6 +153,16 @@ public class OrderByColumnSpec
     );
   }
 
+  public static OrderByColumnSpec getOrderByForDimName(List<OrderByColumnSpec> orderBys, String dimName)
+  {
+    for (OrderByColumnSpec orderBy : orderBys) {
+      if (orderBy.dimension.equals(dimName)) {
+        return orderBy;
+      }
+    }
+    return null;
+  }
+
   public static int getDimIndexForOrderBy(OrderByColumnSpec orderSpec, List<DimensionSpec> dimensions) {
     int i = 0;
     for (DimensionSpec dimSpec : dimensions) {

@@ -76,6 +76,15 @@ public class DefaultLimitSpec implements LimitSpec
     return false;
   }
 
+  public static StringComparator getComparatorForDimName(DefaultLimitSpec limitSpec, String dimName) {
+    final OrderByColumnSpec orderBy = OrderByColumnSpec.getOrderByForDimName(limitSpec.getColumns(), dimName);
+    if (orderBy == null) {
+      return null;
+    }
+
+    return orderBy.getDimensionComparator();
+  }
+
   @JsonCreator
   public DefaultLimitSpec(
       @JsonProperty("columns") List<OrderByColumnSpec> columns,

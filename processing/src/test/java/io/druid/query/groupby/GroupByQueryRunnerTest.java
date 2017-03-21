@@ -8761,4 +8761,93 @@ public class GroupByQueryRunnerTest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
+
+  @Test
+  public void testMergeResultsWithLimitPushDownWithNumericDimSorting()
+  {
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("index", "alias", ValueType.FLOAT)
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Lists.newArrayList(
+                    new OrderByColumnSpec(
+                        "alias",
+                        OrderByColumnSpec.Direction.DESCENDING,
+                        StringComparators.LEXICOGRAPHIC
+                    )
+                ),
+                5
+            )
+        )
+        .setContext(
+            ImmutableMap.<String, Object>of(
+                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
+                true
+            )
+        )
+        .setGranularity(Granularities.ALL);
+
+    final GroupByQuery allGranQuery = builder.build();
+
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
+        new QueryRunner<Row>()
+        {
+          @Override
+          public Sequence<Row> run(
+              Query<Row> query, Map<String, Object> responseContext
+          )
+          {
+            // simulate two daily segments
+            final Query query1 = query.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            );
+            final Query query2 = query.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            );
+
+            return factory.getToolchest().mergeResults(
+                new QueryRunner<Row>()
+                {
+                  @Override
+                  public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+                  {
+                    return new MergeSequence(
+                        query.getResultOrdering(),
+                        Sequences.simple(
+                            Arrays.asList(runner.run(query1, responseContext), runner.run(query2, responseContext))
+                        )
+                    );
+                  }
+                }
+            ).run(query, responseContext);
+          }
+        }
+    );
+    Map<String, Object> context = Maps.newHashMap();
+    List<Row> allGranExpectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", 97.387436, "rows", 1L, "idx", 97L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", 811.9913, "rows", 1L, "idx", 811L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", 80.86174, "rows", 1L, "idx", 80L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", 768.4231, "rows", 1L, "idx", 768L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", 166.01605, "rows", 1L, "idx", 166L)
+    );
+
+    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, context), "merged");
+  }
 }
