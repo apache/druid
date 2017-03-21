@@ -329,7 +329,7 @@ public final class SpecializationService
         }
       }
       if (!currentMinutePresent) {
-        perMinuteIterations.computeIfAbsent(currentMinute, AtomicLong::new).addAndGet(newIterations);
+        perMinuteIterations.computeIfAbsent(currentMinute, m -> new AtomicLong()).addAndGet(newIterations);
         totalIterations += newIterations;
       }
       return totalIterations;
