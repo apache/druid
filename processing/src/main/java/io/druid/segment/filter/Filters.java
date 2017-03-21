@@ -22,11 +22,9 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Query;
@@ -441,33 +439,6 @@ public class Filters
       }
     }
     return false;
-  }
-
-  public static ValueMatcher getLongValueMatcher(
-      final LongColumnSelector longSelector,
-      final String value
-  )
-  {
-    if (Strings.isNullOrEmpty(value)) {
-      return BooleanValueMatcher.of(false);
-    }
-
-    final Long longValue = GuavaUtils.tryParseLong(value);
-    if (longValue == null) {
-      return BooleanValueMatcher.of(false);
-    }
-
-    return new ValueMatcher()
-    {
-      // store the primitive, so we don't unbox for every comparison
-      final long unboxedLong = longValue;
-
-      @Override
-      public boolean matches()
-      {
-        return longSelector.get() == unboxedLong;
-      }
-    };
   }
 
   public static ValueMatcher getLongPredicateMatcher(
