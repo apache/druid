@@ -30,13 +30,10 @@ import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Grouper based around a hash table and companion array in a single ByteBuffer. Not thread-safe.
@@ -431,12 +428,6 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
     final ByteBuffer entryBuffer = tableBuffer.duplicate();
     final ByteBuffer keyBuffer = tableBuffer.duplicate();
 
-    List<Map<Integer, Integer>> reloationMaps = new ArrayList<>(aggregators.length);
-    for (int i = 0; i < aggregators.length ; i++)
-    {
-      reloationMaps.add(new HashMap<Integer, Integer>(buckets));
-    }
-
     for (int oldBucket = 0; oldBucket < buckets; oldBucket++) {
       if (isUsed(oldBucket)) {
         int oldPosition = oldBucket * bucketSize;
@@ -457,20 +448,17 @@ public class BufferGrouper<KeyType> implements Grouper<KeyType>
         newTableBuffer.put(entryBuffer);
 
         for (int i = 0; i < aggregators.length; i++) {
-          reloationMaps.get(i).put(
+          aggregators[i].relocate(
               oldPosition + aggregatorOffsets[i],
-              newPosition + aggregatorOffsets[i]
+              newPosition + aggregatorOffsets[i],
+              newTableBuffer,
+              tableBuffer
           );
         }
 
         buffer.putInt(tableArenaSize + newSize * Ints.BYTES, newBucket * bucketSize);
         newSize++;
       }
-    }
-
-    for (int i = 0; i < aggregators.length ; i++)
-    {
-      aggregators[i].relocate(reloationMaps.get(i), newTableBuffer, tableBuffer);
     }
 
     buckets = newBuckets;

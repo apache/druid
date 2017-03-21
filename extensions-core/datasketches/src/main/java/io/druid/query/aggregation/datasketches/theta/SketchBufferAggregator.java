@@ -33,7 +33,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
 import java.util.IdentityHashMap;
-import java.util.Map;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
@@ -53,14 +52,7 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    NativeMemory nativeMemory = getNativeMemory(buf);
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
-    if (unionMap == null) {
-      unionMap = new Int2ObjectOpenHashMap<>();
-    }
-    Memory mem = new MemoryRegion(nativeMemory, position, maxIntermediateSize);
-    unionMap.put(position, (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION));
-    unions.put(buf, unionMap);
+    createNewUnion(buf, position, false);
   }
 
   @Override
@@ -91,13 +83,21 @@ public class SketchBufferAggregator implements BufferAggregator
   {
     Union union = unions.get(buf) != null ? unions.get(buf).get(position) : null;
     if (union == null) {
-      NativeMemory nm = getNativeMemory(buf);
-      Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
-      union = (Union) SetOperation.wrap(mem);
-      Int2ObjectMap<Union> unionMap = unions.get(buf) != null ? unions.get(buf) : new Int2ObjectOpenHashMap<>();
-      unionMap.put(position, union);
-      unions.put(buf, unionMap);
+      union = createNewUnion(buf, position, true);
     }
+    return union;
+  }
+
+  private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
+  {
+    NativeMemory nm = getNativeMemory(buf);
+    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
+    Union union = isWrapped
+                  ? (Union) SetOperation.wrap(mem)
+                  : (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION);
+    Int2ObjectMap<Union> unionMap = unions.get(buf) != null ? unions.get(buf) : new Int2ObjectOpenHashMap<>();
+    unionMap.put(position, union);
+    unions.put(buf, unionMap);
     return union;
   }
 
@@ -126,20 +126,9 @@ public class SketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void relocate(Map<Integer, Integer> oldToNewPositionMap, ByteBuffer newBuffer, ByteBuffer oldBuffer)
+  public void relocate(int oldPosition, int newPosition, ByteBuffer newBuffer, ByteBuffer oldBuffer)
   {
-    unions.clear();
-    NativeMemory nm = getNativeMemory(newBuffer);
-    Int2ObjectMap<Union> unionMap = new Int2ObjectOpenHashMap<>();
-
-    for (Map.Entry<Integer, Integer> entry : oldToNewPositionMap.entrySet()) {
-      int newPosition = entry.getValue();
-      Memory mem = new MemoryRegion(nm, newPosition, maxIntermediateSize);
-      Union newUnion = (Union) SetOperation.wrap(mem);
-      unionMap.put(newPosition, newUnion);
-    }
-
-    unions.put(newBuffer, unionMap);
+    createNewUnion(newBuffer, newPosition, true);
   }
 
   private NativeMemory getNativeMemory(ByteBuffer buffer)

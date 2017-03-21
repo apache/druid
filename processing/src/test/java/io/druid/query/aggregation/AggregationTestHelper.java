@@ -615,9 +615,7 @@ public class AggregationTestHelper
     newBuf.position(7574);
     newBuf.put(theBytes);
     newBuf.position(0);
-    Map<Integer, Integer> oldToNewPositions = new HashMap<>();
-    oldToNewPositions.put(0, 7574);
-    agg.relocate(oldToNewPositions, newBuf, myBuf);
+    agg.relocate(0, 7574, newBuf, myBuf);
     results[1] = (T) agg.get(newBuf, 7574);
     return results;
   }
