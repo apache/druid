@@ -88,6 +88,7 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -614,8 +615,9 @@ public class AggregationTestHelper
     newBuf.position(7574);
     newBuf.put(theBytes);
     newBuf.position(0);
-
-    agg.relocate(0, 7574, newBuf);
+    Map<Integer, Integer> oldToNewPositions = new HashMap<>();
+    oldToNewPositions.put(0, 7574);
+    agg.relocate(oldToNewPositions, newBuf, myBuf);
     results[1] = (T) agg.get(newBuf, 7574);
     return results;
   }

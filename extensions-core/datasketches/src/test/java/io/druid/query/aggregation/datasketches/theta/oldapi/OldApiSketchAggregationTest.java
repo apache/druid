@@ -22,6 +22,8 @@ package io.druid.query.aggregation.datasketches.theta.oldapi;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.yahoo.sketches.theta.Sketches;
+import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
@@ -29,9 +31,12 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.datasketches.theta.SketchHolder;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
+import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -192,6 +197,23 @@ public class OldApiSketchAggregationTest
             )
         )
     );
+  }
+
+  @Test
+  public void testRelocation()
+  {
+    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+    UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
+    updateSketch.update(1);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
+    SketchHolder[] holders = helper.runRelocateVerificationTest(
+        new OldSketchMergeAggregatorFactory("sketch", "sketch", 16, false),
+        columnSelectorFactory,
+        SketchHolder.class
+    );
+    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
