@@ -388,8 +388,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             .appendByte(CACHE_STRATEGY_VERSION)
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimFilter())
-            .appendCacheablesIgnoringOrder(query.getAggregatorSpecs())
-            .appendCacheablesIgnoringOrder(query.getDimensions())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheables(query.getDimensions())
             .appendCacheable(query.getVirtualColumns())
             .build();
       }
