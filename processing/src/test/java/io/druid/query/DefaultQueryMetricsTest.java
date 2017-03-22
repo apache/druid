@@ -67,7 +67,7 @@ public class DefaultQueryMetricsTest
         .build();
     queryMetrics.query(query);
 
-    queryMetrics.queryTime(0).emit(serviceEmitter);
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals(12, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
@@ -102,54 +102,54 @@ public class DefaultQueryMetricsTest
       QueryMetrics<? extends Query<?>> queryMetrics
   )
   {
-    queryMetrics.queryTime(1000001).emit(serviceEmitter);
+    queryMetrics.reportQueryTime(1000001).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     // query/time and most metrics below are measured in milliseconds by default
     Assert.assertEquals(1L, actualEvent.get("value"));
 
-    queryMetrics.waitTime(2000001).emit(serviceEmitter);
+    queryMetrics.reportWaitTime(2000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/wait/time", actualEvent.get("metric"));
     Assert.assertEquals(2L, actualEvent.get("value"));
 
-    queryMetrics.segmentTime(3000001).emit(serviceEmitter);
+    queryMetrics.reportSegmentTime(3000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/segment/time", actualEvent.get("metric"));
     Assert.assertEquals(3L, actualEvent.get("value"));
 
-    queryMetrics.segmentAndCacheTime(4000001).emit(serviceEmitter);
+    queryMetrics.reportSegmentAndCacheTime(4000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/segmentAndCache/time", actualEvent.get("metric"));
     Assert.assertEquals(4L, actualEvent.get("value"));
 
-    queryMetrics.intervalChunkTime(5000001).emit(serviceEmitter);
+    queryMetrics.reportIntervalChunkTime(5000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/intervalChunk/time", actualEvent.get("metric"));
     Assert.assertEquals(5L, actualEvent.get("value"));
 
-    queryMetrics.cpuTime(6000001).emit(serviceEmitter);
+    queryMetrics.reportCpuTime(6000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/cpu/time", actualEvent.get("metric"));
     // CPU time is measured in microseconds by default
     Assert.assertEquals(6000L, actualEvent.get("value"));
 
-    queryMetrics.nodeTimeToFirstByte(7000001).emit(serviceEmitter);
+    queryMetrics.reportNodeTimeToFirstByte(7000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/ttfb", actualEvent.get("metric"));
     Assert.assertEquals(7L, actualEvent.get("value"));
 
-    queryMetrics.nodeTime(8000001).emit(serviceEmitter);
+    queryMetrics.reportNodeTime(8000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/time", actualEvent.get("metric"));
     Assert.assertEquals(8L, actualEvent.get("value"));
 
-    queryMetrics.queryBytes(9).emit(serviceEmitter);
+    queryMetrics.reportQueryBytes(9).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/bytes", actualEvent.get("metric"));
     Assert.assertEquals(9L, actualEvent.get("value"));
 
-    queryMetrics.nodeBytes(10).emit(serviceEmitter);
+    queryMetrics.reportNodeBytes(10).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/bytes", actualEvent.get("metric"));
     Assert.assertEquals(10L, actualEvent.get("value"));

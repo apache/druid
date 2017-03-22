@@ -143,57 +143,57 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public QueryMetrics<QueryType> queryTime(long timeNs)
+  public QueryMetrics<QueryType> reportQueryTime(long timeNs)
   {
     return defaultTimeMetric("query/time", timeNs);
   }
 
   @Override
-  public QueryMetrics<QueryType> queryBytes(long byteCount)
+  public QueryMetrics<QueryType> reportQueryBytes(long byteCount)
   {
     metrics.put("query/bytes", byteCount);
     return this;
   }
 
   @Override
-  public QueryMetrics<QueryType> waitTime(long timeNs)
+  public QueryMetrics<QueryType> reportWaitTime(long timeNs)
   {
     return defaultTimeMetric("query/wait/time", timeNs);
   }
 
   @Override
-  public QueryMetrics<QueryType> segmentTime(long timeNs)
+  public QueryMetrics<QueryType> reportSegmentTime(long timeNs)
   {
     return defaultTimeMetric("query/segment/time", timeNs);
   }
 
   @Override
-  public QueryMetrics<QueryType> segmentAndCacheTime(long timeNs)
+  public QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs)
   {
     return defaultTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
   @Override
-  public QueryMetrics<QueryType> intervalChunkTime(long timeNs)
+  public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
   {
     return defaultTimeMetric("query/intervalChunk/time", timeNs);
   }
 
   @Override
-  public QueryMetrics<QueryType> cpuTime(long timeNs)
+  public QueryMetrics<QueryType> reportCpuTime(long timeNs)
   {
     metrics.put("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
     return this;
   }
 
   @Override
-  public QueryMetrics<QueryType> nodeTimeToFirstByte(long timeNs)
+  public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
   {
     return defaultTimeMetric("query/node/ttfb", timeNs);
   }
 
   @Override
-  public QueryMetrics<QueryType> nodeTime(long timeNs)
+  public QueryMetrics<QueryType> reportNodeTime(long timeNs)
   {
     return defaultTimeMetric("query/node/time", timeNs);
   }
@@ -205,7 +205,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public QueryMetrics<QueryType> nodeBytes(long byteCount)
+  public QueryMetrics<QueryType> reportNodeBytes(long byteCount)
   {
     metrics.put("query/node/bytes", byteCount);
     return this;

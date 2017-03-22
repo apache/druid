@@ -178,7 +178,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
-          queryMetrics.nodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
+          queryMetrics.reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
@@ -277,8 +277,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               TimeUnit.NANOSECONDS.toMillis(nodeTimeNs),
               byteCount.get() / TimeUnit.NANOSECONDS.toSeconds(nodeTimeNs)
           );
-          queryMetrics.nodeTime(nodeTimeNs);
-          queryMetrics.nodeBytes(byteCount.get());
+          queryMetrics.reportNodeTime(nodeTimeNs);
+          queryMetrics.reportNodeBytes(byteCount.get());
           queryMetrics.emit(emitter);
           synchronized (done) {
             try {

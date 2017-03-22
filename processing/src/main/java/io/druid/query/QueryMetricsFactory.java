@@ -29,7 +29,7 @@ import io.druid.query.topn.TopNQueryMetrics;
 public interface QueryMetricsFactory
 {
   /**
-   * Creates a generic {@link QueryMetrics} for query, which doesn't require a custom QueryMetrics subclass (i. e. not
+   * Creates a {@link QueryMetrics} for query, which doesn't have predefined QueryMetrics subclass (i. e. not
    * a topN, groupBy or timeseries query). This method must call {@link QueryMetrics#query(Query)} with the given query
    * on the created QueryMetrics object before returning.
    */

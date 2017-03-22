@@ -49,6 +49,12 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * to allow for query-specific dimensions and metrics.  That is, the ToolChest is expected to set some
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
+   * 
+   * <p>Public extensions (belonging to the Druid source tree) should use injected {@link QueryMetricsFactory} object
+   * for creating the QueryMetrics object, returned from this method.
+   *
+   * <p>This method should ensure that {@link QueryMetrics#query(Query)} is called with the given query passed on the
+   * created QueryMetrics object before returning.
    *
    * @param query The query that is being processed
    *

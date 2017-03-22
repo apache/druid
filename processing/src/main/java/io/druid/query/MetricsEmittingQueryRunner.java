@@ -120,7 +120,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
             metric.register(queryMetrics, timeTakenNs);
 
             if (creationTimeNs > 0) {
-              queryMetrics.waitTime(startTimeNs - creationTimeNs);
+              queryMetrics.reportWaitTime(startTimeNs - creationTimeNs);
             }
             queryMetrics.emit(emitter);
           }

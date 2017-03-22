@@ -90,7 +90,7 @@ public class DefaultGroupByQueryMetricsTest
     GroupByQuery query = builder.build();
     queryMetrics.query(query);
 
-    queryMetrics.queryTime(0).emit(serviceEmitter);
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals(15, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));

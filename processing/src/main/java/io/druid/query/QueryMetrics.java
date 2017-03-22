@@ -32,10 +32,10 @@ import java.util.Map;
  * ---------------------
  *  1. Skipping or partial filtering of particular dimensions or metrics entirely. Implementation could leave the body
  *  of the corresponding method empty, or implement random filtering like:
- *  public void cpuTime(long timeNs)
+ *  public void reportCpuTime(long timeNs)
  *  {
  *    if (ThreadLocalRandom.current().nextDouble() < 0.1) {
- *      super.cpuTime(timeNs);
+ *      super.reportCpuTime(timeNs);
  *    }
  *  }
  *
@@ -49,6 +49,9 @@ import java.util.Map;
  *
  *  4. Control over the dimension and metric names.
  *
+ *  Here, "control" is provided to the operator of a Druid cluster, who would exercise that control through a
+ *  site-specific extension adding a QueryMetricsFactory impl.
+ *
  *
  * Types of methods in this interface
  * ----------------------------------
@@ -58,16 +61,17 @@ import java.util.Map;
  *  2. Methods for setting dimensions, which become known in the process of the query execution or after the query is
  *  completed.
  *  3. Methods to register metrics to be emitted later in bulk via {@link #emit(ServiceEmitter)}. These methods
- *  return this QueryMetrics object back for chaining.
+ *  return this QueryMetrics object back for chaining. Names of these methods start with "report" prefix.
  *
  *
  * Implementors expectations
  * -------------------------
- * QueryMetrics is expected to be changed often, in every Druid release. Users who create their custom implementations
- * of QueryMetrics should be ready to fix the code of their QueryMetrics (implement new methods) when they update Druid.
- * Broken builds of custom extensions, containing custom QueryMetrics is the way to notify users that Druid core "wants"
- * to emit new dimension or metric, and the user handles them manually: if the new dimension or metric is useful and not
- * very expensive to process and store then emit, skip (see above Goals, 1.) otherwise.
+ * QueryMetrics is expected to be changed often, in every Druid release (including "patch" releases). Users who create
+ * their custom implementations of QueryMetrics should be ready to fix the code of their QueryMetrics (implement new
+ * methods) when they update Druid. Broken builds of custom extensions, containing custom QueryMetrics is the way to
+ * notify users that Druid core "wants" to emit new dimension or metric, and the user handles them manually: if the new
+ * dimension or metric is useful and not very expensive to process and store then emit, skip (see above Goals, 1.)
+ * otherwise.
  *
  * <p>QueryMetrics is designed for use from a single thread, implementations shouldn't care about thread-safety.
  *
@@ -144,52 +148,52 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Registers "query time" metric.
    */
-  QueryMetrics<QueryType> queryTime(long timeNs);
+  QueryMetrics<QueryType> reportQueryTime(long timeNs);
 
   /**
    * Registers "query bytes" metric.
    */
-  QueryMetrics<QueryType> queryBytes(long byteCount);
+  QueryMetrics<QueryType> reportQueryBytes(long byteCount);
 
   /**
    * Registers "wait time" metric.
    */
-  QueryMetrics<QueryType> waitTime(long timeNs);
+  QueryMetrics<QueryType> reportWaitTime(long timeNs);
 
   /**
    * Registers "segment time" metric.
    */
-  QueryMetrics<QueryType> segmentTime(long timeNs);
+  QueryMetrics<QueryType> reportSegmentTime(long timeNs);
 
   /**
    * Registers "segmentAndCache time" metric.
    */
-  QueryMetrics<QueryType> segmentAndCacheTime(long timeNs);
+  QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 
   /**
    * Registers "interval chunk time" metric.
    */
-  QueryMetrics<QueryType> intervalChunkTime(long timeNs);
+  QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs);
 
   /**
    * Registers "cpu time" metric.
    */
-  QueryMetrics<QueryType> cpuTime(long timeNs);
+  QueryMetrics<QueryType> reportCpuTime(long timeNs);
 
   /**
    * Registers "time to first byte" metric.
    */
-  QueryMetrics<QueryType> nodeTimeToFirstByte(long timeNs);
+  QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs);
 
   /**
    * Registers "node time" metric.
    */
-  QueryMetrics<QueryType> nodeTime(long timeNs);
+  QueryMetrics<QueryType> reportNodeTime(long timeNs);
 
   /**
    * Registers "node bytes" metric.
    */
-  QueryMetrics<QueryType> nodeBytes(long byteCount);
+  QueryMetrics<QueryType> reportNodeBytes(long byteCount);
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
