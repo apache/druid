@@ -25,11 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -72,7 +70,7 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
       int id = Integer.parseInt(e.getKey());
 
       Map<String, Object> schema = e.getValue();
-      String schemaStr = mapper.writeValueAsString(schema);;
+      String schemaStr = mapper.writeValueAsString(schema);
 
       logger.info("Schema string [%s] = [%s]", id, schemaStr);
       schemaObjs.put(id, new Schema.Parser().parse(schemaStr));
@@ -116,10 +114,8 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
       throw new ParseException("Failed to find schema for id [%s]", schemaId);
     }
 
-    try {
-      DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schemaObj);
-      ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-
+    DatumReader<GenericRecord> reader = new GenericDatumReader<>(schemaObj);
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (Exception e) {

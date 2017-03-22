@@ -18,7 +18,6 @@
  */
 package io.druid.data.input.avro;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -31,6 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public class GenericRecordAsMap implements Map<String, Object>
 {
@@ -102,7 +102,7 @@ public class GenericRecordAsMap implements Map<String, Object>
   {
     Object field = record.get(key.toString());
     if (fromPigAvroStorage && field instanceof GenericData.Array) {
-      return Lists.transform((List) field, PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL);
+      return Lists.transform((List) field, PIG_AVRO_STORAGE_ARRAY_TO_STRING_INCLUDING_NULL::apply);
     }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {

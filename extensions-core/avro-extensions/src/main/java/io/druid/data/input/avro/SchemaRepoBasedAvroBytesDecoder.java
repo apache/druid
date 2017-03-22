@@ -20,11 +20,9 @@ package io.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.data.input.schemarepo.SubjectAndIdConverter;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -53,7 +51,7 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     this.subjectAndIdConverter = subjectAndIdConverter;
     this.schemaRepository = schemaRepository;
-    typedRepository = new TypedSchemaRepository<ID, Schema, SUBJECT>(
+    this.typedRepository = new TypedSchemaRepository<>(
         schemaRepository,
         subjectAndIdConverter.getIdConverter(),
         new AvroSchemaConverter(false),
@@ -78,9 +76,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
   {
     Pair<SUBJECT, ID> subjectAndId = subjectAndIdConverter.getSubjectAndId(bytes);
     Schema schema = typedRepository.getSchema(subjectAndId.lhs, subjectAndId.rhs);
-    DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schema);
-    ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-    try {
+    DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (IOException e) {

@@ -25,11 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -49,6 +47,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
 
   private final Schema schemaObj;
   private final Map<String, Object> schema;
+  private final DatumReader<GenericRecord> reader;
 
   @JsonCreator
   public InlineSchemaAvroBytesDecoder(
@@ -59,10 +58,11 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     Preconditions.checkArgument(schema != null, "schema must be provided");
 
     this.schema = schema;
-    String schemaStr = mapper.writeValueAsString(schema);;
+    String schemaStr = mapper.writeValueAsString(schema);
 
     logger.info("Schema string [%s]", schemaStr);
-    schemaObj = new Schema.Parser().parse(schemaStr);
+    this.schemaObj = new Schema.Parser().parse(schemaStr);
+    this.reader = new GenericDatumReader<>(this.schemaObj);
   }
 
   //For UT only
@@ -70,6 +70,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
   InlineSchemaAvroBytesDecoder(Schema schemaObj)
   {
     this.schemaObj = schemaObj;
+    this.reader = new GenericDatumReader<>(schemaObj);
     this.schema = null;
   }
 
@@ -82,9 +83,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
   @Override
   public GenericRecord parse(ByteBuffer bytes)
   {
-    DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>(schemaObj);
-    ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes));
-    try {
+    try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (Exception e) {
