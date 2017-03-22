@@ -123,14 +123,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void userDimensions(Map<String, String> userDimensions)
-  {
-    for (Map.Entry<String, String> userDimension : userDimensions.entrySet()) {
-      builder.setDimension(userDimension.getKey(), userDimension.getValue());
-    }
-  }
-
-  @Override
   public void status(String status)
   {
     builder.setDimension(DruidMetrics.STATUS, status);
@@ -140,6 +132,18 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public void success(boolean success)
   {
     builder.setDimension("success", String.valueOf(success));
+  }
+
+  @Override
+  public void segment(String segmentIdentifier)
+  {
+    builder.setDimension("segment", segmentIdentifier);
+  }
+
+  @Override
+  public void chunkInterval(Interval interval)
+  {
+    builder.setDimension("chunkInterval", interval.toString());
   }
 
   @Override

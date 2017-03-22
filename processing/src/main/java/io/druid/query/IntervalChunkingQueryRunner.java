@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -109,7 +108,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                                 toolChest,
                                 baseRunner,
                                 QueryMetric.INTERVAL_CHUNK_TIME,
-                                ImmutableMap.of("chunkInterval", singleInterval.toString())
+                                queryMetrics -> queryMetrics.chunkInterval(singleInterval)
                             ).withWaitMeasuredFromNow()
                         ),
                         executor, queryWatcher

@@ -22,7 +22,6 @@ package io.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
@@ -39,6 +38,7 @@ import io.druid.query.CPUTimeMetricQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryMetric;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -47,7 +47,6 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.QueryMetric;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -281,9 +280,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
-    final ImmutableMap<String, String> dims = ImmutableMap.of("segment", sinkSegmentIdentifier);
 
-    // Note: query/segmentAndCache/time and query/segment/time are effectively the same here. They don't split apart
+    // Note: SEGMENT_AND_CACHE_TIME and SEGMENT_TIME are effectively the same here. They don't split apart
     // cache vs. non-cache due to the fact that Sinks may be partially cached and partially uncached. Making this
     // better would need to involve another accumulator like the cpuTimeAccumulator that we could share with the
     // sinkRunner.
@@ -297,10 +295,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                 queryToolChest,
                 sinkRunner,
                 QueryMetric.SEGMENT_TIME,
-                dims
+                queryMetrics -> queryMetrics.segment(sinkSegmentIdentifier)
             ),
             QueryMetric.SEGMENT_AND_CACHE_TIME,
-            dims
+            queryMetrics -> queryMetrics.segment(sinkSegmentIdentifier)
         ).withWaitMeasuredFromNow(),
         queryToolChest,
         emitter,

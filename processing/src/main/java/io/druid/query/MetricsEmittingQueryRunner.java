@@ -27,6 +27,7 @@ import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  */
@@ -37,7 +38,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   private final QueryRunner<T> queryRunner;
   private final long creationTimeNs;
   private final QueryMetric metric;
-  private final Map<String, String> userDimensions;
+  private final Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions;
 
   private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
@@ -45,7 +46,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryRunner<T> queryRunner,
       long creationTimeNs,
       QueryMetric metric,
-      Map<String, String> userDimensions
+      Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
   )
   {
     this.emitter = emitter;
@@ -53,7 +54,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     this.queryRunner = queryRunner;
     this.creationTimeNs = creationTimeNs;
     this.metric = metric;
-    this.userDimensions = userDimensions;
+    this.applyCustomDimensions = applyCustomDimensions;
   }
 
   public MetricsEmittingQueryRunner(
@@ -61,10 +62,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryToolChest<?, ? super Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
       QueryMetric metric,
-      Map<String, String> userDimensions
+      Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
   )
   {
-    this(emitter, queryToolChest, queryRunner, -1, metric, userDimensions);
+    this(emitter, queryToolChest, queryRunner, -1, metric, applyCustomDimensions);
   }
 
   public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
@@ -75,7 +76,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         queryRunner,
         System.nanoTime(),
         metric,
-        userDimensions
+        applyCustomDimensions
     );
   }
 
@@ -84,7 +85,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   {
     final QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
 
-    queryMetrics.userDimensions(userDimensions);
+    applyCustomDimensions.accept(queryMetrics);
 
     return Sequences.wrap(
         // Use LazySequence because want to account execution time of queryRunner.run() (it prepares the underlying
@@ -117,7 +118,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               queryMetrics.status("short");
             }
             long timeTakenNs = System.nanoTime() - startTimeNs;
-            metric.register(queryMetrics, timeTakenNs);
+            metric.report(queryMetrics, timeTakenNs);
 
             if (creationTimeNs > 0) {
               queryMetrics.reportWaitTime(startTimeNs - creationTimeNs);

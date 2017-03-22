@@ -27,25 +27,25 @@ public enum QueryMetric
 {
   SEGMENT_TIME {
     @Override
-    public void register(QueryMetrics<?> metrics, long timeNs)
+    public void report(QueryMetrics<?> metrics, long timeNs)
     {
       metrics.reportSegmentTime(timeNs);
     }
   },
   SEGMENT_AND_CACHE_TIME {
     @Override
-    public void register(QueryMetrics<?> metrics, long timeNs)
+    public void report(QueryMetrics<?> metrics, long timeNs)
     {
       metrics.reportSegmentAndCacheTime(timeNs);
     }
   },
   INTERVAL_CHUNK_TIME {
     @Override
-    public void register(QueryMetrics<?> metrics, long timeNs)
+    public void report(QueryMetrics<?> metrics, long timeNs)
     {
       metrics.reportIntervalChunkTime(timeNs);
     }
   };
 
-  public abstract void register(QueryMetrics<?> metrics, long value);
+  public abstract void report(QueryMetrics<?> metrics, long value);
 }

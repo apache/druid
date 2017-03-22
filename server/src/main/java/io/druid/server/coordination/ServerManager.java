@@ -21,7 +21,6 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -43,6 +42,7 @@ import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryMetric;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -51,7 +51,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.QueryMetric;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -414,16 +413,17 @@ public class ServerManager implements QuerySegmentWalker
   )
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
+    String segmentId = adapter.getIdentifier();
     return CPUTimeMetricQueryRunner.safeBuild(
         new SpecificSegmentQueryRunner<T>(
             new MetricsEmittingQueryRunner<T>(
                 emitter,
                 toolChest,
                 new BySegmentQueryRunner<T>(
-                    adapter.getIdentifier(),
+                    segmentId,
                     adapter.getDataInterval().getStart(),
                     new CachingQueryRunner<T>(
-                        adapter.getIdentifier(),
+                        segmentId,
                         segmentDescriptor,
                         objectMapper,
                         cache,
@@ -433,14 +433,14 @@ public class ServerManager implements QuerySegmentWalker
                             toolChest,
                             new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
                             QueryMetric.SEGMENT_TIME,
-                            ImmutableMap.of("segment", adapter.getIdentifier())
+                            queryMetrics -> queryMetrics.segment(segmentId)
                         ),
                         cachingExec,
                         cacheConfig
                     )
                 ),
                 QueryMetric.SEGMENT_AND_CACHE_TIME,
-                ImmutableMap.of("segment", adapter.getIdentifier())
+                queryMetrics -> queryMetrics.segment(segmentId)
             ).withWaitMeasuredFromNow(),
             segmentSpec
         ),

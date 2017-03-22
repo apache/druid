@@ -20,8 +20,7 @@
 package io.druid.query;
 
 import com.metamx.emitter.service.ServiceEmitter;
-
-import java.util.Map;
+import org.joda.time.Interval;
 
 /**
  * Abstraction wrapping {@link com.metamx.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
@@ -139,11 +138,13 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void remoteAddress(String remoteAddress);
 
-  void userDimensions(Map<String, String> userDimensions);
-
   void status(String status);
 
   void success(boolean success);
+
+  void segment(String segmentIdentifier);
+
+  void chunkInterval(Interval interval);
 
   /**
    * Registers "query time" metric.
