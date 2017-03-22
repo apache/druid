@@ -100,6 +100,7 @@ public final class SpecializationService
    * specialization takes some JVM memory (machine code cache, byte code, etc.)
    */
   private static final int maxSpecializations = Integer.getInteger("maxSpecializations", 1000);
+  private static final AtomicBoolean maxSpecializationsWarningEmitted = new AtomicBoolean(false);
 
   private static final ExecutorService classSpecializationExecutor = Execs.singleThreaded("class-specialization-%d");
 
@@ -346,14 +347,16 @@ public final class SpecializationService
           // PerPrototypeClassState.specializationStates. But it might be that nobody ever hits even the current
           // maxSpecializations limit, so implementing cache eviction is an unnecessary complexity.
           specialized = perPrototypeClassState.prototypeClass.newInstance();
-          LOG.warn(
-              "SpecializationService couldn't make more than [%d] specializations. "
-              + "Not doing specialization for runtime shape[%s] and class remapping[%s], using the prototype class[%s]",
-              maxSpecializations,
-              specializationId.runtimeShape,
-              specializationId.classRemapping,
-              perPrototypeClassState.prototypeClass
-          );
+          if (!maxSpecializationsWarningEmitted.get() && maxSpecializationsWarningEmitted.compareAndSet(false, true)) {
+            LOG.warn(
+                "SpecializationService couldn't make more than [%d] specializations. " +
+                "Not doing specialization for runtime shape[%s] and class remapping[%s], using the prototype class[%s]",
+                maxSpecializations,
+                specializationId.runtimeShape,
+                specializationId.classRemapping,
+                perPrototypeClassState.prototypeClass
+            );
+          }
         } else if (fakeSpecialize) {
           specialized = perPrototypeClassState.prototypeClass.newInstance();
         } else {
