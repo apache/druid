@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -350,7 +351,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
   {
     // at the point where this code is called, only one datasource should exist.
-    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    final String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     PagingSpec pagingSpec = query.getPagingSpec();
     Map<String, Integer> paging = pagingSpec.getPagingIdentifiers();
@@ -360,8 +361,22 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
     final Granularity granularity = query.getGranularity();
 
+    // A paged select query using a UnionDataSource will return pagingIdentifiers from segments in more than one
+    // dataSource which confuses subsequent queries and causes a failure. To avoid this, filter only the paging keys
+    // that are applicable to this dataSource so that each dataSource in a union query gets the appropriate keys.
+    final Iterable<String> filteredPagingKeys = Iterables.filter(
+        paging.keySet(), new Predicate<String>()
+        {
+          @Override
+          public boolean apply(String input)
+          {
+            return DataSegmentUtils.valueOf(dataSource, input) != null;
+          }
+        }
+    );
+
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
+        Iterables.transform(filteredPagingKeys, DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
         intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()

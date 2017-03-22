@@ -21,6 +21,7 @@ package io.druid.query.select;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
@@ -33,6 +34,8 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
+import io.druid.query.UnionDataSource;
+import io.druid.query.UnionQueryRunner;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.IncrementalIndexSegment;
@@ -311,6 +314,38 @@ public class MultiSegmentSelectQueryTest
 
       query = query.withPagingSpec(toNextCursor(merged, query, 3));
     }
+  }
+
+  @Test
+  public void testPagingIdentifiersForUnionDatasource()
+  {
+    Druids.SelectQueryBuilder selectQueryBuilder = Druids
+        .newSelectQueryBuilder()
+        .dataSource(
+            new UnionDataSource(
+                ImmutableList.of(
+                    new TableDataSource(QueryRunnerTestHelper.dataSource),
+                    new TableDataSource("testing-2")
+                )
+            )
+        )
+        .intervals(SelectQueryRunnerTest.I_0112_0114)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
+        .pagingSpec(PagingSpec.newSpec(3));
+
+    SelectQuery query = selectQueryBuilder.build();
+    QueryRunner unionQueryRunner = new UnionQueryRunner(runner);
+
+    List<Result<SelectResultValue>> results = Sequences.toList(
+        unionQueryRunner.run(query, ImmutableMap.of()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
+    query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Arrays.asList(pagingIdentifiers)), query, 3));
+
+    Sequences.toList(unionQueryRunner.run(query, ImmutableMap.of()), Lists.<Result<SelectResultValue>>newArrayList());
   }
 
   private PagingSpec toNextCursor(Map<String, Integer> merged, SelectQuery query, int threshold)

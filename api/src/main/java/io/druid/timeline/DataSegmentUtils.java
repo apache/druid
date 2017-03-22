@@ -21,6 +21,7 @@ package io.druid.timeline;
 
 import com.google.common.base.Function;
 
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 
 import org.joda.time.DateTime;
@@ -44,51 +45,66 @@ public class DataSegmentUtils
       @Override
       public Interval apply(String identifier)
       {
-        return valueOf(datasource, identifier).getInterval();
+        SegmentIdentifierParts segmentIdentifierParts = valueOf(datasource, identifier);
+        if (segmentIdentifierParts == null) {
+          throw new IAE("Invalid identifier [%s]", identifier);
+        }
+
+        return segmentIdentifierParts.getInterval();
       }
     };
   }
 
-  // ignores shard spec
+  /**
+   * Parses a segment identifier into its components: dataSource, interval, version, and any trailing tags. Ignores
+   * shard spec.
+   *
+   * It is possible that this method may incorrectly parse an identifier, for example if the dataSource name in the
+   * identifier contains a DateTime parseable string such as 'datasource_2000-01-01T00:00:00.000Z' and dataSource was
+   * provided as 'datasource'. The desired behavior in this case would be to return null since the identifier does not
+   * actually belong to the provided dataSource but a non-null result would be returned. This is an edge case that would
+   * currently only affect paged select queries with a union dataSource of two similarly-named dataSources as in the
+   * given example.
+   *
+   * @param dataSource the dataSource corresponding to this identifier
+   * @param identifier segment identifier
+   * @return a {@link io.druid.timeline.DataSegmentUtils.SegmentIdentifierParts} object if the identifier could be
+   *         parsed, null otherwise
+   */
   public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
-    SegmentIdentifierParts segmentDesc = parse(dataSource, identifier);
-    if (segmentDesc == null) {
-      throw new IllegalArgumentException("Invalid identifier " + identifier);
-    }
-    return segmentDesc;
-  }
-
-  private static SegmentIdentifierParts parse(String dataSource, String identifier)
-  {
     if (!identifier.startsWith(String.format("%s_", dataSource))) {
-      LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
+
     String remaining = identifier.substring(dataSource.length() + 1);
     String[] splits = remaining.split(DataSegment.delimiter);
     if (splits.length < 3) {
-      LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
 
     DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
-    DateTime start = formatter.parseDateTime(splits[0]);
-    DateTime end = formatter.parseDateTime(splits[1]);
-    String version = splits[2];
-    String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
 
-    return new SegmentIdentifierParts(
-        dataSource,
-        new Interval(start.getMillis(), end.getMillis()),
-        version,
-        trail
-    );
+    try {
+      DateTime start = formatter.parseDateTime(splits[0]);
+      DateTime end = formatter.parseDateTime(splits[1]);
+      String version = splits[2];
+      String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
+
+      return new SegmentIdentifierParts(
+          dataSource,
+          new Interval(start.getMillis(), end.getMillis()),
+          version,
+          trail
+      );
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   public static String withInterval(final String dataSource, final String identifier, Interval newInterval)
   {
-    SegmentIdentifierParts segmentDesc = DataSegmentUtils.parse(dataSource, identifier);
+    SegmentIdentifierParts segmentDesc = DataSegmentUtils.valueOf(dataSource, identifier);
     if (segmentDesc == null) {
       // happens for test segments which has invalid segment id.. ignore for now
       LOGGER.warn("Invalid segment identifier " + identifier);
