@@ -31,16 +31,16 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastByInterval";
   private final Interval interval;
-  private final String colocateDataSource;
+  private final String colocatedDatasource;
 
   @JsonCreator
   public IntervalBroadcastDistributionRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("colocateDataSource") String colocateDataSource
+      @JsonProperty("colocatedDatasource") String colocatedDatasource
   )
   {
     this.interval = interval;
-    this.colocateDataSource = Objects.requireNonNull(colocateDataSource);
+    this.colocatedDatasource = Objects.requireNonNull(colocatedDatasource);
   }
 
   @Override
@@ -62,11 +62,10 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
     return Rules.eligibleForLoad(this.interval, interval);
   }
 
-  @Override
   @JsonProperty
-  public String getColocateDataSource()
+  public String getColocatedDatasource()
   {
-    return colocateDataSource;
+    return colocatedDatasource;
   }
 
   @JsonProperty
@@ -87,6 +86,6 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
     }
 
     IntervalBroadcastDistributionRule that = (IntervalBroadcastDistributionRule) o;
-    return interval.equals(that.interval) && colocateDataSource.equals(that.colocateDataSource);
+    return interval.equals(that.interval) && colocatedDatasource.equals(that.colocatedDatasource);
   }
 }

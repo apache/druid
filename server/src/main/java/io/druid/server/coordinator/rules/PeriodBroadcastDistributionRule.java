@@ -33,16 +33,16 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   static final String TYPE = "broadcastByPeriod";
 
   private final Period period;
-  private final String colocateDataSource;
+  private final String colocatedDatasource;
 
   @JsonCreator
   public PeriodBroadcastDistributionRule(
       @JsonProperty("period") Period period,
-      @JsonProperty("colocateDataSource") String colocateDataSource
+      @JsonProperty("colocatedDatasource") String colocatedDatasource
   )
   {
     this.period = period;
-    this.colocateDataSource = Objects.requireNonNull(colocateDataSource);
+    this.colocatedDatasource = Objects.requireNonNull(colocatedDatasource);
   }
 
   @Override
@@ -64,11 +64,10 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     return Rules.eligibleForLoad(period, interval, referenceTimestamp);
   }
 
-  @Override
   @JsonProperty
-  public String getColocateDataSource()
+  public String getColocatedDatasource()
   {
-    return colocateDataSource;
+    return colocatedDatasource;
   }
 
   @JsonProperty
@@ -89,6 +88,6 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     }
 
     PeriodBroadcastDistributionRule that = (PeriodBroadcastDistributionRule) o;
-    return period.equals(that.period) && colocateDataSource.equals(that.colocateDataSource);
+    return period.equals(that.period) && colocatedDatasource.equals(that.colocatedDatasource);
   }
 }

@@ -31,14 +31,14 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastForever";
 
-  private final String colocateDataSource;
+  private final String colocatedDatasource;
 
   @JsonCreator
   public ForeverBroadcastDistributionRule(
-      @JsonProperty("colocateDataSource") String colocateDataSource
+      @JsonProperty("colocatedDatasource") String colocatedDatasource
   )
   {
-    this.colocateDataSource = Objects.requireNonNull(colocateDataSource);
+    this.colocatedDatasource = Objects.requireNonNull(colocatedDatasource);
   }
 
   @Override
@@ -60,11 +60,10 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
     return true;
   }
 
-  @Override
   @JsonProperty
-  public String getColocateDataSource()
+  public String getColocatedDatasource()
   {
-    return colocateDataSource;
+    return colocatedDatasource;
   }
 
   @Override
@@ -79,6 +78,6 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
     }
 
     ForeverBroadcastDistributionRule that = (ForeverBroadcastDistributionRule) o;
-    return colocateDataSource.equals(that.colocateDataSource);
+    return colocatedDatasource.equals(that.colocatedDatasource);
   }
 }

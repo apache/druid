@@ -41,7 +41,7 @@ public abstract class BroadcastDistributionRule implements Rule
     // Find servers which holds the segments of co-located data source
     final List<ServerHolder> targetServerHolders = params
         .getDruidCluster().getAllServers().stream()
-        .filter(eachHolder -> eachHolder.getServer().getDataSource(getColocateDataSource()) != null)
+        .filter(eachHolder -> eachHolder.getServer().getDataSource(getColocatedDatasource()) != null)
         .collect(Collectors.toList());
 
     // The segment is replicated to the found servers
@@ -69,8 +69,7 @@ public abstract class BroadcastDistributionRule implements Rule
             "Failed to replicate segment[%s] to server[%s] due to insufficient available space",
             segment.getIdentifier(),
             holder.getServer().getHost()
-        )
-           .addData("segmentSize", segment.getSize())
+        ).addData("segmentSize", segment.getSize())
            .addData("availableSize", holder.getAvailableSize())
            .emit();
       } else {
@@ -86,5 +85,5 @@ public abstract class BroadcastDistributionRule implements Rule
     return stats;
   }
 
-  public abstract String getColocateDataSource();
+  public abstract String getColocatedDatasource();
 }
