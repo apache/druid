@@ -74,6 +74,14 @@ import org.joda.time.Interval;
  * dimension or metric is useful and not very expensive to process and store then emit, skip (see above Goals, 1.)
  * otherwise.
  *
+ * <p>If implementors of custom QueryMetrics don't want to fix builds on every Druid release (e. g. if they want to add
+ * a single dimension to emitted events and don't want to alter other dimensions and emitted metrics), they could
+ * inherit their custom QueryMetrics from {@link DefaultQueryMetrics} or query-specific default implementation class,
+ * such as {@link io.druid.query.topn.DefaultTopNQueryMetrics}. Those classes are guaranteed to stay around and
+ * implement new methods, added to the QueryMetrics interface (or a query-specific subinterface). However, there is no
+ * 100% guarantee of compatibility, because methods could not only be added to QueryMetrics, existing methods could also
+ * be changed or removed.
+ *
  * <p>QueryMetrics is designed for use from a single thread, implementations shouldn't care about thread-safety.
  *
  *
@@ -121,9 +129,11 @@ import org.joda.time.Interval;
  * This complex procedure is needed to ensure custom {@link GenericQueryMetricsFactory} specified by users still works
  * for the query type when query type decides to create their custom QueryMetrics subclass.
  *
- * For compatibility reasons {@link io.druid.query.topn.TopNQueryMetrics}, {@link
- * io.druid.query.groupby.GroupByQueryMetrics}, and {@link io.druid.query.timeseries.TimeseriesQueryMetrics} are special
- * and shouldn't be taken as direct examples for following the plan specified above.
+ * {@link io.druid.query.topn.TopNQueryMetrics}, {@link io.druid.query.groupby.GroupByQueryMetrics}, and {@link
+ * io.druid.query.timeseries.TimeseriesQueryMetrics} are implemented differently, because they are introduced at the
+ * same time as the whole QueryMetrics abstraction and their default implementations have to actually emit more
+ * dimensions than the default generic QueryMetrics. So those subinterfaces shouldn't be taken as direct examples for
+ * following the plan specified above.
  *
  * @param <QueryType>
  */
