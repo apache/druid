@@ -31,6 +31,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -149,7 +150,7 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testFilterSegments()
   {
-    DefaultGenericQueryMetricsFactory queryMetricsFactory = DefaultGenericQueryMetricsFactory.instance();
+    GenericQueryMetricsFactory queryMetricsFactory = DefaultGenericQueryMetricsFactory.instance();
     DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest(queryMetricsFactory);
     List<LogicalSegment> segments = toolChest
         .filterSegments(

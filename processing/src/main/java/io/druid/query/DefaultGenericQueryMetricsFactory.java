@@ -25,9 +25,10 @@ import io.druid.jackson.DefaultObjectMapper;
 
 public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
 {
-  private static final DefaultGenericQueryMetricsFactory INSTANCE = new DefaultGenericQueryMetricsFactory(new DefaultObjectMapper());
+  private static final GenericQueryMetricsFactory INSTANCE =
+      new DefaultGenericQueryMetricsFactory(new DefaultObjectMapper());
 
-  public static DefaultGenericQueryMetricsFactory instance()
+  public static GenericQueryMetricsFactory instance()
   {
     return INSTANCE;
   }
