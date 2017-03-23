@@ -55,7 +55,7 @@ import java.util.List;
 /**
  */
 @RunWith(Parameterized.class)
-public class SketchAggregationTestWithSimpleData
+public class SketchAggregationWithSimpleDataTest
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -66,7 +66,7 @@ public class SketchAggregationTestWithSimpleData
   private File s1;
   private File s2;
 
-  public SketchAggregationTestWithSimpleData(GroupByQueryConfig config)
+  public SketchAggregationWithSimpleDataTest(GroupByQueryConfig config)
   {
     this.config = config;
   }
