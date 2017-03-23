@@ -123,7 +123,7 @@ import org.joda.time.Interval;
  *
  * For compatibility reasons {@link io.druid.query.topn.TopNQueryMetrics}, {@link
  * io.druid.query.groupby.GroupByQueryMetrics}, and {@link io.druid.query.timeseries.TimeseriesQueryMetrics} are special
- * and shouldn't been taken as direct examples for following the plan specified above.
+ * and shouldn't be taken as direct examples for following the plan specified above.
  *
  * @param <QueryType>
  */
