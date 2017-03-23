@@ -55,7 +55,7 @@ public class DruidMetrics
   }
 
   public static <T> QueryMetrics<?> makeRequestMetrics(
-      final QueryMetricsFactory queryMetricsFactory,
+      final GenericQueryMetricsFactory queryMetricsFactory,
       final QueryToolChest<T, Query<T>> toolChest,
       final Query<T> query,
       final String remoteAddr

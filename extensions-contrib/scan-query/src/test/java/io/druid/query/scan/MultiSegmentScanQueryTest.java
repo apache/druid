@@ -27,7 +27,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.DefaultQueryMetricsFactory;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -65,7 +65,7 @@ import java.util.Map;
 public class MultiSegmentScanQueryTest
 {
   private static final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
-      DefaultQueryMetricsFactory.instance()
+      DefaultGenericQueryMetricsFactory.instance()
   );
 
   private static final QueryRunnerFactory<ScanResultValue, ScanQuery> factory = new ScanQueryRunnerFactory(

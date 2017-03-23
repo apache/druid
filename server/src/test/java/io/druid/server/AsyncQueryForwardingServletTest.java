@@ -41,7 +41,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.DefaultQueryMetricsFactory;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
@@ -234,7 +234,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper)
           )
           {
             @Override

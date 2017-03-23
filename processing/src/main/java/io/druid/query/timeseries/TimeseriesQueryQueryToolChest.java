@@ -29,10 +29,8 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -64,17 +62,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       };
 
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
   public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
   {
-    this(intervalChunkingQueryRunnerDecorator, DefaultQueryMetricsFactory.instance());
+    this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());
   }
 
   @Inject
   public TimeseriesQueryQueryToolChest(
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      QueryMetricsFactory queryMetricsFactory
+      TimeseriesQueryMetricsFactory queryMetricsFactory
   )
   {
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
@@ -113,7 +111,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public TimeseriesQueryMetrics makeMetrics(TimeseriesQuery query)
   {
-    TimeseriesQueryMetrics queryMetrics = queryMetricsFactory.makeTimeseriesQueryMetrics();
+    TimeseriesQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
     queryMetrics.query(query);
     return queryMetrics;
   }

@@ -30,9 +30,9 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -51,10 +51,10 @@ public class DataSourceQueryQueryToolChest
   {
   };
 
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   @Inject
-  public DataSourceQueryQueryToolChest(QueryMetricsFactory queryMetricsFactory)
+  public DataSourceQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
   {
     this.queryMetricsFactory = queryMetricsFactory;
   }

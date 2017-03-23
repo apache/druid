@@ -29,7 +29,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.DefaultQueryMetricsFactory;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -118,7 +118,7 @@ public class DataSourceMetadataQueryTest
     ;
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
-            new DataSourceQueryQueryToolChest(DefaultQueryMetricsFactory.instance()),
+            new DataSourceQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ), new IncrementalIndexSegment(rtIndex, "test"),
         null
@@ -149,7 +149,7 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testFilterSegments()
   {
-    DefaultQueryMetricsFactory queryMetricsFactory = DefaultQueryMetricsFactory.instance();
+    DefaultGenericQueryMetricsFactory queryMetricsFactory = DefaultGenericQueryMetricsFactory.instance();
     DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest(queryMetricsFactory);
     List<LogicalSegment> segments = toolChest
         .filterSegments(

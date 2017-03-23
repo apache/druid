@@ -22,18 +22,12 @@ package io.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.groupby.DefaultGroupByQueryMetrics;
-import io.druid.query.groupby.GroupByQueryMetrics;
-import io.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
-import io.druid.query.timeseries.TimeseriesQueryMetrics;
-import io.druid.query.topn.DefaultTopNQueryMetrics;
-import io.druid.query.topn.TopNQueryMetrics;
 
-public class DefaultQueryMetricsFactory implements QueryMetricsFactory
+public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
 {
-  private static final DefaultQueryMetricsFactory INSTANCE = new DefaultQueryMetricsFactory(new DefaultObjectMapper());
+  private static final DefaultGenericQueryMetricsFactory INSTANCE = new DefaultGenericQueryMetricsFactory(new DefaultObjectMapper());
 
-  public static DefaultQueryMetricsFactory instance()
+  public static DefaultGenericQueryMetricsFactory instance()
   {
     return INSTANCE;
   }
@@ -41,7 +35,7 @@ public class DefaultQueryMetricsFactory implements QueryMetricsFactory
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public DefaultQueryMetricsFactory(ObjectMapper jsonMapper)
+  public DefaultGenericQueryMetricsFactory(ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }
@@ -54,21 +48,4 @@ public class DefaultQueryMetricsFactory implements QueryMetricsFactory
     return queryMetrics;
   }
 
-  @Override
-  public TopNQueryMetrics makeTopNQueryMetrics()
-  {
-    return new DefaultTopNQueryMetrics(jsonMapper);
-  }
-
-  @Override
-  public GroupByQueryMetrics makeGroupByQueryMetrics()
-  {
-    return new DefaultGroupByQueryMetrics(jsonMapper);
-  }
-
-  @Override
-  public TimeseriesQueryMetrics makeTimeseriesQueryMetrics()
-  {
-    return new DefaultTimeseriesQueryMetrics(jsonMapper);
-  }
 }

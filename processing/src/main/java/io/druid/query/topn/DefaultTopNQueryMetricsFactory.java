@@ -17,27 +17,32 @@
  * under the License.
  */
 
-package io.druid.query;
+package io.druid.query.topn;
 
-import io.druid.query.groupby.GroupByQueryMetrics;
-import io.druid.query.timeseries.TimeseriesQueryMetrics;
-import io.druid.query.topn.TopNQueryMetrics;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import io.druid.jackson.DefaultObjectMapper;
 
-/**
- * This factory is used for DI of custom {@link QueryMetrics} implementations.
- */
-public interface QueryMetricsFactory
+public class DefaultTopNQueryMetricsFactory implements TopNQueryMetricsFactory
 {
-  /**
-   * Creates a {@link QueryMetrics} for query, which doesn't have predefined QueryMetrics subclass (i. e. not
-   * a topN, groupBy or timeseries query). This method must call {@link QueryMetrics#query(Query)} with the given query
-   * on the created QueryMetrics object before returning.
-   */
-  QueryMetrics<Query<?>> makeMetrics(Query<?> query);
+  private static final TopNQueryMetricsFactory INSTANCE = new DefaultTopNQueryMetricsFactory(new DefaultObjectMapper());
 
-  TopNQueryMetrics makeTopNQueryMetrics();
+  public static TopNQueryMetricsFactory instance()
+  {
+    return INSTANCE;
+  }
 
-  GroupByQueryMetrics makeGroupByQueryMetrics();
+  private final ObjectMapper jsonMapper;
 
-  TimeseriesQueryMetrics makeTimeseriesQueryMetrics();
+  @Inject
+  public DefaultTopNQueryMetricsFactory(ObjectMapper jsonMapper)
+  {
+    this.jsonMapper = jsonMapper;
+  }
+
+  @Override
+  public TopNQueryMetrics makeMetrics()
+  {
+    return new DefaultTopNQueryMetrics(jsonMapper);
+  }
 }

@@ -34,10 +34,8 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -71,21 +69,21 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
   private final TopNQueryConfig config;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final TopNQueryMetricsFactory queryMetricsFactory;
 
   public TopNQueryQueryToolChest(
       TopNQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this(config, intervalChunkingQueryRunnerDecorator, DefaultQueryMetricsFactory.instance());
+    this(config, intervalChunkingQueryRunnerDecorator, DefaultTopNQueryMetricsFactory.instance());
   }
 
   @Inject
   public TopNQueryQueryToolChest(
       TopNQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      QueryMetricsFactory queryMetricsFactory
+      TopNQueryMetricsFactory queryMetricsFactory
   )
   {
     this.config = config;
@@ -153,7 +151,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public TopNQueryMetrics makeMetrics(TopNQuery query)
   {
-    TopNQueryMetrics queryMetrics = queryMetricsFactory.makeTopNQueryMetrics();
+    TopNQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
     queryMetrics.query(query);
     return queryMetrics;
   }

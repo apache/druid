@@ -29,7 +29,7 @@ import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
-import io.druid.query.QueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.http.security.StateResourceFilter;
@@ -68,7 +68,7 @@ public class BrokerQueryResource extends QueryResource
       RequestLogger requestLogger,
       QueryManager queryManager,
       AuthConfig authConfig,
-      QueryMetricsFactory queryMetricsFactory,
+      GenericQueryMetricsFactory queryMetricsFactory,
       TimelineServerView brokerServerView
   )
   {

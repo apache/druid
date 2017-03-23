@@ -36,11 +36,11 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultQueryMetricsFactory;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -74,21 +74,21 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
   private final SearchQueryConfig config;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this(config, intervalChunkingQueryRunnerDecorator, DefaultQueryMetricsFactory.instance());
+    this(config, intervalChunkingQueryRunnerDecorator, DefaultGenericQueryMetricsFactory.instance());
   }
 
   @Inject
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      QueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.config = config;

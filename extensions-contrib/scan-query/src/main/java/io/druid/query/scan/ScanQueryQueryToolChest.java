@@ -27,7 +27,7 @@ import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -40,10 +40,10 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   {
   };
 
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   @Inject
-  public ScanQueryQueryToolChest(QueryMetricsFactory queryMetricsFactory)
+  public ScanQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
   {
     this.queryMetricsFactory = queryMetricsFactory;
   }

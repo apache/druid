@@ -32,9 +32,9 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.QueryCountStatsProvider;
@@ -105,7 +105,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final DruidHttpClientConfig httpClientConfig;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   private HttpClient broadcastClient;
 
@@ -119,7 +119,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      QueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.warehouse = warehouse;

@@ -50,11 +50,16 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
    * 
-   * <p>Public extensions (belonging to the Druid source tree) should use injected {@link QueryMetricsFactory} object
-   * for creating the QueryMetrics object, returned from this method.
+   * <p>QueryToolChests for query types in core (druid-processing) and public extensions (belonging to the Druid source
+   * tree) should use delegate this method to {@link GenericQueryMetricsFactory#makeMetrics(Query)} on an injected
+   * instance of {@link GenericQueryMetricsFactory}, as long as they don't need to emit custom dimensions and/or
+   * metrics.
    *
-   * <p>This method should ensure that {@link QueryMetrics#query(Query)} is called with the given query passed on the
-   * created QueryMetrics object before returning.
+   * <p>If some custom dimensions and/or metrics should be emitted for a query type, a plan described in
+   * "Making subinterfaces of QueryMetrics" section in {@link QueryMetrics}'s class-level Javadocs should be followed.
+   *
+   * <p>One way or another, this method should ensure that {@link QueryMetrics#query(Query)} is called with the given
+   * query passed on the created QueryMetrics object before returning.
    *
    * @param query The query that is being processed
    *

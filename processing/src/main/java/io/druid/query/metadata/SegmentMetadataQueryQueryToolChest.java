@@ -39,10 +39,10 @@ import io.druid.java.util.common.guava.MappedSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultQueryMetricsFactory;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -79,15 +79,15 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   };
 
   private final SegmentMetadataQueryConfig config;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config)
   {
-    this(config, DefaultQueryMetricsFactory.instance());
+    this(config, DefaultGenericQueryMetricsFactory.instance());
   }
 
   @Inject
-  public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config, QueryMetricsFactory queryMetricsFactory)
+  public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config, GenericQueryMetricsFactory queryMetricsFactory)
   {
     this.config = config;
     this.queryMetricsFactory = queryMetricsFactory;

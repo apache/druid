@@ -40,11 +40,9 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.DefaultQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryDataSource;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -85,21 +83,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private final GroupByStrategySelector strategySelector;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GroupByQueryMetricsFactory queryMetricsFactory;
 
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this(strategySelector, intervalChunkingQueryRunnerDecorator, DefaultQueryMetricsFactory.instance());
+    this(strategySelector, intervalChunkingQueryRunnerDecorator, DefaultGroupByQueryMetricsFactory.instance());
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      QueryMetricsFactory queryMetricsFactory
+      GroupByQueryMetricsFactory queryMetricsFactory
   )
   {
     this.strategySelector = strategySelector;
@@ -225,7 +223,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public GroupByQueryMetrics makeMetrics(GroupByQuery query)
   {
-    GroupByQueryMetrics queryMetrics = queryMetricsFactory.makeGroupByQueryMetrics();
+    GroupByQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
     queryMetrics.query(query);
     return queryMetrics;
   }

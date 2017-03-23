@@ -38,11 +38,11 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -102,7 +102,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final RequestLogger requestLogger;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -118,7 +118,7 @@ public class QueryResource implements QueryCountStatsProvider
       RequestLogger requestLogger,
       QueryManager queryManager,
       AuthConfig authConfig,
-      QueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.warehouse = warehouse;

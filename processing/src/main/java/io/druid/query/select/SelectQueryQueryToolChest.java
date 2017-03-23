@@ -37,11 +37,11 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultQueryMetricsFactory;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
-import io.druid.query.QueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -81,7 +81,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   private final ObjectMapper jsonMapper;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final Supplier<SelectQueryConfig> configSupplier;
-  private final QueryMetricsFactory queryMetricsFactory;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
@@ -89,7 +89,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       Supplier<SelectQueryConfig> configSupplier
   )
   {
-    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultQueryMetricsFactory(jsonMapper));
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultGenericQueryMetricsFactory(jsonMapper));
   }
 
   @Inject
@@ -97,7 +97,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       ObjectMapper jsonMapper,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       Supplier<SelectQueryConfig> configSupplier,
-      QueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.jsonMapper = jsonMapper;

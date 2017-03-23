@@ -49,7 +49,7 @@ import org.joda.time.Interval;
  *  4. Control over the dimension and metric names.
  *
  *  Here, "control" is provided to the operator of a Druid cluster, who would exercise that control through a
- *  site-specific extension adding a QueryMetricsFactory impl.
+ *  site-specific extension adding XxxQueryMetricsFactory impl(s).
  *
  *
  * Types of methods in this interface
@@ -57,8 +57,10 @@ import org.joda.time.Interval;
  *  1. Methods, pulling some dimensions from the query object. These methods are used to populate the metric before the
  *  query is run. These methods accept a single `QueryType query` parameter. {@link #query(Query)} calls all methods
  *  of this type, hence pulling all available information from the query object as dimensions.
+ *
  *  2. Methods for setting dimensions, which become known in the process of the query execution or after the query is
  *  completed.
+ *
  *  3. Methods to register metrics to be emitted later in bulk via {@link #emit(ServiceEmitter)}. These methods
  *  return this QueryMetrics object back for chaining. Names of these methods start with "report" prefix.
  *
@@ -89,6 +91,39 @@ import org.joda.time.Interval;
  * 3. When adding a new method for registering metrics, make it to accept the metric value in the smallest reasonable
  * unit (i. e. nanoseconds for time metrics, bytes for metrics of data size, etc.), allowing the implementations of
  * this method to round the value up to more coarse-grained units, if they don't need the maximum precision.
+ *
+ *
+ * Making subinterfaces of QueryMetrics for emitting custom dimensions and/or metrics for specific query types
+ * -----------------------------------------------------------------------------------------------------------
+ * If a query type (e. g. {@link io.druid.query.search.search.SearchQuery} (it's runners) needs to emit custom
+ * dimensions and/or metrics which doesn't make sense for all other query types, the following steps should be executed:
+ *  1. Create `interface SearchQueryMetrics extends QueryMetrics` (here and below "Search" is the query type) with
+ *  additional methods (see "Adding new methods" section above).
+ *
+ *  2. Create `class DefaultSearchQueryMetrics implements SearchQueryMetrics`. This class should implement extra methods
+ *  from SearchQueryMetrics interfaces with empty bodies, AND DELEGATE ALL OTHER METHODS TO A QueryMetrics OBJECT,
+ *  provided as a sole parameter in DefaultSearchQueryMetrics constructor.
+ *
+ *  3. Create `interface SearchQueryMetricsFactory` with a single method
+ *  `SearchQueryMetrics makeMetrics(SearchQuery query);`.
+ *
+ *  4. Create `class DefaultSearchQueryMetricsFactory implements SearchQueryMetricsFactory`, which accepts {@link
+ *  GenericQueryMetricsFactory} as injected constructor parameter, and implements makeMetrics() as
+ *  `return new DefaultSearchQueryMetrics(genericQueryMetricsFactory.makeMetrics(query));`
+ *
+ *  5. Inject and use SearchQueryMetricsFactory instead of {@link GenericQueryMetricsFactory} in {@link
+ *  io.druid.query.search.SearchQueryQueryToolChest}.
+ *
+ *  6. Specify `binder.bind(SearchQueryMetricsFactory.class).to(DefaultSearchQueryMetricsFactory.class)` in
+ *  QueryToolChestModule (if the query type belongs to the core druid-processing, e. g. SearchQuery) or in some
+ *  extension-specific Guice module otherwise, if the query type is defined in an extension, e. g. ScanQuery.
+ *
+ * This complex procedure is needed to ensure custom {@link GenericQueryMetricsFactory} specified by users still works
+ * for the query type when query type decides to create their custom QueryMetrics subclass.
+ *
+ * For compatibility reasons {@link io.druid.query.topn.TopNQueryMetrics}, {@link
+ * io.druid.query.groupby.GroupByQueryMetrics}, and {@link io.druid.query.timeseries.TimeseriesQueryMetrics} are special
+ * and shouldn't been taken as direct examples for following the plan specified above.
  *
  * @param <QueryType>
  */
