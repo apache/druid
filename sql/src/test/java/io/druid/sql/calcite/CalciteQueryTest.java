@@ -1083,6 +1083,82 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testCountStarWithLongColumnFiltersOnFloatLiterals() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE cnt > 1.1 and cnt < 100000001.0",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      BOUND("cnt", "1.1", "100000001.0", true, true, null, StringComparators.NUMERIC)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of()
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE cnt = 1.0",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      SELECTOR("cnt", "1.0", null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE cnt = 100000001.0",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      SELECTOR("cnt", "100000001.0", null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of()
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE cnt = 1.0 or cnt = 100000001.0",
+        ImmutableList.<Query>of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      IN("cnt", ImmutableList.of("1.0", "100000001.0"), null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithLongColumnFiltersOnTwoPoints() throws Exception
   {
     testQuery(
