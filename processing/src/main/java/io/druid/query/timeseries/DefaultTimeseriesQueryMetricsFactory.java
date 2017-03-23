@@ -20,6 +20,7 @@
 package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import io.druid.jackson.DefaultObjectMapper;
 
@@ -28,6 +29,11 @@ public class DefaultTimeseriesQueryMetricsFactory implements TimeseriesQueryMetr
   private static final TimeseriesQueryMetricsFactory INSTANCE =
       new DefaultTimeseriesQueryMetricsFactory(new DefaultObjectMapper());
 
+  /**
+   * Should be used only in tests, directly or indirectly (via {@link
+   * TimeseriesQueryQueryToolChest#TimeseriesQueryQueryToolChest(io.druid.query.IntervalChunkingQueryRunnerDecorator)}).
+   */
+  @VisibleForTesting
   public static TimeseriesQueryMetricsFactory instance()
   {
     return INSTANCE;

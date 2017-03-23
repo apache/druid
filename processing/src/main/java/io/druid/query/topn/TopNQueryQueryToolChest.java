@@ -20,6 +20,7 @@
 package io.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -71,6 +72,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TopNQueryMetricsFactory queryMetricsFactory;
 
+  @VisibleForTesting
   public TopNQueryQueryToolChest(
       TopNQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator

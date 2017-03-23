@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import io.druid.jackson.DefaultObjectMapper;
 
@@ -28,6 +29,12 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
   private static final GenericQueryMetricsFactory INSTANCE =
       new DefaultGenericQueryMetricsFactory(new DefaultObjectMapper());
 
+  /**
+   * Should be used only in tests, directly or indirectly (e. g. in {@link
+   * io.druid.query.search.SearchQueryQueryToolChest#SearchQueryQueryToolChest(
+   * io.druid.query.search.search.SearchQueryConfig, IntervalChunkingQueryRunnerDecorator)}).
+   */
+  @VisibleForTesting
   public static GenericQueryMetricsFactory instance()
   {
     return INSTANCE;

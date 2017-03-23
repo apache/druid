@@ -20,6 +20,7 @@
 package io.druid.query.search;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
@@ -76,6 +77,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
+  @VisibleForTesting
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator

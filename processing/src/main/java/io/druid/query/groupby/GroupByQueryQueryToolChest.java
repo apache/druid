@@ -20,6 +20,7 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -85,6 +86,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
 
+  @VisibleForTesting
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator

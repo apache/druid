@@ -20,6 +20,7 @@
 package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -64,6 +65,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
+  @VisibleForTesting
   public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
   {
     this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());

@@ -81,6 +81,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   private final SegmentMetadataQueryConfig config;
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
+  @VisibleForTesting
   public SegmentMetadataQueryQueryToolChest(SegmentMetadataQueryConfig config)
   {
     this(config, DefaultGenericQueryMetricsFactory.instance());

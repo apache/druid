@@ -20,6 +20,7 @@
 package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -61,6 +62,7 @@ public class TimeBoundaryQueryQueryToolChest
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
+  @VisibleForTesting
   public TimeBoundaryQueryQueryToolChest()
   {
     this(DefaultGenericQueryMetricsFactory.instance());
