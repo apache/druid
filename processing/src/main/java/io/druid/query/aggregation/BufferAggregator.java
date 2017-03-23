@@ -126,4 +126,28 @@ public interface BufferAggregator extends HotLoopCallee
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
   }
+
+  /*
+   * Relocates any cached objects.
+   * If underlying ByteBuffer used for aggregation buffer relocates to a new ByteBuffer, positional caches(if any)
+   * built on top of old ByteBuffer can not be used for further {@link BufferAggregator#aggregate(ByteBuffer, int)}
+   * calls. This method tells the BufferAggregator that the cached objects at a certain location has been relocated to
+   * a different location.
+   *
+   * Only used if there is any positional caches/objects in the BufferAggregator implementation.
+   *
+   * If relocate happens to be across multiple new ByteBuffers (say n ByteBuffers), this method should be called
+   * multiple times(n times) given all the new positions/old positions should exist in newBuffer/OldBuffer.
+   *
+   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
+   *
+   * @param oldPosition old position of a cached object before aggregation buffer relocates to a new ByteBuffer.
+   * @param newPosition new position of a cached object after aggregation buffer relocates to a new ByteBuffer.
+   * @param oldBuffer old aggregation buffer.
+   * @param newBuffer new aggregation buffer.
+   */
+  default void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+  }
+
 }
