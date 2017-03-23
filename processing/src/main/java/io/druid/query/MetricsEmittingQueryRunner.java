@@ -28,6 +28,7 @@ import io.druid.java.util.common.guava.Sequences;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.ObjLongConsumer;
 
 /**
  */
@@ -37,7 +38,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   private final QueryToolChest<?, ? super Query<T>> queryToolChest;
   private final QueryRunner<T> queryRunner;
   private final long creationTimeNs;
-  private final QueryMetric metric;
+  private final ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric;
   private final Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions;
 
   private MetricsEmittingQueryRunner(
@@ -45,7 +46,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryToolChest<?, ? super Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
       long creationTimeNs,
-      QueryMetric metric,
+      ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric,
       Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
   )
   {
@@ -53,7 +54,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     this.queryToolChest = queryToolChest;
     this.queryRunner = queryRunner;
     this.creationTimeNs = creationTimeNs;
-    this.metric = metric;
+    this.reportMetric = reportMetric;
     this.applyCustomDimensions = applyCustomDimensions;
   }
 
@@ -61,11 +62,11 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       ServiceEmitter emitter,
       QueryToolChest<?, ? super Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
-      QueryMetric metric,
+      ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric,
       Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
   )
   {
-    this(emitter, queryToolChest, queryRunner, -1, metric, applyCustomDimensions);
+    this(emitter, queryToolChest, queryRunner, -1, reportMetric, applyCustomDimensions);
   }
 
   public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
@@ -75,7 +76,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         queryToolChest,
         queryRunner,
         System.nanoTime(),
-        metric,
+        reportMetric,
         applyCustomDimensions
     );
   }
@@ -118,7 +119,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               queryMetrics.status("short");
             }
             long timeTakenNs = System.nanoTime() - startTimeNs;
-            metric.report(queryMetrics, timeTakenNs);
+            reportMetric.accept(queryMetrics, timeTakenNs);
 
             if (creationTimeNs > 0) {
               queryMetrics.reportWaitTime(startTimeNs - creationTimeNs);

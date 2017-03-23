@@ -139,6 +139,7 @@ import org.joda.time.Interval;
  */
 public interface QueryMetrics<QueryType extends Query<?>>
 {
+
   /**
    * Pulls all information from the query object into dimensions of future metrics.
    */

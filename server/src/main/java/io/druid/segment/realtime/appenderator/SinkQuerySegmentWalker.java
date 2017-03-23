@@ -38,7 +38,7 @@ import io.druid.query.CPUTimeMetricQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryMetric;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -281,7 +281,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   )
   {
 
-    // Note: SEGMENT_AND_CACHE_TIME and SEGMENT_TIME are effectively the same here. They don't split apart
+    // Note: reportSegmentAndCacheTime and reportSegmentTime are effectively the same here. They don't split apart
     // cache vs. non-cache due to the fact that Sinks may be partially cached and partially uncached. Making this
     // better would need to involve another accumulator like the cpuTimeAccumulator that we could share with the
     // sinkRunner.
@@ -294,10 +294,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                 emitter,
                 queryToolChest,
                 sinkRunner,
-                QueryMetric.SEGMENT_TIME,
+                QueryMetrics::reportSegmentTime,
                 queryMetrics -> queryMetrics.segment(sinkSegmentIdentifier)
             ),
-            QueryMetric.SEGMENT_AND_CACHE_TIME,
+            QueryMetrics::reportSegmentAndCacheTime,
             queryMetrics -> queryMetrics.segment(sinkSegmentIdentifier)
         ).withWaitMeasuredFromNow(),
         queryToolChest,

@@ -42,7 +42,7 @@ import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryMetric;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -432,14 +432,14 @@ public class ServerManager implements QuerySegmentWalker
                             emitter,
                             toolChest,
                             new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
-                            QueryMetric.SEGMENT_TIME,
+                            QueryMetrics::reportSegmentTime,
                             queryMetrics -> queryMetrics.segment(segmentId)
                         ),
                         cachingExec,
                         cacheConfig
                     )
                 ),
-                QueryMetric.SEGMENT_AND_CACHE_TIME,
+                QueryMetrics::reportSegmentAndCacheTime,
                 queryMetrics -> queryMetrics.segment(segmentId)
             ).withWaitMeasuredFromNow(),
             segmentSpec

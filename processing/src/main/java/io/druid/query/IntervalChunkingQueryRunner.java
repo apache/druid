@@ -107,7 +107,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                                 emitter,
                                 toolChest,
                                 baseRunner,
-                                QueryMetric.INTERVAL_CHUNK_TIME,
+                                QueryMetrics::reportIntervalChunkTime,
                                 queryMetrics -> queryMetrics.chunkInterval(singleInterval)
                             ).withWaitMeasuredFromNow()
                         ),
