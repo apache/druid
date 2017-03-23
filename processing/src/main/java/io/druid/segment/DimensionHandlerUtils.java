@@ -33,6 +33,8 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -231,12 +233,7 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
-      try {
-        return GuavaUtils.tryParseLong((String) valObj);
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse value[%s] as long", valObj);
-      }
+      return DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -253,14 +250,45 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
-      try {
-        return Floats.tryParse((String) valObj);
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse value[%s] as float", valObj);
-      }
+      return Floats.tryParse((String) valObj);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
+  }
+
+  /**
+   * Convert a string representing a decimal value to a long.
+   *
+   * If the decimal value is not an exact integral value (e.g. 42.0), or if the decimal value
+   * is too large to be contained within a long, this function returns null.
+   *
+   * @param decimalStr string representing a decimal value
+   *
+   * @return long equivalent of decimalStr, returns null for non-integral decimals and integral decimal values outside
+   * of the values representable by longs
+   */
+  @Nullable
+  public static Long getExactLongFromDecimalString(String decimalStr)
+  {
+    final Long val = GuavaUtils.tryParseLong(decimalStr);
+    if (val != null) {
+      return val;
+    }
+
+    BigDecimal convertedBD;
+    try {
+      convertedBD = new BigDecimal(decimalStr);
+    }
+    catch (NumberFormatException nfe) {
+      return null;
+    }
+
+    try {
+      return convertedBD.longValueExact();
+    }
+    catch (ArithmeticException ae) {
+      // indicates there was a non-integral part, or the BigDecimal was too big for a long
+      return null;
     }
   }
 }
