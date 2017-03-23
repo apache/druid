@@ -27,20 +27,19 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ObjectColumnSelector;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
   private final ObjectColumnSelector selector;
   private final int size;
   private final int maxIntermediateSize;
-
-  private NativeMemory nm;
-
-  private final Map<Integer, Union> unions = new HashMap<>(); //position in BB -> Union Object
+  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, NativeMemory> nmCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(ObjectColumnSelector selector, int size, int maxIntermediateSize)
   {
@@ -52,12 +51,7 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    if (nm == null) {
-      nm = new NativeMemory(buf);
-    }
-
-    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
-    unions.put(position, (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION));
+    createNewUnion(buf, position, false);
   }
 
   @Override
@@ -86,12 +80,27 @@ public class SketchBufferAggregator implements BufferAggregator
   //Note that this is not threadsafe and I don't think it needs to be
   private Union getUnion(ByteBuffer buf, int position)
   {
-    Union union = unions.get(position);
-    if (union == null) {
-      Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
-      union = (Union) SetOperation.wrap(mem);
-      unions.put(position, union);
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    Union union = unionMap != null ? unionMap.get(position) : null;
+    if (union != null) {
+      return union;
     }
+    return createNewUnion(buf, position, true);
+  }
+
+  private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
+  {
+    NativeMemory nm = getNativeMemory(buf);
+    Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
+    Union union = isWrapped
+                  ? (Union) SetOperation.wrap(mem)
+                  : (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION);
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    if (unionMap == null) {
+      unionMap = new Int2ObjectOpenHashMap<>();
+      unions.put(buf, unionMap);
+    }
+    unionMap.put(position, union);
     return union;
   }
 
@@ -111,6 +120,30 @@ public class SketchBufferAggregator implements BufferAggregator
   public void close()
   {
     unions.clear();
+  }
+
+  @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    createNewUnion(newBuffer, newPosition, true);
+    Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
+    if (unionMap != null) {
+      unionMap.remove(oldPosition);
+      if (unionMap.isEmpty()) {
+        unions.remove(oldBuffer);
+        nmCache.remove(oldBuffer);
+      }
+    }
+  }
+
+  private NativeMemory getNativeMemory(ByteBuffer buffer)
+  {
+    NativeMemory nm = nmCache.get(buffer);
+    if (nm == null) {
+      nm = new NativeMemory(buffer);
+      nmCache.put(buffer, nm);
+    }
+    return nm;
   }
 
 }
