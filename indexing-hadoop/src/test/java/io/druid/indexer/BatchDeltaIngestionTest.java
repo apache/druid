@@ -322,8 +322,7 @@ public class BatchDeltaIngestionTest
         ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
-        null,
-        Granularities.NONE
+        null
     );
 
     List<InputRow> rows = Lists.newArrayList();
