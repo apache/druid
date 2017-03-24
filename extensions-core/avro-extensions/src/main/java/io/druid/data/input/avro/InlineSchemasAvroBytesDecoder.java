@@ -124,7 +124,9 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
     }
     catch (EOFException eof) {
       // waiting for avro v1.9.0 (#AVRO-813)
-      throw new ParseException("Avro's unnecessary EOFException", eof);
+      throw new ParseException(
+          eof, "Avro's unnecessary EOFException, detail: [%s]", "https://issues.apache.org/jira/browse/AVRO-813"
+      );
     }
     catch (Exception e) {
       throw new ParseException(e, "Fail to decode avro message with schemaId [%s].", schemaId);
