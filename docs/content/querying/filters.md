@@ -18,6 +18,18 @@ This is the equivalent of `WHERE <dimension_string> = '<dimension_value_string>'
 
 The selector filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
+### Column Comparison filter
+
+The column comparison filter is similar to the selector filter, but instead compares dimensions to each other. For example:
+
+``` json
+"filter": { "type": "columnComparison", "dimensions": [<dimension_a>, <dimension_b>] }
+```
+
+This is the equivalent of `WHERE <dimension_a> = <dimension_b>`.
+
+`dimensions` is list of [DimensionSpecs](./dimensionspecs.html), making it possible to apply an extraction function if needed.
+
 ### Regular expression filter
 
 The regular expression filter is similar to the selector filter, but using regular expressions. It matches the specified dimension with the given pattern. The pattern can be any standard [Java regular expression](http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html).

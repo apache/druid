@@ -41,4 +41,12 @@ public interface ValueMatcherColumnSelectorStrategy<ValueSelectorType extends Co
    * @return A ValueMatcher that applies the predicate for this DimensionQueryHelper's value type from the predicateFactory
    */
   ValueMatcher makeValueMatcher(ValueSelectorType selector, DruidPredicateFactory predicateFactory);
+
+  /**
+   * Create a ValueGetter.
+   *
+   * @param selector Column selector
+   * @return A ValueGetter that returns the value(s) of the selected column
+   */
+  ValueGetter makeValueGetter(ValueSelectorType selector);
 }
