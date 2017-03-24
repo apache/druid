@@ -50,6 +50,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private static final Boolean defaultBuildV9Directly = Boolean.TRUE;
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
   private static final long defaultHandoffConditionTimeout = 0;
+  private static final long defaultAlertTimeout = 0;
 
   private static File createNewBasePersistDirectory()
   {
@@ -73,7 +74,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         0,
         0,
         defaultReportParseExceptions,
-        defaultHandoffConditionTimeout
+        defaultHandoffConditionTimeout,
+        defaultAlertTimeout
     );
   }
 
@@ -91,6 +93,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final int mergeThreadPriority;
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
+  private final long alertTimeout;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -107,7 +110,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("persistThreadPriority") int persistThreadPriority,
       @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
-      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout
+      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
+      @JsonProperty("alertTimeout") Long alertTimeout
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -134,6 +138,9 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
                                    ? defaultHandoffConditionTimeout
                                    : handoffConditionTimeout;
     Preconditions.checkArgument(this.handoffConditionTimeout >= 0, "handoffConditionTimeout must be >= 0");
+
+    this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
+    Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
   }
 
   @JsonProperty
@@ -220,6 +227,12 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return handoffConditionTimeout;
   }
 
+  @JsonProperty
+  public long getAlertTimeout()
+  {
+    return alertTimeout;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -236,7 +249,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        alertTimeout
     );
   }
 
@@ -256,7 +270,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        alertTimeout
     );
   }
 }

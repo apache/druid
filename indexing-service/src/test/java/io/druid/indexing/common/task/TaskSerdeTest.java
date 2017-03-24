@@ -503,6 +503,7 @@ public class TaskSerdeTest
                 0,
                 0,
                 true,
+                null,
                 null
             )
         ),
