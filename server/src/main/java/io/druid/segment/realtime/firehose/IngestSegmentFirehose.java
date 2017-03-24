@@ -26,7 +26,7 @@ import com.google.common.collect.Maps;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
@@ -59,8 +59,7 @@ public class IngestSegmentFirehose implements Firehose
       final List<WindowedStorageAdapter> adapters,
       final List<String> dims,
       final List<String> metrics,
-      final DimFilter dimFilter,
-      final Granularity granularity
+      final DimFilter dimFilter
   )
   {
     Sequence<InputRow> rows = Sequences.concat(
@@ -77,7 +76,7 @@ public class IngestSegmentFirehose implements Firehose
                             Filters.toFilter(dimFilter),
                             adapter.getInterval(),
                             VirtualColumns.EMPTY,
-                            granularity,
+                            Granularities.ALL,
                             false
                         ), new Function<Cursor, Sequence<InputRow>>()
                         {

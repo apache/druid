@@ -38,7 +38,6 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.task.NoopTask;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
@@ -282,12 +281,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, Granularities.NONE);
+      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter);
     }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-    catch (SegmentLoadingException e) {
+    catch (IOException | SegmentLoadingException e) {
       throw Throwables.propagate(e);
     }
 

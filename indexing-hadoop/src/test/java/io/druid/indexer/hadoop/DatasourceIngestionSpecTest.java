@@ -22,7 +22,6 @@ package io.druid.indexer.hadoop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
@@ -49,7 +48,6 @@ public class DatasourceIngestionSpecTest
         null,
         null,
         new SelectorDimFilter("dim", "value", null),
-        Granularities.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
         false
@@ -82,7 +80,6 @@ public class DatasourceIngestionSpecTest
         "test",
         null,
         intervals,
-        null,
         null,
         null,
         null,
@@ -133,7 +130,6 @@ public class DatasourceIngestionSpecTest
             )
         ),
         new SelectorDimFilter("dim", "value", null),
-        Granularities.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
         true
@@ -156,7 +152,7 @@ public class DatasourceIngestionSpecTest
     DatasourceIngestionSpec actual = MAPPER.readValue(jsonStr, DatasourceIngestionSpec.class);
 
     Assert.assertEquals(
-        new DatasourceIngestionSpec("test", Interval.parse("2014/2015"), null, null, null, null, null, null, false),
+        new DatasourceIngestionSpec("test", Interval.parse("2014/2015"), null, null, null, null, null, false),
         actual
     );
   }
