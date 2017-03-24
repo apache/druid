@@ -134,13 +134,8 @@ class LookupListeningResource extends ListenerResource
             }
 
             try {
-              for (Map.Entry<String, LookupExtractorFactoryContainer> e : state.getToLoad().entrySet()) {
-                manager.add(e.getKey(), e.getValue());
-              }
-
-              for (String lookupToDrop : state.getToDrop()) {
-                manager.remove(lookupToDrop);
-              }
+              state.getToLoad().forEach(manager::add);
+              state.getToDrop().forEach(manager::remove);
 
               return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
             }

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -71,8 +70,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -85,38 +84,22 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class LookupCoordinatorManager
 {
-  //key used in druid-0.9.x with config manager
+  //key used in druid-0.10.0 with config manager
   public static final String OLD_LOOKUP_CONFIG_KEY = "lookups";
 
   public static final String LOOKUP_CONFIG_KEY = "lookupsConfig";
   public static final String LOOKUP_LISTEN_ANNOUNCE_KEY = "lookups";
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
-  private final static Function<HostAndPort, URL> HOST_TO_URL = new Function<HostAndPort, URL>()
-  {
-    @Nullable
-    @Override
-    public URL apply(HostAndPort input)
-    {
-      if (input == null) {
-        LOG.warn("null entry in lookups");
-        return null;
-      }
-      try {
-        return getLookupsURL(input);
-      }
-      catch (MalformedURLException e) {
-        LOG.warn(e, "Skipping node. Malformed URL from `%s`", input);
-        return null;
-      }
-    }
-  };
-
   private final ListenerDiscoverer listenerDiscoverer;
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final JacksonConfigManager configManager;
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig;
+
+  // Known lookup state across various cluster nodes is managed in the reference here. On each lookup management loop
+  // state is rediscovered and updated in the ref here. If some lookup nodes have disappeared since last lookup
+  // management loop, then they get discarded automatically.
   private final AtomicReference<Map<HostAndPort, LookupsStateWithMap>> knownOldState = new AtomicReference<>();
 
   // Updated by config watching service
@@ -167,13 +150,13 @@ public class LookupCoordinatorManager
     }
 
     //ensure all the lookups specs have version specified. ideally this should be done in the LookupExtractorFactoryMapContainer
-    //constructor but that allows null to enable backward compatibility with 0.9.x lookup specs
+    //constructor but that allows null to enable backward compatibility with 0.10.0 lookup specs
     for (final String tier : updateSpec.keySet()) {
       Map<String, LookupExtractorFactoryMapContainer> lookups = updateSpec.get(tier);
       for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : lookups.entrySet()) {
         Preconditions.checkNotNull(
             e.getValue().getVersion(),
-            String.format("lookup [%s]:[%s] does not have version.", tier, e.getKey())
+            "lookup [%s]:[%s] does not have version.", tier, e.getKey()
         );
       }
     }
@@ -317,61 +300,17 @@ public class LookupCoordinatorManager
             )
         );
 
-        //Note: this call is idempotent, so multiple start() would not cause any problems.
-        lookupMapConfigRef = configManager.watch(
-            LOOKUP_CONFIG_KEY,
-            new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
-            {
-            },
-            null
-        );
-
-        // backward compatibility with 0.9.x
-        if (lookupMapConfigRef.get() == null) {
-          Map<String, Map<String, Map<String, Object>>> oldLookups = configManager.watch(
-              OLD_LOOKUP_CONFIG_KEY,
-              new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
-              {
-              },
-              null
-          ).get();
-
-          if (oldLookups != null) {
-            Map<String, Map<String, LookupExtractorFactoryMapContainer>> converted = new HashMap<>();
-            for (String tier : oldLookups.keySet()) {
-              Map<String, Map<String, Object>> oldTierLookups = oldLookups.get(tier);
-              if (oldLookups != null && !oldLookups.isEmpty()) {
-                Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
-                for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
-                  convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
-                }
-                converted.put(tier, convertedTierLookups);
-              }
-            }
-            configManager.set(
-                LOOKUP_CONFIG_KEY,
-                converted,
-                new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
-            );
-          }
-        }
+        initializeLookupsConfigWatcher();
 
         this.backgroundManagerExitedLatch = new CountDownLatch(1);
         this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                lookupMgmtLoop();
-              }
-            },
-            2000,
+            this::lookupManagementLoop,
+            2000, //initial delay to start management after a little while
             lookupCoordinatorManagerConfig.getPeriod(),
             TimeUnit.MILLISECONDS
         );
         Futures.addCallback(
-            backgroundManagerFuture, new FutureCallback()
+            backgroundManagerFuture, new FutureCallback<Object>()
             {
               @Override
               public void onSuccess(@Nullable Object result)
@@ -399,7 +338,7 @@ public class LookupCoordinatorManager
         LOG.makeAlert(ex, "Got Exception while start()").emit();
       }
       finally {
-        //so that subsequent stop() would happen.
+        //so that subsequent stop() would happen, even if start() failed with exception
         lifecycleLock.started();
         lifecycleLock.exitStart();
       }
@@ -430,14 +369,56 @@ public class LookupCoordinatorManager
         LOG.makeAlert(ex, "Got Exception while stop()").emit();
       }
       finally {
-        //so that next start() would happen.
+        //so that subsequent start() would happen, even if stop() failed with exception
         lifecycleLock.exitStop();
         lifecycleLock.reset();
       }
     }
   }
 
-  private void lookupMgmtLoop()
+  private void initializeLookupsConfigWatcher()
+  {
+    //Note: this call is idempotent, so multiple start() would not cause any problems.
+    lookupMapConfigRef = configManager.watch(
+        LOOKUP_CONFIG_KEY,
+        new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
+        {
+        },
+        null
+    );
+
+    // backward compatibility with 0.10.0
+    if (lookupMapConfigRef.get() == null) {
+      Map<String, Map<String, Map<String, Object>>> oldLookups = configManager.watch(
+          OLD_LOOKUP_CONFIG_KEY,
+          new TypeReference<Map<String, Map<String, Map<String, Object>>>>()
+          {
+          },
+          null
+      ).get();
+
+      if (oldLookups != null) {
+        Map<String, Map<String, LookupExtractorFactoryMapContainer>> converted = new HashMap<>();
+        for (Map.Entry<String, Map<String, Map<String, Object>>> tierEntry : oldLookups.entrySet()) {
+          Map<String, Map<String, Object>> oldTierLookups = tierEntry.getValue();
+          if (oldTierLookups != null && !oldTierLookups.isEmpty()) {
+            Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
+            for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
+              convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
+            }
+            converted.put(tierEntry.getKey(), convertedTierLookups);
+          }
+        }
+        configManager.set(
+            LOOKUP_CONFIG_KEY,
+            converted,
+            new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
+        );
+      }
+    }
+  }
+
+  private void lookupManagementLoop()
   {
     // Sanity check for if we are shutting down
     if (Thread.currentThread().isInterrupted() || !lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
@@ -449,103 +430,33 @@ public class LookupCoordinatorManager
 
     if (allLookupTiers == null) {
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not updating lookups because no data exists");
-      }
+      LOG.debug("Not updating lookups because no data exists");
       return;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Starting lookup sync for on all nodes.");
-    }
+    LOG.debug("Starting lookup sync for on all nodes.");
 
-    final Map<HostAndPort, LookupsStateWithMap> currState = new HashMap<>();
-    final Random rand = new Random();
+    final Map<HostAndPort, LookupsStateWithMap> currState = new ConcurrentHashMap<>();
 
     try {
       List<ListenableFuture<?>> futures = new ArrayList<>();
-      for (String tier : allLookupTiers.keySet()) {
+      for (Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : allLookupTiers.entrySet()) {
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Starting lookup mgmt for tier [%s].", tier);
-        }
+        LOG.debug("Starting lookup mgmt for tier [%s].", tierEntry.getKey());
 
-        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = allLookupTiers.get(tier);
-        for (final HostAndPort node : listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tier))) {
+        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = tierEntry.getValue();
+        for (final HostAndPort node : listenerDiscoverer.getNodes(LookupModule.getTierListenerPath(tierEntry.getKey()))) {
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Starting lookup mgmt for tier [%s] and host [%s:%s].", tier, node.getHostText(), node.getPort());
-          }
+          LOG.debug(
+              "Starting lookup mgmt for tier [%s] and host [%s:%s].",
+              tierEntry.getKey(),
+              node.getHostText(),
+              node.getPort()
+          );
 
           futures.add(
               executorService.submit(
-                  new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      try {
-
-                        if (LOG.isDebugEnabled()) {
-                          LOG.debug("Starting lookup sync for node [%s].", node);
-                        }
-
-                        LookupsStateWithMap lookupsState = knownOldState.get() != null ? knownOldState.get().get(node) : null;
-                        if (lookupsState == null
-                            || !lookupsState.getToLoad().isEmpty()
-                            || !lookupsState.getToDrop().isEmpty()
-                            || rand.nextBoolean()) {
-                          lookupsState = getLookupStateForNode(node);
-
-                          if (LOG.isDebugEnabled()) {
-                            LOG.debug("Received lookups state from node [%s].", node);
-                          }
-                        }
-                        currState.put(node, lookupsState);
-
-                        Map<String, LookupExtractorFactoryMapContainer> toLoad = new HashMap<>();
-                        for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : tierLookups.entrySet()) {
-                          String name = e.getKey();
-                          LookupExtractorFactoryMapContainer lookupToBe = e.getValue();
-
-                          LookupExtractorFactoryMapContainer current = lookupsState.getToLoad().get(name);
-                          if (current == null) {
-                            current = lookupsState.getCurrent().get(name);
-                          }
-
-                          if (current == null || lookupToBe.replaces(current)) {
-                            toLoad.put(name, lookupToBe);
-                          }
-                        }
-
-                        Set<String> toDrop = new HashSet<>();
-                        toDrop.addAll(lookupsState.getCurrent().keySet());
-                        toDrop.addAll(lookupsState.getToLoad().keySet());
-                        toDrop = Sets.difference(toDrop, lookupsState.getToDrop());
-                        toDrop = Sets.difference(toDrop, tierLookups.keySet());
-
-                        if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
-                          currState.put(node, updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop)));
-
-                          if (LOG.isDebugEnabled()) {
-                            LOG.debug(
-                                "Sent lookup toAdd[%d] and toDrop[%d] updates to node [%s].",
-                                toLoad.size(),
-                                toDrop.size(),
-                                node
-                            );
-                          }
-                        }
-
-                        if (LOG.isDebugEnabled()) {
-                          LOG.debug("Finished lookup sync for node [%s].", node);
-                        }
-                      }
-                      catch (Exception ex) {
-                        LOG.makeAlert(ex, "Failed to manage lookups on node [%s].", node).emit();
-                      }
-                    }
-                  }
+                  () -> this.doLookupManagementOnNode(node, tierLookups, currState)
               )
           );
         }
@@ -569,8 +480,60 @@ public class LookupCoordinatorManager
       LOG.makeAlert(ex, "Failed to finish lookup management loop.").emit();
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished lookup sync for on all nodes.");
+    LOG.debug("Finished lookup sync for on all nodes.");
+  }
+
+  private void doLookupManagementOnNode(
+      HostAndPort node,
+      Map<String, LookupExtractorFactoryMapContainer> nodeTierLookups,
+      Map<HostAndPort, LookupsStateWithMap> stateToUpdate
+  )
+  {
+    try {
+
+      LOG.debug("Starting lookup sync for node [%s].", node);
+
+      LookupsStateWithMap lookupsState = getLookupStateForNode(node);
+      LOG.debug("Received lookups state from node [%s].", node);
+
+      stateToUpdate.put(node, lookupsState);
+
+      Map<String, LookupExtractorFactoryMapContainer> toLoad = new HashMap<>();
+      for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : nodeTierLookups.entrySet()) {
+        String name = e.getKey();
+        LookupExtractorFactoryMapContainer lookupToBe = e.getValue();
+
+        LookupExtractorFactoryMapContainer current = lookupsState.getToLoad().get(name);
+        if (current == null) {
+          current = lookupsState.getCurrent().get(name);
+        }
+
+        if (current == null || lookupToBe.replaces(current)) {
+          toLoad.put(name, lookupToBe);
+        }
+      }
+
+      Set<String> toDrop = new HashSet<>();
+      toDrop.addAll(lookupsState.getCurrent().keySet());
+      toDrop.addAll(lookupsState.getToLoad().keySet());
+      toDrop = Sets.difference(toDrop, lookupsState.getToDrop());
+      toDrop = Sets.difference(toDrop, nodeTierLookups.keySet());
+
+      if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
+        stateToUpdate.put(node, updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop)));
+
+        LOG.debug(
+            "Sent lookup toAdd[%d] and toDrop[%d] updates to node [%s].",
+            toLoad.size(),
+            toDrop.size(),
+            node
+        );
+      }
+
+      LOG.debug("Finished lookup sync for node [%s].", node);
+    }
+    catch (Exception ex) {
+      LOG.makeAlert(ex, "Failed to manage lookups on node [%s].", node).emit();
     }
   }
 
@@ -586,9 +549,7 @@ public class LookupCoordinatorManager
 
     final URL url = getLookupsUpdateURL(node);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending lookups load/drop request to [%s]. Request [%s]", url, lookupsUpdate);
-    }
+    LOG.debug("Sending lookups load/drop request to [%s]. Request [%s]", url, lookupsUpdate);
 
     try (final InputStream result = httpClient.go(
         new Request(HttpMethod.POST, url)
@@ -601,12 +562,10 @@ public class LookupCoordinatorManager
       if (httpStatusIsSuccess(returnCode.get())) {
         try {
           final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
-                response
-            );
-          }
+          LOG.debug(
+              "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+              response
+          );
           return response;
         } catch (IOException ex) {
           throw new IOException(
@@ -645,9 +604,7 @@ public class LookupCoordinatorManager
     final AtomicInteger returnCode = new AtomicInteger(0);
     final AtomicReference<String> reasonString = new AtomicReference<>(null);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Getting lookups from [%s]", url);
-    }
+    LOG.debug("Getting lookups from [%s]", url);
 
     try (final InputStream result = httpClient.go(
         new Request(HttpMethod.GET, url)
@@ -658,12 +615,10 @@ public class LookupCoordinatorManager
       if (returnCode.get() == 200) {
         try {
           final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
-                response
-            );
-          }
+          LOG.debug(
+              "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+              response
+          );
           return response;
         } catch(IOException ex) {
           throw new IOException(

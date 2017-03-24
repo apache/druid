@@ -60,6 +60,10 @@ public class LookupReferencesManager
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
+  // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
+  // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that
+  // into the ref here.
+  // this allows getAllLookupsState() to provide a consistent view without using locks.
   @VisibleForTesting
   final AtomicReference<LookupUpdateState> stateRef = new AtomicReference<>();
 
@@ -123,7 +127,7 @@ public class LookupReferencesManager
                   while (!Thread.interrupted()) {
                     try {
                       handlePendingNotices();
-                      LockSupport.park();
+                      LockSupport.parkNanos(LookupReferencesManager.this, TimeUnit.MINUTES.toNanos(1));
                     }
                     catch (Throwable t) {
                       LOG.makeAlert(t, "Error occured while lookup notice handling.").emit();
@@ -160,9 +164,7 @@ public class LookupReferencesManager
     }
 
     LookupUpdateState swappedState = atomicallyUpdateStateRef(
-        oldState -> {
-          return new LookupUpdateState(oldState.lookupMap, ImmutableList.of(), oldState.pendingNotices);
-        }
+        oldState -> new LookupUpdateState(oldState.lookupMap, ImmutableList.of(), oldState.pendingNotices)
     );
 
     Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>(swappedState.lookupMap);
@@ -180,9 +182,7 @@ public class LookupReferencesManager
     ImmutableMap<String, LookupExtractorFactoryContainer> immutableLookupMap = ImmutableMap.copyOf(lookupMap);
 
     atomicallyUpdateStateRef(
-        oldState -> {
-          return new LookupUpdateState(immutableLookupMap, oldState.pendingNotices, ImmutableList.of());
-        }
+        oldState -> new LookupUpdateState(immutableLookupMap, oldState.pendingNotices, ImmutableList.of())
     );
   }
 
@@ -237,6 +237,10 @@ public class LookupReferencesManager
   {
     atomicallyUpdateStateRef(
         oldState -> {
+          if (oldState.pendingNotices.size() > 10000) { //don't let pendingNotices grow indefinitely
+            throw new ISE("There are too many [%d] pendingNotices.", oldState.pendingNotices.size());
+          }
+
           ImmutableList.Builder<Notice> builder = ImmutableList.builder();
           builder.addAll(oldState.pendingNotices);
           builder.add(notice);

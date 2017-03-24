@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.java.util.common.logger.Logger;
 
@@ -185,9 +184,8 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
    *
    * @return The object to be returned in the entity. A NULL return will cause a 404 response. A non-null return will cause a 202 response. An Exception thrown will cause a 500 response.
    */
-  protected abstract
   @Nullable
-  Object delete(String id);
+  protected abstract Object delete(String id);
 
   /**
    * Get the object for a particular id
@@ -196,13 +194,11 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
    *
    * @return The object to be returned in the entity. A NULL return will cause a 404 response. A non-null return will cause a 200 response. An Exception thrown will cause a 500 response.
    */
-  protected abstract
   @Nullable
-  Object get(String id);
+  protected abstract Object get(String id);
 
-  protected abstract
   @Nullable
-  Object getAll();
+  protected abstract Object getAll();
 
   /**
    * Process a POST request of the input items
@@ -213,7 +209,6 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
    *
    * @throws Exception
    */
-  public abstract
   @Nullable
-  Object post(Map<String, ObjType> inputObject) throws Exception;
+  public abstract Object post(Map<String, ObjType> inputObject) throws Exception;
 }
