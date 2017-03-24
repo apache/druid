@@ -37,7 +37,6 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.java.util.common.RE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -526,35 +525,23 @@ public class RealtimeIndexTask extends AbstractTask
 
   private void setupTimeoutAlert()
   {
-    Object obj = RealtimeIndexTask.this.getContextValue("alertTimeout");
-    if (obj == null) {
-      return;
-    }
-
-    long timeout = parseLong(obj);
-
-    Timer timer = new Timer("RealtimeIndexTask-Timer", true);
-    timer.schedule(
-        new TimerTask()
-        {
-          @Override
-          public void run()
+    if (spec.getTuningConfig().getAlertTimeout() > 0) {
+      Timer timer = new Timer("RealtimeIndexTask-Timer", true);
+      timer.schedule(
+          new TimerTask()
           {
-            log.makeAlert("RealtimeIndexTask hasn't finished in configured time [%d] ms.", timeout);
-          }
-        },
-        timeout
-    );
-  }
-
-  private long parseLong(Object obj)
-  {
-    if (obj instanceof Number) {
-      return ((Number) obj).longValue();
-    } else if (obj instanceof String) {
-      return Long.parseLong((String) obj);
-    } else {
-      throw new RE("given object[%s] could not be parsed into long.", obj.getClass().getName());
+            @Override
+            public void run()
+            {
+              log.makeAlert(
+                  "RealtimeIndexTask for dataSource [%s] hasn't finished in configured time [%d] ms.",
+                  spec.getDataSchema().getDataSource(),
+                  spec.getTuningConfig().getAlertTimeout()
+              ).emit();
+            }
+          },
+          spec.getTuningConfig().getAlertTimeout()
+      );
     }
   }
 }
