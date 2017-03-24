@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.common.utils.JodaUtils;
-import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.filter.DimFilter;
 import io.druid.timeline.DataSegment;
@@ -38,7 +37,6 @@ public class DatasourceIngestionSpec
   private final List<Interval> intervals;
   private final List<DataSegment> segments;
   private final DimFilter filter;
-  private final Granularity granularity;
   private final List<String> dimensions;
   private final List<String> metrics;
   private final boolean ignoreWhenNoSegments;
@@ -50,7 +48,6 @@ public class DatasourceIngestionSpec
       @JsonProperty("intervals") List<Interval> intervals,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("filter") DimFilter filter,
-      @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
       @JsonProperty("ignoreWhenNoSegments") boolean ignoreWhenNoSegments
@@ -77,8 +74,6 @@ public class DatasourceIngestionSpec
     this.segments = segments;
 
     this.filter = filter;
-    this.granularity = granularity == null ? Granularities.NONE : granularity;
-
     this.dimensions = dimensions;
     this.metrics = metrics;
 
@@ -110,12 +105,6 @@ public class DatasourceIngestionSpec
   }
 
   @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
-  }
-
-  @JsonProperty
   public List<String> getDimensions()
   {
     return dimensions;
@@ -141,7 +130,6 @@ public class DatasourceIngestionSpec
         intervals,
         segments,
         filter,
-        granularity,
         dimensions,
         metrics,
         ignoreWhenNoSegments
@@ -156,7 +144,6 @@ public class DatasourceIngestionSpec
         intervals,
         segments,
         filter,
-        granularity,
         dimensions,
         metrics,
         ignoreWhenNoSegments
@@ -171,7 +158,6 @@ public class DatasourceIngestionSpec
         intervals,
         segments,
         filter,
-        granularity,
         dimensions,
         metrics,
         ignoreWhenNoSegments
@@ -186,7 +172,6 @@ public class DatasourceIngestionSpec
         intervals,
         segments,
         filter,
-        granularity,
         dimensions,
         metrics,
         ignoreWhenNoSegments
@@ -220,9 +205,6 @@ public class DatasourceIngestionSpec
     if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
       return false;
     }
-    if (!granularity.equals(that.granularity)) {
-      return false;
-    }
     if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
       return false;
     }
@@ -237,7 +219,6 @@ public class DatasourceIngestionSpec
     result = 31 * result + intervals.hashCode();
     result = 31 * result + (segments != null ? segments.hashCode() : 0);
     result = 31 * result + (filter != null ? filter.hashCode() : 0);
-    result = 31 * result + granularity.hashCode();
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
     result = 31 * result + (ignoreWhenNoSegments ? 1 : 0);
@@ -252,7 +233,6 @@ public class DatasourceIngestionSpec
            ", intervals=" + intervals +
            ", segments=" + segments +
            ", filter=" + filter +
-           ", granularity=" + granularity +
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +
            ", ignoreWhenNoSegments=" + ignoreWhenNoSegments +
