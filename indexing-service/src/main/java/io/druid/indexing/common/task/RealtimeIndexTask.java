@@ -70,6 +70,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
@@ -188,6 +190,8 @@ public class RealtimeIndexTask extends AbstractTask
     if (this.plumber != null) {
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
     }
+
+    setupTimeoutAlert();
 
     boolean normalExit = true;
 
@@ -516,6 +520,28 @@ public class RealtimeIndexTask extends AbstractTask
     public void publishSegment(DataSegment segment) throws IOException
     {
       taskToolbox.publishSegments(ImmutableList.of(segment));
+    }
+  }
+
+  private void setupTimeoutAlert()
+  {
+    if (spec.getTuningConfig().getAlertTimeout() > 0) {
+      Timer timer = new Timer("RealtimeIndexTask-Timer", true);
+      timer.schedule(
+          new TimerTask()
+          {
+            @Override
+            public void run()
+            {
+              log.makeAlert(
+                  "RealtimeIndexTask for dataSource [%s] hasn't finished in configured time [%d] ms.",
+                  spec.getDataSchema().getDataSource(),
+                  spec.getTuningConfig().getAlertTimeout()
+              ).emit();
+            }
+          },
+          spec.getTuningConfig().getAlertTimeout()
+      );
     }
   }
 }

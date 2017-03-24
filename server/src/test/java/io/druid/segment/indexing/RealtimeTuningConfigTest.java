@@ -67,6 +67,7 @@ public class RealtimeTuningConfigTest
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertEquals(0, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
@@ -92,7 +93,8 @@ public class RealtimeTuningConfigTest
                      + "  \"persistThreadPriority\": 100,\n"
                      + "  \"mergeThreadPriority\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
-                     + "  \"handoffConditionTimeout\": 100\n"
+                     + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"alertTimeout\": 70\n"
                      + "}";
 
     ObjectMapper mapper = TestHelper.getObjectMapper();
@@ -109,6 +111,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals("/tmp/xxx", config.getBasePersistDirectory().toString());
     Assert.assertEquals(false, config.getBuildV9Directly());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
+    Assert.assertEquals(70, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
