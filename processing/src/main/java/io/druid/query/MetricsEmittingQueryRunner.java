@@ -19,76 +19,74 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
 
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.ObjLongConsumer;
 
 /**
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
   private final ServiceEmitter emitter;
-  private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
+  private final QueryToolChest<?, ? super Query<T>> queryToolChest;
   private final QueryRunner<T> queryRunner;
-  private final long creationTime;
-  private final String metricName;
-  private final Map<String, String> userDimensions;
+  private final long creationTimeNs;
+  private final ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric;
+  private final Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions;
 
   private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
-      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
+      QueryToolChest<?, ? super Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
-      long creationTime,
-      String metricName,
-      Map<String, String> userDimensions
+      long creationTimeNs,
+      ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric,
+      Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
   )
   {
     this.emitter = emitter;
-    this.builderFn = builderFn;
+    this.queryToolChest = queryToolChest;
     this.queryRunner = queryRunner;
-    this.creationTime = creationTime;
-    this.metricName = metricName;
-    this.userDimensions = userDimensions;
+    this.creationTimeNs = creationTimeNs;
+    this.reportMetric = reportMetric;
+    this.applyCustomDimensions = applyCustomDimensions;
   }
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
-      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
+      QueryToolChest<?, ? super Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
-      String metricName,
-      Map<String, String> userDimensions
+      ObjLongConsumer<? super QueryMetrics<? super Query<T>>> reportMetric,
+      Consumer<QueryMetrics<? super Query<T>>> applyCustomDimensions
   )
   {
-    this(emitter, builderFn, queryRunner, -1, metricName, userDimensions);
+    this(emitter, queryToolChest, queryRunner, -1, reportMetric, applyCustomDimensions);
   }
 
   public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
   {
-    return new MetricsEmittingQueryRunner<T>(
+    return new MetricsEmittingQueryRunner<>(
         emitter,
-        builderFn,
+        queryToolChest,
         queryRunner,
-        System.currentTimeMillis(),
-        metricName,
-        userDimensions
+        System.nanoTime(),
+        reportMetric,
+        applyCustomDimensions
     );
   }
 
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    final ServiceMetricEvent.Builder builder = builderFn.apply(query);
+    final QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
 
-    for (Map.Entry<String, String> userDimension : userDimensions.entrySet()) {
-      builder.setDimension(userDimension.getKey(), userDimension.getValue());
-    }
+    applyCustomDimensions.accept(queryMetrics);
 
     return Sequences.wrap(
         // Use LazySequence because want to account execution time of queryRunner.run() (it prepares the underlying
@@ -104,28 +102,29 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         }),
         new SequenceWrapper()
         {
-          private long startTime;
+          private long startTimeNs;
 
           @Override
           public void before()
           {
-            startTime = System.currentTimeMillis();
+            startTimeNs = System.nanoTime();
           }
 
           @Override
           public void after(boolean isDone, Throwable thrown)
           {
             if (thrown != null) {
-              builder.setDimension(DruidMetrics.STATUS, "failed");
+              queryMetrics.status("failed");
             } else if (!isDone) {
-              builder.setDimension(DruidMetrics.STATUS, "short");
+              queryMetrics.status("short");
             }
-            long timeTaken = System.currentTimeMillis() - startTime;
-            emitter.emit(builder.build(metricName, timeTaken));
+            long timeTakenNs = System.nanoTime() - startTimeNs;
+            reportMetric.accept(queryMetrics, timeTakenNs);
 
-            if (creationTime > 0) {
-              emitter.emit(builder.build("query/wait/time", startTime - creationTime));
+            if (creationTimeNs > 0) {
+              queryMetrics.reportWaitTime(startTimeNs - creationTimeNs);
             }
+            queryMetrics.emit(emitter);
           }
         }
     );

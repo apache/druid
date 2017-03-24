@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
@@ -43,9 +42,11 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.java.util.common.guava.YieldingSequenceBase;
 import io.druid.query.ConcatQueryRunner;
+import io.druid.query.DefaultQueryMetrics;
 import io.druid.query.Druids;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -573,9 +574,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public ServiceMetricEvent.Builder makeMetricBuilder(QueryType query)
+    public QueryMetrics<Query<?>> makeMetrics(QueryType query)
     {
-      return new ServiceMetricEvent.Builder();
+      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
     }
 
     @Override
