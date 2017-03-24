@@ -20,17 +20,16 @@
 package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -64,11 +63,22 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       };
 
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
-  @Inject
+  @VisibleForTesting
   public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
   {
+    this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public TimeseriesQueryQueryToolChest(
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      TimeseriesQueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -101,17 +111,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(TimeseriesQuery query)
+  public TimeseriesQueryMetrics makeMetrics(TimeseriesQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-                       .setDimension(
-                           "numMetrics",
-                           String.valueOf(query.getAggregatorSpecs().size())
-                       )
-                       .setDimension(
-                           "numComplexMetrics",
-                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                       );
+    TimeseriesQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
+    queryMetrics.query(query);
+    return queryMetrics;
   }
 
   @Override

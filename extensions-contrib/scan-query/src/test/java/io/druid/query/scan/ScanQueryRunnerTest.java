@@ -27,6 +27,7 @@ import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.TableDataSource;
@@ -95,7 +96,9 @@ public class ScanQueryRunnerTest
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
-  private static final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest();
+  private static final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
+      DefaultGenericQueryMetricsFactory.instance()
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException

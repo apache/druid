@@ -20,6 +20,7 @@
 package io.druid.query.search;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
@@ -29,7 +30,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -37,9 +37,11 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -72,17 +74,28 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   };
 
   private final SearchQueryConfig config;
-
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
-  @Inject
+  @VisibleForTesting
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
+    this(config, intervalChunkingQueryRunnerDecorator, DefaultGenericQueryMetricsFactory.instance());
+  }
+
+  @Inject
+  public SearchQueryQueryToolChest(
+      SearchQueryConfig config,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      GenericQueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.config = config;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -113,9 +126,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(SearchQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(SearchQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override

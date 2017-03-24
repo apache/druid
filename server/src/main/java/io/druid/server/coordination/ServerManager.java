@@ -21,13 +21,11 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -44,6 +42,7 @@ import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -255,7 +254,6 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final Function<Query<T>, ServiceMetricEvent.Builder> builderFn = getBuilderFn(toolChest);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     DataSource dataSource = query.getDataSource();
@@ -312,7 +310,6 @@ public class ServerManager implements QuerySegmentWalker
                                     holder.getVersion(),
                                     input.getChunkNumber()
                                 ),
-                                builderFn,
                                 cpuTimeAccumulator
                             );
                           }
@@ -327,7 +324,7 @@ public class ServerManager implements QuerySegmentWalker
             toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
             toolChest
         ),
-        builderFn,
+        toolChest,
         emitter,
         cpuTimeAccumulator,
         true
@@ -362,7 +359,6 @@ public class ServerManager implements QuerySegmentWalker
       return new NoopQueryRunner<T>();
     }
 
-    final Function<Query<T>, ServiceMetricEvent.Builder> builderFn = getBuilderFn(toolChest);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
@@ -390,7 +386,7 @@ public class ServerManager implements QuerySegmentWalker
 
                 final ReferenceCountingSegment adapter = chunk.getObject();
                 return Arrays.asList(
-                    buildAndDecorateQueryRunner(factory, toolChest, adapter, input, builderFn, cpuTimeAccumulator)
+                    buildAndDecorateQueryRunner(factory, toolChest, adapter, input, cpuTimeAccumulator)
                 );
               }
             }
@@ -401,7 +397,7 @@ public class ServerManager implements QuerySegmentWalker
             toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
             toolChest
         ),
-        builderFn,
+        toolChest,
         emitter,
         cpuTimeAccumulator,
         true
@@ -413,65 +409,45 @@ public class ServerManager implements QuerySegmentWalker
       final QueryToolChest<T, Query<T>> toolChest,
       final ReferenceCountingSegment adapter,
       final SegmentDescriptor segmentDescriptor,
-      final Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
       final AtomicLong cpuTimeAccumulator
   )
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
+    String segmentId = adapter.getIdentifier();
     return CPUTimeMetricQueryRunner.safeBuild(
         new SpecificSegmentQueryRunner<T>(
             new MetricsEmittingQueryRunner<T>(
                 emitter,
-                builderFn,
+                toolChest,
                 new BySegmentQueryRunner<T>(
-                    adapter.getIdentifier(),
+                    segmentId,
                     adapter.getDataInterval().getStart(),
                     new CachingQueryRunner<T>(
-                        adapter.getIdentifier(),
+                        segmentId,
                         segmentDescriptor,
                         objectMapper,
                         cache,
                         toolChest,
                         new MetricsEmittingQueryRunner<T>(
                             emitter,
-                            new Function<Query<T>, ServiceMetricEvent.Builder>()
-                            {
-                              @Override
-                              public ServiceMetricEvent.Builder apply(@Nullable final Query<T> input)
-                              {
-                                return toolChest.makeMetricBuilder(input);
-                              }
-                            },
+                            toolChest,
                             new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
-                            "query/segment/time",
-                            ImmutableMap.of("segment", adapter.getIdentifier())
+                            QueryMetrics::reportSegmentTime,
+                            queryMetrics -> queryMetrics.segment(segmentId)
                         ),
                         cachingExec,
                         cacheConfig
                     )
                 ),
-                "query/segmentAndCache/time",
-                ImmutableMap.of("segment", adapter.getIdentifier())
+                QueryMetrics::reportSegmentAndCacheTime,
+                queryMetrics -> queryMetrics.segment(segmentId)
             ).withWaitMeasuredFromNow(),
             segmentSpec
         ),
-        builderFn,
+        toolChest,
         emitter,
         cpuTimeAccumulator,
         false
     );
-  }
-
-  private static <T> Function<Query<T>, ServiceMetricEvent.Builder> getBuilderFn(final QueryToolChest<T, Query<T>> toolChest)
-  {
-    return new Function<Query<T>, ServiceMetricEvent.Builder>()
-    {
-      @Nullable
-      @Override
-      public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
-      {
-        return toolChest.makeMetricBuilder(input);
-      }
-    };
   }
 }

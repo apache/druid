@@ -38,9 +38,11 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -74,6 +76,7 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -99,6 +102,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final RequestLogger requestLogger;
   protected final QueryManager queryManager;
   protected final AuthConfig authConfig;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -113,7 +117,8 @@ public class QueryResource implements QueryCountStatsProvider
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       QueryManager queryManager,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.warehouse = warehouse;
@@ -125,6 +130,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.requestLogger = requestLogger;
     this.queryManager = queryManager;
     this.authConfig = authConfig;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @DELETE
@@ -170,7 +176,7 @@ public class QueryResource implements QueryCountStatsProvider
       @Context final HttpServletRequest req // used to get request content-type, remote address and AuthorizationInfo
   ) throws IOException
   {
-    final long start = System.currentTimeMillis();
+    final long startNs = System.nanoTime();
     Query query = null;
     QueryToolChest toolChest = null;
     String queryId = null;
@@ -261,25 +267,31 @@ public class QueryResource implements QueryCountStatsProvider
                       os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
                       os.close();
                       successfulQueryCount.incrementAndGet();
-                      final long queryTime = System.currentTimeMillis() - start;
-                      emitter.emit(
-                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                      .setDimension("success", "true")
-                                      .build("query/time", queryTime)
+                      final long queryTimeNs = System.nanoTime() - startNs;
+                      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+                          queryMetricsFactory,
+                          theToolChest,
+                          theQuery,
+                          req.getRemoteAddr()
                       );
-                      emitter.emit(
-                          DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                      .build("query/bytes", os.getCount())
-                      );
+                      queryMetrics.success(true);
+                      queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
+
+                      DruidMetrics.makeRequestMetrics(
+                          queryMetricsFactory,
+                          theToolChest,
+                          theQuery,
+                          req.getRemoteAddr()
+                      ).reportQueryBytes(os.getCount()).emit(emitter);
 
                       requestLogger.log(
                           new RequestLogLine(
-                              new DateTime(start),
+                              new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                               req.getRemoteAddr(),
                               theQuery,
                               new QueryStats(
                                   ImmutableMap.<String, Object>of(
-                                      "query/time", queryTime,
+                                      "query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                                       "query/bytes", os.getCount(),
                                       "success", true
                                   )
@@ -328,21 +340,24 @@ public class QueryResource implements QueryCountStatsProvider
       try {
         log.warn(e, "Exception while processing queryId [%s]", queryId);
         interruptedQueryCount.incrementAndGet();
-        final long queryTime = System.currentTimeMillis() - start;
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
-                        .setDimension("success", "false")
-                        .build("query/time", queryTime)
+        final long queryTimeNs = System.nanoTime() - startNs;
+        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            toolChest,
+            query,
+            req.getRemoteAddr()
         );
+        queryMetrics.success(false);
+        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(start),
+                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
                     ImmutableMap.<String, Object>of(
                         "query/time",
-                        queryTime,
+                        TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                         "success",
                         false,
                         "interrupted",
@@ -370,20 +385,23 @@ public class QueryResource implements QueryCountStatsProvider
       failedQueryCount.incrementAndGet();
 
       try {
-        final long queryTime = System.currentTimeMillis() - start;
-        emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
-                        .setDimension("success", "false")
-                        .build("query/time", queryTime)
+        final long queryTimeNs = System.nanoTime() - startNs;
+        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            toolChest,
+            query,
+            req.getRemoteAddr()
         );
+        queryMetrics.success(false);
+        queryMetrics.reportQueryTime(queryTimeNs).emit(emitter);
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(start),
+                new DateTime(TimeUnit.NANOSECONDS.toMillis(startNs)),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(ImmutableMap.<String, Object>of(
                     "query/time",
-                    queryTime,
+                    TimeUnit.NANOSECONDS.toMillis(queryTimeNs),
                     "success",
                     false,
                     "exception",

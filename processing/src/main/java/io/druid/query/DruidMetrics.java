@@ -20,14 +20,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.AggregatorFactory;
-import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -61,50 +54,21 @@ public class DruidMetrics
     return retVal;
   }
 
-  public static <T> ServiceMetricEvent.Builder makePartialQueryTimeMetric(Query<T> query)
-  {
-    return new ServiceMetricEvent.Builder()
-        .setDimension(DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
-        .setDimension(TYPE, query.getType())
-        .setDimension(
-            INTERVAL,
-            Lists.transform(
-                query.getIntervals(),
-                new Function<Interval, String>()
-                {
-                  @Override
-                  public String apply(Interval input)
-                  {
-                    return input.toString();
-                  }
-                }
-            ).toArray(new String[query.getIntervals().size()])
-        )
-        .setDimension("hasFilters", String.valueOf(query.hasFilters()))
-        .setDimension("duration", query.getDuration().toString())
-        .setDimension(ID, Strings.nullToEmpty(query.getId()));
-  }
-
-  public static <T> ServiceMetricEvent.Builder makeQueryTimeMetric(
+  public static <T> QueryMetrics<?> makeRequestMetrics(
+      final GenericQueryMetricsFactory queryMetricsFactory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final ObjectMapper jsonMapper,
       final Query<T> query,
       final String remoteAddr
   ) throws JsonProcessingException
   {
-    final ServiceMetricEvent.Builder baseMetric = toolChest == null
-                                                  ? makePartialQueryTimeMetric(query)
-                                                  : toolChest.makeMetricBuilder(query);
-
-    return baseMetric
-        .setDimension(
-            "context",
-            jsonMapper.writeValueAsString(
-                query.getContext() == null
-                ? ImmutableMap.of()
-                : query.getContext()
-            )
-        )
-        .setDimension("remoteAddress", remoteAddr);
+    QueryMetrics<? super Query<T>> queryMetrics;
+    if (toolChest != null) {
+      queryMetrics = toolChest.makeMetrics(query);
+    } else {
+      queryMetrics = queryMetricsFactory.makeMetrics(query);
+    }
+    queryMetrics.context(query);
+    queryMetrics.remoteAddress(remoteAddr);
+    return queryMetrics;
   }
 }
