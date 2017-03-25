@@ -1008,7 +1008,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         final TopicPartition topicPartition = outOfRangePartition.getKey();
         final long nextOffset = outOfRangePartition.getValue();
         // seek to the beginning to get the least available offset
-        consumer.seekToBeginning(topicPartition);
+        consumer.seekToBeginning(Lists.newArrayList(topicPartition));
         final long leastAvailableOffset = consumer.position(topicPartition);
         // reset the seek
         consumer.seek(topicPartition, nextOffset);
