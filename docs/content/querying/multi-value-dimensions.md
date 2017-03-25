@@ -29,6 +29,7 @@ dimensions. Filters follow these rules on multi-value dimensions:
 
 - Value filters (like "selector", "bound", and "in") match a row if any of the values of a multi-value dimension match
   the filter.
+- The Column Comparison filter will match a row if the dimensions have any overlap.
 - Value filters that match `null` or `""` (empty string) will match empty cells in a multi-value dimension.
 - Logical expression filters behave the same way they do on single-value dimensions: "and" matches a row if all
   underlying filters match that row; "or" matches a row if any underlying filters match that row; "not" matches a row

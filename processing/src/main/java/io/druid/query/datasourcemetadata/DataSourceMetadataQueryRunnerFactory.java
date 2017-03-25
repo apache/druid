@@ -42,12 +42,16 @@ import java.util.concurrent.ExecutorService;
 public class DataSourceMetadataQueryRunnerFactory
     implements QueryRunnerFactory<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest();
+  private final DataSourceQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
   @Inject
-  public DataSourceMetadataQueryRunnerFactory(QueryWatcher queryWatcher)
+  public DataSourceMetadataQueryRunnerFactory(
+      DataSourceQueryQueryToolChest toolChest,
+      QueryWatcher queryWatcher
+  )
   {
+    this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
   }
 

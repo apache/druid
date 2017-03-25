@@ -40,6 +40,7 @@ import io.druid.sql.calcite.expression.CharacterLengthExtractionOperator;
 import io.druid.sql.calcite.expression.ExtractExtractionOperator;
 import io.druid.sql.calcite.expression.FloorExtractionOperator;
 import io.druid.sql.calcite.expression.LookupExtractionOperator;
+import io.druid.sql.calcite.expression.RegexpExtractExtractionOperator;
 import io.druid.sql.calcite.expression.SqlExtractionOperator;
 import io.druid.sql.calcite.expression.SubstringExtractionOperator;
 import io.druid.sql.calcite.planner.Calcites;
@@ -64,7 +65,8 @@ public class SqlModule implements Module
       ExtractExtractionOperator.class,
       FloorExtractionOperator.class,
       LookupExtractionOperator.class,
-      SubstringExtractionOperator.class
+      SubstringExtractionOperator.class,
+      RegexpExtractExtractionOperator.class
   );
 
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";

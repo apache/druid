@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 
@@ -46,16 +45,27 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
 
   /**
-   * Creates a builder that is used to generate a metric for this specific query type.  This exists
-   * to allow for query-specific dimensions on metrics.  That is, the ToolChest is expected to set some
+   * Creates a {@link QueryMetrics} object that is used to generate metrics for this specific query type.  This exists
+   * to allow for query-specific dimensions and metrics.  That is, the ToolChest is expected to set some
    * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
+   * 
+   * <p>QueryToolChests for query types in core (druid-processing) and public extensions (belonging to the Druid source
+   * tree) should use delegate this method to {@link GenericQueryMetricsFactory#makeMetrics(Query)} on an injected
+   * instance of {@link GenericQueryMetricsFactory}, as long as they don't need to emit custom dimensions and/or
+   * metrics.
+   *
+   * <p>If some custom dimensions and/or metrics should be emitted for a query type, a plan described in
+   * "Making subinterfaces of QueryMetrics" section in {@link QueryMetrics}'s class-level Javadocs should be followed.
+   *
+   * <p>One way or another, this method should ensure that {@link QueryMetrics#query(Query)} is called with the given
+   * query passed on the created QueryMetrics object before returning.
    *
    * @param query The query that is being processed
    *
-   * @return A MetricEvent.Builder that can be used to make metrics for the provided query
+   * @return A QueryMetrics that can be used to make metrics for the provided query
    */
-  public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
+  public abstract QueryMetrics<? super QueryType> makeMetrics(QueryType query);
 
   /**
    * Creates a Function that can take in a ResultType and return a new ResultType having applied

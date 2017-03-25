@@ -72,8 +72,7 @@ public class IngestSegmentFirehoseTest
           ImmutableList.of(wsa, wsa),
           ImmutableList.of("host"),
           ImmutableList.of("visited_sum", "unique_hosts"),
-          null,
-          Granularities.NONE
+          null
       );
 
       int count = 0;

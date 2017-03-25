@@ -34,6 +34,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
 
 import java.nio.charset.Charset;
+import java.util.Calendar;
 
 /**
  * Utility functions for Calcite.
@@ -137,6 +138,22 @@ public class Calcites
   {
     final DateTime date = dateTime.withZone(timeZone).dayOfMonth().roundFloorCopy();
     return Days.daysBetween(new DateTime(0L, DateTimeZone.UTC), date.withZoneRetainFields(DateTimeZone.UTC)).getDays();
+  }
+
+  /**
+   * Calcite expects TIMESTAMP and DATE literals to be represented by Calendars that would have the expected
+   * local time fields if printed as UTC.
+   *
+   * @param dateTime joda timestamp
+   * @param timeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
+  {
+    final Calendar calendar = Calendar.getInstance();
+    calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
+    return calendar;
   }
 
   /**

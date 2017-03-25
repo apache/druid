@@ -35,6 +35,7 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.util.ByteBufferInputStream;
 
+import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
@@ -43,7 +44,7 @@ import java.util.Map;
  */
 public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
 {
-  private static final Logger logger = new Logger(InlineSchemaAvroBytesDecoder.class);
+  private static final Logger LOGGER = new Logger(InlineSchemaAvroBytesDecoder.class);
 
   private final Schema schemaObj;
   private final Map<String, Object> schema;
@@ -60,7 +61,7 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     this.schema = schema;
     String schemaStr = mapper.writeValueAsString(schema);
 
-    logger.info("Schema string [%s]", schemaStr);
+    LOGGER.info("Schema string [%s]", schemaStr);
     this.schemaObj = new Schema.Parser().parse(schemaStr);
     this.reader = new GenericDatumReader<>(this.schemaObj);
   }
@@ -85,6 +86,12 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
   {
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
+    }
+    catch (EOFException eof) {
+      // waiting for avro v1.9.0 (#AVRO-813)
+      throw new ParseException(
+          eof, "Avro's unnecessary EOFException, detail: [%s]", "https://issues.apache.org/jira/browse/AVRO-813"
+      );
     }
     catch (Exception e) {
       throw new ParseException(e, "Fail to decode avro message!");
