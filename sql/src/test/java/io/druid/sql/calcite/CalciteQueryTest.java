@@ -2925,6 +2925,19 @@ public class CalciteQueryTest
   }
 
   @Test
+  public void testSelectCurrentTimeAndDateLosAngeles() throws Exception
+  {
+    testQuery(
+        PlannerContext.create(PLANNER_CONFIG_DEFAULT, QUERY_CONTEXT_LOS_ANGELES),
+        "SELECT CURRENT_TIMESTAMP, CURRENT_DATE, CURRENT_DATE + INTERVAL '1' DAY",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{T("2000-01-01T00Z", LOS_ANGELES), D("1999-12-31"), D("2000-01-01")}
+        )
+    );
+  }
+
+  @Test
   public void testFilterOnCurrentTimestampLosAngeles() throws Exception
   {
     testQuery(
@@ -2934,14 +2947,14 @@ public class CalciteQueryTest
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-02T08Z/2002-01-01T08Z")))
+                  .intervals(QSS(new Interval("2000-01-02T00Z/2002-01-01T08Z")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{4L}
+            new Object[]{5L}
         )
     );
   }
@@ -2978,14 +2991,14 @@ public class CalciteQueryTest
         ImmutableList.<Query>of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(new Interval("2000-01-02T08Z/2002-01-01T08Z")))
+                  .intervals(QSS(new Interval("2000-01-02T00Z/2002-01-01T08Z")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{4L}
+            new Object[]{5L}
         )
     );
   }
