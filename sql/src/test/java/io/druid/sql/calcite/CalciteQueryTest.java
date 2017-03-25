@@ -53,6 +53,7 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.BucketExtractionFn;
 import io.druid.query.extraction.CascadeExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
@@ -2788,6 +2789,43 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{4L}
+        )
+    );
+  }
+
+  @Test
+  public void testRegexpExtract() throws Exception
+  {
+    testQuery(
+        "SELECT DISTINCT REGEXP_EXTRACT(dim1, '^.'), REGEXP_EXTRACT(dim1, '^(.)', 1) FROM foo",
+        ImmutableList.<Query>of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            DIMS(
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d0",
+                                    new RegexDimExtractionFn("^.", 0, true, null)
+                                ),
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d1",
+                                    new RegexDimExtractionFn("^(.)", 1, true, null)
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", ""},
+            new Object[]{"1", "1"},
+            new Object[]{"2", "2"},
+            new Object[]{"a", "a"},
+            new Object[]{"d", "d"}
         )
     );
   }
