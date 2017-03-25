@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Ints;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +38,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
   private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
 
   private final String expr;
+  private final int index;
   private final Pattern pattern;
   private final boolean replaceMissingValue;
   private final String replaceMissingValueWith;
@@ -43,6 +46,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
   @JsonCreator
   public RegexDimExtractionFn(
       @JsonProperty("expr") String expr,
+      @JsonProperty("index") Integer index,
       @JsonProperty("replaceMissingValue") Boolean replaceMissingValue,
       @JsonProperty("replaceMissingValueWith") String replaceMissingValueWith
   )
@@ -50,15 +54,26 @@ public class RegexDimExtractionFn extends DimExtractionFn
     Preconditions.checkNotNull(expr, "expr must not be null");
 
     this.expr = expr;
+    this.index = index == null ? 1 : index;
     this.pattern = Pattern.compile(expr);
     this.replaceMissingValue = replaceMissingValue == null ? false : replaceMissingValue;
     this.replaceMissingValueWith = replaceMissingValueWith;
+  }
+
+  public RegexDimExtractionFn(
+      String expr,
+      Boolean replaceMissingValue,
+      String replaceMissingValueWith
+  )
+  {
+    this(expr, null, replaceMissingValue, replaceMissingValueWith);
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] exprBytes = StringUtils.toUtf8(expr);
+    byte[] indexBytes = Ints.toByteArray(index);
     byte[] replaceBytes = replaceMissingValue ? new byte[]{1} : new byte[]{0};
     byte[] replaceStrBytes;
     if (replaceMissingValueWith == null) {
@@ -69,6 +84,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
 
     int totalLen = 1
                    + exprBytes.length
+                   + indexBytes.length
                    + replaceBytes.length
                    + replaceStrBytes.length; // fields
     totalLen += 2; // separators
@@ -77,6 +93,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_REGEX)
                      .put(exprBytes)
                      .put(CACHE_KEY_SEPARATOR)
+                     .put(indexBytes)
                      .put(replaceStrBytes)
                      .put(CACHE_KEY_SEPARATOR)
                      .put(replaceBytes)
@@ -89,7 +106,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
     final String retVal;
     final Matcher matcher = pattern.matcher(Strings.nullToEmpty(dimValue));
     if (matcher.find()) {
-      retVal = matcher.group(1);
+      retVal = matcher.group(index);
     } else {
       retVal = replaceMissingValue ? replaceMissingValueWith : dimValue;
     }
@@ -100,6 +117,12 @@ public class RegexDimExtractionFn extends DimExtractionFn
   public String getExpr()
   {
     return expr;
+  }
+
+  @JsonProperty
+  public int getIndex()
+  {
+    return index;
   }
 
   @JsonProperty("replaceMissingValue")
@@ -129,11 +152,11 @@ public class RegexDimExtractionFn extends DimExtractionFn
   @Override
   public String toString()
   {
-    return String.format("regex(%s)", expr);
+    return String.format("regex(/%s/, %d)", expr, index);
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -141,19 +164,16 @@ public class RegexDimExtractionFn extends DimExtractionFn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    RegexDimExtractionFn that = (RegexDimExtractionFn) o;
-
-    if (!expr.equals(that.expr)) {
-      return false;
-    }
-
-    return true;
+    final RegexDimExtractionFn that = (RegexDimExtractionFn) o;
+    return index == that.index &&
+           replaceMissingValue == that.replaceMissingValue &&
+           Objects.equals(expr, that.expr) &&
+           Objects.equals(replaceMissingValueWith, that.replaceMissingValueWith);
   }
 
   @Override
   public int hashCode()
   {
-    return expr.hashCode();
+    return Objects.hash(expr, index, replaceMissingValue, replaceMissingValueWith);
   }
 }

@@ -47,7 +47,7 @@ public class SelectorDimFilterTest
     SelectorDimFilter selectorDimFilter2 = new SelectorDimFilter("abc", "d", regexFn);
 
     Assert.assertEquals("abc = d", selectorDimFilter.toString());
-    Assert.assertEquals("regex(.*)(abc) = d", selectorDimFilter2.toString());
+    Assert.assertEquals("regex(/.*/, 1)(abc) = d", selectorDimFilter2.toString());
   }
 
   @Test
