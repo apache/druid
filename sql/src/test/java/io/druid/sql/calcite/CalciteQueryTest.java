@@ -740,7 +740,8 @@ public class CalciteQueryTest
         "SELECT CHARACTER_LENGTH(dim1) + 1 FROM druid.foo GROUP BY CHARACTER_LENGTH(dim1) + 1", // Group by math
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
         "SELECT SUBSTRING(dim1, 2) FROM druid.foo GROUP BY dim1", // Project a dimension from GROUP BY
-        "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY SUBSTRING(dim1, 2)" // ORDER BY projection
+        "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY SUBSTRING(dim1, 2)", // ORDER BY projection
+        "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5" // DISTINCT with OFFSET
     );
 
     for (final String query : queries) {
@@ -2001,6 +2002,66 @@ public class CalciteQueryTest
             new Object[]{"a"},
             new Object[]{"abc"}
         )
+    );
+  }
+
+  @Test
+  public void testSelectDistinctWithSortAsOuterQuery() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2) LIMIT 10",
+        ImmutableList.<Query>of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(10)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"abc"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectDistinctWithSortAsOuterQuery2() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 5) LIMIT 10",
+        ImmutableList.<Query>of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"abc"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectDistinctWithSortAsOuterQuery3() throws Exception
+  {
+    // Query reduces to LIMIT 0.
+
+    testQuery(
+        "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5) OFFSET 2",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 

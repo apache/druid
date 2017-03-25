@@ -28,6 +28,7 @@ import io.druid.sql.calcite.rule.DruidSemiJoinRule;
 import io.druid.sql.calcite.rule.DruidTableScanRule;
 import io.druid.sql.calcite.rule.GroupByRules;
 import io.druid.sql.calcite.rule.SelectRules;
+import io.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.volcano.AbstractConverter;
@@ -212,6 +213,8 @@ public class Rules
     if (plannerConfig.isUseFallback()) {
       rules.add(DruidRelToBindableRule.instance());
     }
+
+    rules.add(SortCollapseRule.instance());
 
     // Druid-specific rules.
     rules.add(new DruidTableScanRule(queryMaker));
