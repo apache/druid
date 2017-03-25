@@ -32,7 +32,6 @@ import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
-import java.util.Locale;
 import java.util.Map;
 
 public class DruidConvertletTable implements SqlRexConvertletTable
@@ -84,17 +83,20 @@ public class DruidConvertletTable implements SqlRexConvertletTable
       final SqlOperator operator = call.getOperator();
       if (operator == SqlStdOperatorTable.CURRENT_TIMESTAMP || operator == SqlStdOperatorTable.LOCALTIMESTAMP) {
         return cx.getRexBuilder().makeTimestampLiteral(
-            plannerContext.getLocalNow().toCalendar(Locale.getDefault()),
+            Calcites.jodaToCalciteCalendarLiteral(plannerContext.getLocalNow(), plannerContext.getTimeZone()),
             RelDataType.PRECISION_NOT_SPECIFIED
         );
       } else if (operator == SqlStdOperatorTable.CURRENT_TIME || operator == SqlStdOperatorTable.LOCALTIME) {
         return cx.getRexBuilder().makeTimeLiteral(
-            plannerContext.getLocalNow().toCalendar(Locale.getDefault()),
+            Calcites.jodaToCalciteCalendarLiteral(plannerContext.getLocalNow(), plannerContext.getTimeZone()),
             RelDataType.PRECISION_NOT_SPECIFIED
         );
       } else if (operator == SqlStdOperatorTable.CURRENT_DATE) {
         return cx.getRexBuilder().makeDateLiteral(
-            plannerContext.getLocalNow().hourOfDay().roundFloorCopy().toCalendar(Locale.getDefault())
+            Calcites.jodaToCalciteCalendarLiteral(
+                plannerContext.getLocalNow().hourOfDay().roundFloorCopy(),
+                plannerContext.getTimeZone()
+            )
         );
       } else {
         throw new ISE("WTF?! Should not have got here, operator was: %s", operator);
