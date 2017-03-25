@@ -183,8 +183,8 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
-|`autoScaler`|Only used if autoscaling is enabled. See below.|null|
+|`selectStrategy`|How to assign tasks to middle managers. This is an object, the options are documented below.|fillCapacity|
+|`autoScaler`|Only used if autoscaling is enabled, Choice is `ec2`. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
 
@@ -208,7 +208,7 @@ Workers are assigned tasks until capacity.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`fillCapacity`.|required; must be `fillCapacity`|
+|`worker.config.selectStrategy.type`|`fillCapacity`.|required; must be `fillCapacity`|
 
 Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n workers upto capacity simultaneously and then moving on.
 
@@ -218,8 +218,8 @@ An affinity config can be provided.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`fillCapacityWithAffinity`.|required; must be `fillCapacityWithAffinity`|
-|`affinity`|JSON object mapping a datasource String name to a list of indexing service middle manager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middle manager and what the middle manager announces itself as (examine the Overlord logs to see what your middle manager announces itself as).|{}|
+|`worker.config.selectStrategy.type`|`fillCapacityWithAffinity`.|required; must be `fillCapacityWithAffinity`|
+|`worker.config.selectStrategy.affinityConfig.affinity`|JSON object mapping a datasource String name to a list of indexing service middle manager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middle manager and what the middle manager announces itself as (examine the Overlord logs to see what your middle manager announces itself as).|{}|
 
 Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
 
@@ -231,7 +231,7 @@ The workers with the least amount of tasks is assigned the task.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistribution`.|required; must be `equalDistribution`|
+|`worker.config.selectStrategy.type`|`equalDistribution`.|required; must be `equalDistribution`|
 
 ##### Javascript
 
@@ -244,8 +244,8 @@ its better to write a druid extension module with extending current worker selec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`javascript`.|required; must be `javascript`|
-|`function`|String representing javascript function||
+|`worker.config.selectStrategy.type`|`javascript`.|required; must be `javascript`|
+|`worker.config.selectStrategy.function`|String representing javascript function||
 
 Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
 
@@ -266,11 +266,11 @@ Amazon's EC2 is currently the only supported autoscaler.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
-|`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
-|`availabilityZone`|What availability zone to run in.|none|
-|`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
-|`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
+|`worker.config.autoScaler.minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
+|`worker.config.autoScaler.maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
+|`worker.config.autoScaler.envConfig.availabilityZone`|What availability zone to run in.|none|
+|`worker.config.autoScaler.envConfig.nodeData`|A JSON object that describes how to launch new nodes.|none; required|
+|`worker.config.autoScaler.envConfig.userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
 
 ### MiddleManager Configs
 
