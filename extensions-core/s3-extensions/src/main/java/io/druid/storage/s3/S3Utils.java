@@ -24,7 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 
 import io.druid.java.util.common.RetryUtils;
-import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageObjectsChunk;
@@ -187,11 +187,11 @@ public class S3Utils
     };
   }
 
-  public static String constructSegmentPath(String baseKey, DataSegment segment)
+  public static String constructSegmentPath(String baseKey, String storageDir)
   {
     return JOINER.join(
         baseKey.isEmpty() ? null : baseKey,
-        DataSegmentPusherUtil.getStorageDir(segment)
+        storageDir
     ) + "/index.zip";
   }
 

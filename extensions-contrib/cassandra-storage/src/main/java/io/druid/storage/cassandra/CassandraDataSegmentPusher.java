@@ -27,11 +27,9 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -80,7 +78,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     log.info("Writing [%s] to C*", indexFilesDir);
     String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
-        DataSegmentPusherUtil.getStorageDir(segment)
+        this.getStorageDir(segment)
         );
 
     // Create index

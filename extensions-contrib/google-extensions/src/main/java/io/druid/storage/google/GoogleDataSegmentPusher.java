@@ -28,7 +28,6 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -108,19 +107,13 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     try {
       indexFile = File.createTempFile("index", ".zip");
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
-      final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
+      final String storageDir = this.getStorageDir(segment);
       final String indexPath = buildPath(storageDir + "/" + "index.zip");
       final String descriptorPath = buildPath(storageDir + "/" + "descriptor.json");
 
       final DataSegment outSegment = segment
           .withSize(indexSize)
-          .withLoadSpec(
-              ImmutableMap.<String, Object>of(
-                  "type", GoogleStorageDruidModule.SCHEME,
-                  "bucket", config.getBucket(),
-                  "path", indexPath
-              )
-          )
+          .withLoadSpec(makeLoadSpec(config.getBucket(), indexPath))
           .withBinaryVersion(version);
 
       descriptorFile = createDescriptorFile(jsonMapper, outSegment);
@@ -149,13 +142,15 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
+    // remove the leading "/"
+    return makeLoadSpec(config.getBucket(),finalIndexZipFilePath.getPath().substring(1));
+  }
+
+  private Map<String, Object> makeLoadSpec(String bucket, String path) {
     return ImmutableMap.<String, Object>of(
-        "type",
-        GoogleStorageDruidModule.SCHEME,
-        "bucket",
-        config.getBucket(),
-        "path",
-        finalIndexZipFilePath.getPath().substring(1) // remove the leading "/"
+        "type", GoogleStorageDruidModule.SCHEME,
+        "bucket", bucket,
+        "path", path
     );
   }
 

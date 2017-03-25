@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -106,7 +106,7 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
          jsonMapper
     ).addMockedMethod("insert", File.class, String.class, String.class).createMock();
 
-    final String storageDir = DataSegmentPusherUtil.getStorageDir(segmentToPush);
+    final String storageDir = pusher.getStorageDir(segmentToPush);
     final String indexPath = prefix + "/" + storageDir + "/" + "index.zip";
     final String descriptorPath = prefix + "/" + storageDir + "/" + "descriptor.json";
 

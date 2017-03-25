@@ -22,7 +22,7 @@ package io.druid.storage.cloudfiles;
 import com.google.common.base.Predicate;
 
 import io.druid.java.util.common.RetryUtils;
-import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -68,11 +68,6 @@ public class CloudFilesUtils
       path = basePath + "/" + fileName;
     }
     return path;
-  }
-
-  public static String buildCloudFilesPath(String basePath, final DataSegment segment)
-  {
-    return buildCloudFilesPath(basePath, DataSegmentPusherUtil.getStorageDir(segment));
   }
 
 }

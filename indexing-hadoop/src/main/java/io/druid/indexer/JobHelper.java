@@ -35,7 +35,6 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -542,77 +541,33 @@ public class JobHelper
     out.putNextEntry(new ZipEntry(file.getName()));
   }
 
-  public static boolean isHdfs(FileSystem fs)
-  {
-    return "hdfs".equals(fs.getScheme()) || "viewfs".equals(fs.getScheme()) || "maprfs".equals(fs.getScheme());
-  }
-
   public static Path makeFileNamePath(
       final Path basePath,
       final FileSystem fs,
       final DataSegment segmentTemplate,
-      final String baseFileName
+      final String baseFileName,
+      DataSegmentPusher dataSegmentPusher
   )
   {
-    final Path finalIndexZipPath;
-    final String segmentDir;
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      finalIndexZipPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_%s",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              baseFileName
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      finalIndexZipPath = new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%s",
-              segmentDir,
-              baseFileName
-          )
-      );
-    }
-    return finalIndexZipPath;
+    return new Path(prependFSIfNullScheme(fs, basePath),
+                    dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName));
   }
 
   public static Path makeTmpPath(
       final Path basePath,
       final FileSystem fs,
       final DataSegment segmentTemplate,
-      final TaskAttemptID taskAttemptID
+      final TaskAttemptID taskAttemptID,
+      DataSegmentPusher dataSegmentPusher
   )
   {
-    final String segmentDir;
-
-    if (isHdfs(fs)) {
-      segmentDir = DataSegmentPusherUtil.getHdfsStorageDir(segmentTemplate);
-      return new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_index.zip.%d",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              taskAttemptID.getId()
-          )
-      );
-    } else {
-      segmentDir = DataSegmentPusherUtil.getStorageDir(segmentTemplate);
-      return new Path(
-          prependFSIfNullScheme(fs, basePath),
-          String.format(
-              "./%s/%d_index.zip.%d",
-              segmentDir,
-              segmentTemplate.getShardSpec().getPartitionNum(),
-              taskAttemptID.getId()
-          )
-      );
-    }
+    return new Path(
+        prependFSIfNullScheme(fs, basePath),
+        String.format("./%s.%d",
+                      dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+                      taskAttemptID.getId()
+        )
+    );
   }
 
   /**

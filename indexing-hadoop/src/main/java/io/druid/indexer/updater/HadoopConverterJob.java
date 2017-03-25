@@ -556,20 +556,23 @@ public class HadoopConverterJob
               baseOutputPath,
               outputFS,
               finalSegmentTemplate,
-              JobHelper.INDEX_ZIP
+              JobHelper.INDEX_ZIP,
+              config.DATA_SEGMENT_PUSHER
           ),
           JobHelper.makeFileNamePath(
               baseOutputPath,
               outputFS,
               finalSegmentTemplate,
-              JobHelper.DESCRIPTOR_JSON
+              JobHelper.DESCRIPTOR_JSON,
+              config.DATA_SEGMENT_PUSHER
           ),
           JobHelper.makeTmpPath(
               baseOutputPath,
               outputFS,
               finalSegmentTemplate,
-              context.getTaskAttemptID()
-              ),
+              context.getTaskAttemptID(),
+              config.DATA_SEGMENT_PUSHER
+          ),
           config.DATA_SEGMENT_PUSHER
       );
       context.progress();

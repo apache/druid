@@ -88,14 +88,14 @@ public class LocalDataSegmentPusherTest
     Assert.assertEquals(dataSegment2, returnSegment2);
 
     Assert.assertNotEquals(
-        DataSegmentPusherUtil.getStorageDir(dataSegment),
-        DataSegmentPusherUtil.getStorageDir(dataSegment2)
+        localDataSegmentPusher.getStorageDir(dataSegment),
+        localDataSegmentPusher.getStorageDir(dataSegment2)
     );
 
     for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
       File outDir = new File(
           config.getStorageDirectory(),
-          DataSegmentPusherUtil.getStorageDir(returnSegment)
+          localDataSegmentPusher.getStorageDir(returnSegment)
       );
       File versionFile = new File(outDir, "index.zip");
       File descriptorJson = new File(outDir, "descriptor.json");
