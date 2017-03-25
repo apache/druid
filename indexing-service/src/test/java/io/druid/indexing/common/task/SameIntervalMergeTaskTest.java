@@ -54,8 +54,10 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 public class SameIntervalMergeTaskTest
@@ -200,6 +202,12 @@ public class SameIntervalMergeTaskTest
             segments.add(segment);
             return segment;
           }
+          @Override
+          public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+          {
+            return null;
+          }
+
         }, null, null, null, null, null, null, null, null, null, new SegmentLoader()
         {
           @Override

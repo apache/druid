@@ -75,7 +75,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File dataSegmentFile, DataSegment segment) throws IOException
   {
-    final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
+    final String storageDir = this.getStorageDir(segment);
     final File baseStorageDir = config.getStorageDirectory();
     final File outDir = new File(baseStorageDir, storageDir);
 

@@ -77,7 +77,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
-    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), inSegment);
+    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), getStorageDir(inSegment));
 
     File descriptorFile = null;
     File zipOutFile = null;
@@ -114,18 +114,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
 
               final DataSegment outSegment = inSegment
                   .withSize(indexSize)
-                  .withLoadSpec(
-                      ImmutableMap.<String, Object>of(
-                          "type",
-                          CloudFilesStorageDruidModule.SCHEME,
-                          "region",
-                          segmentData.getRegion(),
-                          "container",
-                          segmentData.getContainer(),
-                          "path",
-                          segmentData.getPath()
-                      )
-                  )
+                  .withLoadSpec(makeLoadSpec(new URI(segmentData.getPath())))
                   .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               return outSegment;

@@ -20,6 +20,7 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
@@ -29,13 +30,13 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HadoopFsWrapper;
 import org.apache.hadoop.fs.Path;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.File;
 import java.io.IOException;
@@ -86,7 +87,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File inDir, DataSegment segment) throws IOException
   {
-    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
+    final String storageDir = this.getStorageDir(segment);
 
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
@@ -199,5 +200,37 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
     return  ImmutableMap.<String, Object>of("type", "hdfs", "path", finalIndexZipFilePath.toString());
+  }
+
+  private static final Joiner JOINER = Joiner.on("/").skipNulls();
+
+  /**
+   * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in
+   * path names. So we format paths differently for HDFS.
+   */
+
+  @Override
+  public String getStorageDir(DataSegment segment)
+  {
+    return JOINER.join(
+        segment.getDataSource(),
+        String.format(
+            "%s_%s",
+            segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
+            segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
+        ),
+        segment.getVersion().replaceAll(":", "_")
+    );
+  }
+
+  @Override
+  public String makeIndexPathName(DataSegment dataSegment, String indexName)
+  {
+    return String.format(
+        "./%s/%d_%s",
+        this.getStorageDir(dataSegment),
+        dataSegment.getShardSpec().getPartitionNum(),
+        indexName
+    );
   }
 }

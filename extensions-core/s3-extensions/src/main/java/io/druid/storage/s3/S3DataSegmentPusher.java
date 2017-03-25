@@ -67,6 +67,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
+    if (config.isUseS3aSchema()) {
+      return String.format("s3a://%s/%s", config.getBucket(), config.getBaseKey());
+    }
     return String.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
   }
 
@@ -80,7 +83,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), inSegment);
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment));
 
     log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getIdentifier(), s3Path);
 
@@ -109,16 +112,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
               s3Client.putObject(outputBucket, toPush);
 
               final DataSegment outSegment = inSegment.withSize(indexSize)
-                                                      .withLoadSpec(
-                                                          ImmutableMap.<String, Object>of(
-                                                              "type",
-                                                              "s3_zip",
-                                                              "bucket",
-                                                              outputBucket,
-                                                              "key",
-                                                              toPush.getKey()
-                                                          )
-                                                      )
+                                                      .withLoadSpec(makeLoadSpec(outputBucket, toPush.getKey()))
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
@@ -155,10 +149,21 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
+    // remove the leading "/"
+    return makeLoadSpec(finalIndexZipFilePath.getHost(), finalIndexZipFilePath.getPath().substring(1));
+  }
+
+  private Map<String, Object> makeLoadSpec(String bucket, String key)
+  {
     return ImmutableMap.<String, Object>of(
-        "type", "s3_zip",
-        "bucket", finalIndexZipFilePath.getHost(),
-        "key", finalIndexZipFilePath.getPath().substring(1) // remove the leading "/"
+        "type",
+        "s3_zip",
+        "bucket",
+        bucket,
+        "key",
+        key,
+        "S3Schema",
+        config.isUseS3aSchema() ? "s3a" : "s3n"
     );
   }
 }
