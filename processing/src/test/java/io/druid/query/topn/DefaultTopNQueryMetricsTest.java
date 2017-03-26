@@ -24,6 +24,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CachingEmitter;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunnerTestHelper;
@@ -31,14 +32,11 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class DefaultTopNQueryMetricsTest
 {
@@ -71,19 +69,15 @@ public class DefaultTopNQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(16, actualEvent.size());
+    Assert.assertEquals(15, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(DataSourceUtil.getMetricName(query.getDataSources()), actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnInterval.getIntervals();
-    List<String> expectedStringIntervals =
-        expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
-    Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
-    Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
+    Assert.assertEquals(query.getTotalDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
 
     // TopN-specific dimensions

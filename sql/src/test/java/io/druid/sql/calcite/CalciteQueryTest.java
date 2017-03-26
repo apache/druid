@@ -343,6 +343,7 @@ public class CalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .pagingSpec(FIRST_PAGING_SPEC)
+                  .updateDistributionTarget()
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -357,6 +358,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -382,6 +384,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -416,6 +419,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -438,6 +442,7 @@ public class CalciteQueryTest
                   .descending(true)
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -464,6 +469,7 @@ public class CalciteQueryTest
                   .descending(false)
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -487,6 +493,7 @@ public class CalciteQueryTest
                   .descending(true)
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -521,6 +528,7 @@ public class CalciteQueryTest
                     )
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(
@@ -551,6 +559,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build(),
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -563,6 +572,7 @@ public class CalciteQueryTest
                           true
                       )
                   )
+                  .updateDistributionTarget()
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -571,6 +581,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(NOT(SELECTOR("dim1", "", null)))
                   .pagingSpec(FIRST_PAGING_SPEC)
+                  .updateDistributionTarget()
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -586,6 +597,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -630,6 +642,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("cnt", "d0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -651,6 +664,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("m1", "d0", ValueType.FLOAT)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -677,6 +691,7 @@ public class CalciteQueryTest
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .filters(SELECTOR("m1", "1.0", null))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -712,6 +727,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -804,6 +820,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build(),
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -823,6 +840,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -851,6 +869,7 @@ public class CalciteQueryTest
                           SELECTOR("dim2", "a", null)
                       )
                   )
+                  .updateDistributionTarget()
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build(),
             Druids.newSelectQueryBuilder()
@@ -871,6 +890,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build(),
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -890,6 +910,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -941,6 +962,7 @@ public class CalciteQueryTest
                       new LongMaxAggregatorFactory("a1", "cnt")
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.<Object[]>of()
@@ -963,6 +985,7 @@ public class CalciteQueryTest
                       new LongMaxAggregatorFactory("a1", "cnt")
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.<Object[]>of()
@@ -981,6 +1004,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1005,6 +1029,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1050,6 +1075,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1076,6 +1102,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1099,6 +1126,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of()
@@ -1116,6 +1144,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1135,6 +1164,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of()
@@ -1152,6 +1182,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1173,6 +1204,7 @@ public class CalciteQueryTest
                   .filters(IN("cnt", ImmutableList.of("1", "2"), null))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1203,6 +1235,7 @@ public class CalciteQueryTest
                                 )
                             )
                         )
+                        .updateDistributionTarget()
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -1260,6 +1293,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1300,6 +1334,7 @@ public class CalciteQueryTest
                 )
                 .threshold(3)
                 .context(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(
@@ -1355,6 +1390,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -1409,6 +1445,7 @@ public class CalciteQueryTest
                                 3
                             )
                         )
+                        .updateDistributionTarget()
                         .setContext(QUERY_CONTEXT_NO_TOPN)
                         .build()
         ),
@@ -1477,6 +1514,7 @@ public class CalciteQueryTest
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1508,6 +1546,7 @@ public class CalciteQueryTest
                       ))
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1534,6 +1573,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -1556,6 +1596,7 @@ public class CalciteQueryTest
                   .filters(SELECTOR("dim2", "a", null))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1577,6 +1618,7 @@ public class CalciteQueryTest
                   .filters(null)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.<Object[]>of()
@@ -1596,6 +1638,7 @@ public class CalciteQueryTest
                   .filters(BOUND("dim1", "a", "b", false, true, null, StringComparators.LEXICOGRAPHIC))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1617,6 +1660,7 @@ public class CalciteQueryTest
                   .filters(SELECTOR("dim1", "abc", null))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1638,6 +1682,7 @@ public class CalciteQueryTest
                   .filters(NUMERIC_SELECTOR("dim1", "2", null))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1659,6 +1704,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1679,6 +1725,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1705,6 +1752,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1745,6 +1793,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1786,6 +1835,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1816,6 +1866,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1839,6 +1890,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1875,6 +1927,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1908,6 +1961,7 @@ public class CalciteQueryTest
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -1941,6 +1995,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -1970,6 +2025,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -1995,6 +2051,7 @@ public class CalciteQueryTest
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(
@@ -2019,6 +2076,7 @@ public class CalciteQueryTest
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(
@@ -2043,6 +2101,7 @@ public class CalciteQueryTest
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(5)
                 .context(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(
@@ -2088,6 +2147,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -2123,6 +2183,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a0")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2155,6 +2216,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -2196,6 +2258,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a1")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2243,6 +2306,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -2297,6 +2361,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a1")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2334,6 +2399,7 @@ public class CalciteQueryTest
                             new LongSumAggregatorFactory("a0", "a0"),
                             new CountAggregatorFactory("a1")
                         ))
+                        .updateDistributionTarget()
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -2370,6 +2436,7 @@ public class CalciteQueryTest
                 .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                 .metric(new NumericTopNMetricSpec("a0"))
                 .threshold(2)
+                .updateDistributionTarget()
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build(),
             GroupByQuery.builder()
@@ -2392,6 +2459,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2442,6 +2510,7 @@ public class CalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
+                        .updateDistributionTarget()
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -2480,6 +2549,7 @@ public class CalciteQueryTest
                             new SubstringDimExtractionFn(0, 1)
                         )))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build(),
             GroupByQuery.builder()
                         .setDataSource(
@@ -2504,6 +2574,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a0")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
 
         ),
@@ -2544,6 +2615,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a1")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2584,6 +2656,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a1")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2660,6 +2733,7 @@ public class CalciteQueryTest
                                 )
                             )
                         )
+                        .updateDistributionTarget()
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -2702,6 +2776,7 @@ public class CalciteQueryTest
                             new CountAggregatorFactory("a0")
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2752,6 +2827,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2811,6 +2887,7 @@ public class CalciteQueryTest
                       ))
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -2846,6 +2923,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -2879,6 +2957,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2921,6 +3000,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2968,6 +3048,7 @@ public class CalciteQueryTest
                         )
                         .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -2994,6 +3075,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3015,6 +3097,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3050,6 +3133,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3070,6 +3154,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3094,6 +3179,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3119,6 +3205,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3141,6 +3228,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3163,6 +3251,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3186,6 +3275,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3230,6 +3320,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.<Object[]>of()
@@ -3252,6 +3343,7 @@ public class CalciteQueryTest
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3297,6 +3389,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3360,6 +3453,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3398,6 +3492,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3453,6 +3548,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3489,6 +3585,7 @@ public class CalciteQueryTest
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3514,6 +3611,7 @@ public class CalciteQueryTest
                   .granularity(Granularities.MONTH)
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3541,6 +3639,7 @@ public class CalciteQueryTest
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimeZone.forID(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3572,6 +3671,7 @@ public class CalciteQueryTest
                   .granularity(new PeriodGranularity(Period.hours(1), null, DateTimeZone.UTC))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.<Object[]>builder()
@@ -3620,6 +3720,7 @@ public class CalciteQueryTest
                   .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3651,6 +3752,7 @@ public class CalciteQueryTest
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .descending(true)
                   .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -3704,6 +3806,7 @@ public class CalciteQueryTest
                                 Integer.MAX_VALUE
                             )
                         )
+                        .updateDistributionTarget()
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -3745,6 +3848,7 @@ public class CalciteQueryTest
                         )
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3786,6 +3890,7 @@ public class CalciteQueryTest
                         )
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_LOS_ANGELES)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3838,6 +3943,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3875,6 +3981,7 @@ public class CalciteQueryTest
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(1)
                 .context(QUERY_CONTEXT_DEFAULT)
+                .updateDistributionTarget()
                 .build()
         ),
         ImmutableList.of(
@@ -3922,6 +4029,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -3951,6 +4059,7 @@ public class CalciteQueryTest
                         .setDimFilter(NOT(SELECTOR("dim1", "", null)))
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build(),
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -3976,6 +4085,7 @@ public class CalciteQueryTest
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -4023,6 +4133,7 @@ public class CalciteQueryTest
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setHavingSpec(new DimFilterHavingSpec(NUMERIC_SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build(),
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4036,6 +4147,7 @@ public class CalciteQueryTest
                   .filters(AND(SELECTOR("dim1", "def", null), SELECTOR("dim2", "abc", null)))
                   .pagingSpec(FIRST_PAGING_SPEC)
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build(),
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4055,6 +4167,7 @@ public class CalciteQueryTest
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
+                  .updateDistributionTarget()
                   .build()
         ),
         ImmutableList.of(
@@ -4080,6 +4193,7 @@ public class CalciteQueryTest
                             DIMS(new ExtractionDimensionSpec("dim1", "d0", new SubstringDimExtractionFn(0, 1)))
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build(),
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -4095,6 +4209,7 @@ public class CalciteQueryTest
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(
@@ -4132,6 +4247,7 @@ public class CalciteQueryTest
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
+                        .updateDistributionTarget()
                         .build()
         ),
         ImmutableList.of(

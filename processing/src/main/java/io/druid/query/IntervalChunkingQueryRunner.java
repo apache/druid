@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -72,9 +73,10 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
       return baseRunner.run(query, responseContext);
     }
 
+    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
     List<Interval> chunkIntervals = Lists.newArrayList(
         FunctionalIterable
-            .create(query.getIntervals())
+            .create(spec.getQuerySegmentSpec().getIntervals())
             .transformCat(
                 new Function<Interval, Iterable<Interval>>()
                 {
@@ -113,7 +115,10 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                         ),
                         executor, queryWatcher
                     ).run(
-                        query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))),
+                        query.replaceQuerySegmentSpecWith(
+                            Iterables.getOnlyElement(spec.getDataSource().getNames()),
+                            new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))
+                        ),
                         responseContext
                     );
                   }

@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -40,7 +40,7 @@ import java.util.Objects;
 /**
  */
 @JsonTypeName("select")
-public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
+public class SelectQuery extends SingleSourceBaseQuery<Result<SelectResultValue>>
 {
   private final DimFilter dimFilter;
   private final Granularity granularity;

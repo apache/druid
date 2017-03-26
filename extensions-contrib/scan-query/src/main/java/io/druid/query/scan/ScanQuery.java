@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.TableDataSource;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
@@ -35,11 +37,12 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @JsonTypeName("scan")
-public class ScanQuery extends BaseQuery<ScanResultValue>
+public class ScanQuery extends SingleSourceBaseQuery<ScanResultValue>
 {
   public static final String SCAN = "scan";
   public static final String RESULT_FORMAT_LIST = "list";
@@ -310,6 +313,21 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return this;
     }
 
+    public ScanQueryBuilder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContextKeys.DIST_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(
+              SingleSourceBaseQuery.getLeafDataSource(dataSource),
+              querySegmentSpec
+          )
+      );
+      return this;
+    }
+
     public ScanQueryBuilder intervals(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
@@ -330,7 +348,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      if (context == null) {
+        context = new HashMap<>(c);
+      } else {
+        context.putAll(c);
+      }
       return this;
     }
 

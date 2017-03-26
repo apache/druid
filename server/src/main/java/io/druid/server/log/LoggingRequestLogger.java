@@ -21,8 +21,8 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.server.RequestLogLine;
 import org.slf4j.MDC;
@@ -59,11 +59,11 @@ public class LoggingRequestLogger implements RequestLogger
         try {
           final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
-          MDC.put("dataSource", query.getDataSource().toString());
+          MDC.put("dataSource", (String) Queries.getDataSourceAndIntervalStrings(query).lhs);
           MDC.put("queryType", query.getType());
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
           MDC.put("remoteAddr", requestLogLine.getRemoteAddr());
-          MDC.put("duration", query.getDuration().toString());
+          MDC.put("duration", query.getTotalDuration().toString());
           MDC.put("descending", Boolean.toString(query.isDescending()));
           if (setContextMDC) {
             final Iterable<Map.Entry<String, Object>> entries = query.getContext() == null

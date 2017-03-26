@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.guava.Sequence;
@@ -96,7 +97,7 @@ public class TimewarpOperatorTest
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
                     ),
                     new Result<>(
-                        query.getIntervals().get(0).getEnd(),
+                        ((SingleSourceBaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getEnd(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
                     )
                 )
@@ -106,12 +107,13 @@ public class TimewarpOperatorTest
         new DateTime("2014-08-02").getMillis()
     );
 
-    final Query<Result<TimeseriesResultValue>> query =
+    Query<Result<TimeseriesResultValue>> query =
         Druids.newTimeseriesQueryBuilder()
               .dataSource("dummy")
               .intervals("2014-07-31/2014-08-05")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .build();
+    query = setDistributionTarget(query);
 
     Assert.assertEquals(
         Lists.newArrayList(
@@ -165,10 +167,11 @@ public class TimewarpOperatorTest
         new DateTime("2014-08-02").getMillis()
     );
 
-    final Query<Result<TimeBoundaryResultValue>> timeBoundaryQuery =
+    Query<Result<TimeBoundaryResultValue>> timeBoundaryQuery =
         Druids.newTimeBoundaryQueryBuilder()
               .dataSource("dummy")
               .build();
+    timeBoundaryQuery = setDistributionTarget(timeBoundaryQuery);
 
     Assert.assertEquals(
         Lists.newArrayList(
@@ -200,11 +203,11 @@ public class TimewarpOperatorTest
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
-                        query.getIntervals().get(0).getStart(),
+                        ((SingleSourceBaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getStart(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
                     ),
                     new Result<>(
-                        query.getIntervals().get(0).getEnd(),
+                        ((SingleSourceBaseQuery<Result<TimeseriesResultValue>>)query).getIntervals().get(0).getEnd(),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
                     )
                 )
@@ -214,12 +217,13 @@ public class TimewarpOperatorTest
         new DateTime("2014-08-02").getMillis()
     );
 
-    final Query<Result<TimeseriesResultValue>> query =
+    Query<Result<TimeseriesResultValue>> query =
         Druids.newTimeseriesQueryBuilder()
               .dataSource("dummy")
               .intervals("2014-08-06/2014-08-08")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .build();
+    query = setDistributionTarget(query);
 
     Assert.assertEquals(
         Lists.newArrayList(
@@ -233,6 +237,19 @@ public class TimewarpOperatorTest
             )
         ),
         Sequences.toList(queryRunner.run(query, Maps.<String, Object>newHashMap()), Lists.<Result<TimeseriesResultValue>>newArrayList())
+    );
+  }
+
+  private static <T> Query<T> setDistributionTarget(Query<T> query)
+  {
+    return query.withOverriddenContext(
+        ImmutableMap.of(
+            QueryContextKeys.DIST_TARGET_SOURCE,
+            new DataSourceWithSegmentSpec(
+                Iterables.getOnlyElement(query.getDataSources()).getDataSource(),
+                Iterables.getOnlyElement(query.getDataSources()).getQuerySegmentSpec()
+            )
+        )
     );
   }
 }

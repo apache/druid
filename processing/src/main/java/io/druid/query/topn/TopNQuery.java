@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -42,7 +42,7 @@ import java.util.Objects;
 
 /**
  */
-public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
+public class TopNQuery extends SingleSourceBaseQuery<Result<TopNResultValue>>
 {
   public static final String TOPN = "topN";
 

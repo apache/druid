@@ -45,33 +45,23 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void query(QueryType query)
   {
-    dataSource(query);
+    dataSources(query);
     queryType(query);
-    interval(query);
     hasFilters(query);
     duration(query);
     queryId(query);
   }
 
   @Override
-  public void dataSource(QueryType query)
+  public void dataSources(QueryType query)
   {
-    builder.setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()));
+    builder.setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSources()));
   }
 
   @Override
   public void queryType(QueryType query)
   {
     builder.setDimension(DruidMetrics.TYPE, query.getType());
-  }
-
-  @Override
-  public void interval(QueryType query)
-  {
-    builder.setDimension(
-        DruidMetrics.INTERVAL,
-        query.getIntervals().stream().map(Interval::toString).toArray(String[]::new)
-    );
   }
 
   @Override
@@ -83,7 +73,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void duration(QueryType query)
   {
-    builder.setDimension("duration", query.getDuration().toString());
+    builder.setDimension("duration", query.getTotalDuration().toString());
   }
 
   @Override

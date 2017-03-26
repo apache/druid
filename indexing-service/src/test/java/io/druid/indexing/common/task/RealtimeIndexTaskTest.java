@@ -1081,6 +1081,7 @@ public class RealtimeIndexTaskTest
                                       )
                                   ).granularity(Granularities.ALL)
                                   .intervals("2000/3000")
+                                  .updateDistributionTarget()
                                   .build();
 
     ArrayList<Result<TimeseriesResultValue>> results = Sequences.toList(

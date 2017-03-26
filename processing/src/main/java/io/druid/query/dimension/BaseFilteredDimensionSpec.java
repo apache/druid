@@ -44,6 +44,12 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public String getDataSourceName()
+  {
+    return delegate.getDataSourceName();
+  }
+
+  @Override
   public String getDimension()
   {
     return delegate.getDimension();

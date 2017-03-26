@@ -179,4 +179,17 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     return segments;
   }
+
+  /**
+   * Wraps a QueryRunner.  The output QueryRunner must contain the query distribution information
+   * required by CachingClusteredClient in its context.  The query distribution information represents that
+   * how CachingClusteredClient chooses the nodes who are responsible for processing the given query.
+   * This information is currently based on only the target data source of the given query,
+   * but it can be extended in the future.
+   *
+   * @param runner The runner to be wrapped
+   *
+   * @return The wrapped runner
+   */
+  public abstract QueryRunner<ResultType> annotateDistributionTarget(QueryRunner<ResultType> runner);
 }

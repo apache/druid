@@ -43,6 +43,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.InsufficientResourcesException;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -156,7 +157,15 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  private static int countRequiredMergeBufferNum(Query query, int foundNum)
+  /**
+   * Count the maximum length of consecutive groupBy subqueries.
+   *
+   * @param query
+   * @param foundNum
+   * @param <T>
+   * @return
+   */
+  private static <T> int countRequiredMergeBufferNum(Query<T> query, int foundNum)
   {
     // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
     // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
@@ -165,11 +174,36 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // until the outer groupBy processing completes.
     // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
 
-    final DataSource dataSource = query.getDataSource();
-    if (foundNum == MAX_MERGE_BUFFER_NUM + 1 || !(dataSource instanceof QueryDataSource)) {
-      return foundNum - 1;
+    return countGroupByLayers(query, foundNum) - 1;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> int countGroupByLayers(final Query<T> query, final int foundNum)
+  {
+    if (foundNum == MAX_MERGE_BUFFER_NUM + 1) {
+      return foundNum;
+    }
+
+    int maxFoundFromChildren = -1;
+    for (DataSourceWithSegmentSpec eachSpec : query.getDataSources()) {
+      final DataSource dataSource = eachSpec.getDataSource();
+
+      if (dataSource instanceof QueryDataSource) {
+        QueryDataSource queryDataSource = (QueryDataSource) dataSource;
+        if (queryDataSource.getQuery() instanceof GroupByQuery) {
+          final int tmp = countGroupByLayers(queryDataSource.getQuery(), foundNum + 1);
+          maxFoundFromChildren = tmp > maxFoundFromChildren ? tmp : maxFoundFromChildren;
+        } else {
+          final int tmp = countGroupByLayers(queryDataSource.getQuery(), 0);
+          maxFoundFromChildren = tmp > maxFoundFromChildren ? tmp : maxFoundFromChildren;
+        }
+      }
+    }
+
+    if (maxFoundFromChildren > -1) {
+      return maxFoundFromChildren > foundNum ? maxFoundFromChildren : foundNum;
     } else {
-      return countRequiredMergeBufferNum(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
+      return foundNum;
     }
   }
 

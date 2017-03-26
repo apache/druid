@@ -89,6 +89,7 @@ public class SpecificSegmentQueryRunnerTest
 
           }
         },
+        "foo",
         new SpecificSegmentSpec(
             descriptor
         )
@@ -167,6 +168,7 @@ public class SpecificSegmentQueryRunnerTest
             );
           }
         },
+        "foo",
         new SpecificSegmentSpec(
             descriptor
         )

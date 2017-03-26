@@ -38,11 +38,13 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryDataSource;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -63,6 +65,7 @@ import org.joda.time.Interval;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,7 +73,7 @@ import java.util.Set;
 
 /**
  */
-public class GroupByQuery extends BaseQuery<Row>
+public class GroupByQuery extends SingleSourceBaseQuery<Row>
 {
   public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
@@ -654,6 +657,18 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
+    public Builder updateDistributionTarget()
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(
+          QueryContextKeys.DIST_TARGET_SOURCE,
+          new DataSourceWithSegmentSpec(getLeafDataSource(dataSource), querySegmentSpec)
+      );
+      return this;
+    }
+
     public Builder setInterval(QuerySegmentSpec interval)
     {
       return setQuerySegmentSpec(interval);
@@ -815,7 +830,11 @@ public class GroupByQuery extends BaseQuery<Row>
 
     public Builder setContext(Map<String, Object> context)
     {
-      this.context = context;
+      if (this.context == null) {
+        this.context = new HashMap<>(context);
+      } else {
+        this.context.putAll(context);
+      }
       return this;
     }
 

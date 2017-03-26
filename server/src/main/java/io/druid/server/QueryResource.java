@@ -37,6 +37,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -202,7 +203,7 @@ public class QueryResource implements QueryCountStatsProvider
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
-            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
+            .setName(String.format("%s[%s_%s]", currThreadName, query.getType(), queryId));
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
@@ -211,13 +212,16 @@ public class QueryResource implements QueryCountStatsProvider
         // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
         AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
         if (authorizationInfo != null) {
-          for (String dataSource : query.getDataSource().getNames()) {
-            Access authResult = authorizationInfo.isAuthorized(
-                new Resource(dataSource, ResourceType.DATASOURCE),
-                Action.READ
-            );
-            if (!authResult.isAllowed()) {
-              return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+          final Iterable<DataSourceWithSegmentSpec> sources = query.getDataSources();
+          for (DataSourceWithSegmentSpec eachSource : sources) {
+            for (String dataSource : eachSource.getDataSource().getNames()) {
+              Access authResult = authorizationInfo.isAuthorized(
+                  new Resource(dataSource, ResourceType.DATASOURCE),
+                  Action.READ
+              );
+              if (!authResult.isAllowed()) {
+                return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+              }
             }
           }
         } else {
@@ -233,7 +237,8 @@ public class QueryResource implements QueryCountStatsProvider
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      final Sequence res = query.run(texasRanger, responseContext);
+      final Sequence res;
+      res = query.run(texasRanger, responseContext);
 
       if (prevEtag != null && prevEtag.equals(responseContext.get(HDR_ETAG))) {
         return Response.notModified().build();

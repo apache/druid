@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -30,7 +29,6 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -105,33 +103,17 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   public static final String QUERYID = "queryId";
-  private final DataSource dataSource;
+
   private final boolean descending;
   private final Map<String, Object> context;
-  private final QuerySegmentSpec querySegmentSpec;
-  private volatile Duration duration;
 
   public BaseQuery(
-      DataSource dataSource,
-      QuerySegmentSpec querySegmentSpec,
       boolean descending,
       Map<String, Object> context
   )
   {
-    Preconditions.checkNotNull(dataSource, "dataSource can't be null");
-    Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
-
-    this.dataSource = dataSource;
     this.context = context;
-    this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
-  }
-
-  @JsonProperty
-  @Override
-  public DataSource getDataSource()
-  {
-    return dataSource;
   }
 
   @JsonProperty
@@ -141,43 +123,20 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return descending;
   }
 
-  @JsonProperty("intervals")
-  public QuerySegmentSpec getQuerySegmentSpec()
-  {
-    return querySegmentSpec;
-  }
-
-  @Override
-  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
-  {
-    return run(querySegmentSpec.lookup(this, walker), context);
-  }
-
   public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
   {
     return runner.run(this, context);
   }
 
-  @Override
-  public List<Interval> getIntervals()
+  public static Duration initDuration(QuerySegmentSpec querySegmentSpec)
   {
-    return querySegmentSpec.getIntervals();
-  }
-
-  @Override
-  public Duration getDuration()
-  {
-    if (duration == null) {
-      Duration totalDuration = new Duration(0);
-      for (Interval interval : querySegmentSpec.getIntervals()) {
-        if (interval != null) {
-          totalDuration = totalDuration.plus(interval.toDuration());
-        }
+    Duration totalDuration = new Duration(0);
+    for (Interval interval : querySegmentSpec.getIntervals()) {
+      if (interval != null) {
+        totalDuration = totalDuration.plus(interval.toDuration());
       }
-      duration = totalDuration;
     }
-
-    return duration;
+    return totalDuration;
   }
 
   @Override
@@ -255,17 +214,6 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) {
       return false;
     }
-    if (dataSource != null ? !dataSource.equals(baseQuery.dataSource) : baseQuery.dataSource != null) {
-      return false;
-    }
-    if (duration != null ? !duration.equals(baseQuery.duration) : baseQuery.duration != null) {
-      return false;
-    }
-    if (querySegmentSpec != null
-        ? !querySegmentSpec.equals(baseQuery.querySegmentSpec)
-        : baseQuery.querySegmentSpec != null) {
-      return false;
-    }
 
     return true;
   }
@@ -273,11 +221,8 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public int hashCode()
   {
-    int result = dataSource != null ? dataSource.hashCode() : 0;
-    result = 31 * result + (descending ? 1 : 0);
+    int result = (descending ? 1 : 0);
     result = 31 * result + (context != null ? context.hashCode() : 0);
-    result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
-    result = 31 * result + (duration != null ? duration.hashCode() : 0);
     return result;
   }
 }

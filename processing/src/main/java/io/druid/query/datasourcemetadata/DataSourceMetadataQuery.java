@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -39,7 +39,7 @@ import java.util.Map;
 
 /**
  */
-public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadataResultValue>>
+public class DataSourceMetadataQuery extends SingleSourceBaseQuery<Result<DataSourceMetadataResultValue>>
 {
   public static final Interval MY_Y2K_INTERVAL = new Interval(
       JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT

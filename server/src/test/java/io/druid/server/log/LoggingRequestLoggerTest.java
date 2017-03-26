@@ -25,12 +25,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.LegacyDataSource;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.server.QueryStats;
@@ -132,7 +132,7 @@ public class LoggingRequestLoggerTest
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
     requestLogger.log(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
+    Assert.assertEquals("[datasource]", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
@@ -147,7 +147,7 @@ public class LoggingRequestLoggerTest
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true);
     requestLogger.log(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
+    Assert.assertEquals("[datasource]", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
@@ -179,7 +179,7 @@ public class LoggingRequestLoggerTest
 }
 
 @JsonTypeName("fake")
-class FakeQuery extends BaseQuery
+class FakeQuery extends SingleSourceBaseQuery
 {
   public FakeQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, boolean descending, Map context)
   {

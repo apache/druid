@@ -101,6 +101,18 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
+  public QueryRunner<Result<TimeBoundaryResultValue>> annotateDistributionTarget(QueryRunner<Result<TimeBoundaryResultValue>> runner)
+  {
+    return (query, responseContext) -> {
+      final TimeBoundaryQuery timeBoundaryQuery = (TimeBoundaryQuery) query;
+      return runner.run(
+          timeBoundaryQuery.distributeBy(timeBoundaryQuery.getDataSourceWithSegmentSpec()),
+          responseContext
+      );
+    };
+  }
+
+  @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeResults(
       final QueryRunner<Result<TimeBoundaryResultValue>> runner
   )

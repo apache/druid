@@ -68,8 +68,8 @@ public class SelectQuerySpecTest
         + "\"filter\":null,"
         + "\"granularity\":{\"type\":\"all\"},"
         + "\"dimensions\":"
-        + "[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
-        + "{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
+        + "[{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
+        + "{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":[],"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":true},"
@@ -104,8 +104,8 @@ public class SelectQuerySpecTest
         + "\"filter\":null,"
         + "\"granularity\":{\"type\":\"all\"},"
         + "\"dimensions\":"
-        + "[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
-        + "{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
+        + "[{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"market\",\"outputName\":\"market\",\"outputType\":\"STRING\"},"
+        + "{\"type\":\"default\",\"dataSource\":null,\"dimension\":\"quality\",\"outputName\":\"quality\",\"outputType\":\"STRING\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"virtualColumns\":[],";
 

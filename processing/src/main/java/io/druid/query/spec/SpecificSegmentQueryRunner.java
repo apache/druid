@@ -19,6 +19,7 @@
 
 package io.druid.query.spec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Accumulator;
@@ -28,6 +29,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.guava.YieldingAccumulator;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -37,31 +39,47 @@ import io.druid.segment.SegmentMissingException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
 public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> base;
+  private final String dataSourceName;
   private final SpecificSegmentSpec specificSpec;
 
   public SpecificSegmentQueryRunner(
       QueryRunner<T> base,
+      String datasourceName,
       SpecificSegmentSpec specificSpec
   )
   {
     this.base = base;
+    this.dataSourceName = datasourceName;
     this.specificSpec = specificSpec;
   }
 
   @Override
   public Sequence<T> run(final Query<T> input, final Map<String, Object> responseContext)
   {
-    final Query<T> query = input.withQuerySegmentSpec(specificSpec);
+    final Query<T> query = input.replaceQuerySegmentSpecWith(dataSourceName, specificSpec);
 
     final Thread currThread = Thread.currentThread();
     final String currThreadName = currThread.getName();
-    final String newName = String.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
+    final List<DataSourceWithSegmentSpec> specs = StreamSupport
+        .stream(input.getDataSources().spliterator(), false)
+        .filter(spec -> spec.getDataSource().getNames().contains(dataSourceName))
+        .collect(Collectors.toList());
+    Preconditions.checkState(specs.size() == 1);
+
+    final String newName = String.format(
+        "%s_%s_%s",
+        query.getType(),
+        specs.get(0).getDataSource(),
+        specs.get(0).getQuerySegmentSpec().getIntervals()
+    );
 
     final Sequence<T> baseSequence = doNamed(
         currThread, currThreadName, newName, new Supplier<Sequence<T>>()

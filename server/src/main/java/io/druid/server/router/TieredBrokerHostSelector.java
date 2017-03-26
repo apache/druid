@@ -30,6 +30,9 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
+import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
@@ -43,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
-public class TieredBrokerHostSelector<T> implements HostSelector<T>
+public class TieredBrokerHostSelector implements HostSelector
 {
   private static EmittingLogger log = new EmittingLogger(TieredBrokerHostSelector.class);
 
@@ -122,7 +125,8 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     return tierConfig.getDefaultBrokerServiceName();
   }
 
-  public Pair<String, ServerDiscoverySelector> select(final Query<T> query)
+  @Override
+  public <T> Pair<String, ServerDiscoverySelector> select(final Query<T> query)
   {
     synchronized (lock) {
       if (!ruleManager.isStarted() || !started) {
@@ -142,43 +146,47 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
 
     if (brokerServiceName == null) {
       // For Union Queries tier will be selected on the rules for first dataSource.
-      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
+      for (DataSourceWithSegmentSpec spec : query.getDataSources()) {
+        final DataSource dataSource = spec.getDataSource();
+        List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(dataSource.getNames(), null));
 
-      // find the rule that can apply to the entire set of intervals
-      DateTime now = new DateTime();
-      int lastRulePosition = -1;
-      LoadRule baseRule = null;
+        // find the rule that can apply to the entire set of intervals
+        DateTime now = new DateTime();
+        int lastRulePosition = -1;
+        LoadRule baseRule = null;
 
-      for (Interval interval : query.getIntervals()) {
-        int currRulePosition = 0;
-        for (Rule rule : rules) {
-          if (rule instanceof LoadRule && currRulePosition > lastRulePosition && rule.appliesTo(interval, now)) {
-            lastRulePosition = currRulePosition;
-            baseRule = (LoadRule) rule;
+        for (Interval interval : spec.getQuerySegmentSpec().getIntervals()) {
+          int currRulePosition = 0;
+          for (Rule rule : rules) {
+            if (rule instanceof LoadRule && currRulePosition > lastRulePosition && rule.appliesTo(interval, now)) {
+              lastRulePosition = currRulePosition;
+              baseRule = (LoadRule) rule;
+              break;
+            }
+            currRulePosition++;
+          }
+        }
+
+        if (baseRule == null) {
+          return getDefaultLookup();
+        }
+
+        // in the baseRule, find the broker of highest priority
+        for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
+          if (baseRule.getTieredReplicants().containsKey(entry.getKey())) {
+            brokerServiceName = entry.getValue();
             break;
           }
-          currRulePosition++;
-        }
-      }
-
-      if (baseRule == null) {
-        return getDefaultLookup();
-      }
-
-      // in the baseRule, find the broker of highest priority
-      for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
-        if (baseRule.getTieredReplicants().containsKey(entry.getKey())) {
-          brokerServiceName = entry.getValue();
-          break;
         }
       }
     }
 
     if (brokerServiceName == null) {
+      final Pair<String, String> dataSourceAndInterval = Queries.getDataSourceAndIntervalStrings(query);
       log.error(
           "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
-          query.getDataSource(),
-          query.getIntervals(),
+          dataSourceAndInterval.lhs,
+          dataSourceAndInterval.rhs,
           tierConfig.getDefaultBrokerServiceName()
       );
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();

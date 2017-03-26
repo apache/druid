@@ -41,31 +41,36 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    DataSource dataSource = query.getDataSource();
-    if (dataSource instanceof UnionDataSource) {
+    if (query instanceof SingleSourceBaseQuery) {
+      final SingleSourceBaseQuery singleSourceBaseQuery = (SingleSourceBaseQuery) query;
 
-      return new MergeSequence<>(
-          query.getResultOrdering(),
-          Sequences.simple(
-              Lists.transform(
-                  ((UnionDataSource) dataSource).getDataSources(),
-                  new Function<DataSource, Sequence<T>>()
-                  {
-                    @Override
-                    public Sequence<T> apply(DataSource singleSource)
+      final DataSource dataSource = singleSourceBaseQuery.getDataSource();
+      if (dataSource instanceof UnionDataSource) {
+
+        return new MergeSequence<>(
+            query.getResultOrdering(),
+            Sequences.simple(
+                Lists.transform(
+                    ((UnionDataSource) dataSource).getDataSources(),
+                    new Function<DataSource, Sequence<T>>()
                     {
-                      return baseRunner.run(
-                          query.withDataSource(singleSource),
-                          responseContext
-                      );
+                      @Override
+                      public Sequence<T> apply(DataSource singleSource)
+                      {
+                        return baseRunner.run(
+                            singleSourceBaseQuery.withDataSource(singleSource),
+                            responseContext
+                        );
+                      }
                     }
-                  }
-              )
-          )
-      );
+                )
+            )
+        );
+      } else {
+        return baseRunner.run(query, responseContext);
+      }
     } else {
       return baseRunner.run(query, responseContext);
     }
   }
-
 }

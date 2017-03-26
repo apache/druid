@@ -23,9 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -35,8 +33,10 @@ import io.druid.java.util.common.guava.YieldingSequenceBase;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.SegmentMissingException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
@@ -73,18 +73,21 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           OutType initValue, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        List<SegmentDescriptor> missingSegments = getMissingSegments(context);
+        Map<String, List<SegmentDescriptor>> missingSegments = getMissingSegments(context);
 
         if (!missingSegments.isEmpty()) {
           for (int i = 0; i < config.getNumTries(); i++) {
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
-            context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-            final Query<T> retryQuery = query.withQuerySegmentSpec(
-                new MultipleSpecificSegmentSpec(
-                    missingSegments
-                )
-            );
+            context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
+            Query<T> retryQuery = query;
+            for (Entry<String, List<SegmentDescriptor>> entry : missingSegments.entrySet()) {
+              retryQuery = query.replaceQuerySegmentSpecWith(
+                  entry.getKey(),
+                  new MultipleSpecificSegmentSpec(entry.getValue())
+              );
+            }
+
             Sequence<T> retrySequence = baseRunner.run(retryQuery, context);
             listOfSequences.add(retrySequence);
             missingSegments = getMissingSegments(context);
@@ -93,7 +96,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             }
           }
 
-          final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
+          final Map<String, List<SegmentDescriptor>> finalMissingSegs = getMissingSegments(context);
           if (!config.isReturnPartialResults() && !finalMissingSegs.isEmpty()) {
             throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
           }
@@ -111,16 +114,16 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     };
   }
 
-  private List<SegmentDescriptor> getMissingSegments(final Map<String, Object> context)
+  private Map<String, List<SegmentDescriptor>> getMissingSegments(final Map<String, Object> context)
   {
     final Object maybeMissingSegments = context.get(Result.MISSING_SEGMENTS_KEY);
     if (maybeMissingSegments == null) {
-      return Lists.newArrayList();
+      return new HashMap<>();
     }
 
     return jsonMapper.convertValue(
         maybeMissingSegments,
-        new TypeReference<List<SegmentDescriptor>>()
+        new TypeReference<Map<String, List<SegmentDescriptor>>>()
         {
         }
     );

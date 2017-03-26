@@ -23,12 +23,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -79,5 +83,23 @@ public class Queries
     }
 
     return postAggs;
+  }
+
+  public static <T> Pair<String, String> getDataSourceAndIntervalStrings(final Query<T> query)
+  {
+    final List<String> datasourceNames = new ArrayList<>();
+    final List<String> intervals = new ArrayList<>();
+
+    query.getDataSources().forEach(spec -> {
+      datasourceNames.addAll(spec.getDataSource().getNames());
+      intervals.addAll(
+          spec.getQuerySegmentSpec().getIntervals().stream().map(Interval::toString).collect(Collectors.toList())
+      );
+    });
+
+    return new Pair<>(
+        datasourceNames.stream().collect(Collectors.joining(",", "[", "]")),
+        intervals.stream().collect(Collectors.joining(",", "[", "]"))
+    );
   }
 }

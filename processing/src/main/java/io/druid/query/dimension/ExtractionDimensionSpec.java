@@ -35,6 +35,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 {
   private static final byte CACHE_TYPE_ID = 0x1;
 
+  private final String dataSourceName;
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final String outputName;
@@ -42,6 +43,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
 
   @JsonCreator
   public ExtractionDimensionSpec(
+      @JsonProperty("dataSourceName") String dataSourceName,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("outputType") ValueType outputType,
@@ -53,6 +55,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
     Preconditions.checkNotNull(dimension, "dimension must not be null");
     Preconditions.checkArgument(extractionFn != null || dimExtractionFn != null, "extractionFn must not be null");
 
+    this.dataSourceName = dataSourceName;
     this.dimension = dimension;
     this.extractionFn = extractionFn != null ? extractionFn : dimExtractionFn;
     this.outputType = outputType == null ? ValueType.STRING : outputType;
@@ -61,14 +64,25 @@ public class ExtractionDimensionSpec implements DimensionSpec
     this.outputName = outputName == null ? dimension : outputName;
   }
 
+  public ExtractionDimensionSpec(String dataSourceName, String dimension, String outputName, ExtractionFn extractionFn)
+  {
+    this(dataSourceName, dimension, outputName, null, extractionFn, null);
+  }
+
   public ExtractionDimensionSpec(String dimension, String outputName, ExtractionFn extractionFn)
   {
-    this(dimension, outputName, null, extractionFn, null);
+    this(null, dimension, outputName, null, extractionFn, null);
   }
 
   public ExtractionDimensionSpec(String dimension, String outputName, ValueType outputType, ExtractionFn extractionFn)
   {
-    this(dimension, outputName, outputType, extractionFn, null);
+    this(null, dimension, outputName, outputType, extractionFn, null);
+  }
+
+  @Override
+  public String getDataSourceName()
+  {
+    return dataSourceName;
   }
 
   @Override

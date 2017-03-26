@@ -21,6 +21,7 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -28,8 +29,10 @@ import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.Query;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.GenericQueryMetricsFactory;
+import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.http.security.StateResourceFilter;
@@ -102,11 +105,16 @@ public class BrokerQueryResource extends QueryResource
     final ResponseContext context = createContext(req.getContentType(), pretty != null);
     try {
       Query<?> query = context.getObjectMapper().readValue(in, Query.class);
+
+      final DataSourceWithSegmentSpec spec = (DataSourceWithSegmentSpec) query.getContext().computeIfAbsent(
+          QueryContextKeys.DIST_TARGET_SOURCE,
+          key -> Iterables.getFirst(query.getDataSources(), null)
+      );
       return context.ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
-              query.getDataSource(),
-              query.getIntervals(),
+              spec.getDataSource(),
+              spec.getQuerySegmentSpec().getIntervals(),
               numCandidates
           )
       );

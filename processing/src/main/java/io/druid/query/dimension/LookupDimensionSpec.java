@@ -41,6 +41,9 @@ public class LookupDimensionSpec implements DimensionSpec
   private static final byte CACHE_TYPE_ID = 0x4;
 
   @JsonProperty
+  private final String dataSourceName;
+
+  @JsonProperty
   private final String dimension;
 
   @JsonProperty
@@ -65,6 +68,7 @@ public class LookupDimensionSpec implements DimensionSpec
 
   @JsonCreator
   public LookupDimensionSpec(
+      @JsonProperty("dataSourceName") String dataSourceName,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("lookup") LookupExtractor lookup,
@@ -75,6 +79,7 @@ public class LookupDimensionSpec implements DimensionSpec
       @JsonProperty("optimize") Boolean optimize
   )
   {
+    this.dataSourceName = dataSourceName;
     this.retainMissingValue = retainMissingValue;
     this.optimize = optimize == null ? true : optimize;
     this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
@@ -94,6 +99,36 @@ public class LookupDimensionSpec implements DimensionSpec
           "The system is not configured to allow for lookups, please read about configuring a lookup manager in the docs"
       );
     }
+  }
+
+  public LookupDimensionSpec(
+      String dimension,
+      String outputName,
+      LookupExtractor lookup,
+      boolean retainMissingValue,
+      String replaceMissingValueWith,
+      String name,
+      LookupReferencesManager lookupReferencesManager,
+      Boolean optimize
+  )
+  {
+    this(
+        null,
+        dimension,
+        outputName,
+        lookup,
+        retainMissingValue,
+        replaceMissingValueWith,
+        name,
+        lookupReferencesManager,
+        optimize
+    );
+  }
+
+  @Override
+  public String getDataSourceName()
+  {
+    return dataSourceName;
   }
 
   @Override

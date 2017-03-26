@@ -25,9 +25,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
-import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
+public class SegmentMetadataQuery extends SingleSourceBaseQuery<SegmentAnalysis>
 {
   /* The SegmentMetadataQuery cache key may contain UTF-8 column name strings.
    * Prepend 0xFF before the analysisTypes as a separator to avoid

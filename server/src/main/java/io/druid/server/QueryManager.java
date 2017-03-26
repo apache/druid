@@ -24,9 +24,11 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Query;
 import io.druid.query.QueryWatcher;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -60,9 +62,13 @@ public class QueryManager implements QueryWatcher
   public void registerQuery(Query query, final ListenableFuture future)
   {
     final String id = query.getId();
-    final List<String> datasources = query.getDataSource().getNames();
+    final Iterable<DataSourceWithSegmentSpec> sources = query.getDataSources();
+    final List<String> dataSourceNames = new ArrayList<>();
+    for (DataSourceWithSegmentSpec eachSource : sources) {
+      dataSourceNames.addAll(eachSource.getDataSource().getNames());
+    }
     queries.put(id, future);
-    queryDatasources.putAll(id, datasources);
+    queryDatasources.putAll(id, dataSourceNames);
     future.addListener(
         new Runnable()
         {
@@ -70,7 +76,7 @@ public class QueryManager implements QueryWatcher
           public void run()
           {
             queries.remove(id, future);
-            for (String datasource : datasources) {
+            for (String datasource : dataSourceNames) {
               queryDatasources.remove(id, datasource);
             }
           }

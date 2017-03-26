@@ -23,6 +23,9 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
+import io.druid.query.QueryContextKeys;
+import io.druid.query.SingleSourceBaseQuery;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -38,6 +41,7 @@ import io.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -207,6 +211,21 @@ public class TopNQueryBuilder
     return this;
   }
 
+  public TopNQueryBuilder updateDistributionTarget()
+  {
+    if (context == null) {
+      context = new HashMap<>();
+    }
+    context.put(
+        QueryContextKeys.DIST_TARGET_SOURCE,
+        new DataSourceWithSegmentSpec(
+            SingleSourceBaseQuery.getLeafDataSource(dataSource),
+            querySegmentSpec
+        )
+    );
+    return this;
+  }
+
   public TopNQueryBuilder virtualColumns(VirtualColumns virtualColumns)
   {
     this.virtualColumns = virtualColumns;
@@ -325,7 +344,11 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder context(Map<String, Object> c)
   {
-    context = c;
+    if (context == null) {
+      context = new HashMap<>(c);
+    } else {
+      context.putAll(c);
+    }
     return this;
   }
 }

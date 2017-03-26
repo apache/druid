@@ -19,6 +19,7 @@
 
 package io.druid.query.spec;
 
+import com.google.common.collect.ImmutableList;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
@@ -49,7 +50,7 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
   @Override
   public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
   {
-    return walker.getQueryRunnerForSegments(query, Arrays.asList(descriptor));
+    return walker.getQueryRunnerForSegments(query, ImmutableList.of(descriptor));
   }
 
   public SegmentDescriptor getDescriptor() { return descriptor; }

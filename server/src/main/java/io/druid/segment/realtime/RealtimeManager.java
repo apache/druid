@@ -35,6 +35,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -152,8 +153,9 @@ public class RealtimeManager implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, Iterable<Interval> intervals)
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    final Map<Integer, FireChief> partitionChiefs = chiefs.get(Iterables.getOnlyElement(query.getDataSource()
-                                                                                             .getNames()));
+    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
+    final Map<Integer, FireChief> partitionChiefs = chiefs.get(Iterables.getOnlyElement(spec.getDataSource()
+                                                                                            .getNames()));
 
     return partitionChiefs == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
         factory.mergeRunners(
@@ -177,8 +179,9 @@ public class RealtimeManager implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    final Map<Integer, FireChief> partitionChiefs = chiefs.get(Iterables.getOnlyElement(query.getDataSource()
-                                                                                             .getNames()));
+    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
+    final String dataSourceName = Iterables.getOnlyElement(spec.getDataSource().getNames());
+    final Map<Integer, FireChief> partitionChiefs = chiefs.get(dataSourceName);
 
     return partitionChiefs == null
            ? new NoopQueryRunner<T>()
@@ -195,7 +198,9 @@ public class RealtimeManager implements QuerySegmentWalker
                            final FireChief retVal = partitionChiefs.get(spec.getPartitionNumber());
                            return retVal == null
                                   ? new NoopQueryRunner<T>()
-                                  : retVal.getQueryRunner(query.withQuerySegmentSpec(new SpecificSegmentSpec(spec)));
+                                  : retVal.getQueryRunner(
+                                      query.replaceQuerySegmentSpecWith(dataSourceName, new SpecificSegmentSpec(spec))
+                                  );
                          }
                        }
                    )

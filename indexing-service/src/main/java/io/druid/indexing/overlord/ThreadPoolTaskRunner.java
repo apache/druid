@@ -45,6 +45,7 @@ import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -343,11 +344,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
   {
     QueryRunner<T> queryRunner = null;
-    final String queryDataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
+    final String dataSourceName = Iterables.getOnlyElement(spec.getDataSource().getNames());
 
     for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
       final Task task = taskRunnerWorkItem.getTask();
-      if (task.getDataSource().equals(queryDataSource)) {
+      if (task.getDataSource().equals(dataSourceName)) {
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {
@@ -355,7 +357,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
             queryRunner = taskQueryRunner;
           } else {
             log.makeAlert("Found too many query runners for datasource")
-               .addData("dataSource", queryDataSource)
+               .addData("dataSource", dataSourceName)
                .emit();
           }
         }

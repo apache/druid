@@ -67,6 +67,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.TrinaryFn;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MapQueryToolChestWarehouse;
@@ -449,6 +450,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
+                                                        .updateDistributionTarget()
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -488,6 +490,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
+                                                        .updateDistributionTarget()
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -544,6 +547,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -565,6 +569,7 @@ public class CachingClusteredClientTest
                                         .aggregators(AGGS)
                                         .postAggregators(POST_AGGS)
                                         .context(CONTEXT)
+                                        .updateDistributionTarget()
                                         .build();
 
     final Map<String, Object> context = new HashMap<>();
@@ -617,6 +622,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
+                                                        .updateDistributionTarget()
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -663,6 +669,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-05/2011-01-10")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             Maps.newHashMap()
         )
@@ -680,6 +687,7 @@ public class CachingClusteredClientTest
                                                         .granularity(PT1H_TZ_GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
+                                                        .updateDistributionTarget()
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -711,6 +719,7 @@ public class CachingClusteredClientTest
             builder.intervals("2011-11-04/2011-11-08")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -727,6 +736,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
+                                                        .updateDistributionTarget()
                                                         .context(CONTEXT);
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client, new TimeseriesQueryQueryToolChest(
@@ -801,6 +811,7 @@ public class CachingClusteredClientTest
         .granularity(GRANULARITY)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
+        .updateDistributionTarget()
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -859,6 +870,7 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(DIFF_ORDER_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -879,6 +891,7 @@ public class CachingClusteredClientTest
         .granularity(PT1H_TZ_GRANULARITY)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
+        .updateDistributionTarget()
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -913,6 +926,7 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(DIFF_ORDER_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -980,6 +994,7 @@ public class CachingClusteredClientTest
         .granularity(GRANULARITY)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
+        .updateDistributionTarget()
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -1035,6 +1050,7 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(DIFF_ORDER_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -1054,6 +1070,7 @@ public class CachingClusteredClientTest
         .granularity(GRANULARITY)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
+        .updateDistributionTarget()
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -1109,6 +1126,7 @@ public class CachingClusteredClientTest
                    .metric("avg_imps_per_row_double")
                    .aggregators(AGGS)
                    .postAggregators(DIFF_ORDER_POST_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -1126,6 +1144,7 @@ public class CachingClusteredClientTest
                                                     .intervals(SEG_SPEC)
                                                     .dimensions(Arrays.asList(TOP_DIM))
                                                     .query("how")
+                                                    .updateDistributionTarget()
                                                     .context(CONTEXT);
 
     testQueryCaching(
@@ -1183,6 +1202,7 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -1192,7 +1212,8 @@ public class CachingClusteredClientTest
   @Test
   public void testSearchCachingRenamedOutput() throws Exception
   {
-    final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
+    final Druids.SearchQueryBuilder builder = Druids
+        .newSearchQueryBuilder()
         .dataSource(DATA_SOURCE)
         .filters(DIM_FILTER)
         .granularity(GRANULARITY)
@@ -1200,6 +1221,7 @@ public class CachingClusteredClientTest
         .intervals(SEG_SPEC)
         .dimensions(Arrays.asList(TOP_DIM))
         .query("how")
+        .updateDistributionTarget()
         .context(CONTEXT);
 
     testQueryCaching(
@@ -1257,7 +1279,8 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
-                .build(),
+                   .updateDistributionTarget()
+                   .build(),
             context
         )
     );
@@ -1303,6 +1326,7 @@ public class CachingClusteredClientTest
                                               .dimensions(Arrays.asList("a"))
                                               .metrics(Arrays.asList("rows"))
                                               .pagingSpec(new PagingSpec(null, 3))
+                                              .updateDistributionTarget()
                                               .context(CONTEXT);
 
     testQueryCaching(
@@ -1356,6 +1380,7 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
+                   .updateDistributionTarget()
                    .build(),
             context
         )
@@ -1368,7 +1393,8 @@ public class CachingClusteredClientTest
     final Set<String> dimensions = Sets.<String>newHashSet("a");
     final Set<String> metrics = Sets.<String>newHashSet("rows");
 
-    Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
+    Druids.SelectQueryBuilder builder = Druids
+        .newSelectQueryBuilder()
         .dataSource(DATA_SOURCE)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
@@ -1376,6 +1402,7 @@ public class CachingClusteredClientTest
         .dimensions(Arrays.asList("a"))
         .metrics(Arrays.asList("rows"))
         .pagingSpec(new PagingSpec(null, 3))
+        .updateDistributionTarget()
         .context(CONTEXT);
 
     testQueryCaching(
@@ -1435,7 +1462,8 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
-                .build(),
+                   .updateDistributionTarget()
+                   .build(),
             context
         )
     );
@@ -1458,8 +1486,9 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
-                .dimensionSpecs(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("a", "a2")))
-                .build(),
+                   .dimensionSpecs(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("a", "a2")))
+                   .updateDistributionTarget()
+                   .build(),
             context
         )
     );
@@ -1483,6 +1512,7 @@ public class CachingClusteredClientTest
         .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "a")))
         .setAggregatorSpecs(aggsWithUniques)
         .setPostAggregatorSpecs(POST_AGGS)
+        .updateDistributionTarget()
         .setContext(CONTEXT);
 
     final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
@@ -1563,6 +1593,7 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.setInterval("2011-01-05/2011-01-10")
+                   .updateDistributionTarget()
                    .build(),
             context
         ),
@@ -1579,6 +1610,7 @@ public class CachingClusteredClientTest
               .dataSource(CachingClusteredClientTest.DATA_SOURCE)
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
+              .updateDistributionTarget()
               .build(),
         new Interval("2011-01-01/2011-01-02"),
         makeTimeBoundaryResult(new DateTime("2011-01-01"), new DateTime("2011-01-01"), new DateTime("2011-01-02")),
@@ -1600,6 +1632,7 @@ public class CachingClusteredClientTest
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MAX_TIME)
+              .updateDistributionTarget()
               .build(),
         new Interval("2011-01-01/2011-01-02"),
         makeTimeBoundaryResult(new DateTime("2011-01-01"), null, new DateTime("2011-01-02")),
@@ -1621,6 +1654,7 @@ public class CachingClusteredClientTest
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MIN_TIME)
+              .updateDistributionTarget()
               .build(),
         new Interval("2011-01-01/2011-01-02"),
         makeTimeBoundaryResult(new DateTime("2011-01-01"), new DateTime("2011-01-01"), null),
@@ -1672,6 +1706,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
+                                                        .updateDistributionTarget()
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
@@ -1744,14 +1779,15 @@ public class CachingClusteredClientTest
                              .build();
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
-                                                    .dataSource(DATA_SOURCE)
-                                                    .filters(filter)
-                                                    .granularity(GRANULARITY)
-                                                    .intervals(SEG_SPEC)
-                                                    .context(CONTEXT)
-                                                    .intervals("2011-01-05/2011-01-10")
-                                                    .aggregators(RENAMED_AGGS)
-                                                    .postAggregators(RENAMED_POST_AGGS);
+                                                        .dataSource(DATA_SOURCE)
+                                                        .filters(filter)
+                                                        .granularity(GRANULARITY)
+                                                        .intervals(SEG_SPEC)
+                                                        .context(CONTEXT)
+                                                        .intervals("2011-01-05/2011-01-10")
+                                                        .aggregators(RENAMED_AGGS)
+                                                        .updateDistributionTarget()
+                                                        .postAggregators(RENAMED_POST_AGGS);
 
     TimeseriesQuery query = builder.build();
     Map<String, List> context = new HashMap<>();
@@ -1948,6 +1984,7 @@ public class CachingClusteredClientTest
           throw new ISE("Unknown query type[%s]", query.getClass());
         }
       }
+      final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
 
       final Iterable<Result<Object>> expected = new ArrayList<>();
       for (int intervalNo = 0; intervalNo < i + 1; intervalNo++) {
@@ -1965,7 +2002,8 @@ public class CachingClusteredClientTest
                 TestHelper.assertExpectedResults(
                     expected,
                     runner.run(
-                        query.withQuerySegmentSpec(
+                        query.replaceQuerySegmentSpecWith(
+                            Iterables.getOnlyElement(spec.getDataSource().getNames()),
                             new MultipleIntervalSegmentSpec(
                                 ImmutableList.of(
                                     actualQueryInterval
@@ -2155,6 +2193,8 @@ public class CachingClusteredClientTest
         expectedResultsRangeEnd = i + 1;
       }
 
+      final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
+
       runWithMocks(
           new Runnable()
           {
@@ -2189,7 +2229,8 @@ public class CachingClusteredClientTest
                             )
                     ),
                     runner.run(
-                        query.withQuerySegmentSpec(
+                        query.replaceQuerySegmentSpecWith(
+                            Iterables.getOnlyElement(spec.getDataSource().getNames()),
                             new MultipleIntervalSegmentSpec(
                                 ImmutableList.of(
                                     actualQueryInterval
@@ -3000,6 +3041,7 @@ public class CachingClusteredClientTest
               .dataSource(CachingClusteredClientTest.DATA_SOURCE)
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
+              .updateDistributionTarget()
               .build(),
         new Interval("1970-01-01/1970-01-02"),
         makeTimeBoundaryResult(new DateTime("1970-01-01"), new DateTime("1970-01-01"), new DateTime("1970-01-02")),
@@ -3021,6 +3063,7 @@ public class CachingClusteredClientTest
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MAX_TIME)
+              .updateDistributionTarget()
               .build(),
         new Interval("1970-01-01/2011-01-02"),
         makeTimeBoundaryResult(new DateTime("1970-01-01"), null, new DateTime("1970-01-02")),
@@ -3042,6 +3085,7 @@ public class CachingClusteredClientTest
               .intervals(CachingClusteredClientTest.SEG_SPEC)
               .context(CachingClusteredClientTest.CONTEXT)
               .bound(TimeBoundaryQuery.MIN_TIME)
+              .updateDistributionTarget()
               .build(),
         new Interval("1970-01-01/2011-01-02"),
         makeTimeBoundaryResult(new DateTime("1970-01-01"), new DateTime("1970-01-01"), null),
@@ -3067,6 +3111,7 @@ public class CachingClusteredClientTest
         .setGranularity(GRANULARITY)
         .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "output")))
         .setAggregatorSpecs(AGGS)
+        .updateDistributionTarget()
         .setContext(CONTEXT);
 
     testQueryCaching(
@@ -3123,6 +3168,7 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.setInterval("2011-01-05/2011-01-10")
+                   .updateDistributionTarget()
                    .build(),
             context
         ),
@@ -3146,6 +3192,7 @@ public class CachingClusteredClientTest
             builder.setInterval("2011-01-05/2011-01-10")
                    .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "output2")))
                    .setAggregatorSpecs(RENAMED_AGGS)
+                   .updateDistributionTarget()
                    .build(),
             context
         ),
@@ -3182,6 +3229,7 @@ public class CachingClusteredClientTest
                                     .dataSource(DATA_SOURCE)
                                     .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
                                     .context(ImmutableMap.<String, Object>of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                    .updateDistributionTarget()
                                     .build();
 
 

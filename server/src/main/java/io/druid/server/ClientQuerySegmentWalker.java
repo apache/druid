@@ -94,11 +94,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             )
         )
         .applyPreMergeDecoration()
+        .annotateDistributionTarget()
         .mergeResults()
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter)
         .postProcess(postProcessing);
   }
-
-
 }

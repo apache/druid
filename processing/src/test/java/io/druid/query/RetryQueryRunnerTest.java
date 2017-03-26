@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
@@ -38,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -66,19 +68,23 @@ public class RetryQueryRunnerTest
   public void testRunWithMissingSegments() throws Exception
   {
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(Query query, Map context)
           {
-            ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                new SegmentDescriptor(
-                    new Interval(
-                        178888,
-                        1999999
-                    ), "test", 1
+            final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).put(
+                Iterables.getOnlyElement(timeseriesQuery.getDataSource().getNames()),
+                Lists.newArrayList(
+                    new SegmentDescriptor(
+                        new Interval(
+                            178888,
+                            1999999
+                        ), "test", 1
+                    )
                 )
             );
             return Sequences.empty();
@@ -111,7 +117,7 @@ public class RetryQueryRunnerTest
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
-        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 1
+        ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 1
     );
     Assert.assertTrue("Should return an empty sequence as a result", ((List) actualResults).size() == 0);
   }
@@ -122,7 +128,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new MapMaker().makeMap();
     context.put("count", 0);
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -132,13 +138,17 @@ public class RetryQueryRunnerTest
               Map<String, Object> context
           )
           {
+            final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
             if ((int) context.get("count") == 0) {
-              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 1
+              ((Map<String, List<SegmentDescriptor>>) context.get(Result.MISSING_SEGMENTS_KEY)).put(
+                  Iterables.getOnlyElement(timeseriesQuery.getDataSource().getNames()),
+                  Lists.newArrayList(
+                      new SegmentDescriptor(
+                          new Interval(
+                              178888,
+                              1999999
+                          ), "test", 1
+                      )
                   )
               );
               context.put("count", 1);
@@ -180,7 +190,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
+        ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
     );
   }
 
@@ -189,7 +199,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new MapMaker().makeMap();
     context.put("count", 0);
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -199,13 +209,17 @@ public class RetryQueryRunnerTest
               Map<String, Object> context
           )
           {
+            final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
             if ((int) context.get("count") < 3) {
-              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 1
+              ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).put(
+                  Iterables.getOnlyElement(timeseriesQuery.getDataSource().getNames()),
+                  Lists.newArrayList(
+                      new SegmentDescriptor(
+                          new Interval(
+                              178888,
+                              1999999
+                          ), "test", 1
+                      )
                   )
               );
               context.put("count", (int) context.get("count") + 1);
@@ -247,7 +261,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
+        ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
     );
   }
 
@@ -255,7 +269,7 @@ public class RetryQueryRunnerTest
   public void testException() throws Exception
   {
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -265,12 +279,16 @@ public class RetryQueryRunnerTest
               Map<String, Object> context
           )
           {
-            ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                new SegmentDescriptor(
-                    new Interval(
-                        178888,
-                        1999999
-                    ), "test", 1
+            final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            ((Map<String, List<SegmentDescriptor>>) context.get(Result.MISSING_SEGMENTS_KEY)).put(
+                Iterables.getOnlyElement(timeseriesQuery.getDataSource().getNames()),
+                Lists.newArrayList(
+                    new SegmentDescriptor(
+                        new Interval(
+                            178888,
+                            1999999
+                        ), "test", 1
+                    )
                 )
             );
             return Sequences.empty();
@@ -307,7 +325,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new MapMaker().makeMap();
     context.put("count", 0);
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new HashMap<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -317,9 +335,16 @@ public class RetryQueryRunnerTest
               Map<String, Object> context
           )
           {
+            final TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
             if ((int) context.get("count") == 0) {
               // assume 2 missing segments at first run
-              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
+              final Map<String, List<SegmentDescriptor>> missingSegments =
+                  (Map<String, List<SegmentDescriptor>>) context.get(Result.MISSING_SEGMENTS_KEY);
+              final List<SegmentDescriptor> list = missingSegments.computeIfAbsent(
+                  Iterables.getOnlyElement(timeseriesQuery.getDataSource().getNames()),
+                  key -> Lists.newArrayList()
+              );
+              list.add(
                   new SegmentDescriptor(
                       new Interval(
                           178888,
@@ -327,7 +352,7 @@ public class RetryQueryRunnerTest
                       ), "test", 1
                   )
               );
-              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
+              list.add(
                   new SegmentDescriptor(
                       new Interval(
                           178888,
@@ -335,6 +360,7 @@ public class RetryQueryRunnerTest
                       ), "test", 2
                   )
               );
+
               context.put("count", 1);
               return Sequences.simple(
                   Arrays.asList(
@@ -348,14 +374,20 @@ public class RetryQueryRunnerTest
               );
             } else if ((int) context.get("count") == 1) {
               // this is first retry
-              Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2);
+              Assert.assertTrue(
+                  "Should retry with 2 missing segments",
+                  ((MultipleSpecificSegmentSpec)((SingleSourceBaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2
+              );
               // assume only left 1 missing at first retry
-              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
-                  new SegmentDescriptor(
-                      new Interval(
-                          178888,
-                          1999999
-                      ), "test", 2
+              ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).put(
+                  Iterables.getOnlyElement(timeseriesQuery.getDataSource().getNames()),
+                  Lists.newArrayList(
+                      new SegmentDescriptor(
+                          new Interval(
+                              178888,
+                              1999999
+                          ), "test", 2
+                      )
                   )
               );
               context.put("count", 2);
@@ -371,7 +403,10 @@ public class RetryQueryRunnerTest
               );
             } else {
               // this is second retry
-              Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1);
+              Assert.assertTrue(
+                  "Should retry with 1 missing segments",
+                  ((MultipleSpecificSegmentSpec)((SingleSourceBaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1
+              );
               // assume no more missing at second retry
               context.put("count", 3);
               return Sequences.simple(
@@ -410,7 +445,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with 3 elements", ((List) actualResults).size() == 3);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
+        ((Map) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
     );
   }
 }

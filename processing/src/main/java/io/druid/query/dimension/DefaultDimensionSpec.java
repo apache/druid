@@ -64,17 +64,20 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   private static final byte CACHE_TYPE_ID = 0x0;
+  private final String dataSourceName;
   private final String dimension;
   private final String outputName;
   private final ValueType outputType;
 
   @JsonCreator
   public DefaultDimensionSpec(
+      @JsonProperty("dataSource") String dataSourceName,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("outputType") ValueType outputType
   )
   {
+    this.dataSourceName = dataSourceName;
     this.dimension = dimension;
     this.outputType = outputType == null ? ValueType.STRING : outputType;
 
@@ -83,11 +86,36 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   public DefaultDimensionSpec(
+      String dataSourceName,
       String dimension,
       String outputName
   )
   {
-    this(dimension, outputName, ValueType.STRING);
+    this(dataSourceName, dimension, outputName, ValueType.STRING);
+  }
+
+  public DefaultDimensionSpec(
+      String dimension,
+      String outputName,
+      ValueType outputType
+  )
+  {
+    this(null, dimension, outputName, outputType);
+  }
+
+  public DefaultDimensionSpec(
+      String dimension,
+      String outputName
+  )
+  {
+    this(null, dimension, outputName);
+  }
+
+  @Override
+  @JsonProperty("dataSource")
+  public String getDataSourceName()
+  {
+    return dataSourceName;
   }
 
   @Override

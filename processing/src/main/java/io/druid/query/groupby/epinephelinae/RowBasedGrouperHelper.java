@@ -199,7 +199,7 @@ public class RowBasedGrouperHelper
           @Override
           public long apply(Row row)
           {
-            return query.getIntervals().get(0).getStartMillis();
+            return query.getQuerySegmentSpec().getIntervals().get(0).getStartMillis();
           }
         };
       } else {

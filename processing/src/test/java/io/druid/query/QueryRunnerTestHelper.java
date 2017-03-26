@@ -75,6 +75,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -332,7 +334,7 @@ public class QueryRunnerTestHelper
     };
   }
 
-  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
+  public static <T , QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )
       throws IOException
@@ -434,7 +436,7 @@ public class QueryRunnerTestHelper
     };
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+  public static <T , QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String resourceFileName,
       final String runnerName
@@ -448,7 +450,7 @@ public class QueryRunnerTestHelper
     );
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+  public static <T , QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       Segment adapter,
       final String runnerName
@@ -457,7 +459,7 @@ public class QueryRunnerTestHelper
     return makeQueryRunner(factory, segmentId, adapter, runnerName);
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+  public static <T , QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String segmentId,
       Segment adapter,
@@ -528,22 +530,28 @@ public class QueryRunnerTestHelper
               @Override
               public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
               {
-                List<TimelineObjectHolder> segments = Lists.newArrayList();
-                for (Interval interval : query.getIntervals()) {
-                  segments.addAll(timeline.lookup(interval));
-                }
+                final List<TimelineObjectHolder> segments = StreamSupport
+                    .stream(query.getDataSources().spliterator(), false)
+                    .flatMap(spec -> spec.getQuerySegmentSpec().getIntervals().stream())
+                    .flatMap(interval -> timeline.lookup(interval).stream())
+                    .collect(Collectors.toList());
                 List<Sequence<T>> sequences = Lists.newArrayList();
                 for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
-                  Query running = query.withQuerySegmentSpec(
-                      new SpecificSegmentSpec(
-                          new SegmentDescriptor(
-                              holder.getInterval(),
-                              holder.getVersion(),
-                              0
-                          )
-                      )
-                  );
+                  Query running = query;
+                  for (DataSourceWithSegmentSpec spec : query.getDataSources()) {
+                    running = query.replaceQuerySegmentSpecWith(
+                        spec.getDataSource(),
+                        new SpecificSegmentSpec(
+                            new SegmentDescriptor(
+                                holder.getInterval(),
+                                holder.getVersion(),
+                                0
+                            )
+                        )
+                    );
+                  }
+
                   sequences.add(factory.createRunner(segment).run(running, responseContext));
                 }
                 return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));

@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -61,7 +62,11 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
                   new BySegmentResultValueClass<T>(
                       results,
                       segmentIdentifier,
-                      query.getIntervals().get(0)
+                      Iterables.getOnlyElement(
+                          Iterables.getOnlyElement(query.getDataSources())
+                                   .getQuerySegmentSpec()
+                                   .getIntervals()
+                      )
                   )
               )
           )

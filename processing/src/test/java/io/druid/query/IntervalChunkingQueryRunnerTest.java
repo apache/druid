@@ -26,6 +26,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids.TimeseriesQueryBuilder;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.timeseries.TimeseriesQuery;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,6 +75,7 @@ public class IntervalChunkingQueryRunnerTest
   @Test
   public void testChunking() {
     Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-01-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1D")).build();
+    query = query.distributeBy(((TimeseriesQuery) query).getDataSourceWithSegmentSpec());
 
     executors.execute(EasyMock.anyObject(Runnable.class));
     EasyMock.expectLastCall().times(10);
@@ -90,6 +92,7 @@ public class IntervalChunkingQueryRunnerTest
   @Test
   public void testChunkingOnMonths() {
     Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-02-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1M")).build();
+    query = query.distributeBy(((TimeseriesQuery) query).getDataSourceWithSegmentSpec());
 
     executors.execute(EasyMock.anyObject(Runnable.class));
     EasyMock.expectLastCall().times(2);

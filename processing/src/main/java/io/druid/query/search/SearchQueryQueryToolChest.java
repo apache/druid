@@ -362,6 +362,18 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     );
   }
 
+  @Override
+  public QueryRunner<Result<SearchResultValue>> annotateDistributionTarget(QueryRunner<Result<SearchResultValue>> runner)
+  {
+    return (query, responseContext) -> {
+      final SearchQuery searchQuery = (SearchQuery) query;
+      return runner.run(
+          searchQuery.distributeBy(searchQuery.getDataSourceWithSegmentSpec()),
+          responseContext
+      );
+    };
+  }
+
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     private final QueryRunner<Result<SearchResultValue>> runner;

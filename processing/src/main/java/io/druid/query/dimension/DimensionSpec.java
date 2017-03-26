@@ -38,6 +38,8 @@ import io.druid.segment.column.ValueType;
 })
 public interface DimensionSpec extends Cacheable
 {
+  String getDataSourceName();
+
   String getDimension();
 
   String getOutputName();

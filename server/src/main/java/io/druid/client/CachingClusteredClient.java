@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +59,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceWithSegmentSpec;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -164,7 +166,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       contextBuilder.put("bySegment", true);
     }
 
-    TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+    final DataSourceWithSegmentSpec spec = query.getDistributionTarget();
+    final List<String> dataSourceNames = spec.getDataSource().getNames();
+    Preconditions.checkArgument(dataSourceNames.size() > 0);
+    final String dataSourceName = dataSourceNames.get(0);
+
+    TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(spec.getDataSource());
 
     if (timeline == null) {
       return Sequences.empty();
@@ -183,7 +190,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
       boolean uncoveredIntervalsOverflowed = false;
 
-      for (Interval interval : query.getIntervals()) {
+      for (Interval interval : spec.getQuerySegmentSpec().getIntervals()) {
         Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
         long startMillis = interval.getStartMillis();
         long endMillis = interval.getEndMillis();
@@ -219,7 +226,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
       }
     } else {
-      for (Interval interval : query.getIntervals()) {
+      for (Interval interval : spec.getQuerySegmentSpec().getIntervals()) {
         Iterables.addAll(serversLookup, timeline.lookup(interval));
       }
     }
@@ -336,7 +343,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         log.makeAlert(
             "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
             segment.rhs,
-            query.getDataSource()
+            spec.getDataSource()
         ).emit();
       } else {
         final DruidServer server = queryableDruidServer.getServer();
@@ -429,7 +436,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               final Sequence<T> resultSeqToAdd;
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
                 if (!isBySegment) {
-                  resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
+                  resultSeqToAdd = clientQueryable.run(
+                      query.replaceQuerySegmentSpecWith(dataSourceName, segmentSpec),
+                      responseContext
+                  );
                 } else {
                   // bySegment queries need to be de-serialized, see DirectDruidClient.run()
 
@@ -439,7 +449,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
                   @SuppressWarnings("unchecked")
                   final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
-                      bySegmentQuery.withQuerySegmentSpec(segmentSpec),
+                      bySegmentQuery.replaceQuerySegmentSpecWith(dataSourceName, segmentSpec),
                       responseContext
                   );
 
@@ -472,7 +482,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               } else { // Requires some manipulation on broker side
                 @SuppressWarnings("unchecked")
                 final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
-                    rewrittenQuery.withQuerySegmentSpec(segmentSpec),
+                    rewrittenQuery.replaceQuerySegmentSpecWith(dataSourceName, segmentSpec),
                     responseContext
                 );
                 resultSeqToAdd = new MergeSequence(

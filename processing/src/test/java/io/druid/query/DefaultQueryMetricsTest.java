@@ -29,14 +29,11 @@ import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class DefaultQueryMetricsTest
 {
@@ -69,19 +66,15 @@ public class DefaultQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(12, actualEvent.size());
+    Assert.assertEquals(11, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(DataSourceUtil.getMetricName(query.getDataSources()), actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnInterval.getIntervals();
-    List<String> expectedStringIntervals =
-        expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
-    Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
-    Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
+    Assert.assertEquals(query.getTotalDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));

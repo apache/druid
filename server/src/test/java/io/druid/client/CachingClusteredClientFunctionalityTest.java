@@ -79,53 +79,55 @@ public class CachingClusteredClientFunctionalityTest {
     addToTimeline(new Interval("2015-01-04/2015-01-05"), "1");
     addToTimeline(new Interval("2015-02-04/2015-02-05"), "1");
 
-    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+    final Druids.TimeseriesQueryBuilder builder = Druids
+        .newTimeseriesQueryBuilder()
         .dataSource("test")
         .intervals("2015-01-02/2015-01-03")
         .granularity("day")
         .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
+        .updateDistributionTarget()
         .context(ImmutableMap.<String, Object>of("uncoveredIntervalsLimit", 3));
 
     Map<String, Object> responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     Assert.assertNull(responseContext.get("uncoveredIntervals"));
 
-    builder.intervals("2015-01-01/2015-01-03");
+    builder.intervals("2015-01-01/2015-01-03").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02");
 
-    builder.intervals("2015-01-01/2015-01-04");
+    builder.intervals("2015-01-01/2015-01-04").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04");
 
-    builder.intervals("2015-01-02/2015-01-04");
+    builder.intervals("2015-01-02/2015-01-04").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04");
 
-    builder.intervals("2015-01-01/2015-01-30");
+    builder.intervals("2015-01-01/2015-01-30").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
-    builder.intervals("2015-01-02/2015-01-30");
+    builder.intervals("2015-01-02/2015-01-30").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-03/2015-01-04", "2015-01-05/2015-01-30");
 
-    builder.intervals("2015-01-04/2015-01-30");
+    builder.intervals("2015-01-04/2015-01-30").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-05/2015-01-30");
 
-    builder.intervals("2015-01-10/2015-01-30");
+    builder.intervals("2015-01-10/2015-01-30").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, false, "2015-01-10/2015-01-30");
 
-    builder.intervals("2015-01-01/2015-02-25");
+    builder.intervals("2015-01-01/2015-02-25").updateDistributionTarget();
     responseContext = new HashMap<>();
     client.run(builder.build(), responseContext);
     assertUncovered(responseContext, true, "2015-01-01/2015-01-02", "2015-01-03/2015-01-04", "2015-01-05/2015-02-04");

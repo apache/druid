@@ -25,6 +25,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.query.CachingEmitter;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunnerTestHelper;
@@ -34,13 +35,11 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 
 public class DefaultGroupByQueryMetricsTest
@@ -92,17 +91,15 @@ public class DefaultGroupByQueryMetricsTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals(15, actualEvent.size());
+    Assert.assertEquals(14, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(DataSourceUtil.getMetricName(query.getDataSources()), actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    Interval expectedInterval = new Interval("2011-04-02/2011-04-04");
-    Assert.assertEquals(Collections.singletonList(expectedInterval.toString()), actualEvent.get(DruidMetrics.INTERVAL));
     Assert.assertEquals("true", actualEvent.get("hasFilters"));
-    Assert.assertEquals(expectedInterval.toDuration().toString(), actualEvent.get("duration"));
+    Assert.assertEquals(query.getTotalDuration().toString(), actualEvent.get("duration"));
     Assert.assertEquals("", actualEvent.get(DruidMetrics.ID));
 
     // GroupBy-specific dimensions
