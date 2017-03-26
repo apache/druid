@@ -33,14 +33,14 @@ import java.util.Set;
 
 /**
  */
-public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWorkerSelectStrategy
+public class EqualDistributionWithAffinityWorkerSelectStrategy extends EqualDistributionWorkerSelectStrategy
 {
   private final AffinityConfig affinityConfig;
   private final Set<String> affinityWorkerHosts = Sets.newHashSet();
 
   @JsonCreator
-  public FillCapacityWithAffinityWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
+  public EqualDistributionWithAffinityWorkerSelectStrategy(
+          @JsonProperty("affinityConfig") AffinityConfig affinityConfig
   )
   {
     this.affinityConfig = affinityConfig;
@@ -59,9 +59,9 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
 
   @Override
   public Optional<ImmutableWorkerInfo> findWorkerForTask(
-      final WorkerTaskRunnerConfig config,
-      final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
-      final Task task
+          final WorkerTaskRunnerConfig config,
+          final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
+          final Task task
   )
   {
     // don't run other datasources on affinity workers; we only want our configured datasources to run on them
@@ -107,7 +107,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
       return false;
     }
 
-    FillCapacityWithAffinityWorkerSelectStrategy that = (FillCapacityWithAffinityWorkerSelectStrategy) o;
+    EqualDistributionWithAffinityWorkerSelectStrategy that = (EqualDistributionWithAffinityWorkerSelectStrategy) o;
 
     if (affinityConfig != null ? !affinityConfig.equals(that.affinityConfig) : that.affinityConfig != null) {
       return false;
@@ -122,4 +122,3 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
     return affinityConfig != null ? affinityConfig.hashCode() : 0;
   }
 }
-
