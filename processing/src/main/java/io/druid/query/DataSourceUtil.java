@@ -41,14 +41,14 @@ public class DataSourceUtil
                  .collect(Collectors.joining(",", "[", "]"));
   }
 
-  private static final StringJoiner JOINER = new StringJoiner(",", "[", "]");
   private static String getMetricName(DataSourceWithSegmentSpec spec)
   {
-    JOINER.add(getMetricName(spec.getDataSource())).add("=");
-    JOINER.add(spec.getQuerySegmentSpec().getIntervals().stream()
+    final StringJoiner joiner = new StringJoiner("=", "[", "]");
+    joiner.add(getMetricName(spec.getDataSource()));
+    joiner.add(spec.getQuerySegmentSpec().getIntervals().stream()
                    .map(Interval::toString)
                    .collect(Collectors.joining(",", "[", "]"))
     );
-    return JOINER.toString();
+    return joiner.toString();
   }
 }
