@@ -27,6 +27,7 @@ import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -66,6 +67,7 @@ public class GenericIndexedWriter<T> implements Closeable
   private long numWritten = 0;
   private boolean requireMultipleFiles = false;
   private ByteBuffer buf;
+  private final ByteBuffer sizeHelperBuffer = ByteBuffer.allocate(Ints.BYTES);
 
 
   public GenericIndexedWriter(
@@ -122,20 +124,6 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
-  private static void writeLongValueToOutputStream(ByteBuffer helperBuf, long value, CountingOutputStream outLong)
-      throws IOException
-  {
-    helperBuf.putLong(0, value);
-    outLong.write(helperBuf.array());
-  }
-
-  private static void writeIntValueToOutputStream(ByteBuffer helperBuf, int value, CountingOutputStream outLong)
-      throws IOException
-  {
-    helperBuf.putInt(0, value);
-    outLong.write(helperBuf.array());
-  }
-
   public void open() throws IOException
   {
     headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header")));
@@ -151,13 +139,13 @@ public class GenericIndexedWriter<T> implements Closeable
     byte[] bytesToWrite = strategy.toBytes(objectToWrite);
 
     ++numWritten;
-    valuesOut.write(Ints.toByteArray(bytesToWrite.length));
+    SerializerUtils.writeBigEndianIntToOutputStream(valuesOut, bytesToWrite.length, sizeHelperBuffer);
     valuesOut.write(bytesToWrite);
 
     if (!requireMultipleFiles) {
-      writeIntValueToOutputStream(buf, Ints.checkedCast(valuesOut.getCount()), headerOut);
+      SerializerUtils.writeBigEndianIntToOutputStream(headerOut, Ints.checkedCast(valuesOut.getCount()), buf);
     } else {
-      writeLongValueToOutputStream(buf, valuesOut.getCount(), headerOutLong);
+      SerializerUtils.writeNativeOrderedLongToOutputStream(headerOutLong, valuesOut.getCount(), buf);
     }
 
     if (!requireMultipleFiles && getSerializedSize() > fileSizeLimit) {
@@ -205,7 +193,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
     try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"))) {
       metaOut.write(GenericIndexed.VERSION_ONE);
-      metaOut.write(objectsSorted ? 0x1 : 0x0);
+      metaOut.write(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
       metaOut.write(Ints.toByteArray(Ints.checkedCast(numBytesWritten + 4)));
       metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
     }
@@ -366,7 +354,7 @@ public class GenericIndexedWriter<T> implements Closeable
     int bagSizePower = bagSizePower();
     OutputStream metaOut = Channels.newOutputStream(channel);
     metaOut.write(GenericIndexed.VERSION_TWO);
-    metaOut.write(objectsSorted ? 0x1 : 0x0);
+    metaOut.write(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
     metaOut.write(Ints.toByteArray(bagSizePower));
     metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
     metaOut.write(Ints.toByteArray(fileNameByteArray.length));
@@ -436,7 +424,11 @@ public class GenericIndexedWriter<T> implements Closeable
         }
         currentNumBytes = Long.reverseBytes(headerFile.readLong());
         relativeNumBytes = currentNumBytes - relativeRefBytes;
-        writeIntValueToOutputStream(helperBuffer, Ints.checkedCast(relativeNumBytes), finalHeaderOut);
+        SerializerUtils.writeNativeOrderedIntToOutputStream(
+            finalHeaderOut,
+            Ints.checkedCast(relativeNumBytes),
+            helperBuffer
+        );
       }
 
       long numBytesToPutInFile = finalHeaderOut.getCount();
@@ -460,7 +452,7 @@ public class GenericIndexedWriter<T> implements Closeable
       ByteBuffer buf = ByteBuffer.allocate(Longs.BYTES).order(ByteOrder.nativeOrder());
       for (int i = 0; i < numWritten; i++) {
         int count = headerFile.readInt();
-        writeLongValueToOutputStream(buf, count, headerOutLong);
+        SerializerUtils.writeNativeOrderedLongToOutputStream(headerOutLong, count, buf);
       }
     }
   }
