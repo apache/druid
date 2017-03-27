@@ -167,7 +167,7 @@ public class GenericIndexed<T> implements Indexed<T>
   private int logBaseTwoOfElementsPerValueFile;
   private int relativeIndexMask;
 
-  private ByteBuffer theBuffer;
+  private final ByteBuffer theBuffer;
 
   /**
    * Constructor for version one.
@@ -211,6 +211,7 @@ public class GenericIndexed<T> implements Indexed<T>
   {
     this.versionOne = false;
 
+    this.theBuffer = null;
     this.strategy = strategy;
     this.allowReverseLookup = allowReverseLookup;
     this.valueBuffers = valueBuffs;
