@@ -130,11 +130,11 @@ public class KafkaEmitterConfig
   public String toString()
   {
     return "KafkaEmitterConfig{" +
-           "bootstrapServers='" + bootstrapServers + '\'' +
-           ", metricTopic='" + metricTopic + '\'' +
-           ", alertTopic='" + alertTopic + '\'' +
+           "bootstrap.servers='" + bootstrapServers + '\'' +
+           ", metric.topic='" + metricTopic + '\'' +
+           ", alert.topic='" + alertTopic + '\'' +
            ", clusterName='" + clusterName + '\'' +
-           ", kafkaProducerConfig=" + kafkaProducerConfig +
+           ", Producer.config=" + kafkaProducerConfig +
            '}';
   }
 }
