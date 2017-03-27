@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * Unsafe for concurrent use from multiple threads.
  */
 public class LongMetricColumnSerializer implements MetricColumnSerializer
 {

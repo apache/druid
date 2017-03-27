@@ -31,6 +31,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.common.utils.JodaUtils;
+import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -56,7 +57,6 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -402,19 +402,13 @@ public class IndexMergerV9 extends IndexMerger
       final ColumnDescriptor serdeficator
   ) throws IOException
   {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-    byte[] specBytes = baos.toByteArray();
-
-    final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-        columnName, serdeficator.numBytes() + specBytes.length
-    );
-    try {
-      channel.write(ByteBuffer.wrap(specBytes));
+    ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
+    serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
+    try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+        columnName, serdeficator.numBytes() + specBytes.size()
+    )) {
+      specBytes.writeTo(channel);
       serdeficator.write(channel, v9Smoosher);
-    }
-    finally {
-      channel.close();
     }
   }
 

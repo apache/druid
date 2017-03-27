@@ -36,7 +36,7 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
 
   protected WrappedImmutableRoaringBitmap(ByteBuffer byteBuffer)
   {
-    this.bitmap = new ImmutableRoaringBitmap(byteBuffer.asReadOnlyBuffer());
+    this.bitmap = new ImmutableRoaringBitmap(byteBuffer);
   }
 
   /**

@@ -19,26 +19,23 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
@@ -71,9 +68,10 @@ import java.util.List;
  */
 public class GenericIndexed<T> implements Indexed<T>
 {
-  public static final byte VERSION_ONE = 0x1;
-  public static final byte VERSION_TWO = 0x2;
-  private static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
+  static final byte VERSION_ONE = 0x1;
+  static final byte VERSION_TWO = 0x2;
+  static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
+  static final byte REVERSE_LOOKUP_DISALLOWED = 0x0;
   private final static Ordering<String> NATURAL_STRING_ORDERING = Ordering.natural().nullsFirst();
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
@@ -107,129 +105,32 @@ public class GenericIndexed<T> implements Indexed<T>
     }
   };
 
-  private final ObjectStrategy<T> strategy;
-  private final boolean allowReverseLookup;
-  private final int size;
-  private final BufferIndexed bufferIndexed;
-  private final List<ByteBuffer> valueBuffers;
-  private final ByteBuffer headerBuffer;
-  private int logBaseTwoOfElementsPerValueFile;
-
-  private ByteBuffer theBuffer;
-
-  // used for single file version, v1
-  GenericIndexed(
-      ByteBuffer buffer,
-      ObjectStrategy<T> strategy,
-      boolean allowReverseLookup
-  )
+  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
   {
-    this.theBuffer = buffer;
-    this.strategy = strategy;
-    this.allowReverseLookup = allowReverseLookup;
-    size = theBuffer.getInt();
+    byte versionFromBuffer = buffer.get();
 
-    int indexOffset = theBuffer.position();
-    int valuesOffset = theBuffer.position() + size * Ints.BYTES;
-
-    buffer.position(valuesOffset);
-    valueBuffers = Lists.newArrayList(buffer.slice());
-    buffer.position(indexOffset);
-    headerBuffer = buffer.slice();
-    final ByteBuffer valueBuffer = valueBuffers.get(0);
-    bufferIndexed = new BufferIndexed()
-    {
-      @Override
-      public T get(int index)
-      {
-        checkIndex(index, size);
-
-        final int startOffset;
-        final int endOffset;
-
-        if (index == 0) {
-          startOffset = 4;
-          endOffset = headerBuffer.getInt(0);
-        } else {
-          int headerPosition = (index - 1) * Ints.BYTES;
-          startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
-          endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
-        }
-        return _get(valueBuffer.asReadOnlyBuffer(), startOffset, endOffset);
-      }
-    };
+    if (VERSION_ONE == versionFromBuffer) {
+      return createGenericIndexedVersionOne(buffer, strategy);
+    } else if (VERSION_TWO == versionFromBuffer) {
+      throw new IAE(
+          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)"
+          + " to read version 2 indexed."
+      );
+    }
+    throw new IAE("Unknown version[%d]", (int) versionFromBuffer);
   }
 
-  // used for multiple file version, v2.
-  GenericIndexed(
-      List<ByteBuffer> valueBuffs,
-      ByteBuffer headerBuff,
-      ObjectStrategy<T> strategy,
-      boolean allowReverseLookup,
-      int logBaseTwoOfElementsPerValueFile,
-      int numWritten
-  )
+  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)
   {
-    this.strategy = strategy;
-    this.allowReverseLookup = allowReverseLookup;
-    this.valueBuffers = valueBuffs;
-    this.headerBuffer = headerBuff;
-    this.size = numWritten;
-    this.logBaseTwoOfElementsPerValueFile = logBaseTwoOfElementsPerValueFile;
-    headerBuffer.order(ByteOrder.nativeOrder());
-    bufferIndexed = new BufferIndexed()
-    {
-      @Override
-      public T get(int index)
-      {
-        int fileNum = index >> GenericIndexed.this.logBaseTwoOfElementsPerValueFile;
-        final ByteBuffer copyBuffer = valueBuffers.get(fileNum).asReadOnlyBuffer();
+    byte versionFromBuffer = buffer.get();
 
-        checkIndex(index, size);
-
-        final int startOffset;
-        final int endOffset;
-        int relativePositionOfIndex = index & ((1 << GenericIndexed.this.logBaseTwoOfElementsPerValueFile) - 1);
-        if (relativePositionOfIndex == 0) {
-          int headerPosition = index * Ints.BYTES;
-          startOffset = 4;
-          endOffset = headerBuffer.getInt(headerPosition);
-        } else {
-          int headerPosition = (index - 1) * Ints.BYTES;
-          startOffset = headerBuffer.getInt(headerPosition) + 4;
-          endOffset = headerBuffer.getInt(headerPosition + 4);
-        }
-        return _get(copyBuffer, startOffset, endOffset);
-      }
-    };
-  }
-
-  public static int getNumberOfFilesRequired(int bagSize, long numWritten)
-  {
-    int numberOfFilesRequired = (int) (numWritten / bagSize);
-    if ((numWritten % bagSize) != 0) {
-      numberOfFilesRequired += 1;
+    if (VERSION_ONE == versionFromBuffer) {
+      return createGenericIndexedVersionOne(buffer, strategy);
+    } else if (VERSION_TWO == versionFromBuffer) {
+      return createGenericIndexedVersionTwo(buffer, strategy, fileMapper);
     }
-    return numberOfFilesRequired;
-  }
 
-  /**
-   * Checks  if {@code index} a valid `element index` in GenericIndexed.
-   * Similar to Preconditions.checkElementIndex() except this method throws {@link IAE} with custom error message.
-   * <p>
-   * Used here to get existing behavior(same error message and exception) of V1 GenericIndexed.
-   *
-   * @param index index identifying an element of an GenericIndexed.
-   * @param size  number of elements.
-   */
-  private static void checkIndex(int index, int size)
-  {
-    if (index < 0) {
-      throw new IAE("Index[%s] < 0", index);
-    }
-    if (index >= size) {
-      throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
-    }
+    throw new IAE("Unknown version [%s]", versionFromBuffer);
   }
 
   public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy)
@@ -239,160 +140,121 @@ public class GenericIndexed<T> implements Indexed<T>
 
   public static <T> GenericIndexed<T> fromIterable(Iterable<T> objectsIterable, ObjectStrategy<T> strategy)
   {
-    Iterator<T> objects = objectsIterable.iterator();
-    if (!objects.hasNext()) {
-      final ByteBuffer buffer = ByteBuffer.allocate(4).putInt(0);
-      buffer.flip();
-      return new GenericIndexed<T>(buffer, strategy, true);
-    }
-
-    boolean allowReverseLookup = true;
-    int count = 0;
-
-    ByteArrayOutputStream headerBytes = new ByteArrayOutputStream();
-    ByteArrayOutputStream valueBytes = new ByteArrayOutputStream();
-    try {
-      int offset = 0;
-      T prevVal = null;
-      do {
-        count++;
-        T next = objects.next();
-        if (allowReverseLookup && prevVal != null && !(strategy.compare(prevVal, next) < 0)) {
-          allowReverseLookup = false;
-        }
-
-        final byte[] bytes = strategy.toBytes(next);
-        offset += 4 + bytes.length;
-        headerBytes.write(Ints.toByteArray(offset));
-        valueBytes.write(Ints.toByteArray(bytes.length));
-        valueBytes.write(bytes);
-
-        if (prevVal instanceof Closeable) {
-          CloseQuietly.close((Closeable) prevVal);
-        }
-        prevVal = next;
-      } while (objects.hasNext());
-
-      if (prevVal instanceof Closeable) {
-        CloseQuietly.close((Closeable) prevVal);
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.BYTES + headerBytes.size() + valueBytes.size());
-    theBuffer.put(Ints.toByteArray(count));
-    theBuffer.put(headerBytes.toByteArray());
-    theBuffer.put(valueBytes.toByteArray());
-    theBuffer.flip();
-
-    return new GenericIndexed<T>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
+    return fromIterableVersionOne(objectsIterable, strategy);
   }
 
-  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
+  static int getNumberOfFilesRequired(int bagSize, long numWritten)
   {
-    byte versionFromBuffer = buffer.get();
-
-    if (VERSION_ONE == versionFromBuffer) {
-      return createVersionOneGenericIndexed(buffer, strategy);
-    } else if (VERSION_TWO == versionFromBuffer) {
-      throw new IAE(
-          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)"
-          + " to read version 2 indexed.",
-          versionFromBuffer
-      );
+    int numberOfFilesRequired = (int) (numWritten / bagSize);
+    if ((numWritten % bagSize) != 0) {
+      numberOfFilesRequired += 1;
     }
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
+    return numberOfFilesRequired;
   }
 
-  private static <T> GenericIndexed<T> createVersionOneGenericIndexed(ByteBuffer byteBuffer, ObjectStrategy<T> strategy)
-  {
-    boolean allowReverseLookup = byteBuffer.get() == REVERSE_LOOKUP_ALLOWED;
-    int size = byteBuffer.getInt();
-    ByteBuffer bufferToUse = byteBuffer.asReadOnlyBuffer();
-    bufferToUse.limit(bufferToUse.position() + size);
-    byteBuffer.position(bufferToUse.limit());
 
-    return new GenericIndexed<T>(
-        bufferToUse,
-        strategy,
-        allowReverseLookup
-    );
-  }
+  private final boolean versionOne;
 
-  private static <T> GenericIndexed<T> createVersionTwoGenericIndexed(
-      ByteBuffer byteBuffer,
+  private final ObjectStrategy<T> strategy;
+  private final boolean allowReverseLookup;
+  private final int size;
+  private final ByteBuffer headerBuffer;
+
+  private final ByteBuffer firstValueBuffer;
+
+  private final ByteBuffer[] valueBuffers;
+  private int logBaseTwoOfElementsPerValueFile;
+  private int relativeIndexMask;
+
+  private ByteBuffer theBuffer;
+
+  /**
+   * Constructor for version one.
+   */
+  GenericIndexed(
+      ByteBuffer buffer,
       ObjectStrategy<T> strategy,
-      SmooshedFileMapper fileMapper
+      boolean allowReverseLookup
   )
   {
-    if (fileMapper == null) {
-      throw new IAE("SmooshedFileMapper can not be null for version 2.");
-    }
-    boolean allowReverseLookup = byteBuffer.get() == REVERSE_LOOKUP_ALLOWED;
-    int logBaseTwoOfElementsPerValueFile = byteBuffer.getInt();
-    int numElements = byteBuffer.getInt();
-    String columnName;
+    this.versionOne = true;
 
-    List<ByteBuffer> valueBuffersToUse;
-    ByteBuffer headerBuffer;
-    try {
-      columnName = SERIALIZER_UTILS.readString(byteBuffer);
-      valueBuffersToUse = Lists.newArrayList();
-      int elementsPerValueFile = 1 << logBaseTwoOfElementsPerValueFile;
-      int numberOfFilesRequired = getNumberOfFilesRequired(elementsPerValueFile, numElements);
-      for (int i = 0; i < numberOfFilesRequired; i++) {
-        valueBuffersToUse.add(
-            fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i))
-                      .asReadOnlyBuffer()
-        );
-      }
-      headerBuffer = fileMapper.mapFile(GenericIndexedWriter.generateHeaderFileName(columnName));
-    }
-    catch (IOException e) {
-      throw new RuntimeException("File mapping failed.", e);
-    }
+    this.theBuffer = buffer;
+    this.strategy = strategy;
+    this.allowReverseLookup = allowReverseLookup;
+    size = theBuffer.getInt();
 
-    return new GenericIndexed<T>(
-        valueBuffersToUse,
-        headerBuffer,
-        strategy,
-        allowReverseLookup,
-        logBaseTwoOfElementsPerValueFile,
-        numElements
-    );
+    int indexOffset = theBuffer.position();
+    int valuesOffset = theBuffer.position() + size * Ints.BYTES;
+
+    buffer.position(valuesOffset);
+    // Ensure the value buffer's limit equals to capacity.
+    firstValueBuffer = buffer.slice();
+    valueBuffers = new ByteBuffer[]{firstValueBuffer};
+    buffer.position(indexOffset);
+    headerBuffer = buffer.slice();
   }
 
-  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)
+
+  /**
+   * Constructor for version two.
+   */
+  GenericIndexed(
+      ByteBuffer[] valueBuffs,
+      ByteBuffer headerBuff,
+      ObjectStrategy<T> strategy,
+      boolean allowReverseLookup,
+      int logBaseTwoOfElementsPerValueFile,
+      int numWritten
+  )
   {
-    byte versionFromBuffer = buffer.get();
+    this.versionOne = false;
 
-    if (VERSION_ONE == versionFromBuffer) {
-      return createVersionOneGenericIndexed(buffer, strategy);
-    } else if (VERSION_TWO == versionFromBuffer) {
-      return createVersionTwoGenericIndexed(buffer, strategy, fileMapper);
+    this.strategy = strategy;
+    this.allowReverseLookup = allowReverseLookup;
+    this.valueBuffers = valueBuffs;
+    this.firstValueBuffer = valueBuffers[0];
+    this.headerBuffer = headerBuff;
+    this.size = numWritten;
+    this.logBaseTwoOfElementsPerValueFile = logBaseTwoOfElementsPerValueFile;
+    this.relativeIndexMask = (1 << logBaseTwoOfElementsPerValueFile) - 1;
+    headerBuffer.order(ByteOrder.nativeOrder());
+  }
+
+  /**
+   * Checks  if {@code index} a valid `element index` in GenericIndexed.
+   * Similar to Preconditions.checkElementIndex() except this method throws {@link IAE} with custom error message.
+   * <p>
+   * Used here to get existing behavior(same error message and exception) of V1 GenericIndexed.
+   *
+   * @param index index identifying an element of an GenericIndexed.
+   */
+  private void checkIndex(int index)
+  {
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
     }
-
-    throw new IAE("Unknown version [%s]", versionFromBuffer);
+    if (index >= size) {
+      throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
+    }
   }
 
   @Override
   public Class<? extends T> getClazz()
   {
-    return bufferIndexed.getClazz();
+    return strategy.getClazz();
   }
 
   @Override
   public int size()
   {
-    return bufferIndexed.size();
+    return size;
   }
 
   @Override
   public T get(int index)
   {
-    return bufferIndexed.get(index);
+    return versionOne ? getVersionOne(index) : getVersionTwo(index);
   }
 
   /**
@@ -407,35 +269,56 @@ public class GenericIndexed<T> implements Indexed<T>
   @Override
   public int indexOf(T value)
   {
-    return bufferIndexed.indexOf(value);
+    return indexOf(this, value);
+  }
+
+  private int indexOf(Indexed<T> indexed, T value)
+  {
+    if (!allowReverseLookup) {
+      throw new UnsupportedOperationException("Reverse lookup not allowed.");
+    }
+
+    value = (value != null && value.equals("")) ? null : value;
+
+    int minIndex = 0;
+    int maxIndex = size - 1;
+    while (minIndex <= maxIndex) {
+      int currIndex = (minIndex + maxIndex) >>> 1;
+
+      T currValue = indexed.get(currIndex);
+      int comparison = strategy.compare(currValue, value);
+      if (comparison == 0) {
+        return currIndex;
+      }
+
+      if (comparison < 0) {
+        minIndex = currIndex + 1;
+      } else {
+        maxIndex = currIndex - 1;
+      }
+    }
+
+    return -(minIndex + 1);
   }
 
   @Override
   public Iterator<T> iterator()
   {
-    return bufferIndexed.iterator();
+    return IndexedIterable.create(this).iterator();
   }
 
   public long getSerializedSize()
   {
-    if (valueBuffers.size() != 1) {
+    if (!versionOne) {
       throw new UnsupportedOperationException("Method not supported for version 2 GenericIndexed.");
     }
-    return theBuffer.remaining()
-           + 2
-           + Ints.BYTES
-           + Ints.BYTES; //2 Bytes for version and sorted flag. 4 bytes to store numbers
-    // of bytes and next 4 bytes to store number of elements.
+    return getSerializedSizeVersionOne();
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    //version 2 will always have more than one buffer in valueBuffers.
-    if (valueBuffers.size() == 1) {
-      channel.write(ByteBuffer.wrap(new byte[]{VERSION_ONE, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
-      channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4))); // 4 Bytes to store size.
-      channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
-      channel.write(theBuffer.asReadOnlyBuffer());
+    if (versionOne) {
+      writeToChannelVersionOne(channel);
     } else {
       throw new UnsupportedOperationException(
           "GenericIndexed serialization for V2 is unsupported. Use GenericIndexedWriter instead.");
@@ -449,64 +332,19 @@ public class GenericIndexed<T> implements Indexed<T>
    */
   public GenericIndexed<T>.BufferIndexed singleThreaded()
   {
-    if (valueBuffers.size() == 1) {
-      final ByteBuffer copyBuffer = valueBuffers.get(0).asReadOnlyBuffer();
-      return new BufferIndexed()
-      {
-        @Override
-        public T get(final int index)
-        {
-          checkIndex(index, size);
+    return versionOne ? singleThreadedVersionOne() : singleThreadedVersionTwo();
+  }
 
-          final int startOffset;
-          final int endOffset;
-
-          if (index == 0) {
-            startOffset = 4;
-            endOffset = headerBuffer.getInt(0);
-          } else {
-            int headerPosition = (index - 1) * Ints.BYTES;
-            startOffset = headerBuffer.getInt(headerPosition) + 4;
-            endOffset = headerBuffer.getInt(headerPosition + 4);
-          }
-          return _get(copyBuffer, startOffset, endOffset);
-        }
-      };
-    } else {
-
-      final List<ByteBuffer> copyValueBuffers = new ArrayList<>();
-      for (ByteBuffer buffer : valueBuffers) {
-        copyValueBuffers.add(buffer.asReadOnlyBuffer());
-      }
-
-      return new BufferIndexed()
-      {
-        @Override
-        public T get(final int index)
-        {
-          int fileNum = index >> logBaseTwoOfElementsPerValueFile;
-          final ByteBuffer copyBuffer = copyValueBuffers.get(fileNum);
-
-          checkIndex(index, size);
-          final int startOffset;
-          final int endOffset;
-
-          int relativePositionOfIndex = index & ((1 << logBaseTwoOfElementsPerValueFile) - 1);
-          if (relativePositionOfIndex == 0) {
-            int headerPosition = index * Ints.BYTES;
-            startOffset = 4;
-            endOffset = headerBuffer.getInt(headerPosition);
-          } else {
-            int headerPosition = (index - 1) * Ints.BYTES;
-            startOffset = headerBuffer.getInt(headerPosition) + 4;
-            endOffset = headerBuffer.getInt(headerPosition + 4);
-          }
-
-          return _get(copyBuffer, startOffset, endOffset);
-        }
-      };
+  private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
+  {
+    final int size = endOffset - startOffset;
+    if (size == 0) {
+      return null;
     }
-
+    ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
+    copyValueBuffer.position(startOffset);
+    // fromByteBuffer must not modify the buffer limit
+    return strategy.fromByteBuffer(copyValueBuffer, size);
   }
 
   abstract class BufferIndexed implements Indexed<T>
@@ -525,15 +363,19 @@ public class GenericIndexed<T> implements Indexed<T>
       return size;
     }
 
-    protected T _get(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
+    T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       final int size = endOffset - startOffset;
-      if (startOffset == endOffset) {
+      lastReadSize = size;
+      if (size == 0) {
         return null;
       }
+      // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
+      // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
+      // sets the limit to the maximum possible, the capacity. It is safe to reset the limit to capacity, because the
+      // value buffer(s) initial limit equals to capacity.
+      copyValueBuffer.clear();
       copyValueBuffer.position(startOffset);
-      lastReadSize = size;
-      // fromByteBuffer must not modify the buffer limit
       return strategy.fromByteBuffer(copyValueBuffer, size);
     }
 
@@ -542,7 +384,7 @@ public class GenericIndexed<T> implements Indexed<T>
      *
      * @return the size in bytes of the last value read
      */
-    public int getLastValueSize()
+    int getLastValueSize()
     {
       return lastReadSize;
     }
@@ -550,38 +392,247 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public int indexOf(T value)
     {
-      if (!allowReverseLookup) {
-        throw new UnsupportedOperationException("Reverse lookup not allowed.");
-      }
-
-      value = (value != null && value.equals("")) ? null : value;
-
-      int minIndex = 0;
-      int maxIndex = size - 1;
-      while (minIndex <= maxIndex) {
-        int currIndex = (minIndex + maxIndex) >>> 1;
-
-        T currValue = get(currIndex);
-        int comparison = strategy.compare(currValue, value);
-        if (comparison == 0) {
-          return currIndex;
-        }
-
-        if (comparison < 0) {
-          minIndex = currIndex + 1;
-        } else {
-          maxIndex = currIndex - 1;
-        }
-      }
-
-      return -(minIndex + 1);
+      return GenericIndexed.this.indexOf(this, value);
     }
 
     @Override
     public Iterator<T> iterator()
     {
-      return IndexedIterable.create(this).iterator();
+      return GenericIndexed.this.iterator();
     }
   }
 
+  ///////////////
+  // VERSION ONE
+  ///////////////
+
+  private static <T> GenericIndexed<T> createGenericIndexedVersionOne(ByteBuffer byteBuffer, ObjectStrategy<T> strategy)
+  {
+    boolean allowReverseLookup = byteBuffer.get() == REVERSE_LOOKUP_ALLOWED;
+    int size = byteBuffer.getInt();
+    ByteBuffer bufferToUse = byteBuffer.asReadOnlyBuffer();
+    bufferToUse.limit(bufferToUse.position() + size);
+    byteBuffer.position(bufferToUse.limit());
+
+    return new GenericIndexed<>(
+        bufferToUse,
+        strategy,
+        allowReverseLookup
+    );
+  }
+
+  private static <T> GenericIndexed<T> fromIterableVersionOne(Iterable<T> objectsIterable, ObjectStrategy<T> strategy)
+  {
+    Iterator<T> objects = objectsIterable.iterator();
+    if (!objects.hasNext()) {
+      final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES).putInt(0);
+      buffer.flip();
+      return new GenericIndexed<>(buffer, strategy, true);
+    }
+
+    boolean allowReverseLookup = true;
+    int count = 0;
+
+    ZeroCopyByteArrayOutputStream headerBytes = new ZeroCopyByteArrayOutputStream();
+    ZeroCopyByteArrayOutputStream valueBytes = new ZeroCopyByteArrayOutputStream();
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
+    try {
+      int offset = 0;
+      T prevVal = null;
+      do {
+        count++;
+        T next = objects.next();
+        if (allowReverseLookup && prevVal != null && !(strategy.compare(prevVal, next) < 0)) {
+          allowReverseLookup = false;
+        }
+
+        final byte[] bytes = strategy.toBytes(next);
+        offset += Ints.BYTES + bytes.length;
+        SerializerUtils.writeBigEndianIntToOutputStream(headerBytes, offset, helperBuffer);
+        SerializerUtils.writeBigEndianIntToOutputStream(valueBytes, bytes.length, helperBuffer);
+        valueBytes.write(bytes);
+
+        if (prevVal instanceof Closeable) {
+          CloseQuietly.close((Closeable) prevVal);
+        }
+        prevVal = next;
+      } while (objects.hasNext());
+
+      if (prevVal instanceof Closeable) {
+        CloseQuietly.close((Closeable) prevVal);
+      }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.BYTES + headerBytes.size() + valueBytes.size());
+    theBuffer.putInt(count);
+    headerBytes.writeTo(theBuffer);
+    valueBytes.writeTo(theBuffer);
+    theBuffer.flip();
+
+    return new GenericIndexed<>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
+  }
+
+  private long getSerializedSizeVersionOne()
+  {
+    return theBuffer.remaining()
+           + 1 // version byte
+           + 1 // allowReverseLookup flag
+           + Ints.BYTES // numBytesUsed
+           + Ints.BYTES; // numElements
+  }
+
+  private T getVersionOne(int index)
+  {
+    checkIndex(index);
+
+    final int startOffset;
+    final int endOffset;
+
+    if (index == 0) {
+      startOffset = Ints.BYTES;
+      endOffset = headerBuffer.getInt(0);
+    } else {
+      int headerPosition = (index - 1) * Ints.BYTES;
+      startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
+      endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+    }
+    return copyBufferAndGet(firstValueBuffer, startOffset, endOffset);
+  }
+
+  private BufferIndexed singleThreadedVersionOne()
+  {
+    final ByteBuffer copyBuffer = firstValueBuffer.asReadOnlyBuffer();
+    return new BufferIndexed()
+    {
+      @Override
+      public T get(final int index)
+      {
+        checkIndex(index);
+
+        final int startOffset;
+        final int endOffset;
+
+        if (index == 0) {
+          startOffset = 4;
+          endOffset = headerBuffer.getInt(0);
+        } else {
+          int headerPosition = (index - 1) * Ints.BYTES;
+          startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
+          endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+        }
+        return bufferedIndexedGet(copyBuffer, startOffset, endOffset);
+      }
+    };
+  }
+
+  private void writeToChannelVersionOne(WritableByteChannel channel) throws IOException
+  {
+    channel.write(ByteBuffer.wrap(new byte[]{
+        VERSION_ONE,
+        allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED
+    }));
+    channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + Ints.BYTES)));
+    channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
+    channel.write(theBuffer.asReadOnlyBuffer());
+  }
+
+
+  ///////////////
+  // VERSION TWO
+  ///////////////
+
+  private static <T> GenericIndexed<T> createGenericIndexedVersionTwo(
+      ByteBuffer byteBuffer,
+      ObjectStrategy<T> strategy,
+      SmooshedFileMapper fileMapper
+  )
+  {
+    if (fileMapper == null) {
+      throw new IAE("SmooshedFileMapper can not be null for version 2.");
+    }
+    boolean allowReverseLookup = byteBuffer.get() == REVERSE_LOOKUP_ALLOWED;
+    int logBaseTwoOfElementsPerValueFile = byteBuffer.getInt();
+    int numElements = byteBuffer.getInt();
+
+    try {
+      String columnName = SERIALIZER_UTILS.readString(byteBuffer);
+      int elementsPerValueFile = 1 << logBaseTwoOfElementsPerValueFile;
+      int numberOfFilesRequired = getNumberOfFilesRequired(elementsPerValueFile, numElements);
+      ByteBuffer[] valueBuffersToUse = new ByteBuffer[numberOfFilesRequired];
+      for (int i = 0; i < numberOfFilesRequired; i++) {
+        // SmooshedFileMapper.mapFile() contract guarantees that the valueBuffer's limit equals to capacity.
+        ByteBuffer valueBuffer = fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i));
+        valueBuffersToUse[i] = valueBuffer.asReadOnlyBuffer();
+      }
+      ByteBuffer headerBuffer = fileMapper.mapFile(GenericIndexedWriter.generateHeaderFileName(columnName));
+      return new GenericIndexed<>(
+          valueBuffersToUse,
+          headerBuffer,
+          strategy,
+          allowReverseLookup,
+          logBaseTwoOfElementsPerValueFile,
+          numElements
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException("File mapping failed.", e);
+    }
+  }
+
+  private T getVersionTwo(int index)
+  {
+    checkIndex(index);
+
+    final int startOffset;
+    final int endOffset;
+
+    int relativePositionOfIndex = index & relativeIndexMask;
+    if (relativePositionOfIndex == 0) {
+      int headerPosition = index * Ints.BYTES;
+      startOffset = Ints.BYTES;
+      endOffset = headerBuffer.getInt(headerPosition);
+    } else {
+      int headerPosition = (index - 1) * Ints.BYTES;
+      startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
+      endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+    }
+    int fileNum = index >> logBaseTwoOfElementsPerValueFile;
+    return copyBufferAndGet(valueBuffers[fileNum], startOffset, endOffset);
+  }
+
+  private BufferIndexed singleThreadedVersionTwo()
+  {
+    final ByteBuffer[] copyValueBuffers = new ByteBuffer[valueBuffers.length];
+    for (int i = 0; i < valueBuffers.length; i++) {
+      copyValueBuffers[i] = valueBuffers[i].asReadOnlyBuffer();
+    }
+
+    return new BufferIndexed()
+    {
+      @Override
+      public T get(final int index)
+      {
+        checkIndex(index);
+
+        final int startOffset;
+        final int endOffset;
+
+        int relativePositionOfIndex = index & relativeIndexMask;
+        if (relativePositionOfIndex == 0) {
+          int headerPosition = index * Ints.BYTES;
+          startOffset = 4;
+          endOffset = headerBuffer.getInt(headerPosition);
+        } else {
+          int headerPosition = (index - 1) * Ints.BYTES;
+          startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
+          endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+        }
+        int fileNum = index >> logBaseTwoOfElementsPerValueFile;
+        return bufferedIndexedGet(copyValueBuffers[fileNum], startOffset, endOffset);
+      }
+    };
+  }
 }

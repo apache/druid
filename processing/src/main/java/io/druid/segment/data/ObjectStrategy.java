@@ -29,8 +29,11 @@ public interface ObjectStrategy<T> extends Comparator<T>
   /**
    * Convert values from their underlying byte representation.
    *
-   * Implementations of this method must not change the given buffer mark, or limit, but may modify its position.
-   * Use buffer.asReadOnlyBuffer() or buffer.duplicate() if mark or limit need to be set.
+   * Implementations of this method <i>may</i> change the given buffer's mark, or limit, and position.
+   *
+   * Implementations of this method <i>may not</i> store the given buffer in a field of the "deserialized" object,
+   * need to use {@link ByteBuffer#slice()}, {@link ByteBuffer#asReadOnlyBuffer()} or {@link ByteBuffer#duplicate()} in
+   * this case.
    *
    * @param buffer buffer to read value from
    * @param numBytes number of bytes used to store the value, starting at buffer.position()

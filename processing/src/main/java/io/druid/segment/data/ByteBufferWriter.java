@@ -26,11 +26,13 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -46,6 +48,7 @@ public class ByteBufferWriter<T> implements Closeable
 
   private CountingOutputStream headerOut = null;
   private CountingOutputStream valueOut = null;
+  private final ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
 
   public ByteBufferWriter(
       IOPeon ioPeon,
@@ -67,8 +70,7 @@ public class ByteBufferWriter<T> implements Closeable
   public void write(T objectToWrite) throws IOException
   {
     byte[] bytesToWrite = strategy.toBytes(objectToWrite);
-
-    headerOut.write(Ints.toByteArray(bytesToWrite.length));
+    SerializerUtils.writeBigEndianIntToOutputStream(headerOut, bytesToWrite.length, helperBuffer);
     valueOut.write(bytesToWrite);
   }
 

@@ -86,9 +86,8 @@ public class IndexedRTree implements Comparable<IndexedRTree>
     @Override
     public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new ImmutableRTree(readOnlyBuffer, bitmapFactory);
+      buffer.limit(buffer.position() + numBytes);
+      return new ImmutableRTree(buffer, bitmapFactory);
     }
 
     @Override

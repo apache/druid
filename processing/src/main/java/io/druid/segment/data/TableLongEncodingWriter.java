@@ -19,10 +19,12 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.BiMap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.IAE;
+import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.longs.LongList;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,16 +33,18 @@ import java.nio.ByteBuffer;
 public class TableLongEncodingWriter implements CompressionFactory.LongEncodingWriter
 {
 
-  private final BiMap<Long, Integer> table;
+  private final Long2IntMap table;
+  private final LongList valueAddedInOrder;
   private final int bitsPerValue;
   private VSizeLongSerde.LongSerializer serializer;
 
-  public TableLongEncodingWriter(BiMap<Long, Integer> table)
+  public TableLongEncodingWriter(Long2IntMap table, LongList valueAddedInOrder)
   {
     if (table.size() > CompressionFactory.MAX_TABLE_SIZE) {
       throw new IAE("Invalid table size[%s]", table.size());
     }
     this.table = table;
+    this.valueAddedInOrder = valueAddedInOrder;
     this.bitsPerValue = VSizeLongSerde.getBitsForMax(table.size());
   }
 
@@ -77,9 +81,9 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
     metaOut.write(CompressionFactory.LongEncodingFormat.TABLE.getId());
     metaOut.write(CompressionFactory.TABLE_ENCODING_VERSION);
     metaOut.write(Ints.toByteArray(table.size()));
-    BiMap<Integer, Long> inverse = table.inverse();
-    for (int i = 0; i < table.size(); i++) {
-      metaOut.write(Longs.toByteArray(inverse.get(i)));
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Longs.BYTES);
+    for (int i = 0; i < valueAddedInOrder.size(); i++) {
+      SerializerUtils.writeBigEndianLongToOutputStream(metaOut, valueAddedInOrder.getLong(i), helperBuffer);
     }
   }
 

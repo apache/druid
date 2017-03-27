@@ -42,6 +42,7 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   private final int numBytes;
 
   private CountingOutputStream valuesOut = null;
+  private final ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
 
   public VSizeIndexedIntsWriter(
       final IOPeon ioPeon,
@@ -63,8 +64,8 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   @Override
   protected void addValue(int val) throws IOException
   {
-    byte[] intAsBytes = Ints.toByteArray(val);
-    valuesOut.write(intAsBytes, intAsBytes.length - numBytes, numBytes);
+    helperBuffer.putInt(0, val);
+    valuesOut.write(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
   }
 
   @Override

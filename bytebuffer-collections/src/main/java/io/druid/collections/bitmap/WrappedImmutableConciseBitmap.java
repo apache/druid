@@ -34,7 +34,7 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
 
   public WrappedImmutableConciseBitmap(ByteBuffer byteBuffer)
   {
-    this.bitmap = new ImmutableConciseSet(byteBuffer.asReadOnlyBuffer());
+    this.bitmap = new ImmutableConciseSet(byteBuffer);
   }
 
   /**

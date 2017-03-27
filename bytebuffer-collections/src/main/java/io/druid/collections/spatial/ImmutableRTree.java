@@ -50,6 +50,7 @@ public class ImmutableRTree
 
   public ImmutableRTree(ByteBuffer data, BitmapFactory bitmapFactory)
   {
+    data = data.asReadOnlyBuffer();
     final int initPosition = data.position();
     Preconditions.checkArgument(data.get(0) == VERSION, "Mismatching versions");
     this.numDims = data.getInt(1 + initPosition) & 0x7FFF;
@@ -69,7 +70,7 @@ public class ImmutableRTree
     buffer.putInt(rTree.getNumDims());
     rTree.getRoot().storeInByteBuffer(buffer, buffer.position());
     buffer.position(0);
-    return new ImmutableRTree(buffer.asReadOnlyBuffer(), rTree.getBitmapFactory());
+    return new ImmutableRTree(buffer, rTree.getBitmapFactory());
   }
 
   private static int calcNumBytes(RTree tree)
