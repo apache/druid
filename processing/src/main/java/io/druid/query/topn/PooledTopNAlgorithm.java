@@ -269,7 +269,7 @@ public class PooledTopNAlgorithm
         SpecializationService.getSpecializationState(
             prototypeScanner.getClass(),
             runtimeShape,
-            ImmutableMap.<Class<?>, Class<?>>of(Offset.class, historicalCursor.getOffset().getClass())
+            ImmutableMap.of(Offset.class, historicalCursor.getOffset().getClass())
         );
     Historical1AggPooledTopNScanner scanner = specializationState.getSpecializedOrDefault(prototypeScanner);
 

@@ -293,6 +293,8 @@ public final class SpecializationService
     @Override
     public T getSpecialized()
     {
+      // Returns null because the class is not yet specialized. The purpose of WindowedLoopIterationCounter is to decide
+      // whether specialization should be done, or not.
       return null;
     }
 
