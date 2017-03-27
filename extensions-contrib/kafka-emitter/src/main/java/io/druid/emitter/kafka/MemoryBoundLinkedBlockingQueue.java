@@ -26,19 +26,22 @@ import java.util.concurrent.atomic.AtomicLong;
  * Similar to LinkedBlockingQueue but can be bounded by the total byte size of the items present in the queue
  * rather than number of items.
  */
-public class MemoryBoundLinkedBlockingQueue<T> {
+public class MemoryBoundLinkedBlockingQueue<T>
+{
   private final long memoryBound;
   private AtomicLong currentMemory;
   private LinkedBlockingQueue<ObjectContainer<T>> queue;
 
-  public MemoryBoundLinkedBlockingQueue(long memoryBound) {
+  public MemoryBoundLinkedBlockingQueue(long memoryBound)
+  {
     this.memoryBound = memoryBound;
     this.currentMemory = new AtomicLong(0L);
     this.queue = new LinkedBlockingQueue<>();
   }
 
   // returns true/false depending on whether item was added or not
-  public boolean offer(ObjectContainer<T> item) {
+  public boolean offer(ObjectContainer<T> item)
+  {
     final long itemLength = item.getSize();
 
     if (currentMemory.addAndGet(itemLength) <= memoryBound) {
@@ -51,34 +54,41 @@ public class MemoryBoundLinkedBlockingQueue<T> {
   }
 
   // blocks until at least one item is available to take
-  public ObjectContainer<T> take() throws InterruptedException {
+  public ObjectContainer<T> take() throws InterruptedException
+  {
     final ObjectContainer<T> ret = queue.take();
     currentMemory.addAndGet(-ret.getSize());
     return ret;
   }
 
-  public long getAvailableBuffer() {
+  public long getAvailableBuffer()
+  {
     return memoryBound - currentMemory.get();
   }
 
-  public int size() {
+  public int size()
+  {
     return queue.size();
   }
 
-  public static class ObjectContainer<T> {
+  public static class ObjectContainer<T>
+  {
     private T data;
     private long size;
 
-    ObjectContainer(T data, long size) {
+    ObjectContainer(T data, long size)
+    {
       this.data = data;
       this.size = size;
     }
 
-    public T getData() {
+    public T getData()
+    {
       return data;
     }
 
-    public long getSize() {
+    public long getSize()
+    {
       return size;
     }
   }

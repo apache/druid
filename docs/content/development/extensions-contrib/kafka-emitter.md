@@ -8,10 +8,10 @@ To use this extension, make sure to [include](../../operations/including-extensi
 
 ## Introduction
 
-This extension emits druid metrics to a Kafka(https://kafka.apache.org) directly with JSON format.<br>
+This extension emits Druid metrics to a [Kafka](https://kafka.apache.org) directly with JSON format.<br>
 Currently, Kafka has not only their nice ecosystem but also consumer API readily available. 
-So, If you currently use kafka, It's easy to integrate various tool or UI 
-to monitor the status of your druid cluster with this extension.
+So, If you currently use Kafka, It's easy to integrate various tool or UI 
+to monitor the status of your Druid cluster with this extension.
 
 ## Configuration
 
@@ -28,7 +28,7 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 ### Example
 
 ```
-druid.emitter.kafka.bootstrap.servers=hostname1:9092,hotname2:9092
+druid.emitter.kafka.bootstrap.servers=hostname1:9092,hostname2:9092
 druid.emitter.kafka.metric.topic=druid-metric
 druid.emitter.kafka.alert.topic=druid-alert
 druid.emitter.kafka.producer.config={"max.block.ms":10000}

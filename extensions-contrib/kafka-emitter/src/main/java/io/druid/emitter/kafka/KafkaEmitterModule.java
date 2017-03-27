@@ -32,23 +32,27 @@ import io.druid.initialization.DruidModule;
 import java.util.Collections;
 import java.util.List;
 
-public class KafkaEmitterModule implements DruidModule {
+public class KafkaEmitterModule implements DruidModule
+{
   private static final String EMITTER_TYPE = "kafka";
 
   @Override
-  public List<? extends Module> getJacksonModules() {
+  public List<? extends Module> getJacksonModules()
+  {
     return Collections.EMPTY_LIST;
   }
 
   @Override
-  public void configure(Binder binder) {
+  public void configure(Binder binder)
+  {
     JsonConfigProvider.bind(binder, "druid.emitter." + EMITTER_TYPE, KafkaEmitterConfig.class);
   }
 
   @Provides
   @ManageLifecycle
   @Named(EMITTER_TYPE)
-  public Emitter getEmitter(KafkaEmitterConfig kafkaEmitterConfig, ObjectMapper mapper) {
+  public Emitter getEmitter(KafkaEmitterConfig kafkaEmitterConfig, ObjectMapper mapper)
+  {
     return new KafkaEmitter(kafkaEmitterConfig, mapper);
   }
 }

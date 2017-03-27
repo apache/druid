@@ -29,20 +29,24 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class KafkaEmitterConfigTest {
+public class KafkaEmitterConfigTest
+{
   private ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp() {
+  public void setUp()
+  {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper()));
   }
 
   @Test
-  public void testSerDeserKafkaEmitterConfig() throws IOException {
+  public void testSerDeserKafkaEmitterConfig() throws IOException
+  {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
                                                                    "alertTest", "clusterNameTest",
-                                                                    ImmutableMap.<String, String>builder()
-                                                                        .put("testKey", "testValue").build());
+                                                                   ImmutableMap.<String, String>builder()
+                                                                       .put("testKey", "testValue").build()
+    );
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.reader(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
