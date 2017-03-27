@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MemoryBoundLinkedBlockingQueue<T>
 {
   private final long memoryBound;
-  private AtomicLong currentMemory;
-  private LinkedBlockingQueue<ObjectContainer<T>> queue;
+  private final AtomicLong currentMemory;
+  private final LinkedBlockingQueue<ObjectContainer<T>> queue;
 
   public MemoryBoundLinkedBlockingQueue(long memoryBound)
   {
