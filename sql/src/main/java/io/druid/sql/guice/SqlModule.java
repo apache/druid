@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import com.google.inject.Provides;
+import com.google.inject.Provider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -40,11 +40,14 @@ import io.druid.sql.calcite.expression.CharacterLengthExtractionOperator;
 import io.druid.sql.calcite.expression.ExtractExtractionOperator;
 import io.druid.sql.calcite.expression.FloorExtractionOperator;
 import io.druid.sql.calcite.expression.LookupExtractionOperator;
+import io.druid.sql.calcite.expression.RegexpExtractExtractionOperator;
 import io.druid.sql.calcite.expression.SqlExtractionOperator;
 import io.druid.sql.calcite.expression.SubstringExtractionOperator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.view.NoopViewManager;
+import io.druid.sql.calcite.view.ViewManager;
 import io.druid.sql.http.SqlResource;
 import org.apache.calcite.schema.SchemaPlus;
 
@@ -62,7 +65,8 @@ public class SqlModule implements Module
       ExtractExtractionOperator.class,
       FloorExtractionOperator.class,
       LookupExtractionOperator.class,
-      SubstringExtractionOperator.class
+      SubstringExtractionOperator.class,
+      RegexpExtractExtractionOperator.class
   );
 
   private static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
@@ -85,6 +89,8 @@ public class SqlModule implements Module
       JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
       JsonConfigProvider.bind(binder, "druid.sql.avatica", AvaticaServerConfig.class);
       LifecycleModule.register(binder, DruidSchema.class);
+      binder.bind(ViewManager.class).to(NoopViewManager.class);
+      binder.bind(SchemaPlus.class).toProvider(SchemaPlusProvider.class);
 
       for (Class<? extends SqlAggregator> clazz : DEFAULT_AGGREGATOR_CLASSES) {
         SqlBindings.addAggregator(binder, clazz);
@@ -106,13 +112,15 @@ public class SqlModule implements Module
     }
   }
 
-  @Provides
-  public SchemaPlus createRootSchema(final DruidSchema druidSchema)
+  public static class SchemaPlusProvider implements Provider<SchemaPlus>
   {
-    if (isEnabled()) {
+    @Inject
+    private DruidSchema druidSchema;
+
+    @Override
+    public SchemaPlus get()
+    {
       return Calcites.createRootSchema(druidSchema);
-    } else {
-      throw new IllegalStateException("Cannot provide SchemaPlus when SQL is disabled.");
     }
   }
 

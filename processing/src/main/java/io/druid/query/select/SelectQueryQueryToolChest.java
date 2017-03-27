@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -31,16 +32,17 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DruidMetrics;
+import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -80,17 +82,29 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   private final ObjectMapper jsonMapper;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final Supplier<SelectQueryConfig> configSupplier;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
-  @Inject
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       Supplier<SelectQueryConfig> configSupplier
   )
   {
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultGenericQueryMetricsFactory(jsonMapper));
+  }
+
+  @Inject
+  public SelectQueryQueryToolChest(
+      ObjectMapper jsonMapper,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
+      Supplier<SelectQueryConfig> configSupplier,
+      GenericQueryMetricsFactory queryMetricsFactory
+  )
+  {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.configSupplier = configSupplier;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -124,9 +138,9 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(SelectQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(SelectQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
@@ -350,7 +364,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
   {
     // at the point where this code is called, only one datasource should exist.
-    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    final String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     PagingSpec pagingSpec = query.getPagingSpec();
     Map<String, Integer> paging = pagingSpec.getPagingIdentifiers();
@@ -360,8 +374,22 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
     final Granularity granularity = query.getGranularity();
 
+    // A paged select query using a UnionDataSource will return pagingIdentifiers from segments in more than one
+    // dataSource which confuses subsequent queries and causes a failure. To avoid this, filter only the paging keys
+    // that are applicable to this dataSource so that each dataSource in a union query gets the appropriate keys.
+    final Iterable<String> filteredPagingKeys = Iterables.filter(
+        paging.keySet(), new Predicate<String>()
+        {
+          @Override
+          public boolean apply(String input)
+          {
+            return DataSegmentUtils.valueOf(dataSource, input) != null;
+          }
+        }
+    );
+
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
+        Iterables.transform(filteredPagingKeys, DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
         intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()

@@ -910,7 +910,8 @@ public class RealtimeIndexTaskTest
         0,
         0,
         reportParseExceptions,
-        handoffTimeout
+        handoffTimeout,
+        null
     );
     return new RealtimeIndexTask(
         taskId,

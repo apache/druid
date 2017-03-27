@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
-
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
@@ -111,8 +110,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
         adapters,
         spec.getDimensions(),
         spec.getMetrics(),
-        spec.getFilter(),
-        spec.getGranularity()
+        spec.getFilter()
     );
 
   }

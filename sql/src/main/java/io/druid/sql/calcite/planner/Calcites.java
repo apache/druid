@@ -25,6 +25,8 @@ import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -34,6 +36,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
 
 import java.nio.charset.Charset;
+import java.util.Calendar;
 
 /**
  * Utility functions for Calcite.
@@ -140,6 +143,22 @@ public class Calcites
   }
 
   /**
+   * Calcite expects TIMESTAMP and DATE literals to be represented by Calendars that would have the expected
+   * local time fields if printed as UTC.
+   *
+   * @param dateTime joda timestamp
+   * @param timeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
+  {
+    final Calendar calendar = Calendar.getInstance();
+    calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
+    return calendar;
+  }
+
+  /**
    * The inverse of {@link #jodaToCalciteTimestamp(DateTime, DateTimeZone)}.
    *
    * @param timestamp Calcite style timestamp
@@ -163,5 +182,18 @@ public class Calcites
   public static DateTime calciteDateToJoda(final int date, final DateTimeZone timeZone)
   {
     return new DateTime(0L, DateTimeZone.UTC).plusDays(date).withZoneRetainFields(timeZone);
+  }
+
+  /**
+   * Checks if a RexNode is a literal int or not. If this returns true, then {@code RexLiteral.intValue(literal)} can be
+   * used to get the value of the literal.
+   *
+   * @param rexNode the node
+   *
+   * @return true if this is an int
+   */
+  public static boolean isIntLiteral(final RexNode rexNode)
+  {
+    return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
   }
 }

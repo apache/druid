@@ -25,14 +25,14 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import com.google.inject.Inject;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
-import io.druid.query.DruidMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -50,6 +50,14 @@ public class DataSourceQueryQueryToolChest
   private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE = new TypeReference<Result<DataSourceMetadataResultValue>>()
   {
   };
+
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  @Inject
+  public DataSourceQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(DataSourceMetadataQuery query, List<T> segments)
@@ -103,11 +111,9 @@ public class DataSourceQueryQueryToolChest
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(DataSourceMetadataQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(DataSourceMetadataQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-        .setDimension("dataSource", DataSourceUtil.getMetricName(query.getDataSource()))
-        .setDimension("type", query.getType());
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
