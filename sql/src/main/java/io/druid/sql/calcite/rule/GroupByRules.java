@@ -807,7 +807,8 @@ public class GroupByRules
         input = foe;
       } else if (rexNode.getKind() == SqlKind.CASE && ((RexCall) rexNode).getOperands().size() == 3) {
         // Possibly a CASE-style filtered aggregation. Styles supported:
-        // A: SUM(CASE WHEN x = 'foo' THEN cnt END) => operands (x = 'foo', cnt, null)
+        // A1: AGG(CASE WHEN x = 'foo' THEN cnt END) => operands (x = 'foo', cnt, null)
+        // A2: SUM(CASE WHEN x = 'foo' THEN cnt ELSE 0 END) => operands (x = 'foo', cnt, 0); must be SUM
         // B: SUM(CASE WHEN x = 'foo' THEN 1 ELSE 0 END) => operands (x = 'foo', 1, 0)
         // C: COUNT(CASE WHEN x = 'foo' THEN 'dummy' END) => operands (x = 'foo', 'dummy', null)
         // If the null and non-null args are switched, "flip" is set, which negates the filter.
@@ -839,15 +840,15 @@ public class GroupByRules
           forceCount = true;
           input = null;
         } else if (call.getAggregation().getKind() == SqlKind.SUM
-                   && arg1 instanceof RexLiteral
-                   && ((Number) RexLiteral.value(arg1)).intValue() == 1
-                   && arg2 instanceof RexLiteral
-                   && ((Number) RexLiteral.value(arg2)).intValue() == 0) {
+                   && Calcites.isIntLiteral(arg1) && RexLiteral.intValue(arg1) == 1
+                   && Calcites.isIntLiteral(arg2) && RexLiteral.intValue(arg2) == 0) {
           // Case B
           forceCount = true;
           input = null;
-        } else if (RexLiteral.isNullLiteral(arg2)) {
-          // Maybe case A
+        } else if (RexLiteral.isNullLiteral(arg2) /* Case A1 */
+                   || (kind == SqlKind.SUM
+                       && Calcites.isIntLiteral(arg2)
+                       && RexLiteral.intValue(arg2) == 0) /* Case A2 */) {
           input = FieldOrExpression.fromRexNode(operatorTable, plannerContext, rowOrder, arg1);
           if (input == null) {
             return null;
