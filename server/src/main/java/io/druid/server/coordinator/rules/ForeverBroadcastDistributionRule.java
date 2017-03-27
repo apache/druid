@@ -25,20 +25,21 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Objects;
 
 public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastForever";
 
-  private final String colocatedDatasource;
+  private final List<String> colocatedDataSources;
 
   @JsonCreator
   public ForeverBroadcastDistributionRule(
-      @JsonProperty("colocatedDatasource") String colocatedDatasource
+      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
   )
   {
-    this.colocatedDatasource = Objects.requireNonNull(colocatedDatasource);
+    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
@@ -46,6 +47,13 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  @JsonProperty
+  public List<String> getColocatedDataSources()
+  {
+    return colocatedDataSources;
   }
 
   @Override
@@ -60,12 +68,6 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
     return true;
   }
 
-  @JsonProperty
-  public String getColocatedDatasource()
-  {
-    return colocatedDatasource;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -78,6 +80,12 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
     }
 
     ForeverBroadcastDistributionRule that = (ForeverBroadcastDistributionRule) o;
-    return colocatedDatasource.equals(that.colocatedDatasource);
+    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getType(), colocatedDataSources);
   }
 }

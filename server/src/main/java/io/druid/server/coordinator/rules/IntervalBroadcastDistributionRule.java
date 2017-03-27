@@ -25,22 +25,23 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Objects;
 
 public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastByInterval";
   private final Interval interval;
-  private final String colocatedDatasource;
+  private final List<String> colocatedDataSources;
 
   @JsonCreator
   public IntervalBroadcastDistributionRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("colocatedDatasource") String colocatedDatasource
+      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
   )
   {
     this.interval = interval;
-    this.colocatedDatasource = Objects.requireNonNull(colocatedDatasource);
+    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
@@ -48,6 +49,13 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  @JsonProperty
+  public List<String> getColocatedDataSources()
+  {
+    return colocatedDataSources;
   }
 
   @Override
@@ -60,12 +68,6 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return Rules.eligibleForLoad(this.interval, interval);
-  }
-
-  @JsonProperty
-  public String getColocatedDatasource()
-  {
-    return colocatedDatasource;
   }
 
   @JsonProperty
@@ -86,6 +88,17 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
     }
 
     IntervalBroadcastDistributionRule that = (IntervalBroadcastDistributionRule) o;
-    return interval.equals(that.interval) && colocatedDatasource.equals(that.colocatedDatasource);
+
+    if (!Objects.equals(interval, that.interval)) {
+      return false;
+    }
+
+    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getType(), interval, colocatedDataSources);
   }
 }

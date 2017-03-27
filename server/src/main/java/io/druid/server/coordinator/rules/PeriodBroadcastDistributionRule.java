@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.util.List;
 import java.util.Objects;
 
 public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
@@ -33,16 +34,16 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   static final String TYPE = "broadcastByPeriod";
 
   private final Period period;
-  private final String colocatedDatasource;
+  private final List<String> colocatedDataSources;
 
   @JsonCreator
   public PeriodBroadcastDistributionRule(
       @JsonProperty("period") Period period,
-      @JsonProperty("colocatedDatasource") String colocatedDatasource
+      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
   )
   {
     this.period = period;
-    this.colocatedDatasource = Objects.requireNonNull(colocatedDatasource);
+    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
@@ -50,6 +51,13 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  @JsonProperty
+  public List<String> getColocatedDataSources()
+  {
+    return colocatedDataSources;
   }
 
   @Override
@@ -62,12 +70,6 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return Rules.eligibleForLoad(period, interval, referenceTimestamp);
-  }
-
-  @JsonProperty
-  public String getColocatedDatasource()
-  {
-    return colocatedDatasource;
   }
 
   @JsonProperty
@@ -88,6 +90,17 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     }
 
     PeriodBroadcastDistributionRule that = (PeriodBroadcastDistributionRule) o;
-    return period.equals(that.period) && colocatedDatasource.equals(that.colocatedDatasource);
+
+    if (!Objects.equals(period, that.period)) {
+      return false;
+    }
+
+    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getType(), period, colocatedDataSources);
   }
 }

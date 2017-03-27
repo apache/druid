@@ -26,6 +26,7 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,10 +40,18 @@ public abstract class BroadcastDistributionRule implements Rule
   )
   {
     // Find servers which holds the segments of co-located data source
-    final List<ServerHolder> targetServerHolders = params
-        .getDruidCluster().getAllServers().stream()
-        .filter(eachHolder -> eachHolder.getServer().getDataSource(getColocatedDatasource()) != null)
-        .collect(Collectors.toList());
+    final List<ServerHolder> targetServerHolders;
+    final List<String> colocatedDataSources = getColocatedDataSources();
+    if (colocatedDataSources == null || colocatedDataSources.isEmpty()) {
+      targetServerHolders = new ArrayList<>(params.getDruidCluster().getAllServers());
+    } else {
+      targetServerHolders = params
+          .getDruidCluster().getAllServers().stream()
+          .filter(eachHolder ->
+              colocatedDataSources.stream().anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)
+          )
+          .collect(Collectors.toList());
+    }
 
     // The segment is replicated to the found servers
     final CoordinatorStats assignStats = assign(
@@ -65,11 +74,10 @@ public abstract class BroadcastDistributionRule implements Rule
 
     for (ServerHolder holder : serverHolderList) {
       if (segment.getSize() > holder.getAvailableSize()) {
-        log.makeAlert(
-            "Failed to replicate segment[%s] to server[%s] due to insufficient available space",
-            segment.getIdentifier(),
-            holder.getServer().getHost()
-        ).addData("segmentSize", segment.getSize())
+        log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
+           .addData("segmentId", segment.getIdentifier())
+           .addData("segmentSize", segment.getSize())
+           .addData("hostName", holder.getServer().getHost())
            .addData("availableSize", holder.getAvailableSize())
            .emit();
       } else {
@@ -85,5 +93,5 @@ public abstract class BroadcastDistributionRule implements Rule
     return stats;
   }
 
-  public abstract String getColocatedDatasource();
+  public abstract List<String> getColocatedDataSources();
 }
