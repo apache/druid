@@ -28,13 +28,13 @@ import java.util.Map;
 
 /**
  */
-public class FillCapacityWithAffinityConfig
+public class AffinityConfig
 {
   // key:Datasource, value:[nodeHostNames]
   private Map<String, List<String>> affinity = Maps.newHashMap();
 
   @JsonCreator
-  public FillCapacityWithAffinityConfig(
+  public AffinityConfig(
       @JsonProperty("affinity") Map<String, List<String>> affinity
   )
   {
@@ -57,7 +57,7 @@ public class FillCapacityWithAffinityConfig
       return false;
     }
 
-    FillCapacityWithAffinityConfig that = (FillCapacityWithAffinityConfig) o;
+    AffinityConfig that = (AffinityConfig) o;
 
     if (affinity != null
         ? !Maps.difference(affinity, that.affinity).entriesDiffering().isEmpty()

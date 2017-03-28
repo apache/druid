@@ -43,6 +43,7 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -689,17 +690,7 @@ public class IndexIO
             final ColumnDescriptor serdeficator = builder
                 .addSerde(columnPartBuilder.build())
                 .build();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-            byte[] specBytes = baos.toByteArray();
-
-            final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-                dimension, serdeficator.numBytes() + specBytes.length
-            );
-            channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel, v9Smoosher);
-            channel.close();
+            makeColumn(v9Smoosher, dimension, serdeficator);
           } else if (filename.startsWith("met_") || filename.startsWith("numeric_dim_")) {
             // NOTE: identifying numeric dimensions by using a different filename pattern is meant to allow the
             // legacy merger (which will be deprecated) to support long/float dims. Going forward, the V9 merger
@@ -751,17 +742,7 @@ public class IndexIO
             }
 
             final ColumnDescriptor serdeficator = builder.build();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-            byte[] specBytes = baos.toByteArray();
-
-            final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-                metric, serdeficator.numBytes() + specBytes.length
-            );
-            channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel, v9Smoosher);
-            channel.close();
+            makeColumn(v9Smoosher, metric, serdeficator);
           } else if (String.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
             CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
                 v8SmooshedFiles.mapFile(filename),
@@ -778,17 +759,7 @@ public class IndexIO
                                           .build()
             );
             final ColumnDescriptor serdeficator = builder.build();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
-            byte[] specBytes = baos.toByteArray();
-
-            final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-                "__time", serdeficator.numBytes() + specBytes.length
-            );
-            channel.write(ByteBuffer.wrap(specBytes));
-            serdeficator.write(channel, v9Smoosher);
-            channel.close();
+            makeColumn(v9Smoosher, "__time", serdeficator);
           } else {
             skippedFiles.add(filename);
           }
@@ -852,6 +823,20 @@ public class IndexIO
       }
       finally {
         closer.close();
+      }
+    }
+
+    private void makeColumn(FileSmoosher v9Smoosher, String dimension, ColumnDescriptor serdeficator)
+        throws IOException
+    {
+      ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
+      serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
+
+      try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+          dimension, serdeficator.numBytes() + specBytes.size()
+      )) {
+        specBytes.writeTo(channel);
+        serdeficator.write(channel, v9Smoosher);
       }
     }
   }
