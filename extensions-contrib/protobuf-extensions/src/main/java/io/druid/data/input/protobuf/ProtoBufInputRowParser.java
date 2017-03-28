@@ -43,8 +43,6 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
-  //private static final Logger log = new Logger(ProtoBufInputRowParser.class);
-
   private final ParseSpec parseSpec;
   private Parser<String, Object> parser;
   private final String descriptorFilePath;
@@ -81,7 +79,6 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
     try {
       DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
       json = JsonFormat.printer().print(message);
-      // log.trace(json);
     } catch (InvalidProtocolBufferException e) {
       throw new ParseException(e, "Protobuf message could not be parsed");
     }
