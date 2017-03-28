@@ -21,7 +21,6 @@ package io.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
@@ -43,7 +42,6 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-@JsonTypeName("protobuf")
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
   //private static final Logger log = new Logger(ProtoBufInputRowParser.class);
 
