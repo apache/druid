@@ -26,7 +26,7 @@ import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsIterator;
 import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 import io.druid.segment.data.WritableSupplier;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -46,7 +46,7 @@ import java.util.List;
  * values - indexed integer representing values in each row
  */
 
-public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>>
+public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedMultiValue<IndexedInts>>
 {
   private static final byte version = 0x2;
   //offsets - indexed integers of length num of rows + 1 representing offsets of starting index of first element of each row in values index
@@ -138,12 +138,12 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
 
 
   @Override
-  public IndexedMultivalue<IndexedInts> get()
+  public IndexedMultiValue<IndexedInts> get()
   {
     return new CompressedVSizeIndexed(offsetSupplier.get(), valueSupplier.get());
   }
 
-  public static class CompressedVSizeIndexed implements IndexedMultivalue<IndexedInts>
+  public static class CompressedVSizeIndexed implements IndexedMultiValue<IndexedInts>
   {
     private final IndexedInts offsets;
     private final IndexedInts values;

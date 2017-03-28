@@ -116,7 +116,7 @@ public class CompressedVSizeIndexedV3WriterTest
   {
     FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
     final IOPeon ioPeon = new TmpFileIOPeon();
-    final IndexedMultivalue<IndexedInts> indexedMultivalue;
+    final IndexedMultiValue<IndexedInts> indexedMultiValue;
 
     try {
       int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
@@ -159,16 +159,16 @@ public class CompressedVSizeIndexedV3WriterTest
           byteOrder,
           null
       );
-      indexedMultivalue = supplierFromByteBuffer.get();
-      assertEquals(indexedMultivalue.size(), vals.size());
+      indexedMultiValue = supplierFromByteBuffer.get();
+      assertEquals(indexedMultiValue.size(), vals.size());
       for (int i = 0; i < vals.size(); ++i) {
-        IndexedInts subVals = indexedMultivalue.get(i);
+        IndexedInts subVals = indexedMultiValue.get(i);
         assertEquals(subVals.size(), vals.get(i).length);
         for (int j = 0; j < subVals.size(); ++j) {
           assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }
-      CloseQuietly.close(indexedMultivalue);
+      CloseQuietly.close(indexedMultiValue);
     }
     finally {
       ioPeon.close();
@@ -304,16 +304,16 @@ public class CompressedVSizeIndexedV3WriterTest
           byteOrder,
           mapper
       );
-      IndexedMultivalue<IndexedInts> indexedMultivalue = supplierFromByteBuffer.get();
-      assertEquals(indexedMultivalue.size(), vals.size());
+      IndexedMultiValue<IndexedInts> indexedMultiValue = supplierFromByteBuffer.get();
+      assertEquals(indexedMultiValue.size(), vals.size());
       for (int i = 0; i < vals.size(); ++i) {
-        IndexedInts subVals = indexedMultivalue.get(i);
+        IndexedInts subVals = indexedMultiValue.get(i);
         assertEquals(subVals.size(), vals.get(i).length);
         for (int j = 0; j < subVals.size(); ++j) {
           assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }
-      CloseQuietly.close(indexedMultivalue);
+      CloseQuietly.close(indexedMultiValue);
       mapper.close();
     }
     finally {

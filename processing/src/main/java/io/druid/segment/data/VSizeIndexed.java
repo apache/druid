@@ -32,7 +32,7 @@ import java.util.Iterator;
 
 /**
  */
-public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
+public class VSizeIndexed implements IndexedMultiValue<IndexedInts>
 {
   private static final byte version = 0x1;
 
@@ -190,11 +190,11 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     // no-op
   }
 
-  public WritableSupplier<IndexedMultivalue<IndexedInts>> asWritableSupplier() {
+  public WritableSupplier<IndexedMultiValue<IndexedInts>> asWritableSupplier() {
     return new VSizeIndexedSupplier(this);
   }
 
-  public static class VSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>> {
+  public static class VSizeIndexedSupplier implements WritableSupplier<IndexedMultiValue<IndexedInts>> {
     final VSizeIndexed delegate;
 
     public VSizeIndexedSupplier(VSizeIndexed delegate) {
@@ -214,7 +214,7 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
     }
 
     @Override
-    public IndexedMultivalue<IndexedInts> get()
+    public IndexedMultiValue<IndexedInts> get()
     {
       return delegate;
     }

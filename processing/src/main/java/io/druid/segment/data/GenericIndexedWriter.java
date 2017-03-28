@@ -352,13 +352,14 @@ public class GenericIndexedWriter<T> implements Closeable
     }
 
     int bagSizePower = bagSizePower();
-    OutputStream metaOut = Channels.newOutputStream(channel);
-    metaOut.write(GenericIndexed.VERSION_TWO);
-    metaOut.write(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
-    metaOut.write(Ints.toByteArray(bagSizePower));
-    metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
-    metaOut.write(Ints.toByteArray(fileNameByteArray.length));
-    metaOut.write(fileNameByteArray);
+    try (OutputStream metaOut = Channels.newOutputStream(channel)) {
+      metaOut.write(GenericIndexed.VERSION_TWO);
+      metaOut.write(objectsSorted ? GenericIndexed.REVERSE_LOOKUP_ALLOWED : GenericIndexed.REVERSE_LOOKUP_DISALLOWED);
+      metaOut.write(Ints.toByteArray(bagSizePower));
+      metaOut.write(Ints.toByteArray(Ints.checkedCast(numWritten)));
+      metaOut.write(Ints.toByteArray(fileNameByteArray.length));
+      metaOut.write(fileNameByteArray);
+    }
 
     try (RandomAccessFile headerFile = new RandomAccessFile(ioPeon.getFile(makeFilename("headerLong")), "r")) {
       Preconditions.checkNotNull(headerFile, "header file missing.");
@@ -403,7 +404,8 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
-  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer) throws IOException
+  private void writeHeaderLong(FileSmoosher smoosher, RandomAccessFile headerFile, int bagSizePower, byte[] buffer)
+      throws IOException
   {
     ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES).order(ByteOrder.nativeOrder());
 

@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
@@ -51,8 +51,8 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class CompressedVSizeIndexedBenchmark
 {
-  private IndexedMultivalue<IndexedInts> uncompressed;
-  private IndexedMultivalue<IndexedInts> compressed;
+  private IndexedMultiValue<IndexedInts> uncompressed;
+  private IndexedMultiValue<IndexedInts> compressed;
 
   @Param({"1", "2", "3", "4"})
   int bytes;
@@ -132,7 +132,7 @@ public class CompressedVSizeIndexedBenchmark
     }
   }
 
-  private static ByteBuffer serialize(WritableSupplier<IndexedMultivalue<IndexedInts>> writableSupplier)
+  private static ByteBuffer serialize(WritableSupplier<IndexedMultiValue<IndexedInts>> writableSupplier)
       throws IOException
   {
     final ByteBuffer buffer = ByteBuffer.allocateDirect((int) writableSupplier.getSerializedSize());

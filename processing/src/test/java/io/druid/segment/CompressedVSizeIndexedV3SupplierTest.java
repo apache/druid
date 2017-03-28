@@ -24,7 +24,7 @@ import com.google.common.collect.Iterables;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedSupplierTest;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.IndexedMultiValue;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
 import org.junit.After;
@@ -68,7 +68,7 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
   }
 
   @Override
-  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  protected WritableSupplier<IndexedMultiValue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     return CompressedVSizeIndexedV3Supplier.fromByteBuffer(
         buffer,
