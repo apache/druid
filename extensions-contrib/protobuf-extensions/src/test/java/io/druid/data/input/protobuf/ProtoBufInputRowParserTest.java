@@ -41,11 +41,13 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class ProtoBufInputRowParserTest {
+public class ProtoBufInputRowParserTest
+{
   private ParseSpec parseSpec;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() throws Exception
+  {
     parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
         new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
@@ -67,7 +69,8 @@ public class ProtoBufInputRowParserTest {
   }
 
   @Test
-  public void testShortMessageType() throws Exception {
+  public void testShortMessageType() throws Exception
+  {
     //configure parser with desc file, and specify which file name to use
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
@@ -75,7 +78,8 @@ public class ProtoBufInputRowParserTest {
 
 
   @Test
-  public void testLongMessageType() throws Exception {
+  public void testLongMessageType() throws Exception
+  {
     //configure parser with desc file, and specify which file name to use
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
 
@@ -83,7 +87,8 @@ public class ProtoBufInputRowParserTest {
 
 
   @Test(expected = ParseException.class)
-  public void testBadProto() throws Exception {
+  public void testBadProto() throws Exception
+  {
     //configure parser with desc file
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "BadName");
 
@@ -91,7 +96,8 @@ public class ProtoBufInputRowParserTest {
 
 
   @Test
-  public void testParse() throws Exception {
+  public void testParse() throws Exception
+  {
 
     //configure parser with desc file
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
@@ -142,7 +148,8 @@ public class ProtoBufInputRowParserTest {
     assertEquals(816.0F, row.getFloatMetric("someLongColumn"), 0.0);
   }
 
-  private void assertDimensionEquals(InputRow row, String dimension, Object expected) {
+  private void assertDimensionEquals(InputRow row, String dimension, Object expected)
+  {
     List<String> values = row.getDimension(dimension);
     assertEquals(1, values.size());
     assertEquals(expected, values.get(0));

@@ -42,7 +42,8 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
+public class ProtoBufInputRowParser implements ByteBufferInputRowParser
+{
   private final ParseSpec parseSpec;
   private Parser<String, Object> parser;
   private final String descriptorFilePath;
@@ -55,7 +56,8 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
       @JsonProperty("parseSpec") ParseSpec parseSpec,
       @JsonProperty("descriptor") String descriptorFilePath,
       @JsonProperty("protoMessageType") String protoMessageType
-  ) {
+  )
+  {
     this.parseSpec = parseSpec;
     this.descriptorFilePath = descriptorFilePath;
     this.protoMessageType = protoMessageType;
@@ -64,22 +66,26 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
   }
 
   @Override
-  public ParseSpec getParseSpec() {
+  public ParseSpec getParseSpec()
+  {
     return parseSpec;
   }
 
   @Override
-  public ProtoBufInputRowParser withParseSpec(ParseSpec parseSpec) {
+  public ProtoBufInputRowParser withParseSpec(ParseSpec parseSpec)
+  {
     return new ProtoBufInputRowParser(parseSpec, descriptorFilePath, protoMessageType);
   }
 
   @Override
-  public InputRow parse(ByteBuffer input) {
+  public InputRow parse(ByteBuffer input)
+  {
     String json;
     try {
       DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
       json = JsonFormat.printer().print(message);
-    } catch (InvalidProtocolBufferException e) {
+    }
+    catch (InvalidProtocolBufferException e) {
       throw new ParseException(e, "Protobuf message could not be parsed");
     }
 
@@ -91,7 +97,8 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
     );
   }
 
-  private Descriptor getDescriptor(String descriptorFilePath) {
+  private Descriptor getDescriptor(String descriptorFilePath)
+  {
     InputStream fin;
 
     fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
@@ -99,12 +106,14 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
       URL url = null;
       try {
         url = new URL(descriptorFilePath);
-      } catch (MalformedURLException e) {
+      }
+      catch (MalformedURLException e) {
         throw new ParseException(e, "descriptor has to be in the classpath or URL:" + descriptorFilePath);
       }
       try {
         fin = url.openConnection().getInputStream();
-      } catch (IOException e) {
+      }
+      catch (IOException e) {
         throw new ParseException(e, "Cannot open descriptor file: " + url.toString());
       }
     }
@@ -112,20 +121,23 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser {
     DynamicSchema dynamicSchema = null;
     try {
       dynamicSchema = DynamicSchema.parseFrom(fin);
-    } catch (Descriptors.DescriptorValidationException e) {
+    }
+    catch (Descriptors.DescriptorValidationException e) {
       throw new ParseException(e, "Invalid descriptor file: " + descriptorFilePath);
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new ParseException(e, "Cannot read " + descriptorFilePath);
     }
 
     Descriptor desc = dynamicSchema.getMessageDescriptor(protoMessageType);
     if (desc == null) {
-      throw new ParseException(new NullPointerException(),
-                               String.format(
-                                   "ProtoBuf message type %s not found in the specified descriptor.  Available messages types are %s",
-                                   protoMessageType,
-                                   dynamicSchema.getMessageTypes()
-                               )
+      throw new ParseException(
+          new NullPointerException(),
+          String.format(
+              "ProtoBuf message type %s not found in the specified descriptor.  Available messages types are %s",
+              protoMessageType,
+              dynamicSchema.getMessageTypes()
+          )
       );
     }
     return desc;
