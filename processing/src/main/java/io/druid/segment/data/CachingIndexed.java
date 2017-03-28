@@ -74,7 +74,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   @Override
   public T get(int index)
   {
-    if(cachedValues != null) {
+    if (cachedValues != null) {
       final T cached = cachedValues.getValue(index);
       if (cached != null) {
         return cached;
@@ -112,6 +112,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
+    inspector.visit("cachedValues", cachedValues != null);
     inspector.visit("delegate", delegate);
   }
 
