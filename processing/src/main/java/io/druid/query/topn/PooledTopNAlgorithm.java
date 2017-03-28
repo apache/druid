@@ -74,7 +74,6 @@ public class PooledTopNAlgorithm
   Historical1AggPooledTopNScanner defaultHistoricalSingleValueDimSelector1SimpleDoubleAggScanner =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
-  private final Capabilities capabilities;
   private final TopNQuery query;
   private final StupidPool<ByteBuffer> bufferPool;
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
@@ -86,8 +85,6 @@ public class PooledTopNAlgorithm
   )
   {
     super(capabilities);
-
-    this.capabilities = capabilities;
     this.query = query;
     this.bufferPool = bufferPool;
   }
