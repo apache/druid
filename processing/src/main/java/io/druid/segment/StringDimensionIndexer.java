@@ -41,7 +41,6 @@ import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -394,7 +393,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     final ExtractionFn extractionFn = spec.getExtractionFn();
 
     final int dimIndex = desc.getIndex();
-    final int maxId = getCardinality();
 
     class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
@@ -415,23 +413,15 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         if (indices == null || indices.length == 0) {
           final int nullId = getEncodedValue(null, false);
           if (nullId > -1) {
-            if (nullId < maxId) {
-              row = new int[] {nullId};
-              rowSize = 1;
-            } else {
-              // Choose to use ArrayBasedIndexedInts later, instead of EmptyIndexedInts, for monomorphism
-              row = IntArrays.EMPTY_ARRAY;
-              rowSize = 0;
-            }
+            row = new int[] {nullId};
+            rowSize = 1;
           }
         }
 
         if (row == null && indices != null && indices.length > 0) {
           row = new int[indices.length];
           for (int id : indices) {
-            if (id < maxId) {
-              row[rowSize++] = id;
-            }
+            row[rowSize++] = id;
           }
         }
 
@@ -509,7 +499,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public int getValueCardinality()
       {
-        return maxId;
+        return getCardinality();
       }
 
       @Override
