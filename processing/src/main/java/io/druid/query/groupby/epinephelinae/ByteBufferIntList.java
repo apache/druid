@@ -26,8 +26,8 @@ import java.nio.ByteBuffer;
 
 public class ByteBufferIntList
 {
-  private ByteBuffer buffer;
-  private int maxElements;
+  private final ByteBuffer buffer;
+  private final int maxElements;
   private int numElements;
 
   public ByteBufferIntList(
@@ -50,6 +50,9 @@ public class ByteBufferIntList
 
   public void add(int val)
   {
+    if (numElements == maxElements) {
+      throw new IndexOutOfBoundsException(String.format("List is full with %s elements.", maxElements));
+    }
     buffer.putInt(numElements * Ints.BYTES, val);
     numElements++;
   }

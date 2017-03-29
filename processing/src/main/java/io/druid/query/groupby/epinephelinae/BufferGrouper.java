@@ -43,6 +43,9 @@ public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
   private ByteBuffer buffer;
   private boolean initialized = false;
 
+  // Track the offsets of used buckets using this list.
+  // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
+  // When expanding the table, the list is reset() and filled with the new offsets of the copied buckets.
   private ByteBuffer offsetListBuffer;
   private ByteBufferIntList offsetList;
 
@@ -109,7 +112,7 @@ public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
           hashTableBuffer,
           keySize,
           bufferGrouperMaxSize,
-          offsetList
+          new BufferGrouperBucketUpdateHandler()
       );
 
       reset();
@@ -181,7 +184,7 @@ public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
         }
       };
 
-      final KeyComparator comparator = keySerde.bufferComparator();
+      final BufferComparator comparator = keySerde.bufferComparator();
 
       // Sort offsets in-place.
       Collections.sort(
@@ -260,6 +263,40 @@ public class BufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType>
           throw new UnsupportedOperationException();
         }
       };
+    }
+  }
+
+  private class BufferGrouperBucketUpdateHandler implements ByteBufferHashTable.BucketUpdateHandler
+  {
+
+    @Override
+    public void handleNewBucket(int bucketOffset)
+    {
+      offsetList.add(bucketOffset);
+    }
+
+    @Override
+    public void handlePreTableSwap()
+    {
+      offsetList.reset();
+    }
+
+    @Override
+    public void handleBucketMove(
+        int oldBucketOffset, int newBucketOffset, ByteBuffer oldBuffer, ByteBuffer newBuffer
+    )
+    {
+      // relocate aggregators (see https://github.com/druid-io/druid/pull/4071)
+      for (int i = 0; i < aggregators.length; i++) {
+        aggregators[i].relocate(
+            oldBucketOffset + aggregatorOffsets[i],
+            newBucketOffset + aggregatorOffsets[i],
+            oldBuffer,
+            newBuffer
+        );
+      }
+
+      offsetList.add(newBucketOffset);
     }
   }
 }

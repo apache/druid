@@ -232,7 +232,7 @@ public interface Grouper<KeyType> extends Closeable
      *
      * @return comparator for keys
      */
-    KeyComparator bufferComparator();
+    BufferComparator bufferComparator();
 
     /**
      * When pushing down limits, it may also be necessary to compare aggregated values along with the key
@@ -244,7 +244,7 @@ public interface Grouper<KeyType> extends Closeable
      *
      * @return comparator for keys + aggs
      */
-    KeyComparator bufferComparatorWithAggregators(AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets);
+    BufferComparator bufferComparatorWithAggregators(AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets);
 
     /**
      * Reset the keySerde to its initial state. After this method is called, {@link #fromByteBuffer(ByteBuffer, int)}
@@ -253,7 +253,7 @@ public interface Grouper<KeyType> extends Closeable
     void reset();
   }
 
-  interface KeyComparator
+  interface BufferComparator
   {
     int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition);
   }

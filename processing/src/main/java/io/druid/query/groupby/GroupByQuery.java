@@ -109,7 +109,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<PostAggregator> postAggregatorSpecs;
 
   private final Function<Sequence<Row>, Sequence<Row>> limitFn;
-  private final boolean willApplyLimitPushDown;
+  private final boolean applyLimitPushDown;
 
   @JsonCreator
   public GroupByQuery(
@@ -151,7 +151,7 @@ public class GroupByQuery extends BaseQuery<Row>
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
-    this.willApplyLimitPushDown = willApplyLimitPushDown();
+    this.applyLimitPushDown = determineApplyLimitPushDown();
 
     // On an inner query, we may sometimes get a LimitSpec so that row orderings can be determined for limit push down
     // However, it's not necessary to build the real limitFn from it at this stage.
@@ -220,7 +220,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = orderBySpec;
     this.limitFn = limitFn;
-    this.willApplyLimitPushDown = willApplyLimitPushDown();
+    this.applyLimitPushDown = determineApplyLimitPushDown();
   }
 
   @JsonProperty
@@ -295,6 +295,12 @@ public class GroupByQuery extends BaseQuery<Row>
     return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
   }
 
+  @JsonIgnore
+  public boolean isApplyLimitPushDown()
+  {
+    return applyLimitPushDown;
+  }
+
   @Override
   public Ordering getResultOrdering()
   {
@@ -338,7 +344,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return forcePushDown;
   }
 
-  public boolean willApplyLimitPushDown()
+  public boolean determineApplyLimitPushDown()
   {
     final boolean forceLimitPushDown = validateAndGetForceLimitPushDown();
 
@@ -377,8 +383,8 @@ public class GroupByQuery extends BaseQuery<Row>
     final List<String> orderedFieldNames = new ArrayList<>();
     final Set<Integer> dimsInOrderBy = new HashSet<>();
     final List<Boolean> needsReverseList = new ArrayList<>();
-    final List<Boolean> isNumericField = Lists.newArrayList();
-    final List<StringComparator> comparators = Lists.newArrayList();
+    final List<Boolean> isNumericField = new ArrayList<>();
+    final List<StringComparator> comparators = new ArrayList<>();
 
     for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
       boolean needsReverse = orderSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING;
@@ -476,7 +482,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public Ordering<Row> getRowOrdering(final boolean granular)
   {
-    if (willApplyLimitPushDown) {
+    if (applyLimitPushDown) {
       if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields(limitSpec, dimensions)) {
         return getRowOrderingForPushDown(granular, (DefaultLimitSpec) limitSpec);
       }

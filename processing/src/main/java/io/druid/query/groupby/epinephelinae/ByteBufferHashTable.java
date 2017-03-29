@@ -73,10 +73,9 @@ public class ByteBufferHashTable
   // how many times the table buffer has filled/readjusted (through adjustTableWhenFull())
   protected int growthCount;
 
-  // If not null, track the offsets of used buckets using this list.
-  // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
-  // When expanding the table, the list is reset() and filled with the new offsets of the copied buckets.
-  protected ByteBufferIntList bucketOffsetList;
+
+
+  protected BucketUpdateHandler bucketUpdateHandler;
 
   public ByteBufferHashTable(
       float maxLoadFactor,
@@ -85,7 +84,7 @@ public class ByteBufferHashTable
       ByteBuffer buffer,
       int keySize,
       int maxSizeForTesting,
-      ByteBufferIntList bucketOffsetList
+      BucketUpdateHandler bucketUpdateHandler
   )
   {
     this.maxLoadFactor = maxLoadFactor;
@@ -95,7 +94,7 @@ public class ByteBufferHashTable
     this.keySize = keySize;
     this.maxSizeForTesting = maxSizeForTesting;
     this.tableArenaSize = buffer.capacity();
-    this.bucketOffsetList = bucketOffsetList;
+    this.bucketUpdateHandler = bucketUpdateHandler;
   }
 
   public void reset()
@@ -185,14 +184,15 @@ public class ByteBufferHashTable
 
     int oldBuckets = buckets;
 
-    if (bucketOffsetList != null) {
-      bucketOffsetList.reset();
+    if (bucketUpdateHandler != null) {
+      bucketUpdateHandler.handlePreTableSwap();
     }
 
     for (int oldBucket = 0; oldBucket < oldBuckets; oldBucket++) {
       if (isBucketUsed(oldBucket)) {
+        int oldBucketOffset = oldBucket * bucketSizeWithHash;
         entryBuffer.limit((oldBucket + 1) * bucketSizeWithHash);
-        entryBuffer.position(oldBucket * bucketSizeWithHash);
+        entryBuffer.position(oldBucketOffset);
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
@@ -203,15 +203,15 @@ public class ByteBufferHashTable
           throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
         }
 
-        final int newOffset = newBucket * bucketSizeWithHash;
+        final int newBucketOffset = newBucket * bucketSizeWithHash;
 
-        newTableBuffer.position(newOffset);
+        newTableBuffer.position(newBucketOffset);
         newTableBuffer.put(entryBuffer);
 
         newSize++;
 
-        if (bucketOffsetList != null) {
-          bucketOffsetList.add(newOffset);
+        if (bucketUpdateHandler != null) {
+          bucketUpdateHandler.handleBucketMove(oldBucketOffset, newBucketOffset, tableBuffer, newTableBuffer);
         }
       }
     }
@@ -240,8 +240,8 @@ public class ByteBufferHashTable
     tableBuffer.put(keyBuffer);
     size++;
 
-    if (bucketOffsetList != null) {
-      bucketOffsetList.add(bucket * bucketSizeWithHash);
+    if (bucketUpdateHandler != null) {
+      bucketUpdateHandler.handleNewBucket(offset);
     }
   }
 
@@ -369,5 +369,12 @@ outer:
   public int getGrowthCount()
   {
     return growthCount;
+  }
+
+  public interface BucketUpdateHandler
+  {
+    void handleNewBucket(int bucketOffset);
+    void handlePreTableSwap();
+    void handleBucketMove(int oldBucketOffset, int newBucketOffset, ByteBuffer oldBuffer, ByteBuffer newBuffer);
   }
 }

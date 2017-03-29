@@ -34,7 +34,7 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
     // No instantiation
   }
 
-  private static final Grouper.KeyComparator KEY_COMPARATOR = new Grouper.KeyComparator()
+  private static final Grouper.BufferComparator KEY_COMPARATOR = new Grouper.BufferComparator()
   {
     @Override
     public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -81,13 +81,13 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
   }
 
   @Override
-  public Grouper.KeyComparator bufferComparator()
+  public Grouper.BufferComparator bufferComparator()
   {
     return KEY_COMPARATOR;
   }
 
   @Override
-  public Grouper.KeyComparator bufferComparatorWithAggregators(
+  public Grouper.BufferComparator bufferComparatorWithAggregators(
       AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
   )
   {

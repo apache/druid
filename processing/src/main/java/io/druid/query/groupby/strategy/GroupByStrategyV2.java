@@ -226,7 +226,20 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // Fudge timestamp, maybe.
     final DateTime fudgeTimestamp = getUniversalTimestamp(query);
 
-    Map<String, Object> newContext = query.computeOverridenContext(
+    final GroupByQuery newQuery = new GroupByQuery(
+        query.getDataSource(),
+        query.getQuerySegmentSpec(),
+        query.getVirtualColumns(),
+        query.getDimFilter(),
+        query.getGranularity(),
+        query.getDimensions(),
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs(),
+        // Don't do "having" clause until the end of this method.
+        null,
+        query.getLimitSpec(),
+        query.getContext()
+    ).withOverriddenContext(
         ImmutableMap.<String, Object>of(
             "finalize", false,
             GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
@@ -237,20 +250,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     Sequence<Row> rowSequence = Sequences.map(
         mergingQueryRunner.run(
-            new GroupByQuery(
-                query.getDataSource(),
-                query.getQuerySegmentSpec(),
-                query.getVirtualColumns(),
-                query.getDimFilter(),
-                query.getGranularity(),
-                query.getDimensions(),
-                query.getAggregatorSpecs(),
-                query.getPostAggregatorSpecs(),
-                // Don't do "having" clause until the end of this method.
-                null,
-                query.getLimitSpec(),
-                newContext
-            ),
+            newQuery,
             responseContext
         ),
         new Function<Row, Row>()

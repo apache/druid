@@ -280,7 +280,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       }
     };
 
-    final Grouper.KeyComparator comparator = keySerde.bufferComparator();
+    final BufferComparator comparator = keySerde.bufferComparator();
 
     // Sort offsets in-place.
     Collections.sort(
@@ -363,7 +363,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
   {
     return new Comparator<Integer>()
     {
-      final Grouper.KeyComparator keyComparator = keySerde.bufferComparatorWithAggregators(
+      final BufferComparator bufferComparator = keySerde.bufferComparatorWithAggregators(
           aggregatorFactories,
           aggregatorOffsets
       );
@@ -371,7 +371,7 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       public int compare(Integer o1, Integer o2)
       {
         final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-        return keyComparator.compare(tableBuffer, tableBuffer, o1 + HASH_SIZE, o2 + HASH_SIZE);
+        return bufferComparator.compare(tableBuffer, tableBuffer, o1 + HASH_SIZE, o2 + HASH_SIZE);
       }
     };
   }
@@ -509,13 +509,23 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
             throw new ISE("WTF?! Couldn't find a bucket while resizing?!");
           }
 
-          final int newOffset = newBucket * bucketSize;
-          newTableBuffer.position(newOffset);
+          final int newBucketOffset = newBucket * bucketSize;
+          newTableBuffer.position(newBucketOffset);
           newTableBuffer.put(entryBuffer);
           numCopied++;
 
           // Update the heap with the copied bucket's new offset in the new table
-          offsetHeap.setAt(i, newOffset);
+          offsetHeap.setAt(i, newBucketOffset);
+
+          // relocate aggregators (see https://github.com/druid-io/druid/pull/4071)
+          for (int j = 0; j < aggregators.length; j++) {
+            aggregators[j].relocate(
+                oldBucketOffset + aggregatorOffsets[j],
+                newBucketOffset + aggregatorOffsets[j],
+                tableBuffer,
+                newTableBuffer
+            );
+          }
         }
       }
 

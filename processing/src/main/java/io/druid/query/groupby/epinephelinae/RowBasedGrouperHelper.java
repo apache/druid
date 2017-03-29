@@ -107,7 +107,7 @@ public class RowBasedGrouperHelper
         )
     );
 
-    final boolean willApplyLimitPushDown = query.willApplyLimitPushDown();
+    final boolean willApplyLimitPushDown = query.isApplyLimitPushDown();
     final DefaultLimitSpec limitSpec = willApplyLimitPushDown ? (DefaultLimitSpec) query.getLimitSpec() : null;
     boolean sortHasNonGroupingFields = false;
     if (willApplyLimitPushDown) {
@@ -960,7 +960,7 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public Grouper.KeyComparator bufferComparator()
+    public Grouper.BufferComparator bufferComparator()
     {
       if (sortableIds == null) {
         Map<String, Integer> sortedMap = Maps.newTreeMap();
@@ -976,7 +976,7 @@ public class RowBasedGrouperHelper
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Grouper.KeyComparator()
+          return new Grouper.BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -998,7 +998,7 @@ public class RowBasedGrouperHelper
             }
           };
         } else {
-          return new Grouper.KeyComparator()
+          return new Grouper.BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -1022,7 +1022,7 @@ public class RowBasedGrouperHelper
           };
         }
       } else {
-        return new Grouper.KeyComparator()
+        return new Grouper.BufferComparator()
         {
           @Override
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -1047,7 +1047,7 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public Grouper.KeyComparator bufferComparatorWithAggregators(
+    public Grouper.BufferComparator bufferComparatorWithAggregators(
         AggregatorFactory[] aggregatorFactories,
         int[] aggregatorOffsets
     )
@@ -1116,7 +1116,7 @@ public class RowBasedGrouperHelper
 
       if (includeTimestamp) {
         if (sortByDimsFirst) {
-          return new Grouper.KeyComparator()
+          return new Grouper.BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -1138,7 +1138,7 @@ public class RowBasedGrouperHelper
             }
           };
         } else {
-          return new Grouper.KeyComparator()
+          return new Grouper.BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -1164,7 +1164,7 @@ public class RowBasedGrouperHelper
           };
         }
       } else {
-        return new Grouper.KeyComparator()
+        return new Grouper.BufferComparator()
         {
           @Override
           public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)

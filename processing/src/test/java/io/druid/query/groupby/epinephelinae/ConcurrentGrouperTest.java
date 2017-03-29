@@ -25,7 +25,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.groupby.epinephelinae.Grouper.KeyComparator;
+import io.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerde;
 import io.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import io.druid.segment.ColumnSelectorFactory;
@@ -107,9 +107,9 @@ public class ConcurrentGrouperTest
         }
 
         @Override
-        public KeyComparator bufferComparator()
+        public BufferComparator bufferComparator()
         {
-          return new KeyComparator()
+          return new BufferComparator()
           {
             @Override
             public int compare(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer, int lhsPosition, int rhsPosition)
@@ -120,7 +120,7 @@ public class ConcurrentGrouperTest
         }
 
         @Override
-        public KeyComparator bufferComparatorWithAggregators(
+        public BufferComparator bufferComparatorWithAggregators(
             AggregatorFactory[] aggregatorFactories,
             int[] aggregatorOffsets
         )
