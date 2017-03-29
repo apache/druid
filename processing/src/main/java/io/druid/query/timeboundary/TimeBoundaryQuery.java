@@ -102,22 +102,17 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return dimFilter != null;
   }
 
+  @JsonProperty("filter")
   @Override
   public DimFilter getFilter()
   {
-    return null;
+    return dimFilter;
   }
 
   @Override
   public String getType()
   {
     return Query.TIME_BOUNDARY;
-  }
-
-  @JsonProperty("filter")
-  public DimFilter getDimensionsFilter()
-  {
-    return dimFilter;
   }
 
   @JsonProperty
