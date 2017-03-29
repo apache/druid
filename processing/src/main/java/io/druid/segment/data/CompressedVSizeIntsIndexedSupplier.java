@@ -283,12 +283,6 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     {
       return intBuffer.get(intBuffer.position() + index);
     }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("intBuffer", intBuffer);
-    }
   }
 
   private class CompressedShortSizeIndexedInts extends CompressedVSizeIndexedInts
@@ -308,12 +302,6 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       // removes the need for padding
       return shortBuffer.get(shortBuffer.position() + index) & 0xFFFF;
     }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("shortBuffer", shortBuffer);
-    }
   }
 
   private class CompressedByteSizeIndexedInts extends CompressedVSizeIndexedInts
@@ -323,12 +311,6 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     {
       // removes the need for padding
       return buffer.get(buffer.position() + index) & 0xFF;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("buffer", buffer);
     }
   }
 
