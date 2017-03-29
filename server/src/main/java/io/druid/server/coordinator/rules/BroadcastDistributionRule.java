@@ -26,8 +26,9 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public abstract class BroadcastDistributionRule implements Rule
 {
@@ -39,8 +40,8 @@ public abstract class BroadcastDistributionRule implements Rule
   )
   {
     // Find servers which holds the segments of co-located data source
-    final List<ServerHolder> loadServerHolders = new ArrayList<>();
-    final List<ServerHolder> dropServerHolders = new ArrayList<>();
+    final Set<ServerHolder> loadServerHolders = new HashSet<>();
+    final Set<ServerHolder> dropServerHolders = new HashSet<>();
     final List<String> colocatedDataSources = getColocatedDataSources();
     if (colocatedDataSources == null || colocatedDataSources.isEmpty()) {
       loadServerHolders.addAll(params.getDruidCluster().getAllServers());
@@ -64,14 +65,14 @@ public abstract class BroadcastDistributionRule implements Rule
   }
 
   private CoordinatorStats assign(
-      final List<ServerHolder> serverHolderList,
+      final Set<ServerHolder> serverHolders,
       final DataSegment segment
   )
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(LoadRule.ASSIGNED_COUNT, 0);
 
-    for (ServerHolder holder : serverHolderList) {
+    for (ServerHolder holder : serverHolders) {
       if (segment.getSize() > holder.getAvailableSize()) {
         log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
            .addData("segmentId", segment.getIdentifier())
@@ -93,7 +94,7 @@ public abstract class BroadcastDistributionRule implements Rule
   }
 
   private CoordinatorStats drop(
-      final List<ServerHolder> serverHolders,
+      final Set<ServerHolder> serverHolders,
       final DataSegment segment
   )
   {
