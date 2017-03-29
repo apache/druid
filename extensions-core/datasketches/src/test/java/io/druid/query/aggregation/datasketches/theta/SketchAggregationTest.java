@@ -28,6 +28,7 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
+import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularities;
@@ -39,6 +40,8 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
+import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -387,6 +390,23 @@ public class SketchAggregationTest
     Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(union1)));
     Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(union1)));
     Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(sketch1)));
+  }
+
+  @Test
+  public void testRelocation()
+  {
+    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+    UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
+    updateSketch.update(1);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
+    SketchHolder[] holders = helper.runRelocateVerificationTest(
+        new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2),
+        columnSelectorFactory,
+        SketchHolder.class
+    );
+    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

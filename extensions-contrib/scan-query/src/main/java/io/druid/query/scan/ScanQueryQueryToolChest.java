@@ -21,12 +21,13 @@ package io.druid.query.scan;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import com.google.inject.Inject;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
+import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -38,6 +39,14 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   private static final TypeReference<ScanResultValue> TYPE_REFERENCE = new TypeReference<ScanResultValue>()
   {
   };
+
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  @Inject
+  public ScanQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 
   @Override
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
@@ -74,9 +83,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(ScanQuery query)
+  public QueryMetrics<Query<?>> makeMetrics(ScanQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query);
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override
