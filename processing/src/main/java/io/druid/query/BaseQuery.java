@@ -115,6 +115,21 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   private final QueryMetrics<?> queryMetrics;
   private volatile Duration duration;
 
+  /**
+   * @deprecated compatibility constructor for extensions, {@link
+   * BaseQuery#BaseQuery(DataSource, QuerySegmentSpec, boolean, Map, QueryMetrics)} should be used instead.
+   */
+  @Deprecated
+  public BaseQuery(
+      DataSource dataSource,
+      QuerySegmentSpec querySegmentSpec,
+      boolean descending,
+      Map<String, Object> context
+  )
+  {
+    this(dataSource, querySegmentSpec, descending, context, null);
+  }
+
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
