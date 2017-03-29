@@ -431,8 +431,10 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
-      inspector.visit("buffer", buffer);
-      inspector.visit("bigEndian", bigEndian);
+      // ideally should inspect buffer and bigEndian, but at the moment of inspectRuntimeShape() call buffer is likely
+      // to be null and bigEndian = false, because loadBuffer() is not yet called, although during the processing buffer
+      // is not null, hence "visiting" null is not representative, and visiting bigEndian = false could be misleading.
+      inspector.visit("singleThreadedBuffers", singleThreadedBuffers);
     }
   }
 }

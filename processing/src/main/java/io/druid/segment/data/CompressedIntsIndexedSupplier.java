@@ -370,8 +370,9 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
-      // ideally should inspect buffer, but at the moment of inspectRuntimeShape() call buffer might be null although
-      // during the processing it is not null, hence "visiting" null is not representative.
+      // ideally should inspect buffer, but at the moment of inspectRuntimeShape() call buffer is likely to be null,
+      // because loadBuffer() is not yet called, although during the processing it is not null, hence "visiting" null is
+      // not representative.
       inspector.visit("singleThreadedIntBuffers", singleThreadedIntBuffers);
     }
   }
