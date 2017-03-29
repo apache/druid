@@ -83,9 +83,17 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    final QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
+    final QueryMetrics<? super Query<T>> queryMetrics;
+    final Query<T> queryWithMetrics;
+    if (query.getQueryMetrics() == null) {
+      queryMetrics = queryToolChest.makeMetrics(query);
+      queryWithMetrics = query.withQueryMetrics(queryMetrics);
+    } else {
+      queryMetrics = (QueryMetrics<? super Query<T>>) query.getQueryMetrics();
+      queryWithMetrics = query;
+    }
     applyCustomDimensions.accept(queryMetrics);
-    final Query<T> queryWithMetrics = query.withQueryMetrics(queryMetrics);
+
     return Sequences.wrap(
         // Use LazySequence because want to account execution time of queryRunner.run() (it prepares the underlying
         // Sequence) as part of the reported query time, i. e. we want to execute queryRunner.run() after

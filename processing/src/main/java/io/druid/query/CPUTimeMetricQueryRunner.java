@@ -58,12 +58,17 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
 
 
   @Override
-  public Sequence<T> run(
-      final Query<T> query, final Map<String, Object> responseContext
-  )
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
-    Query<T> queryWithMetrics = query.withQueryMetrics(queryMetrics);
+    final QueryMetrics<? super Query<T>> queryMetrics;
+    final Query<T> queryWithMetrics;
+    if (query.getQueryMetrics() == null) {
+      queryMetrics = queryToolChest.makeMetrics(query);
+      queryWithMetrics = query.withQueryMetrics(queryMetrics);
+    } else {
+      queryMetrics = (QueryMetrics<? super Query<T>>) query.getQueryMetrics();
+      queryWithMetrics = query;
+    }
     final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
     return Sequences.wrap(
         baseSequence,
