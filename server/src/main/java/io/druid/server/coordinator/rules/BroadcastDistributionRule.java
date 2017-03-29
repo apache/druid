@@ -28,7 +28,6 @@ import io.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public abstract class BroadcastDistributionRule implements Rule
 {
@@ -40,28 +39,28 @@ public abstract class BroadcastDistributionRule implements Rule
   )
   {
     // Find servers which holds the segments of co-located data source
-    final List<ServerHolder> targetServerHolders;
+    final List<ServerHolder> loadServerHolders = new ArrayList<>();
+    final List<ServerHolder> dropServerHolders = new ArrayList<>();
     final List<String> colocatedDataSources = getColocatedDataSources();
     if (colocatedDataSources == null || colocatedDataSources.isEmpty()) {
-      targetServerHolders = new ArrayList<>(params.getDruidCluster().getAllServers());
+      loadServerHolders.addAll(params.getDruidCluster().getAllServers());
     } else {
-      targetServerHolders = params
-          .getDruidCluster().getAllServers().stream()
-          .filter(eachHolder ->
-              colocatedDataSources.stream().anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)
-          )
-          .collect(Collectors.toList());
+      params.getDruidCluster().getAllServers().forEach(
+          eachHolder -> {
+            if (colocatedDataSources.stream()
+                                    .anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)) {
+              loadServerHolders.add(eachHolder);
+            } else if (eachHolder.isServingSegment(segment)) {
+              dropServerHolders.add(eachHolder);
+            }
+          }
+      );
     }
 
-    // The segment is replicated to the found servers
-    final CoordinatorStats assignStats = assign(
-        targetServerHolders,
-        segment
-    );
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.accumulate(assignStats);
 
-    return stats;
+    return stats.accumulate(assign(loadServerHolders, segment))
+                .accumulate(drop(dropServerHolders, segment));
   }
 
   private CoordinatorStats assign(
@@ -88,6 +87,21 @@ public abstract class BroadcastDistributionRule implements Rule
 
         stats.addToGlobalStat(LoadRule.ASSIGNED_COUNT, 1);
       }
+    }
+
+    return stats;
+  }
+
+  private CoordinatorStats drop(
+      final List<ServerHolder> serverHolders,
+      final DataSegment segment
+  )
+  {
+    CoordinatorStats stats = new CoordinatorStats();
+
+    for (ServerHolder holder : serverHolders) {
+      holder.getPeon().dropSegment(segment, null);
+      stats.addToGlobalStat(LoadRule.DROPPED_COUNT, 1);
     }
 
     return stats;
