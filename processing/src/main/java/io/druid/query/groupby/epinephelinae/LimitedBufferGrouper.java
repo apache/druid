@@ -402,7 +402,6 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
 
   private class AlternatingByteBufferHashTable extends ByteBufferHashTable
   {
-    private ByteBuffer totalHashTableBuffer;
     private ByteBuffer[] subHashTableBuffers;
     private ByteBufferHashTable[] subHashTables;
     private ByteBufferHashTable activeHashTable;
@@ -427,7 +426,6 @@ public class LimitedBufferGrouper<KeyType> extends AbstractBufferGrouper<KeyType
       );
 
       this.growthCount = 0;
-      this.totalHashTableBuffer = totalHashTableBuffer;
 
       int subHashTableSize = tableArenaSize / 2;
       buckets = subHashTableSize / bucketSize;
