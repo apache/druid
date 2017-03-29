@@ -30,6 +30,7 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -105,26 +106,31 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   public static final String QUERYID = "queryId";
+
   private final DataSource dataSource;
   private final boolean descending;
   private final Map<String, Object> context;
   private final QuerySegmentSpec querySegmentSpec;
+  @Nullable
+  private final QueryMetrics<?> queryMetrics;
   private volatile Duration duration;
 
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
       boolean descending,
-      Map<String, Object> context
+      Map<String, Object> context,
+      QueryMetrics<?> queryMetrics
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource can't be null");
     Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
 
     this.dataSource = dataSource;
+    this.descending = descending;
     this.context = context;
     this.querySegmentSpec = querySegmentSpec;
-    this.descending = descending;
+    this.queryMetrics = queryMetrics;
   }
 
   @JsonProperty
@@ -206,10 +212,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return parseBoolean(this, key, defaultValue);
   }
 
-  protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
+  protected static Map<String, Object> computeOverriddenContext(
+      final Map<String, Object> context,
+      final Map<String, Object> overrides
+  )
   {
     Map<String, Object> overridden = Maps.newTreeMap();
-    final Map<String, Object> context = getContext();
     if (context != null) {
       overridden.putAll(context);
     }
@@ -226,6 +234,13 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @Override
+  @Nullable
+  public QueryMetrics<?> getQueryMetrics()
+  {
+    return queryMetrics;
+  }
+
+  @Override
   public String getId()
   {
     return (String) getContextValue(QUERYID);
@@ -234,7 +249,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public Query withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.<String, Object>of(QUERYID, id));
+    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
   }
 
   @Override

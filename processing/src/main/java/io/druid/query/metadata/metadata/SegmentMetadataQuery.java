@@ -27,7 +27,9 @@ import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.filter.DimFilter;
@@ -108,12 +110,42 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("lenientAggregatorMerge") Boolean lenientAggregatorMerge
   )
   {
+    this(
+        dataSource,
+        querySegmentSpec,
+        toInclude,
+        merge,
+        context,
+        analysisTypes,
+        useDefaultInterval,
+        lenientAggregatorMerge,
+        null
+    );
+  }
+
+  /**
+   * This constructor is public only because {@link Druids.SegmentMetadataQueryBuilder} needs to access this
+   * constructor, and it is defined in Druids rather than in as an inner class of SegmentMetadataQuery.
+   */
+  public SegmentMetadataQuery(
+      final DataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final ColumnIncluderator toInclude,
+      final Boolean merge,
+      final Map<String, Object> context,
+      final EnumSet<AnalysisType> analysisTypes,
+      final Boolean useDefaultInterval,
+      final Boolean lenientAggregatorMerge,
+      final QueryMetrics<?> queryMetrics
+  )
+  {
     super(
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(DEFAULT_INTERVAL))
                                    : querySegmentSpec,
         false,
-        context
+        context,
+        queryMetrics
     );
 
     if (querySegmentSpec == null) {
@@ -232,60 +264,32 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        toInclude,
-        merge,
-        computeOverridenContext(contextOverride),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverride);
+    return Druids.SegmentMetadataQueryBuilder.copy(this).context(newContext).build();
   }
 
   @Override
   public Query<SegmentAnalysis> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        spec,
-        toInclude,
-        merge,
-        getContext(),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    return Druids.SegmentMetadataQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<SegmentAnalysis> withDataSource(DataSource dataSource)
   {
-    return new SegmentMetadataQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        toInclude,
-        merge,
-        getContext(),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    return Druids.SegmentMetadataQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public Query<SegmentAnalysis> withColumns(ColumnIncluderator includerator)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        includerator,
-        merge,
-        getContext(),
-        analysisTypes,
-        usingDefaultInterval,
-        lenientAggregatorMerge
-    );
+    return Druids.SegmentMetadataQueryBuilder.copy(this).toInclude(includerator).build();
+  }
+
+  @Override
+  public Query<SegmentAnalysis> withQueryMetrics(QueryMetrics<?> queryMetrics)
+  {
+    Preconditions.checkNotNull(queryMetrics);
+    return Druids.SegmentMetadataQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @Override

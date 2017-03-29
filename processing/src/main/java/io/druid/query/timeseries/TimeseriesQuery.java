@@ -22,12 +22,15 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -63,16 +66,47 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context);
+    this(
+        dataSource,
+        querySegmentSpec,
+        descending,
+        virtualColumns,
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        context,
+        null
+    );
+  }
+
+  /**
+   * This constructor is public only because {@link Druids.TimeseriesQueryBuilder} needs to access this constructor, and
+   * it is defined in Druids rather than in as an inner class of TimeseriesQuery.
+   */
+  public TimeseriesQuery(
+      final DataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final boolean descending,
+      final VirtualColumns virtualColumns,
+      final DimFilter dimFilter,
+      final Granularity granularity,
+      final List<AggregatorFactory> aggregatorSpecs,
+      final List<PostAggregator> postAggregatorSpecs,
+      final Map<String, Object> context,
+      final QueryMetrics<?> queryMetrics
+  )
+  {
+    super(dataSource, querySegmentSpec, descending, context, queryMetrics);
+    TimeseriesQueryMetrics.class.cast(queryMetrics); // ClassCastException if not
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         this.aggregatorSpecs,
-        postAggregatorSpecs == null
-        ? ImmutableList.<PostAggregator>of()
-        : postAggregatorSpecs
+        postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );
   }
 
@@ -131,63 +165,31 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public TimeseriesQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        querySegmentSpec,
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
   public Query<Result<TimeseriesResultValue>> withDataSource(DataSource dataSource)
   {
-    return new TimeseriesQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   public TimeseriesQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.TimeseriesQueryBuilder.copy(this).context(newContext).build();
   }
 
   public TimeseriesQuery withDimFilter(DimFilter dimFilter)
   {
-    return new TimeseriesQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        isDescending(),
-        virtualColumns,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return Druids.TimeseriesQueryBuilder.copy(this).filters(dimFilter).build();
+  }
+
+  @Override
+  public Query<Result<TimeseriesResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
+  {
+    Preconditions.checkNotNull(queryMetrics);
+    return Druids.TimeseriesQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @Override

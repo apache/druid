@@ -28,6 +28,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -70,7 +71,40 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    this(
+        dataSource,
+        virtualColumns,
+        dimensionSpec,
+        topNMetricSpec,
+        threshold,
+        querySegmentSpec,
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        context,
+        null
+    );
+  }
+
+  TopNQuery(
+      final DataSource dataSource,
+      final VirtualColumns virtualColumns,
+      final DimensionSpec dimensionSpec,
+      final TopNMetricSpec topNMetricSpec,
+      final int threshold,
+      final QuerySegmentSpec querySegmentSpec,
+      final DimFilter dimFilter,
+      final Granularity granularity,
+      final List<AggregatorFactory> aggregatorSpecs,
+      final List<PostAggregator> postAggregatorSpecs,
+      final Map<String, Object> context,
+      final QueryMetrics<?> queryMetrics
+  )
+  {
+    super(dataSource, querySegmentSpec, false, context, queryMetrics);
+    TopNQueryMetrics.class.cast(queryMetrics); // ClassCastException if not
+
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
@@ -169,139 +203,50 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
   public TopNQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        dimensionSpec,
-        topNMetricSpec,
-        threshold,
-        querySegmentSpec,
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).intervals(querySegmentSpec).build();
   }
 
   public TopNQuery withDimensionSpec(DimensionSpec spec)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        spec,
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).dimension(spec).build();
   }
 
   public TopNQuery withAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        getDimensionSpec(),
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).aggregators(aggregatorSpecs).build();
   }
 
   public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        getDimensionSpec(),
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).postAggregators(postAggregatorSpecs).build();
   }
 
   @Override
   public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
   {
-    return new TopNQuery(
-        dataSource,
-        virtualColumns,
-        dimensionSpec,
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).dataSource(dataSource).build();
   }
 
   public TopNQuery withThreshold(int threshold)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        dimensionSpec,
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).threshold(threshold).build();
   }
 
   public TopNQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        dimensionSpec,
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        computeOverridenContext(contextOverrides)
-    );
+    return new TopNQueryBuilder(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
   public TopNQuery withDimFilter(DimFilter dimFilter)
   {
-    return new TopNQuery(
-        getDataSource(),
-        virtualColumns,
-        getDimensionSpec(),
-        topNMetricSpec,
-        threshold,
-        getQuerySegmentSpec(),
-        dimFilter,
-        granularity,
-        aggregatorSpecs,
-        postAggregatorSpecs,
-        getContext()
-    );
+    return new TopNQueryBuilder(this).filters(dimFilter).build();
+  }
+
+  @Override
+  public Query<Result<TopNResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
+  {
+    Preconditions.checkNotNull(queryMetrics);
+    return new TopNQueryBuilder(this).queryMetrics(queryMetrics).build();
   }
 
   @Override

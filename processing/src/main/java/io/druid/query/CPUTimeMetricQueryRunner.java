@@ -62,7 +62,9 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
       final Query<T> query, final Map<String, Object> responseContext
   )
   {
-    final Sequence<T> baseSequence = delegate.run(query, responseContext);
+    QueryMetrics<? super Query<T>> queryMetrics = queryToolChest.makeMetrics(query);
+    Query<T> queryWithMetrics = query.withQueryMetrics(queryMetrics);
+    final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
     return Sequences.wrap(
         baseSequence,
         new SequenceWrapper()
@@ -84,7 +86,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
-                queryToolChest.makeMetrics(query).reportCpuTime(cpuTimeNs).emit(emitter);
+                queryMetrics.reportCpuTime(cpuTimeNs).emit(emitter);
               }
             }
           }

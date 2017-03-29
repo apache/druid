@@ -21,11 +21,14 @@ package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -34,6 +37,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -52,12 +56,27 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
       @JsonProperty("context") Map<String, Object> context
   )
   {
+    this(dataSource, querySegmentSpec, context, null);
+  }
+
+  /**
+   * This constructor is public only because {@link Druids.DataSourceMetadataQueryBuilder} needs to access this
+   * constructor, and it is defined in Druids rather than in as an inner class of DataSourceMetadataQuery.
+   */
+  public DataSourceMetadataQuery(
+      final DataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final Map<String, Object> context,
+      final QueryMetrics<?> queryMetrics
+  )
+  {
     super(
         dataSource,
-        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
+        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Collections.singletonList(MY_Y2K_INTERVAL))
                                    : querySegmentSpec,
         false,
-        context
+        context,
+        queryMetrics
     );
   }
 
@@ -82,31 +101,27 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   @Override
   public DataSourceMetadataQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new DataSourceMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).context(newContext).build();
   }
 
   @Override
   public DataSourceMetadataQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new DataSourceMetadataQuery(
-        getDataSource(),
-        spec,
-        getContext()
-    );
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<Result<DataSourceMetadataResultValue>> withDataSource(DataSource dataSource)
   {
-    return new DataSourceMetadataQuery(
-        dataSource,
-        getQuerySegmentSpec(),
-        getContext()
-    );
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).dataSource(dataSource).build();
+  }
+
+  @Override
+  public Query<Result<DataSourceMetadataResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
+  {
+    Preconditions.checkNotNull(queryMetrics);
+    return Druids.DataSourceMetadataQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   public Iterable<Result<DataSourceMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)

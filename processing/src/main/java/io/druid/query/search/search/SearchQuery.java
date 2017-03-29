@@ -26,7 +26,9 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryMetrics;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -63,7 +65,27 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    this(dataSource, dimFilter, granularity, limit, querySegmentSpec, dimensions, querySpec, sortSpec, context, null);
+  }
+
+  /**
+   * This constructor is public only because {@link Druids.SearchQueryBuilder} needs to access this constructor, and it
+   * is defined in Druids rather than in as an inner class of SearchQuery.
+   */
+  public SearchQuery(
+      final DataSource dataSource,
+      final DimFilter dimFilter,
+      final Granularity granularity,
+      final int limit,
+      final QuerySegmentSpec querySegmentSpec,
+      final List<DimensionSpec> dimensions,
+      final SearchQuerySpec querySpec,
+      final SearchSortSpec sortSpec,
+      final Map<String, Object> context,
+      final QueryMetrics<?> queryMetrics
+  )
+  {
+    super(dataSource, querySegmentSpec, false, context, queryMetrics);
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
 
     this.dimFilter = dimFilter;
@@ -95,64 +117,32 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public SearchQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        limit,
-        spec,
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).intervals(spec).build();
   }
 
   @Override
   public Query<Result<SearchResultValue>> withDataSource(DataSource dataSource)
   {
-    return new SearchQuery(
-        dataSource,
-        dimFilter,
-        granularity,
-        limit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   @Override
   public SearchQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        limit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        computeOverridenContext(contextOverrides)
-    );
+    Map<String, Object> newContext = computeOverriddenContext(getContext(), contextOverrides);
+    return Druids.SearchQueryBuilder.copy(this).context(newContext).build();
   }
 
   public SearchQuery withDimFilter(DimFilter dimFilter)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        limit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).filters(dimFilter).build();
+  }
+
+  @Override
+  public Query<Result<SearchResultValue>> withQueryMetrics(QueryMetrics<?> queryMetrics)
+  {
+    Preconditions.checkNotNull(queryMetrics);
+    return Druids.SearchQueryBuilder.copy(this).queryMetrics(queryMetrics).build();
   }
 
   @JsonProperty("filter")
@@ -193,17 +183,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 
   public SearchQuery withLimit(int newLimit)
   {
-    return new SearchQuery(
-        getDataSource(),
-        dimFilter,
-        granularity,
-        newLimit,
-        getQuerySegmentSpec(),
-        dimensions,
-        querySpec,
-        sortSpec,
-        getContext()
-    );
+    return Druids.SearchQueryBuilder.copy(this).limit(newLimit).build();
   }
 
   @Override
