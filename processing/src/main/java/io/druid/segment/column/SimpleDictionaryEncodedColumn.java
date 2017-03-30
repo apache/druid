@@ -230,6 +230,12 @@ public class SimpleDictionaryEncodedColumn
                 {
                   return getRowValue() == valueId;
                 }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
+                  inspector.visit("column", SimpleDictionaryEncodedColumn.this);
+                }
               };
             } else {
               return BooleanValueMatcher.of(false);
@@ -253,6 +259,12 @@ public class SimpleDictionaryEncodedColumn
             public boolean matches()
             {
               return predicateMatchingValueIds.get(getRowValue());
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              inspector.visit("column", SimpleDictionaryEncodedColumn.this);
             }
           };
         }

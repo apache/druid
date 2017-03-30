@@ -174,6 +174,13 @@ final class FilteredOffset implements Offset
 
             return iterOffset == currentOffset;
           }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("holder", holder);
+            inspector.visit("iter", iter);
+          }
         };
       } else {
         return new ValueMatcher()
@@ -189,6 +196,13 @@ final class FilteredOffset implements Offset
             }
 
             return iterOffset == currentOffset;
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("holder", holder);
+            inspector.visit("iter", iter);
           }
         };
       }

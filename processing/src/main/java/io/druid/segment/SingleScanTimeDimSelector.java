@@ -80,6 +80,12 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
       {
         return Objects.equals(lookupName(getDimensionValueIndex()), value);
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", SingleScanTimeDimSelector.this);
+      }
     };
   }
 
@@ -92,6 +98,13 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
       public boolean matches()
       {
         return predicate.apply(lookupName(getDimensionValueIndex()));
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", SingleScanTimeDimSelector.this);
+        inspector.visit("predicate", predicate);
       }
     };
   }

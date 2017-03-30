@@ -131,6 +131,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
               return Objects.equals(rowValue, value);
             }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              inspector.visit("row", row);
+              inspector.visit("extractionFn", extractionFn);
+            }
           };
         }
 
@@ -144,6 +151,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
             {
               String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
               return predicate.apply(rowValue);
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              inspector.visit("row", row);
+              inspector.visit("extractionFn", extractionFn);
+              inspector.visit("predicate", predicate);
             }
           };
         }
@@ -211,6 +226,12 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
                 return false;
               }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+              }
             };
           } else {
             return new ValueMatcher()
@@ -229,6 +250,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                   }
                 }
                 return false;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+                inspector.visit("extractionFn", extractionFn);
               }
             };
           }
@@ -256,6 +284,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
                 return false;
               }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+                inspector.visit("predicate", predicate);
+              }
             };
           } else {
             return new ValueMatcher()
@@ -274,6 +309,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                   }
                 }
                 return false;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("row", row);
+                inspector.visit("predicate", predicate);
               }
             };
           }

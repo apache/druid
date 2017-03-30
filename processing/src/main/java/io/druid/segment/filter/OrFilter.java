@@ -27,6 +27,7 @@ import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -103,23 +104,14 @@ public class OrFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        for (ValueMatcher valueMatcher : matchers) {
-          if (valueMatcher.matches()) {
-            return true;
-          }
-        }
-        return false;
-      }
-    };
+    return makeMatcher(matchers.toArray(new ValueMatcher[0]));
   }
 
 
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
+    if (baseMatchers.length == 0) {
+      return BooleanValueMatcher.of(false);
+    }
     if (baseMatchers.length == 1) {
       return baseMatchers[0];
     }
@@ -135,6 +127,15 @@ public class OrFilter implements BooleanFilter
           }
         }
         return false;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("firstBaseMatcher", baseMatchers[0]);
+        inspector.visit("secondBaseMatcher", baseMatchers[1]);
+        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
+        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
       }
     };
   }

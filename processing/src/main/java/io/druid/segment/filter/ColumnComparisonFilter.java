@@ -29,6 +29,7 @@ import io.druid.query.filter.ValueGetter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import io.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
@@ -74,6 +75,9 @@ public class ColumnComparisonFilter implements Filter
   }
 
   public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters) {
+    if (valueGetters.length == 0) {
+      return BooleanValueMatcher.of(true);
+    }
     return new ValueMatcher()
     {
       @Override
@@ -92,6 +96,13 @@ public class ColumnComparisonFilter implements Filter
           }
         }
         return true;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // All value getters are likely the same or similar (in terms of runtime shape), so inspecting only one of them.
+        inspector.visit("oneValueGetter", valueGetters[0]);
       }
     };
   }

@@ -22,6 +22,7 @@ package io.druid.segment.virtual;
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.SingleValueDimensionSelector;
@@ -70,6 +71,12 @@ public abstract class BaseSingleValueDimensionSelector implements SingleValueDim
       {
         return Objects.equals(getValue(), value);
       }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", BaseSingleValueDimensionSelector.this);
+      }
     };
   }
 
@@ -82,6 +89,13 @@ public abstract class BaseSingleValueDimensionSelector implements SingleValueDim
       public boolean matches()
       {
         return predicate.apply(getValue());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", BaseSingleValueDimensionSelector.this);
+        inspector.visit("predicate", predicate);
       }
     };
   }
