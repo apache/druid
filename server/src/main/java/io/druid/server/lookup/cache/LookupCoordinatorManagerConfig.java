@@ -31,11 +31,14 @@ public class LookupCoordinatorManagerConfig
 
   @JsonProperty
   private Duration hostTimeout = null;
+
   @JsonProperty
   private Duration allHostTimeout = null;
+
   @JsonProperty
-  @Min(2)
+  @Min(2) //minimum 2 threads, one for lookupManagementLoop and one for talking to the lookup nodes
   private int threadPoolSize = 10;
+
   @JsonProperty
   @Min(1)
   private long period = 120_000L;

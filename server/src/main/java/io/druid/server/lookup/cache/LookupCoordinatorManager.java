@@ -48,6 +48,7 @@ import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StreamUtils;
 import io.druid.java.util.common.StringUtils;
@@ -151,12 +152,11 @@ public class LookupCoordinatorManager
 
     //ensure all the lookups specs have version specified. ideally this should be done in the LookupExtractorFactoryMapContainer
     //constructor but that allows null to enable backward compatibility with 0.10.0 lookup specs
-    for (final String tier : updateSpec.keySet()) {
-      Map<String, LookupExtractorFactoryMapContainer> lookups = updateSpec.get(tier);
-      for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : lookups.entrySet()) {
+    for (final Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : updateSpec.entrySet()) {
+      for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : tierEntry.getValue().entrySet()) {
         Preconditions.checkNotNull(
             e.getValue().getVersion(),
-            "lookup [%s]:[%s] does not have version.", tier, e.getKey()
+            "lookup [%s]:[%s] does not have version.", tierEntry.getKey(), e.getKey()
         );
       }
     }
@@ -176,9 +176,11 @@ public class LookupCoordinatorManager
       } else {
         // Needs update
         updatedSpec = new HashMap<>(priorSpec);
-        for (final String tier : updateSpec.keySet()) {
+        for (final Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : updateSpec.entrySet()) {
+          final String tier = tierEntry.getKey();
+          final Map<String, LookupExtractorFactoryMapContainer> updateTierSpec = tierEntry.getValue();
           final Map<String, LookupExtractorFactoryMapContainer> priorTierSpec = priorSpec.get(tier);
-          final Map<String, LookupExtractorFactoryMapContainer> updateTierSpec = updateSpec.get(tier);
+
           if (priorTierSpec == null) {
             // New tier
             updatedSpec.put(tier, updateTierSpec);
@@ -273,7 +275,7 @@ public class LookupCoordinatorManager
     return tierLookups.get(lookupName);
   }
 
-  // start() and stop() are synchronized so that they never run in parallel in case of ZK acting funny and
+  // start() and stop() are synchronized so that they never run in parallel in case of ZK acting funny or drui bug and
   // coordinator becomes leader and drops leadership in quick succession.
   public void start()
   {
@@ -345,7 +347,7 @@ public class LookupCoordinatorManager
     }
   }
 
-  public synchronized void stop()
+  public void stop()
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStop()) {
@@ -399,16 +401,14 @@ public class LookupCoordinatorManager
 
       if (oldLookups != null) {
         Map<String, Map<String, LookupExtractorFactoryMapContainer>> converted = new HashMap<>();
-        for (Map.Entry<String, Map<String, Map<String, Object>>> tierEntry : oldLookups.entrySet()) {
-          Map<String, Map<String, Object>> oldTierLookups = tierEntry.getValue();
-          if (oldTierLookups != null && !oldTierLookups.isEmpty()) {
-            Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
-            for (Map.Entry<String, Map<String, Object>> e : oldTierLookups.entrySet()) {
-              convertedTierLookups.put(e.getKey(), new LookupExtractorFactoryMapContainer(null, e.getValue()));
+        oldLookups.forEach(
+            (tier, oldTierLookups) -> {
+              if (oldTierLookups != null && !oldTierLookups.isEmpty()) {
+                converted.put(tier, convertTierLookups(oldTierLookups));
+              }
             }
-            converted.put(tierEntry.getKey(), convertedTierLookups);
-          }
-        }
+        );
+
         configManager.set(
             LOOKUP_CONFIG_KEY,
             converted,
@@ -416,6 +416,19 @@ public class LookupCoordinatorManager
         );
       }
     }
+  }
+
+  private Map<String, LookupExtractorFactoryMapContainer> convertTierLookups(
+      Map<String, Map<String, Object>> oldTierLookups
+  )
+  {
+    Map<String, LookupExtractorFactoryMapContainer> convertedTierLookups = new HashMap<>();
+    oldTierLookups.forEach(
+        (lookup, lookupExtractorFactory) -> {
+          convertedTierLookups.put(lookup, new LookupExtractorFactoryMapContainer(null, lookupExtractorFactory));
+        }
+    );
+    return convertedTierLookups;
   }
 
   private void lookupManagementLoop()
@@ -429,8 +442,7 @@ public class LookupCoordinatorManager
     final Map<String, Map<String, LookupExtractorFactoryMapContainer>> allLookupTiers = lookupMapConfigRef.get();
 
     if (allLookupTiers == null) {
-
-      LOG.debug("Not updating lookups because no data exists");
+      LOG.info("Not updating lookups because no data exists");
       return;
     }
 
@@ -456,7 +468,19 @@ public class LookupCoordinatorManager
 
           futures.add(
               executorService.submit(
-                  () -> this.doLookupManagementOnNode(node, tierLookups, currState)
+                  () -> {
+                    try {
+                      currState.put(node, this.doLookupManagementOnNode(node, tierLookups));
+                    }
+                    catch (Exception ex) {
+                      LOG.makeAlert(
+                          ex,
+                          "Failed to finish lookup management on node [%s:%s]",
+                          node.getHostText(),
+                          node.getPort()
+                      );
+                    }
+                  }
               )
           );
         }
@@ -483,58 +507,83 @@ public class LookupCoordinatorManager
     LOG.debug("Finished lookup sync for on all nodes.");
   }
 
-  private void doLookupManagementOnNode(
+  private LookupsStateWithMap doLookupManagementOnNode(
       HostAndPort node,
-      Map<String, LookupExtractorFactoryMapContainer> nodeTierLookups,
-      Map<HostAndPort, LookupsStateWithMap> stateToUpdate
+      Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
+  ) throws IOException, InterruptedException, ExecutionException
+  {
+    LOG.debug("Starting lookup sync for node [%s].", node);
+
+    LookupsStateWithMap currLookupsStateOnNode = getLookupStateForNode(node);
+    LOG.debug("Received lookups state from node [%s].", node);
+
+
+    // Compare currLookupsStateOnNode with nodeTierLookupsToBe to find what are the lookups
+    // we need to further ask node to load/drop
+    Map<String, LookupExtractorFactoryMapContainer> toLoad = xx(currLookupsStateOnNode, nodeTierLookupsToBe);
+    Set<String> toDrop = toDrop(currLookupsStateOnNode, nodeTierLookupsToBe);
+
+    if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
+      // Send POST request to the node asking to load and drop the lookups necessary.
+      // no need to send "current" in the LookupsStateWithMap , that is not required
+      currLookupsStateOnNode = updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop));
+
+      LOG.debug(
+          "Sent lookup toAdd[%s] and toDrop[%s] updates to node [%s].",
+          toLoad.keySet(),
+          toDrop,
+          node
+      );
+    }
+
+    LOG.debug("Finished lookup sync for node [%s].", node);
+    return currLookupsStateOnNode;
+  }
+
+  // Returns the Map<lookup-name, lookup-spec> that needs to be loaded by the node and it does not know about
+  // those already.
+  private Map<String, LookupExtractorFactoryMapContainer> xx(
+      LookupsStateWithMap currLookupsStateOnNode,
+      Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )
   {
-    try {
+    Map<String, LookupExtractorFactoryMapContainer> toLoad = new HashMap<>();
+    for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : nodeTierLookupsToBe.entrySet()) {
+      String name = e.getKey();
+      LookupExtractorFactoryMapContainer lookupToBe = e.getValue();
 
-      LOG.debug("Starting lookup sync for node [%s].", node);
+      // get it from the current pending notices list on the node
+      LookupExtractorFactoryMapContainer current = currLookupsStateOnNode.getToLoad().get(name);
 
-      LookupsStateWithMap lookupsState = getLookupStateForNode(node);
-      LOG.debug("Received lookups state from node [%s].", node);
-
-      stateToUpdate.put(node, lookupsState);
-
-      Map<String, LookupExtractorFactoryMapContainer> toLoad = new HashMap<>();
-      for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : nodeTierLookups.entrySet()) {
-        String name = e.getKey();
-        LookupExtractorFactoryMapContainer lookupToBe = e.getValue();
-
-        LookupExtractorFactoryMapContainer current = lookupsState.getToLoad().get(name);
-        if (current == null) {
-          current = lookupsState.getCurrent().get(name);
-        }
-
-        if (current == null || lookupToBe.replaces(current)) {
-          toLoad.put(name, lookupToBe);
-        }
+      if (current == null) {
+        //ok, not on pending list, get from currently loaded lookups on node
+        current = currLookupsStateOnNode.getCurrent().get(name);
       }
 
-      Set<String> toDrop = new HashSet<>();
-      toDrop.addAll(lookupsState.getCurrent().keySet());
-      toDrop.addAll(lookupsState.getToLoad().keySet());
-      toDrop = Sets.difference(toDrop, lookupsState.getToDrop());
-      toDrop = Sets.difference(toDrop, nodeTierLookups.keySet());
-
-      if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
-        stateToUpdate.put(node, updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop)));
-
-        LOG.debug(
-            "Sent lookup toAdd[%d] and toDrop[%d] updates to node [%s].",
-            toLoad.size(),
-            toDrop.size(),
-            node
-        );
+      if (current == null || //lookup is neither pending nor already loaded on the node OR
+          lookupToBe.replaces(current) //lookup is already know to node, but lookupToBe overrides that
+          ) {
+        toLoad.put(name, lookupToBe);
       }
+    }
+    return toLoad;
+  }
 
-      LOG.debug("Finished lookup sync for node [%s].", node);
-    }
-    catch (Exception ex) {
-      LOG.makeAlert(ex, "Failed to manage lookups on node [%s].", node).emit();
-    }
+  // Returns Set<lookup-name> that should be dropped from the node which has them already either in pending to load
+  // state or loaded
+  private Set<String> toDrop(
+      LookupsStateWithMap currLookupsStateOnNode,
+      Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
+  )
+  {
+    Set<String> toDrop = new HashSet<>();
+
+    // {currently loading/loaded on the node} - {currently pending deletion on node} - {lookups node should actually have}
+    toDrop.addAll(currLookupsStateOnNode.getCurrent().keySet());
+    toDrop.addAll(currLookupsStateOnNode.getToLoad().keySet());
+    toDrop = Sets.difference(toDrop, currLookupsStateOnNode.getToDrop());
+    toDrop = Sets.difference(toDrop, nodeTierLookupsToBe.keySet());
+    return toDrop;
   }
 
   @VisibleForTesting
@@ -568,9 +617,8 @@ public class LookupCoordinatorManager
           );
           return response;
         } catch (IOException ex) {
-          throw new IOException(
-              String.format("Failed to parse update response from [%s]. response [%s]", url, result),
-              ex
+          throw new IOE(
+              ex, "Failed to parse update response from [%s]. response [%s]", url, result
           );
         }
       } else {
@@ -582,14 +630,12 @@ public class LookupCoordinatorManager
           LOG.warn(e2, "Error reading response");
         }
 
-        throw new IOException(
-            String.format(
-                "Bad update request to [%s] : [%d] : [%s]  Response: [%s]",
-                url,
-                returnCode.get(),
-                reasonString.get(),
-                StringUtils.fromUtf8(baos.toByteArray())
-            )
+        throw new IOE(
+            "Bad update request to [%s] : [%d] : [%s]  Response: [%s]",
+            url,
+            returnCode.get(),
+            reasonString.get(),
+            StringUtils.fromUtf8(baos.toByteArray())
         );
       }
     }
@@ -621,13 +667,11 @@ public class LookupCoordinatorManager
           );
           return response;
         } catch(IOException ex) {
-          throw new IOException(
-              String.format(
-                  "Failed to parser GET lookups response from [%s]. response [%s].",
-                  url,
-                  result
-              ),
-              ex
+          throw new IOE(
+              ex,
+              "Failed to parser GET lookups response from [%s]. response [%s].",
+              url,
+              result
           );
         }
       } else {
@@ -639,14 +683,12 @@ public class LookupCoordinatorManager
           LOG.warn(ex, "Error reading response from GET on url [%s]", url);
         }
 
-        throw new IOException(
-            String.format(
-                "GET request failed to [%s] : [%d] : [%s]  Response: [%s]",
-                url,
-                returnCode.get(),
-                reasonString.get(),
-                StringUtils.fromUtf8(baos.toByteArray())
-            )
+        throw new IOE(
+            "GET request failed to [%s] : [%d] : [%s]  Response: [%s]",
+            url,
+            returnCode.get(),
+            reasonString.get(),
+            StringUtils.fromUtf8(baos.toByteArray())
         );
       }
     }
