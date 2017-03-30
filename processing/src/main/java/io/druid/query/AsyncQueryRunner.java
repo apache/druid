@@ -49,7 +49,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    final int priority = BaseQuery.getContextPriority(query, 0);
+    final int priority = QueryContexts.getPriority(query, 0);
     final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority)
         {
           @Override
@@ -68,11 +68,11 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
       public Sequence<T> get()
       {
         try {
-          Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT);
-          if (timeout == null) {
+          final long timeout = QueryContexts.getTimeout(query);
+          if (timeout == 0) {
             return future.get();
           } else {
-            return future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+            return future.get(timeout, TimeUnit.MILLISECONDS);
           }
         } catch (ExecutionException | InterruptedException | TimeoutException ex) {
           throw Throwables.propagate(ex);

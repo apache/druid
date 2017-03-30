@@ -32,6 +32,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -40,7 +41,7 @@ import io.druid.java.util.common.guava.Yielders;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QuerySegmentWalker;
@@ -177,7 +178,7 @@ public class QueryResource implements QueryCountStatsProvider
   ) throws IOException
   {
     final long startNs = System.nanoTime();
-    Query query = null;
+    Query<?> query = null;
     QueryToolChest toolChest = null;
     String queryId = null;
 
@@ -191,14 +192,11 @@ public class QueryResource implements QueryCountStatsProvider
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      if (query.getContextValue(QueryContextKeys.TIMEOUT) == null) {
-        query = query.withOverriddenContext(
-            ImmutableMap.of(
-                QueryContextKeys.TIMEOUT,
-                config.getMaxIdleTime().toStandardDuration().getMillis()
-            )
-        );
+
+      if (QueryContexts.getTimeout(query) < 0) {
+        throw new IAE("Timeout must be a non negative value, but was [%d]", QueryContexts.getTimeout(query));
       }
+
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
