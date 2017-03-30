@@ -643,11 +643,11 @@ public class DruidCoordinator
         metadataRuleManager.stop();
         metadataSegmentManager.stop();
         lookupCoordinatorManager.stop();
+
+        leader = false;
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to stopBeingLeader").emit();
-      } finally {
-        leader = false;
       }
     }
   }

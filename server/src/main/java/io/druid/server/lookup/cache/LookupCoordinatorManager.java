@@ -90,6 +90,12 @@ public class LookupCoordinatorManager
 
   public static final String LOOKUP_CONFIG_KEY = "lookupsConfig";
   public static final String LOOKUP_LISTEN_ANNOUNCE_KEY = "lookups";
+
+  private static final String LOOKUP_BASE_REQUEST_PATH = ListenerResource.BASE_PATH
+                                                         + "/"
+                                                         + LOOKUP_LISTEN_ANNOUNCE_KEY;
+  private static final String LOOKUP_UPDATE_REQUEST_PATH = LOOKUP_BASE_REQUEST_PATH + "/" + "updates";
+
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
   private final ListenerDiscoverer listenerDiscoverer;
@@ -700,7 +706,7 @@ public class LookupCoordinatorManager
         "http",
         druidNode.getHostText(),
         druidNode.getPortOrDefault(-1),
-        ListenerResource.BASE_PATH + "/" + LOOKUP_LISTEN_ANNOUNCE_KEY
+        LOOKUP_BASE_REQUEST_PATH
     );
   }
 
@@ -710,7 +716,7 @@ public class LookupCoordinatorManager
         "http",
         druidNode.getHostText(),
         druidNode.getPortOrDefault(-1),
-        ListenerResource.BASE_PATH + "/" + LOOKUP_LISTEN_ANNOUNCE_KEY + "/" + "updates"
+        LOOKUP_UPDATE_REQUEST_PATH
     );
   }
 
