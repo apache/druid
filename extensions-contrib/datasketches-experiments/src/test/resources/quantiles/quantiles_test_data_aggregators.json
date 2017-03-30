@@ -1,0 +1,12 @@
+[
+  {
+    "type": "datasketchesQuantilesSketch",
+    "name": "value",
+    "fieldName": "value"
+  },
+  {
+    "type": "datasketchesQuantilesSketch",
+    "name": "non_existing_col_validation",
+    "fieldName": "non_existing_col"
+  }
+]

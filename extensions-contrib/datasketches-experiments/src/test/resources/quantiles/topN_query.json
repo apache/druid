@@ -1,0 +1,65 @@
+{
+  "queryType": "topN",
+  "dataSource": "test_datasource",
+  "granularity":"ALL",
+  "metric": {
+    "type": "inverted",
+    "metric": "valueQuantile"
+  },
+  "dimension": "product",
+  "threshold": 1,
+  "aggregations": [
+    {
+      "type": "datasketchesQuantilesSketch",
+      "name": "valueSketch",
+      "fieldName": "value"
+    },
+    {
+      "type": "datasketchesQuantilesSketch",
+      "name": "non_existing_col_validation",
+      "fieldName": "non_existing_col"
+    }
+  ],
+  "postAggregations": [
+    {
+      "type": "datasketchesQuantiles",
+      "name": "valueQuantiles",
+      "fractions": [0.0, 0.25, 0.50, 0.75, 1.0],
+      "fieldName": "valueSketch"
+    },
+    {
+      "type": "datasketchesQuantile",
+      "name": "valueQuantile",
+      "fraction": 0.25,
+      "fieldName": "valueSketch"
+    },
+    {
+      "type": "datasketchesCustomSplitsHistogram",
+      "name": "valueCustomSplitsHistogram",
+      "splits": [
+        940,
+        2620
+      ],
+      "fieldName": "valueSketch"
+    },
+    {
+      "type": "datasketchesEqualSplitsHistogram",
+      "name": "valueEqualSplitsHistogram",
+      "numSplits": 2,
+      "fieldName": "valueSketch"
+    },
+    {
+      "type": "datasketchesQuantilesSketchMin",
+      "name": "valueMin",
+      "fieldName": "valueSketch"
+    },
+    {
+      "type": "datasketchesQuantilesSketchMax",
+      "name": "valueMax",
+      "fieldName": "valueSketch"
+    }
+  ],
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-11-22T00:00:00.000Z"
+  ]
+}

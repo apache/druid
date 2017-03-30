@@ -67,6 +67,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.html)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.html)|
 |scan-query|Scan query|[link](../development/extensions-contrib/scan-query.html)|
+|druid-datasketches-experiments|Support for experimental aggregators such as quantiles based on [DataSketches](http://datasketches.github.io/).|[link](../development/extensions-contrib/datasketches-experiments.html)|
 
 ## Promoting Community Extension to Core Extension
 

@@ -1,0 +1,11 @@
+{
+  "queryType": "select",
+  "dataSource": "test_datasource",
+  "dimensions":[],
+  "metrics":[],
+  "granularity": "ALL",
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
+  ],
+  "pagingSpec":{"pagingIdentifiers": {}, "threshold":100}
+}
