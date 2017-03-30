@@ -25,6 +25,11 @@ import java.util.concurrent.TimeoutException;
 
 final class UpdateCounter
 {
+  /**
+   * Max {@link Phaser}'s phase, specified in it's javadoc. Then it wraps to zero.
+   */
+  private static final int MAX_PHASE = Integer.MAX_VALUE;
+
   private final Phaser phaser = new Phaser(1);
 
   void update()
@@ -34,14 +39,30 @@ final class UpdateCounter
 
   void awaitTotalUpdates(int totalUpdates) throws InterruptedException
   {
+    totalUpdates &= MAX_PHASE;
     int currentUpdates = phaser.getPhase();
-    while (totalUpdates - currentUpdates > 0) { // overflow-aware
+    checkNotTerminated(currentUpdates);
+    while (((totalUpdates - currentUpdates) & MAX_PHASE) < MAX_PHASE / 2) { // overflow-aware
       currentUpdates = phaser.awaitAdvanceInterruptibly(currentUpdates);
+      checkNotTerminated(currentUpdates);
+    }
+  }
+
+  private void checkNotTerminated(int phase)
+  {
+    if (phase < 0) {
+      throw new IllegalStateException("Phaser[" + phaser + "] unexpectedly terminated.");
     }
   }
 
   void awaitNextUpdates(int nextUpdates) throws InterruptedException
   {
+    if (nextUpdates <= 0) {
+      throw new IllegalArgumentException("nextUpdates is not positive: " + nextUpdates);
+    }
+    if (nextUpdates > MAX_PHASE / 4) {
+      throw new UnsupportedOperationException("Couldn't wait for so many updates: " + nextUpdates);
+    }
     awaitTotalUpdates(phaser.getPhase() + nextUpdates);
   }
 
