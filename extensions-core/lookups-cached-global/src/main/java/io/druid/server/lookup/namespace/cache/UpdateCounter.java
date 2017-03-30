@@ -42,10 +42,19 @@ final class UpdateCounter
     totalUpdates &= MAX_PHASE;
     int currentUpdates = phaser.getPhase();
     checkNotTerminated(currentUpdates);
-    while (((totalUpdates - currentUpdates) & MAX_PHASE) < MAX_PHASE / 2) { // overflow-aware
+    while (comparePhases(totalUpdates, currentUpdates) > 0) {
       currentUpdates = phaser.awaitAdvanceInterruptibly(currentUpdates);
       checkNotTerminated(currentUpdates);
     }
+  }
+
+  private static int comparePhases(int phase1, int phase2)
+  {
+    int diff = (phase1 - phase2) & MAX_PHASE;
+    if (diff == 0) {
+      return 0;
+    }
+    return diff < MAX_PHASE / 2 ? 1 : -1;
   }
 
   private void checkNotTerminated(int phase)
