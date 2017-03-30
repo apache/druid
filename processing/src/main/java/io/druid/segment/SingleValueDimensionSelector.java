@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
+
 /**
  * Specialization for {@link DimensionSelector}s, always having a single value in {@link #getRow()}.
  */
@@ -27,5 +29,6 @@ public interface SingleValueDimensionSelector extends DimensionSelector
   /**
    * Returns a single value of {@link #getRow()}.
    */
+  @CalledFromHotLoop
   int getRowValue();
 }

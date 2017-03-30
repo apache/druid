@@ -19,10 +19,12 @@
 
 package io.druid.segment.historical;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.segment.SingleValueDimensionSelector;
 
 public interface SingleValueHistoricalDimensionSelector
     extends HistoricalDimensionSelector, SingleValueDimensionSelector
 {
+  @CalledFromHotLoop
   int getRowValue(int offset);
 }

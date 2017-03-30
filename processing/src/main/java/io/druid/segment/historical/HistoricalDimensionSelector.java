@@ -19,6 +19,7 @@
 
 package io.druid.segment.historical;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
@@ -27,5 +28,6 @@ import io.druid.segment.data.IndexedInts;
  */
 public interface HistoricalDimensionSelector extends DimensionSelector
 {
+  @CalledFromHotLoop
   IndexedInts getRow(int offset);
 }

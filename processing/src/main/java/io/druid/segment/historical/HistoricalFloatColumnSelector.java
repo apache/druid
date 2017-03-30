@@ -19,9 +19,11 @@
 
 package io.druid.segment.historical;
 
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.segment.FloatColumnSelector;
 
 public interface HistoricalFloatColumnSelector extends FloatColumnSelector
 {
+  @CalledFromHotLoop
   float get(int offset);
 }
