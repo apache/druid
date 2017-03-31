@@ -361,8 +361,21 @@ public final class SpecializationService
           }
         } else if (fakeSpecialize) {
           specialized = perPrototypeClassState.prototypeClass.newInstance();
+          LOG.info(
+              "Not specializing prototype class[%s] for runtime shape[%s] and class remapping[%s] because "
+              + "fakeSpecialize=true, using the prototype class instead",
+              perPrototypeClassState.prototypeClass,
+              specializationId.runtimeShape,
+              specializationId.classRemapping
+          );
         } else {
           specialized = perPrototypeClassState.specialize(specializationId.classRemapping);
+          LOG.info(
+              "Specializing prototype class[%s] for runtime shape[%s] and class remapping[%s]",
+              perPrototypeClassState.prototypeClass,
+              specializationId.runtimeShape,
+              specializationId.classRemapping
+          );
         }
         perPrototypeClassState.specializationStates.put(specializationId, new Specialized<>(specialized));
       }
