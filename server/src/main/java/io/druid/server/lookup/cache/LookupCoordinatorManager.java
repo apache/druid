@@ -526,8 +526,11 @@ public class LookupCoordinatorManager
 
     // Compare currLookupsStateOnNode with nodeTierLookupsToBe to find what are the lookups
     // we need to further ask node to load/drop
-    Map<String, LookupExtractorFactoryMapContainer> toLoad = xx(currLookupsStateOnNode, nodeTierLookupsToBe);
-    Set<String> toDrop = toDrop(currLookupsStateOnNode, nodeTierLookupsToBe);
+    Map<String, LookupExtractorFactoryMapContainer> toLoad = getToBeLoadedOnNode(
+        currLookupsStateOnNode,
+        nodeTierLookupsToBe
+    );
+    Set<String> toDrop = getToBeDroppedFromNode(currLookupsStateOnNode, nodeTierLookupsToBe);
 
     if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
       // Send POST request to the node asking to load and drop the lookups necessary.
@@ -548,7 +551,7 @@ public class LookupCoordinatorManager
 
   // Returns the Map<lookup-name, lookup-spec> that needs to be loaded by the node and it does not know about
   // those already.
-  private Map<String, LookupExtractorFactoryMapContainer> xx(
+  private Map<String, LookupExtractorFactoryMapContainer> getToBeLoadedOnNode(
       LookupsStateWithMap currLookupsStateOnNode,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )
@@ -577,7 +580,7 @@ public class LookupCoordinatorManager
 
   // Returns Set<lookup-name> that should be dropped from the node which has them already either in pending to load
   // state or loaded
-  private Set<String> toDrop(
+  private Set<String> getToBeDroppedFromNode(
       LookupsStateWithMap currLookupsStateOnNode,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )
