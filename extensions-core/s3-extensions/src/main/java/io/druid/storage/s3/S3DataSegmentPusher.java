@@ -153,6 +153,11 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     return makeLoadSpec(finalIndexZipFilePath.getHost(), finalIndexZipFilePath.getPath().substring(1));
   }
 
+  /**
+   * Any change in loadSpec need to be reflected {@link io.druid.indexer.JobHelper#getURIFromSegment()}
+   *
+   */
+  @SuppressWarnings("JavadocReference")
   private Map<String, Object> makeLoadSpec(String bucket, String key)
   {
     return ImmutableMap.<String, Object>of(

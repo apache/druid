@@ -20,7 +20,6 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
@@ -201,8 +200,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     return  ImmutableMap.<String, Object>of("type", "hdfs", "path", finalIndexZipFilePath.toString());
   }
-
-  private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   /**
    * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in

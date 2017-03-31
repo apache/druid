@@ -714,7 +714,12 @@ public class JobHelper
     final String type = loadSpec.get("type").toString();
     final URI segmentLocURI;
     if ("s3_zip".equals(type)) {
-      segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+      if ("s3a".equals(loadSpec.get("S3Schema"))) {
+        segmentLocURI = URI.create(String.format("s3a://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+
+      } else {
+        segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+      }
     } else if ("hdfs".equals(type)) {
       segmentLocURI = URI.create(loadSpec.get("path").toString());
     } else if ("google".equals(type)) {
