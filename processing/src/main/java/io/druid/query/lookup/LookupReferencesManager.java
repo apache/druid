@@ -124,7 +124,7 @@ public class LookupReferencesManager
                     return;
                   }
 
-                  while (!Thread.interrupted()) {
+                  while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
                     try {
                       handlePendingNotices();
                       LockSupport.parkNanos(LookupReferencesManager.this, TimeUnit.MINUTES.toNanos(1));
