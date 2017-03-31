@@ -28,8 +28,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
-import io.druid.concurrent.Threads;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
@@ -110,7 +110,7 @@ public class LookupReferencesManager
       loadSnapshotAndInitStateRef();
 
       if (!testMode) {
-        mainThread = Threads.createThread(
+        mainThread = Execs.makeThread(
             "LookupReferencesManager-MainThread",
             new Runnable()
             {
