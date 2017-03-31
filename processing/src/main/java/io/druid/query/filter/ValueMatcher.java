@@ -27,5 +27,5 @@ import io.druid.query.monomorphicprocessing.HotLoopCallee;
 public interface ValueMatcher extends HotLoopCallee
 {
   @CalledFromHotLoop
-  public boolean matches();
+  boolean matches();
 }
