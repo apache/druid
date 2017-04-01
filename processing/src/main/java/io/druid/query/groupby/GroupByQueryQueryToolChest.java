@@ -115,7 +115,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
       {
-        if (QueryContexts.isBySegment(query, false)) {
+        if (QueryContexts.isBySegment(query)) {
           return runner.run(query, responseContext);
         }
 

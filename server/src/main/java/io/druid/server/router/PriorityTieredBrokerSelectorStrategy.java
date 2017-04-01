@@ -46,7 +46,7 @@ public class PriorityTieredBrokerSelectorStrategy implements TieredBrokerSelecto
   @Override
   public Optional<String> getBrokerServiceName(TieredBrokerConfig tierConfig, Query query)
   {
-    final int priority = QueryContexts.getPriority(query, 0);
+    final int priority = QueryContexts.getPriority(query);
 
     if (priority < minPriority) {
       return Optional.of(

@@ -151,11 +151,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = CacheUtil.useCacheOnBrokers(query, strategy, cacheConfig);
     final boolean populateCache = CacheUtil.populateCacheOnBrokers(query, strategy, cacheConfig);
-    final boolean isBySegment = QueryContexts.isBySegment(query, false);
+    final boolean isBySegment = QueryContexts.isBySegment(query);
 
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final int priority = QueryContexts.getPriority(query, 0);
+    final int priority = QueryContexts.getPriority(query);
     contextBuilder.put(QueryContexts.PRIORITY, priority);
 
     if (populateCache) {
@@ -177,7 +177,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Note that enabling this leads to putting uncovered intervals information in the response headers
     // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
-    int uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query, 0);
+    int uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
 
     if (uncoveredIntervalsLimit > 0) {
       List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);

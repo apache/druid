@@ -120,7 +120,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       final Number timeoutAt = (Number) responseContext.get(CTX_TIMEOUT_AT);
       if (timeoutAt == null || timeoutAt.longValue() == 0L) {
         responseContext.put(CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
-      };
+      }
       return engine.process((ScanQuery) query, segment, responseContext);
     }
   }

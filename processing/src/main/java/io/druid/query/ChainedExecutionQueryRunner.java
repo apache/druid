@@ -91,7 +91,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    final int priority = QueryContexts.getPriority(query, 0);
+    final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
 
     return new BaseSequence<T, Iterator<T>>(
@@ -155,7 +155,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               final long timeout = QueryContexts.getTimeout(query);
               return new MergeIterable<>(
                   ordering.nullsFirst(),
-                  timeout == 0 ?
+                  QueryContexts.isNoTimeout(timeout) ?
                   futures.get() :
                   futures.get(timeout, TimeUnit.MILLISECONDS)
               ).iterator();

@@ -201,7 +201,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       final Map<String, Object> responseContext
                   )
                   {
-                    final int priority = QueryContexts.getPriority(query, 0);
+                    final int priority = QueryContexts.getPriority(query);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
@@ -217,7 +217,11 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     try {
                       queryWatcher.registerQuery(query, future);
                       final long timeout = QueryContexts.getTimeout(query);
-                      return timeout == 0 ? future.get() : future.get(timeout, TimeUnit.MILLISECONDS);
+                      if (QueryContexts.isNoTimeout(timeout)) {
+                        return future.get();
+                      } else {
+                        return future.get(timeout, TimeUnit.MILLISECONDS);
+                      }
                     }
                     catch (InterruptedException e) {
                       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());

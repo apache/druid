@@ -193,10 +193,6 @@ public class QueryResource implements QueryCountStatsProvider
         query = query.withId(queryId);
       }
 
-      if (QueryContexts.getTimeout(query) < 0) {
-        throw new IAE("Timeout must be a non negative value, but was [%d]", QueryContexts.getTimeout(query));
-      }
-
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()

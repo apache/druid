@@ -123,7 +123,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         ImmutableMap.<String, Object>of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true)
     );
 
-    if (QueryContexts.isBySegment(query, false) || forceChainedExecution) {
+    if (QueryContexts.isBySegment(query) || forceChainedExecution) {
       return new ChainedExecutionQueryRunner(exec, queryWatcher, queryables).run(query, responseContext);
     }
 
@@ -139,7 +139,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final int priority = QueryContexts.getPriority(query, 0);
+    final int priority = QueryContexts.getPriority(query);
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
@@ -173,7 +173,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                     throw new TimeoutException();
                   }
                 } else {
-                  mergeBufferHolder = mergeBufferPool.take(-1);
+                  mergeBufferHolder = mergeBufferPool.take();
                 }
                 resources.add(mergeBufferHolder);
               }

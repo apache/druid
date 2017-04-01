@@ -123,7 +123,7 @@ public class CacheUtil
       CacheConfig cacheConfig
   )
   {
-    return QueryContexts.isUseCache(query, true)
+    return QueryContexts.isUseCache(query)
            && strategy != null
            && cacheConfig.isUseCache()
            && cacheConfig.isQueryCacheable(query);
@@ -135,7 +135,7 @@ public class CacheUtil
       CacheConfig cacheConfig
   )
   {
-    return QueryContexts.isPopulateCache(query, true)
+    return QueryContexts.isPopulateCache(query)
            && strategy != null
            && cacheConfig.isPopulateCache()
            && cacheConfig.isQueryCacheable(query);

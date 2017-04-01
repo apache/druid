@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.ISE;
 
 public class QueryContexts
@@ -27,16 +28,37 @@ public class QueryContexts
   public static final String TIMEOUT = "timeout";
   public static final String CHUNK_PERIOD = "chunkPeriod";
 
+  public static final boolean DEFAULT_BY_SEGMENT = false;
+  public static final boolean DEFAULT_POPULATE_CACHE = true;
+  public static final boolean DEFAULT_USE_CACHE = true;
+  public static final int DEFAULT_PRIORITY = 0;
+  public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT = 0;
+  public static final long NO_TIMEOUT = 0;
+
+  public static <T> boolean isBySegment(Query<T> query)
+  {
+    return isBySegment(query, DEFAULT_BY_SEGMENT);
+  }
 
   public static <T> boolean isBySegment(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "bySegment", defaultValue);
   }
 
+  public static <T> boolean isPopulateCache(Query<T> query)
+  {
+    return isPopulateCache(query, DEFAULT_POPULATE_CACHE);
+  }
+
   public static <T> boolean isPopulateCache(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "populateCache", defaultValue);
+  }
+
+  public static <T> boolean isUseCache(Query<T> query)
+  {
+    return isUseCache(query, DEFAULT_USE_CACHE);
   }
 
   public static <T> boolean isUseCache(Query<T> query, boolean defaultValue)
@@ -49,9 +71,19 @@ public class QueryContexts
     return parseBoolean(query, "finalize", defaultValue);
   }
 
+  public static <T> int getUncoveredIntervalsLimit(Query<T> query)
+  {
+    return getUncoveredIntervalsLimit(query, DEFAULT_UNCOVERED_INTERVALS_LIMIT);
+  }
+
   public static <T> int getUncoveredIntervalsLimit(Query<T> query, int defaultValue)
   {
     return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
+  }
+
+  public static <T> int getPriority(Query<T> query)
+  {
+    return getPriority(query, DEFAULT_PRIORITY);
   }
 
   public static <T> int getPriority(Query<T> query, int defaultValue)
@@ -66,7 +98,12 @@ public class QueryContexts
 
   public static <T> boolean hasTimeout(Query<T> query)
   {
-    return getTimeout(query) != 0;
+    return getTimeout(query) != NO_TIMEOUT;
+  }
+
+  public static boolean isNoTimeout(long timeout)
+  {
+    return timeout == NO_TIMEOUT;
   }
 
   public static <T> long getTimeout(Query<T> query)
@@ -76,7 +113,9 @@ public class QueryContexts
 
   public static <T> long getTimeout(Query<T> query, long defaultValue)
   {
-    return parseLong(query, TIMEOUT, defaultValue);
+    final long timeout = parseLong(query, TIMEOUT, defaultValue);
+    Preconditions.checkState(timeout >= 0, "Timeout must be a non negative value, but was [%d]", timeout);
+    return timeout;
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)
