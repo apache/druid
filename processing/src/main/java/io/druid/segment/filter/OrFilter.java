@@ -20,6 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -42,13 +43,9 @@ public class OrFilter implements BooleanFilter
 
   private final List<Filter> filters;
 
-  public OrFilter(
-      List<Filter> filters
-  )
+  public OrFilter(List<Filter> filters)
   {
-    if (filters.size() == 0) {
-      throw new IllegalArgumentException("Can't construct empty OrFilter (the universe does not exist)");
-    }
+    Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
 
     this.filters = filters;
   }
@@ -109,9 +106,8 @@ public class OrFilter implements BooleanFilter
 
 
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
-    if (baseMatchers.length == 0) {
-      return BooleanValueMatcher.of(false);
-    }
+    Preconditions.checkState(baseMatchers.length > 0);
+
     if (baseMatchers.length == 1) {
       return baseMatchers[0];
     }
