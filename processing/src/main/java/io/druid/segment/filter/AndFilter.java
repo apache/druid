@@ -43,10 +43,9 @@ public class AndFilter implements BooleanFilter
 
   private final List<Filter> filters;
 
-  public AndFilter(
-      List<Filter> filters
-  )
+  public AndFilter(List<Filter> filters)
   {
+    Preconditions.checkArgument(filters.size() > 0, "Can't construct empty AndFilter");
     this.filters = filters;
   }
 
@@ -81,10 +80,6 @@ public class AndFilter implements BooleanFilter
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    if (filters.size() == 0) {
-      return BooleanValueMatcher.of(false);
-    }
-
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
 
     for (int i = 0; i < filters.size(); i++) {
@@ -170,9 +165,7 @@ public class AndFilter implements BooleanFilter
 
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
   {
-    if (baseMatchers.length == 0) {
-      return BooleanValueMatcher.of(true);
-    }
+    Preconditions.checkState(baseMatchers.length > 0);
     if (baseMatchers.length == 1) {
       return baseMatchers[0];
     }
