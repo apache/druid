@@ -36,6 +36,8 @@ import java.util.concurrent.ExecutorService;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
 {
+  // This variable indicates when a running query should be expired,
+  // and is effective only when 'timeout' of queryContext has a positive value.
   public static final String CTX_TIMEOUT_AT = "timeoutAt";
   public static final String CTX_COUNT = "count";
   private final ScanQueryQueryToolChest toolChest;
@@ -71,6 +73,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           final Query<ScanResultValue> query, final Map<String, Object> responseContext
       )
       {
+        // Note: this variable is effective only when queryContext has a timeout.
+        // See the comment of CTX_TIMEOUT_AT.
         final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(query);
         responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
         return Sequences.concat(

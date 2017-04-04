@@ -77,15 +77,16 @@ public class BlockingPool<T>
    * Take a resource from the pool, waiting up to the
    * specified wait time if necessary for an element to become available.
    *
-   * @param timeout maximum time to wait for a resource, in milliseconds.
+   * @param timeoutMs maximum time to wait for a resource, in milliseconds.
    *
    * @return a resource, or null if the timeout was reached
    */
-  public ReferenceCountingResourceHolder<T> take(final long timeout)
+  public ReferenceCountingResourceHolder<T> take(final long timeoutMs)
   {
+    Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
-      return wrapObject(timeout > 0 ? pollObject(timeout) : pollObject());
+      return wrapObject(timeoutMs > 0 ? pollObject(timeoutMs) : pollObject());
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
@@ -134,9 +135,9 @@ public class BlockingPool<T>
     }
   }
 
-  private T pollObject(long timeout) throws InterruptedException
+  private T pollObject(long timeoutMs) throws InterruptedException
   {
-    long nanos = TIME_UNIT.toNanos(timeout);
+    long nanos = TIME_UNIT.toNanos(timeoutMs);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {
@@ -171,15 +172,16 @@ public class BlockingPool<T>
    * specified wait time if necessary for elements of the given number to become available.
    *
    * @param elementNum number of resources to take
-   * @param timeout    maximum time to wait for resources, in milliseconds.
+   * @param timeoutMs  maximum time to wait for resources, in milliseconds.
    *
    * @return a resource, or null if the timeout was reached
    */
-  public ReferenceCountingResourceHolder<List<T>> takeBatch(final int elementNum, final long timeout)
+  public ReferenceCountingResourceHolder<List<T>> takeBatch(final int elementNum, final long timeoutMs)
   {
+    Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
-      return wrapObjects(timeout > 0 ? pollObjects(elementNum, timeout) : pollObjects(elementNum));
+      return wrapObjects(timeoutMs > 0 ? pollObjects(elementNum, timeoutMs) : pollObjects(elementNum));
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
@@ -238,9 +240,9 @@ public class BlockingPool<T>
     }
   }
 
-  private List<T> pollObjects(int elementNum, long timeout) throws InterruptedException
+  private List<T> pollObjects(int elementNum, long timeoutMs) throws InterruptedException
   {
-    long nanos = TIME_UNIT.toNanos(timeout);
+    long nanos = TIME_UNIT.toNanos(timeoutMs);
     final List<T> list = Lists.newArrayListWithCapacity(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
