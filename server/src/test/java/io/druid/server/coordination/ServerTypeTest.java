@@ -39,4 +39,10 @@ public class ServerTypeTest
     Assert.assertEquals(ServerType.BRIDGE, ServerType.fromString("bridge"));
     Assert.assertEquals(ServerType.REALTIME, ServerType.fromString("realtime"));
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidName()
+  {
+    ServerType.fromString("invalid");
+  }
 }

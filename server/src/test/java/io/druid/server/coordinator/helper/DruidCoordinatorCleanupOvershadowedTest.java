@@ -70,6 +70,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
     availableSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     druidCluster = new DruidCluster(
+        null,
         ImmutableMap.of("normal", MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(Arrays.asList(
             new ServerHolder(druidServer, mockPeon
             )))));

@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.java.util.common.IAE;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -64,7 +63,7 @@ public abstract class LoadRule implements Rule
       final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
                                          .getLoadedReplicants(segment.getIdentifier(), tier);
 
-      final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(tier);
+      final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getHistoricalsByTier(tier);
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
         continue;
@@ -176,8 +175,6 @@ public abstract class LoadRule implements Rule
       }
     }
 
-    final ReplicationThrottler replicationManager = params.getReplicationManager();
-
     // Find all instances of this segment across tiers
     Map<String, Integer> replicantsByTier = params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier());
 
@@ -188,7 +185,7 @@ public abstract class LoadRule implements Rule
 
       stats.addToTieredStat(droppedCount, tier, 0);
 
-      MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().get(tier);
+      MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getHistoricalsByTier(tier);
       if (serverQueue == null) {
         log.makeAlert("No holders found for tier[%s]", entry.getKey()).emit();
         continue;
