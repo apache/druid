@@ -104,7 +104,7 @@ public class BatchDataSegmentAnnouncerTest
             "id",
             "host",
             Long.MAX_VALUE,
-            "type",
+            "historical",
             "tier",
             0
         ),

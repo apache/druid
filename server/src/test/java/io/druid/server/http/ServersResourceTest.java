@@ -41,7 +41,7 @@ public class ServersResourceTest {
   @Before
   public void setUp()
   {
-    DruidServer dummyServer = new DruidServer("dummy", "host", 1234L, "type", "tier", 0);
+    DruidServer dummyServer = new DruidServer("dummy", "host", 1234L, "historical", "tier", 0);
     DataSegment segment = DataSegment.builder()
                                      .dataSource("dataSource")
                                      .interval(new Interval("2016-03-22T14Z/2016-03-22T15Z"))
@@ -65,7 +65,7 @@ public class ServersResourceTest {
     String result = objectMapper.writeValueAsString(res.getEntity());
     String expected = "[{\"host\":\"host\","
                       + "\"maxSize\":1234,"
-                      + "\"type\":\"type\","
+                      + "\"type\":\"HISTORICAL\","
                       + "\"tier\":\"tier\","
                       + "\"priority\":0,"
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
@@ -80,7 +80,7 @@ public class ServersResourceTest {
   {
     Response res = serversResource.getClusterServers(null, "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"type\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
+    String expected = "[{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"HISTORICAL\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}]";
     Assert.assertEquals(expected, result);
   }
 
@@ -91,7 +91,7 @@ public class ServersResourceTest {
     String result = objectMapper.writeValueAsString(res.getEntity());
     String expected = "{\"host\":\"host\","
                       + "\"maxSize\":1234,"
-                      + "\"type\":\"type\","
+                      + "\"type\":\"HISTORICAL\","
                       + "\"tier\":\"tier\","
                       + "\"priority\":0,"
                       + "\"segments\":{\"dataSource_2016-03-22T14:00:00.000Z_2016-03-22T15:00:00.000Z_v0\":"
@@ -106,7 +106,7 @@ public class ServersResourceTest {
   {
     Response res = serversResource.getServer(server.getName(), "simple");
     String result = objectMapper.writeValueAsString(res.getEntity());
-    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"type\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
+    String expected = "{\"host\":\"host\",\"tier\":\"tier\",\"type\":\"HISTORICAL\",\"priority\":0,\"currSize\":1,\"maxSize\":1234}";
     Assert.assertEquals(expected, result);
   }
 

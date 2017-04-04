@@ -79,7 +79,7 @@ public class ClientInfoResourceTest
   public void setup()
   {
     VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
-    DruidServer server = new DruidServer("name", "host", 1234, "type", "tier", 0);
+    DruidServer server = new DruidServer("name", "host", 1234, "historical", "tier", 0);
 
     addSegment(timeline, server, "1960-02-13/1961-02-14", ImmutableList.of("d5"), ImmutableList.of("m5"), "v0");
 

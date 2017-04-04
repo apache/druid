@@ -217,7 +217,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(metadataRuleManager);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, 5L, null, null, 0),
+            new DruidServerMetadata("from", null, 5L, "historical", null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment", segment)
@@ -228,7 +228,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidServer2 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, 5L, null, null, 0),
+            new DruidServerMetadata("to", null, 5L, "historical", null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment2", segment)
