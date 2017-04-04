@@ -394,13 +394,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         } else {
           failedQueryCount.incrementAndGet();
         }
-        QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
-            queryMetricsFactory,
-            warehouse.getToolChest(query),
-            query,
-            req.getRemoteAddr()
-        );
-        queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
+        emitQueryTime(requestTimeNs, success);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -433,6 +427,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       try {
         final String errorMessage = failure.getMessage();
         failedQueryCount.incrementAndGet();
+        emitQueryTime(System.nanoTime() - startNs, false);
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -460,6 +455,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
          .emit();
 
       super.onFailure(response, failure);
+    }
+
+    private void emitQueryTime(long requestTimeNs, boolean success) throws JsonProcessingException
+    {
+      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
+          queryMetricsFactory,
+          warehouse.getToolChest(query),
+          query,
+          req.getRemoteAddr()
+      );
+      queryMetrics.success(success);
+      queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
   }
 }
