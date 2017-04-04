@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -72,7 +73,7 @@ public class ImmutableDruidServer
     return metadata.getMaxSize();
   }
 
-  public String getType()
+  public ServerType getType()
   {
     return metadata.getType();
   }

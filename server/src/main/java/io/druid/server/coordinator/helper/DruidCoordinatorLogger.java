@@ -194,7 +194,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         log.info(
             "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
             server.getName(),
-            server.getType(),
+            server.getType().toString(),
             server.getTier(),
             queuePeon.getSegmentsToLoad().size(),
             queuePeon.getSegmentsToDrop().size(),

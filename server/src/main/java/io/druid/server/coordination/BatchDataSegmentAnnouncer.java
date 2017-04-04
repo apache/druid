@@ -231,7 +231,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     // server.getName() is already in the zk path
     return makeServedSegmentPath(UUIDUtils.generateUuid(
         server.getHost(),
-        server.getType(),
+        server.getType().toString(),
         server.getTier(),
         new DateTime().toString()
     ));

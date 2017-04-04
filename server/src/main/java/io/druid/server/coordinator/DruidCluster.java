@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
@@ -39,6 +40,7 @@ public class DruidCluster
     this.cluster = Maps.newHashMap();
   }
 
+  @VisibleForTesting
   public DruidCluster(Map<String, MinMaxPriorityQueue<ServerHolder>> cluster)
   {
     this.cluster = cluster;
