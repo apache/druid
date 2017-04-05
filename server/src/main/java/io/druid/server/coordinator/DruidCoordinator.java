@@ -745,7 +745,7 @@ public class DruidCoordinator
                                 DruidServer input
                             )
                             {
-                              return input.isAssignable();
+                              return input.segmentReplicatable();
                             }
                           }
                       ).transform(

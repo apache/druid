@@ -215,6 +215,8 @@ public class RealtimeManagerTest
                 tuningConfig
             )
         ),
+        null,
+        null,
         null
     );
     plumber2 = new TestPlumber(new Sink(
@@ -234,6 +236,8 @@ public class RealtimeManagerTest
                 tuningConfig
             )
         ),
+        null,
+        null,
         null
     );
 
@@ -327,7 +331,8 @@ public class RealtimeManagerTest
                 1,
                 fireChief_1
             )
-        )
+        ),
+        null
     );
 
     startFireChiefWithPartitionNum(fireChief_0, 0);

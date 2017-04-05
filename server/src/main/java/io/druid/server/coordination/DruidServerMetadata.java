@@ -87,9 +87,9 @@ public class DruidServerMetadata
     return priority;
   }
 
-  public boolean isAssignable()
+  public boolean segmentReplicatable()
   {
-    return type.isAssignable();
+    return type.segmentReplicatable();
   }
 
   @Override

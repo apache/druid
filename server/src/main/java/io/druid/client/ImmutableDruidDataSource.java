@@ -72,4 +72,14 @@ public class ImmutableDruidDataSource
   {
     return segmentsHolder;
   }
+
+  @Override
+  public String toString()
+  {
+    return "ImmutableDruidDataSource{"
+           + "name='" + name
+           + "', segments='" + segmentsHolder
+           + "', properties='" + properties
+           + "'}";
+  }
 }

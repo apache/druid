@@ -20,6 +20,7 @@
 package io.druid.segment.realtime;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -50,6 +51,7 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Plumbers;
+import io.druid.server.SegmentManager;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -72,27 +74,34 @@ public class RealtimeManager implements QuerySegmentWalker
    */
   private final Map<String, Map<Integer, FireChief>> chiefs;
 
+  private final SegmentManager segmentManager;
+
   @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
-      QueryRunnerFactoryConglomerate conglomerate
+      QueryRunnerFactoryConglomerate conglomerate,
+      SegmentManager segmentManager
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
 
     this.chiefs = Maps.newHashMap();
+    this.segmentManager = segmentManager;
   }
 
+  @VisibleForTesting
   RealtimeManager(
       List<FireDepartment> fireDepartments,
       QueryRunnerFactoryConglomerate conglomerate,
-      Map<String, Map<Integer, FireChief>> chiefs
+      Map<String, Map<Integer, FireChief>> chiefs,
+      SegmentManager segmentManager
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
-    this.chiefs = chiefs;
+    this.chiefs = chiefs == null ? Maps.newHashMap() : Maps.newHashMap(chiefs);
+    this.segmentManager = segmentManager;
   }
 
   @LifecycleStart

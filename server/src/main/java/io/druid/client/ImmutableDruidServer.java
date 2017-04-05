@@ -102,4 +102,14 @@ public class ImmutableDruidServer
   {
     return segments;
   }
+
+  @Override
+  public String toString()
+  {
+    return "ImmutableDruidServer{"
+           + "meta='" + metadata
+           + "', size='" + currSize
+           + "', sources='" + dataSources
+           + "'}";
+  }
 }

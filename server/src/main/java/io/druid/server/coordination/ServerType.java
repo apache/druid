@@ -21,20 +21,36 @@ package io.druid.server.coordination;
 
 public enum ServerType
 {
-  HISTORICAL(true),
-  BRIDGE(true),
-  REALTIME(false);
+  HISTORICAL,
+  BRIDGE,
+  REALTIME {
+    @Override
+    public boolean segmentReplicatable()
+    {
+      return false;
+    }
+  };
 
-  private boolean assignable;
+  /**
+   * Indicates this type of node is able to be a target of segment replication.
 
-  boolean isAssignable()
+   * @return true if it is available for replication
+   *
+   * @see io.druid.server.coordinator.rules.LoadRule
+   */
+  boolean segmentReplicatable()
   {
-    return assignable;
+    return true;
   }
 
-  ServerType(boolean assignable)
+  /**
+   * Indicates this type of node is able to be a target of segment broadcast.
+   *
+   * @return true if it is available for broadcast.
+   */
+  boolean segmentBroadcastable()
   {
-    this.assignable = assignable;
+    return true;
   }
 
   static ServerType fromString(String type)

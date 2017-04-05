@@ -122,9 +122,9 @@ public class DruidServer implements Comparable
     return metadata.getTier();
   }
 
-  public boolean isAssignable()
+  public boolean segmentReplicatable()
   {
-    return metadata.isAssignable();
+    return metadata.segmentReplicatable();
   }
 
   public int getPriority()

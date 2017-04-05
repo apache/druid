@@ -27,9 +27,9 @@ public class ServerTypeTest
   @Test
   public void testAssignable()
   {
-    Assert.assertTrue(ServerType.HISTORICAL.isAssignable());
-    Assert.assertTrue(ServerType.BRIDGE.isAssignable());
-    Assert.assertFalse(ServerType.REALTIME.isAssignable());
+    Assert.assertTrue(ServerType.HISTORICAL.segmentReplicatable());
+    Assert.assertTrue(ServerType.BRIDGE.segmentReplicatable());
+    Assert.assertFalse(ServerType.REALTIME.segmentReplicatable());
   }
 
   @Test
