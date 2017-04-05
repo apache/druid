@@ -28,6 +28,10 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.http.OverlordResource;
+import io.druid.indexing.overlord.supervisor.Supervisor;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.indexing.overlord.supervisor.SupervisorResource;
+import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.http.security.ResourceFilterTestHelper;
@@ -42,18 +46,20 @@ import org.junit.runners.Parameterized;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
+import java.util.List;
 
 @RunWith(Parameterized.class)
 public class SecurityResourceFilterTest extends ResourceFilterTestHelper
 {
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
   public static Collection<Object[]> data()
   {
     return ImmutableList.copyOf(
         Iterables.concat(
             getRequestPaths(OverlordResource.class, ImmutableList.<Class<?>>of(TaskStorageQueryAdapter.class)),
-            getRequestPaths(WorkerResource.class)
+            getRequestPaths(WorkerResource.class),
+            getRequestPaths(SupervisorResource.class, ImmutableList.<Class<?>>of(SupervisorManager.class))
         )
     );
   }
@@ -64,8 +70,10 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   private final Injector injector;
   private final Task noopTask = new NoopTask(null, 0, 0, null, null, null);
 
-  private static boolean mockedOnce;
+  private static boolean mockedOnceTsqa;
+  private static boolean mockedOnceSM;
   private TaskStorageQueryAdapter tsqa;
+  private SupervisorManager supervisorManager;
 
   public SecurityResourceFilterTest(
       String requestPath,
@@ -83,20 +91,48 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   @Before
   public void setUp() throws Exception
   {
-    if (resourceFilter instanceof TaskResourceFilter && !mockedOnce) {
+    if (resourceFilter instanceof TaskResourceFilter && !mockedOnceTsqa) {
       // Since we are creating the mocked tsqa object only once and getting that object from Guice here therefore
       // if the mockedOnce check is not done then we will call EasyMock.expect and EasyMock.replay on the mocked object
       // multiple times and it will throw exceptions
       tsqa = injector.getInstance(TaskStorageQueryAdapter.class);
       EasyMock.expect(tsqa.getTask(EasyMock.anyString())).andReturn(Optional.of(noopTask)).anyTimes();
       EasyMock.replay(tsqa);
-      mockedOnce = true;
+      mockedOnceTsqa = true;
+    }
+    if (resourceFilter instanceof SupervisorResourceFilter && !mockedOnceSM) {
+      supervisorManager = injector.getInstance(SupervisorManager.class);
+      SupervisorSpec supervisorSpec = new SupervisorSpec()
+      {
+        @Override
+        public String getId()
+        {
+          return "id";
+        }
+
+        @Override
+        public Supervisor createSupervisor()
+        {
+          return null;
+        }
+
+        @Override
+        public List<String> getDataSources()
+        {
+          return ImmutableList.of("test");
+        }
+      };
+      EasyMock.expect(supervisorManager.getSupervisorSpec(EasyMock.anyString()))
+              .andReturn(Optional.of(supervisorSpec))
+              .anyTimes();
+      EasyMock.replay(supervisorManager);
+      mockedOnceSM = true;
     }
     setUp(resourceFilter);
   }
 
   @Test
-  public void testDatasourcesResourcesFilteringAccess()
+  public void testResourcesFilteringAccess()
   {
     setUpMockExpectations(requestPath, true, requestMethod);
     EasyMock.expect(request.getEntity(Task.class)).andReturn(noopTask).anyTimes();
@@ -113,7 +149,6 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     setUpMockExpectations(requestPath, false, requestMethod);
     EasyMock.expect(request.getEntity(Task.class)).andReturn(noopTask).anyTimes();
-    EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
     EasyMock.replay(req, request, authorizationInfo);
     Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
@@ -140,6 +175,9 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     EasyMock.verify(req, request, authorizationInfo);
     if (tsqa != null) {
       EasyMock.verify(tsqa);
+    }
+    if (supervisorManager != null) {
+      EasyMock.verify(supervisorManager);
     }
   }
 

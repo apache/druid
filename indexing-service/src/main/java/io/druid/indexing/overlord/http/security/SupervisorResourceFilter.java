@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
-import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.TaskStorageQueryAdapter;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.server.http.security.AbstractResourceFilter;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
@@ -40,21 +40,15 @@ import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
-/**
- * Use this ResourceFilter when the datasource information is present after "task" segment in the request Path
- * Here are some example paths where this filter is used -
- * - druid/indexer/v1/task/{taskid}/...
- * Note - DO NOT use this filter at MiddleManager resources as TaskStorageQueryAdapter cannot be injected there
- */
-public class TaskResourceFilter extends AbstractResourceFilter
+public class SupervisorResourceFilter extends AbstractResourceFilter
 {
-  private final TaskStorageQueryAdapter taskStorageQueryAdapter;
+  private final SupervisorManager supervisorManager;
 
   @Inject
-  public TaskResourceFilter(TaskStorageQueryAdapter taskStorageQueryAdapter, AuthConfig authConfig)
+  public SupervisorResourceFilter(AuthConfig authConfig, SupervisorManager supervisorManager)
   {
     super(authConfig);
-    this.taskStorageQueryAdapter = taskStorageQueryAdapter;
+    this.supervisorManager = supervisorManager;
   }
 
   @Override
@@ -62,7 +56,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
   {
     if (getAuthConfig().isEnabled()) {
       // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final String taskId = Preconditions.checkNotNull(
+      final String supervisorId = Preconditions.checkNotNull(
           request.getPathSegments()
                  .get(
                      Iterables.indexOf(
@@ -72,38 +66,46 @@ public class TaskResourceFilter extends AbstractResourceFilter
                            @Override
                            public boolean apply(PathSegment input)
                            {
-                             return input.getPath().equals("task");
+                             return input.getPath().equals("supervisor");
                            }
                          }
                      ) + 1
                  ).getPath()
       );
 
-      Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
-      if (!taskOptional.isPresent()) {
+      Optional<SupervisorSpec> supervisorSpecOptional = supervisorManager.getSupervisorSpec(supervisorId);
+      if (!supervisorSpecOptional.isPresent()) {
         throw new WebApplicationException(
             Response.status(Response.Status.BAD_REQUEST)
-                    .entity(String.format("Cannot find any task with id: [%s]", taskId))
+                    .entity(String.format("Cannot find any supervisor with id: [%s]", supervisorId))
                     .build()
         );
       }
-      final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());
 
       final AuthorizationInfo authorizationInfo = (AuthorizationInfo) getReq().getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
       Preconditions.checkNotNull(
           authorizationInfo,
           "Security is enabled but no authorization info found in the request"
       );
-      final Access authResult = authorizationInfo.isAuthorized(
-          new Resource(dataSourceName, ResourceType.DATASOURCE),
-          getAction(request)
+
+      final SupervisorSpec spec = supervisorSpecOptional.get();
+      Preconditions.checkArgument(
+          spec.getDataSources() != null && spec.getDataSources().size() > 0,
+          "No dataSources found to perform authorization checks"
       );
-      if (!authResult.isAllowed()) {
-        throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
-                                                  .entity(
-                                                      String.format("Access-Check-Result: %s", authResult.toString())
-                                                  )
-                                                  .build());
+
+      for (String dataSource : spec.getDataSources()) {
+        Access authResult = authorizationInfo.isAuthorized(
+            new Resource(dataSource, ResourceType.DATASOURCE),
+            getAction(request)
+        );
+        if (!authResult.isAllowed()) {
+          throw new WebApplicationException(Response.status(Response.Status.FORBIDDEN)
+                                                    .entity(
+                                                        String.format("Access-Check-Result: %s", authResult.toString())
+                                                    )
+                                                    .build());
+        }
       }
     }
 
@@ -113,7 +115,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
   @Override
   public boolean isApplicable(String requestPath)
   {
-    List<String> applicablePaths = ImmutableList.of("druid/indexer/v1/task/");
+    List<String> applicablePaths = ImmutableList.of("druid/indexer/v1/supervisor/");
     for (String path : applicablePaths) {
       if (requestPath.startsWith(path) && !requestPath.equals(path)) {
         return true;
@@ -121,4 +123,5 @@ public class TaskResourceFilter extends AbstractResourceFilter
     }
     return false;
   }
+
 }

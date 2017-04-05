@@ -22,6 +22,8 @@ package io.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import java.util.List;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "NoopSupervisorSpec", value = NoopSupervisorSpec.class)
@@ -31,4 +33,6 @@ public interface SupervisorSpec
   String getId();
 
   Supervisor createSupervisor();
+
+  List<String> getDataSources();
 }

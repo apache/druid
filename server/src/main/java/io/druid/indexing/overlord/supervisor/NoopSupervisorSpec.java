@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.supervisor;
 
 import io.druid.indexing.overlord.DataSourceMetadata;
+import java.util.List;
 
 /**
  * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
@@ -52,5 +53,11 @@ public class NoopSupervisorSpec implements SupervisorSpec
       @Override
       public void reset(DataSourceMetadata dataSourceMetadata) {}
     };
+  }
+
+  @Override
+  public List<String> getDataSources()
+  {
+    return null;
   }
 }

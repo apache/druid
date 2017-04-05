@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -33,6 +34,7 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.segment.indexing.DataSchema;
 
+import java.util.List;
 import java.util.Map;
 
 public class KafkaSupervisorSpec implements SupervisorSpec
@@ -132,6 +134,12 @@ public class KafkaSupervisorSpec implements SupervisorSpec
         mapper,
         this
     );
+  }
+
+  @Override
+  public List<String> getDataSources()
+  {
+    return ImmutableList.of(getDataSchema().getDataSource());
   }
 
   @Override
