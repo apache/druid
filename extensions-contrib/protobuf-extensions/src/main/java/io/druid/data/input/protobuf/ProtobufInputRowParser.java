@@ -108,13 +108,13 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         url = new URL(descriptorFilePath);
       }
       catch (MalformedURLException e) {
-        throw new ParseException(e, "descriptor has to be in the classpath or URL:" + descriptorFilePath);
+        throw new ParseException(e, "Descriptor not found in class path or malformed URL:" + descriptorFilePath);
       }
       try {
         fin = url.openConnection().getInputStream();
       }
       catch (IOException e) {
-        throw new ParseException(e, "Cannot open descriptor file: " + url.toString());
+        throw new ParseException(e, "Cannot read descriptor file: " + url.toString());
       }
     }
 
@@ -126,7 +126,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       throw new ParseException(e, "Invalid descriptor file: " + descriptorFilePath);
     }
     catch (IOException e) {
-      throw new ParseException(e, "Cannot read " + descriptorFilePath);
+      throw new ParseException(e, "Cannot read descriptor file: " + descriptorFilePath);
     }
 
     Descriptor desc = dynamicSchema.getMessageDescriptor(protoMessageType);
