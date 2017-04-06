@@ -114,7 +114,9 @@ If `type` is not included, the parser defaults to `string`. For additional data 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `protobuf`. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
+| descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
+| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be json. See JSON ParseSpec for more configuration options.  Please note timeAndDims parseSpec is no longer supported. | yes |
 
 ### ParseSpec
 
