@@ -101,11 +101,6 @@ public class QueryContexts
     return getTimeout(query) != NO_TIMEOUT;
   }
 
-  public static boolean isNoTimeout(long timeout)
-  {
-    return timeout == NO_TIMEOUT;
-  }
-
   public static <T> long getTimeout(Query<T> query)
   {
     return getTimeout(query, DEFAULT_TIMEOUT);
