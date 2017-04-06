@@ -41,7 +41,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class ProtoBufInputRowParserTest
+public class ProtobufInputRowParserTest
 {
   private ParseSpec parseSpec;
 
@@ -72,7 +72,7 @@ public class ProtoBufInputRowParserTest
   public void testShortMessageType() throws Exception
   {
     //configure parser with desc file, and specify which file name to use
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
   }
 
@@ -81,7 +81,7 @@ public class ProtoBufInputRowParserTest
   public void testLongMessageType() throws Exception
   {
     //configure parser with desc file, and specify which file name to use
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
 
   }
 
@@ -90,7 +90,7 @@ public class ProtoBufInputRowParserTest
   public void testBadProto() throws Exception
   {
     //configure parser with desc file
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "BadName");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "BadName");
 
   }
 
@@ -100,7 +100,7 @@ public class ProtoBufInputRowParserTest
   {
 
     //configure parser with desc file
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 07, 12, 9, 30);

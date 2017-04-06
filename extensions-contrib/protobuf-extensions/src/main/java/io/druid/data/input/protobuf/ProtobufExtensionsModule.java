@@ -28,16 +28,16 @@ import io.druid.initialization.DruidModule;
 import java.util.Arrays;
 import java.util.List;
 
-public class ProtoBufExtensionsModule implements DruidModule
+public class ProtobufExtensionsModule implements DruidModule
 {
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return Arrays.asList(
-        new SimpleModule("ProtoBufInputRowParserModule")
+        new SimpleModule("ProtobufInputRowParserModule")
             .registerSubtypes(
-                new NamedType(ProtoBufInputRowParser.class, "protobuf")
+                new NamedType(ProtobufInputRowParser.class, "protobuf")
             )
     );
   }

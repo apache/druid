@@ -42,7 +42,7 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-public class ProtoBufInputRowParser implements ByteBufferInputRowParser
+public class ProtobufInputRowParser implements ByteBufferInputRowParser
 {
   private final ParseSpec parseSpec;
   private Parser<String, Object> parser;
@@ -52,7 +52,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 
 
   @JsonCreator
-  public ProtoBufInputRowParser(
+  public ProtobufInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
       @JsonProperty("descriptor") String descriptorFilePath,
       @JsonProperty("protoMessageType") String protoMessageType
@@ -72,9 +72,9 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   }
 
   @Override
-  public ProtoBufInputRowParser withParseSpec(ParseSpec parseSpec)
+  public ProtobufInputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new ProtoBufInputRowParser(parseSpec, descriptorFilePath, protoMessageType);
+    return new ProtobufInputRowParser(parseSpec, descriptorFilePath, protoMessageType);
   }
 
   @Override
@@ -134,7 +134,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
       throw new ParseException(
           new NullPointerException(),
           String.format(
-              "ProtoBuf message type %s not found in the specified descriptor.  Available messages types are %s",
+              "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,
               dynamicSchema.getMessageTypes()
           )
