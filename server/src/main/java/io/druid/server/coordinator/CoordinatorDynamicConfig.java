@@ -71,18 +71,28 @@ public class CoordinatorDynamicConfig
       current = new Builder().build();
     }
 
-    this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting == null ? current.getMillisToWaitBeforeDeleting() : millisToWaitBeforeDeleting;
+    this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting == null
+                                      ? current.getMillisToWaitBeforeDeleting()
+                                      : millisToWaitBeforeDeleting;
     this.mergeBytesLimit = mergeBytesLimit == null ? current.getMergeBytesLimit() : mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit == null ? current.getMergeSegmentsLimit() : mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove == null ? current.getMaxSegmentsToMove() : maxSegmentsToMove;
     this.replicantLifetime = replicantLifetime == null ? current.getReplicantLifetime() : replicantLifetime;
-    this.replicationThrottleLimit = replicationThrottleLimit == null ? current.getReplicationThrottleLimit() : replicationThrottleLimit;
-    this.balancerComputeThreads = Math.max(balancerComputeThreads == null ? current.getBalancerComputeThreads() : balancerComputeThreads, 1);
+    this.replicationThrottleLimit = replicationThrottleLimit == null
+                                    ? current.getReplicationThrottleLimit()
+                                    : replicationThrottleLimit;
+    this.balancerComputeThreads = Math.max(
+        balancerComputeThreads == null
+        ? current.getBalancerComputeThreads()
+        : balancerComputeThreads, 1
+    );
     this.emitBalancingStats = emitBalancingStats == null ? current.emitBalancingStats() : emitBalancingStats;
 
 
     this.killAllDataSources = killAllDataSources == null ? current.isKillAllDataSources() : killAllDataSources;
-    this.killDataSourceWhitelist = killDataSourceWhitelist == null ? current.getKillDataSourceWhitelist() : parseKillDataSourceWhitelist(killDataSourceWhitelist);
+    this.killDataSourceWhitelist = killDataSourceWhitelist == null
+                                   ? current.getKillDataSourceWhitelist()
+                                   : parseKillDataSourceWhitelist(killDataSourceWhitelist);
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
