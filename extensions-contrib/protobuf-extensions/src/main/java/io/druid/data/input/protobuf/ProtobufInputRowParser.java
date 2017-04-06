@@ -41,6 +41,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Set;
 
 public class ProtobufInputRowParser implements ByteBufferInputRowParser
 {
@@ -129,14 +130,18 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       throw new ParseException(e, "Cannot read descriptor file: " + descriptorFilePath);
     }
 
-    Descriptor desc = dynamicSchema.getMessageDescriptor(protoMessageType);
+    Set<String> messageTypes = dynamicSchema.getMessageTypes();
+    if (messageTypes.size() == 0) {
+      throw new ParseException("No message types found in the descriptor: " + descriptorFilePath);
+    }
+    String messageType = messageTypes.size() == 1 ? (String)messageTypes.toArray()[0] : protoMessageType;
+    Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
     if (desc == null) {
       throw new ParseException(
-          new NullPointerException(),
           String.format(
               "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,
-              dynamicSchema.getMessageTypes()
+              messageTypes
           )
       );
     }
