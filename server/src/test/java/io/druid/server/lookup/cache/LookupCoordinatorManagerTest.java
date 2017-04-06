@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.emitter.core.Event;
@@ -34,10 +35,11 @@ import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.common.utils.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.StringUtils;
+import io.druid.query.lookup.LookupModule;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import org.easymock.EasyMock;
 import org.hamcrest.BaseMatcher;
@@ -169,12 +171,15 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream(
-                   StringUtils.toUtf8(
-                       mapper.writeValueAsString(
-                           LOOKUPS_STATE
-                       )
-                   )));
+    future.set(
+        new ByteArrayInputStream(
+            StringUtils.toUtf8(
+                mapper.writeValueAsString(
+                    LOOKUPS_STATE
+                )
+            )
+        )
+    );
     EasyMock.expect(client.go(
         EasyMock.<Request>anyObject(),
         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -183,27 +188,22 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.ACCEPTED.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.ACCEPTED.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
-    LookupsStateWithMap resp = manager.updateNode(
+    LookupsStateWithMap resp = lookupsCommunicator.updateNode(
         HostAndPort.fromString("localhost"),
         LOOKUPS_STATE
     );
@@ -227,28 +227,23 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
     try {
-      manager.updateNode(
+      lookupsCommunicator.updateNode(
           HostAndPort.fromString("localhost"),
           LOOKUPS_STATE
       );
@@ -275,28 +270,23 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.ACCEPTED.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.ACCEPTED.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
     try {
-      manager.updateNode(
+      lookupsCommunicator.updateNode(
           HostAndPort.fromString("localhost"),
           LOOKUPS_STATE
       );
@@ -322,29 +312,24 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.ACCEPTED.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.ACCEPTED.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
     Thread.currentThread().interrupt();
     try {
-      manager.updateNode(
+      lookupsCommunicator.updateNode(
           HostAndPort.fromString("localhost"),
           LOOKUPS_STATE
       );
@@ -367,12 +352,15 @@ public class LookupCoordinatorManagerTest
     final HttpResponseHandler<InputStream, InputStream> responseHandler = EasyMock.createStrictMock(HttpResponseHandler.class);
 
     final SettableFuture<InputStream> future = SettableFuture.create();
-    future.set(new ByteArrayInputStream(
-                   StringUtils.toUtf8(
-                       mapper.writeValueAsString(
-                           LOOKUPS_STATE
-                       )
-                   )));
+    future.set(
+        new ByteArrayInputStream(
+            StringUtils.toUtf8(
+                mapper.writeValueAsString(
+                    LOOKUPS_STATE
+                )
+            )
+        )
+    );
     EasyMock.expect(client.go(
                         EasyMock.<Request>anyObject(),
                         EasyMock.<SequenceInputStreamResponseHandler>anyObject(),
@@ -381,27 +369,22 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.OK.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.OK.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
-    LookupsStateWithMap resp = manager.getLookupStateForNode(
+    LookupsStateWithMap resp = lookupsCommunicator.getLookupStateForNode(
         HostAndPort.fromString("localhost")
     );
 
@@ -425,28 +408,23 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
     try {
-      manager.getLookupStateForNode(
+      lookupsCommunicator.getLookupStateForNode(
           HostAndPort.fromString("localhost")
       );
       Assert.fail();
@@ -472,28 +450,23 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.ACCEPTED.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.ACCEPTED.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
     try {
-      manager.getLookupStateForNode(
+      lookupsCommunicator.getLookupStateForNode(
           HostAndPort.fromString("localhost")
       );
       Assert.fail();
@@ -518,29 +491,24 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.replay(client, responseHandler);
 
-    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
-        client,
-        discoverer,
-        mapper,
-        configManager,
-        lookupCoordinatorManagerConfig
-    )
-    {
-      @Override
-      HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-          final AtomicInteger returnCode,
-          final AtomicReference<String> reasonString
-      )
-      {
-        returnCode.set(Response.Status.ACCEPTED.getStatusCode());
-        reasonString.set("");
-        return responseHandler;
-      }
-    };
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper)
+        {
+          @Override
+          HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+              final AtomicInteger returnCode,
+              final AtomicReference<String> reasonString
+          )
+          {
+            returnCode.set(Response.Status.ACCEPTED.getStatusCode());
+            reasonString.set("");
+            return responseHandler;
+          }
+        };
 
     Thread.currentThread().interrupt();
     try {
-      manager.getLookupStateForNode(
+      lookupsCommunicator.getLookupStateForNode(
           HostAndPort.fromString("localhost")
       );
       Assert.fail();
@@ -1048,6 +1016,137 @@ public class LookupCoordinatorManagerTest
     Assert.assertNull(manager.getLookup(LOOKUP_TIER, "foo"));
   }
 
+
+  @Test(timeout = 2_000)
+  public void testLookupManagementLoop() throws Exception
+  {
+    Map<String, LookupExtractorFactoryMapContainer> lookup1 = ImmutableMap.of(
+        "lookup1", new LookupExtractorFactoryMapContainer(
+            "v1", ImmutableMap.of("k1", "v1")
+        )
+    );
+
+    Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups =
+        ImmutableMap.of(
+            "tier1",
+            lookup1
+        );
+    EasyMock.reset(configManager);
+    EasyMock.expect(configManager.watch(
+                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                        EasyMock.<TypeReference>anyObject(),
+                        EasyMock.<AtomicReference>isNull()
+                    )).andReturn(
+        new AtomicReference<>(configuredLookups)).once();
+    EasyMock.replay(configManager);
+
+    HostAndPort host1 = HostAndPort.fromParts("host1", 1234);
+    HostAndPort host2 = HostAndPort.fromParts("host2", 3456);
+
+    EasyMock.reset(discoverer);
+    EasyMock.expect(
+        discoverer.getNodes(LookupModule.getTierListenerPath("tier1"))
+    ).andReturn(ImmutableList.of(host1, host2)).anyTimes();
+    EasyMock.replay(discoverer);
+
+    LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator = EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class);
+    EasyMock.expect(
+        lookupsCommunicator.getLookupStateForNode(
+            host1
+        )
+    ).andReturn(
+        new LookupsStateWithMap(
+            ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0"))), null, null
+        )
+    ).once();
+
+    LookupsStateWithMap host1UpdatedState = new LookupsStateWithMap(
+        lookup1, null, null
+    );
+
+    EasyMock.expect(
+        lookupsCommunicator.updateNode(
+            host1,
+            new LookupsStateWithMap(
+                null,
+                lookup1,
+                ImmutableSet.of("lookup0")
+            )
+        )
+    ).andReturn(
+        host1UpdatedState
+    ).once();
+
+
+    EasyMock.expect(
+        lookupsCommunicator.getLookupStateForNode(
+            host2
+        )
+    ).andReturn(
+        new LookupsStateWithMap(
+            ImmutableMap.of("lookup3", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
+                            "lookup1", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.of("k0", "v0"))),
+            null, null
+        )
+    ).once();
+
+    LookupsStateWithMap host2UpdatedState = new LookupsStateWithMap(
+        null, lookup1, null
+    );
+
+    EasyMock.expect(
+        lookupsCommunicator.updateNode(
+            host2,
+            new LookupsStateWithMap(
+                null,
+                lookup1,
+                ImmutableSet.of("lookup3")
+            )
+        )
+    ).andReturn(
+        host2UpdatedState
+    ).once();
+
+    EasyMock.replay(lookupsCommunicator);
+
+    LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig = new LookupCoordinatorManagerConfig()
+    {
+      public long getInitialDelay()
+      {
+        return 1;
+      }
+
+      public int getThreadPoolSize()
+      {
+        return 2;
+      }
+    };
+
+    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        discoverer,
+        configManager,
+        lookupCoordinatorManagerConfig,
+        lookupsCommunicator
+    );
+
+    Assert.assertNull(manager.knownOldState.get());
+
+    manager.start();
+
+    Map<HostAndPort, LookupsStateWithMap> expectedKnownState = ImmutableMap.of(
+        host1,
+        host1UpdatedState,
+        host2,
+        host2UpdatedState
+    );
+
+    while (!expectedKnownState.equals(manager.knownOldState.get())) {
+      Thread.sleep(100);
+    }
+
+    EasyMock.verify(discoverer, configManager, lookupsCommunicator);
+  }
+
   @Test
   public void testStartStop() throws Exception
   {
@@ -1175,20 +1274,22 @@ public class LookupCoordinatorManagerTest
     EasyMock.expect(discoverer.discoverChildren(LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY))
             .andThrow(ex)
             .once();
-    expectedException.expectCause(new BaseMatcher<Throwable>()
-    {
-      @Override
-      public boolean matches(Object o)
-      {
-        return o == ex;
-      }
+    expectedException.expectCause(
+        new BaseMatcher<Throwable>()
+        {
+          @Override
+          public boolean matches(Object o)
+          {
+            return o == ex;
+          }
 
-      @Override
-      public void describeTo(Description description)
-      {
+          @Override
+          public void describeTo(Description description)
+          {
 
-      }
-    });
+          }
+        }
+    );
     EasyMock.replay(discoverer);
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
@@ -1205,7 +1306,7 @@ public class LookupCoordinatorManagerTest
     }
   }
 
-  //tests that lookups stored in db from 0.9.x are converted and restored.
+  //tests that lookups stored in db from 0.10.0 are converted and restored.
   @Test
   public void testBackwardCompatibilityMigration() throws Exception
   {
@@ -1239,7 +1340,13 @@ public class LookupCoordinatorManagerTest
             EasyMock.eq(
                 ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
                     "tier1",
-                    ImmutableMap.of("lookup1", new LookupExtractorFactoryMapContainer(null, ImmutableMap.<String, Object>of("k", "v")))
+                    ImmutableMap.of(
+                        "lookup1",
+                        new LookupExtractorFactoryMapContainer(
+                            null,
+                            ImmutableMap.<String, Object>of("k", "v")
+                        )
+                    )
                 )
             ),
             EasyMock.anyObject(AuditInfo.class)

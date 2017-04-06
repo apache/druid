@@ -43,6 +43,10 @@ public class LookupCoordinatorManagerConfig
   @Min(1)
   private long period = 120_000L;
 
+  @JsonProperty
+  @Min(1)
+  private long initialDelay = 2_000L;
+
   public Duration getHostTimeout()
   {
     return hostTimeout == null ? DEFAULT_HOST_TIMEOUT : hostTimeout;
@@ -81,5 +85,15 @@ public class LookupCoordinatorManagerConfig
   public void setPeriod(long period)
   {
     this.period = period;
+  }
+
+  public long getInitialDelay()
+  {
+    return initialDelay;
+  }
+
+  public void getInitialDelay(long initialDelay)
+  {
+    this.initialDelay = initialDelay;
   }
 }

@@ -99,15 +99,15 @@ public class LookupCoordinatorManager
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
   private final ListenerDiscoverer listenerDiscoverer;
-  private final HttpClient httpClient;
-  private final ObjectMapper smileMapper;
   private final JacksonConfigManager configManager;
   private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig;
+  private final LookupsCommunicator lookupsCommunicator;
 
   // Known lookup state across various cluster nodes is managed in the reference here. On each lookup management loop
   // state is rediscovered and updated in the ref here. If some lookup nodes have disappeared since last lookup
   // management loop, then they get discarded automatically.
-  private final AtomicReference<Map<HostAndPort, LookupsStateWithMap>> knownOldState = new AtomicReference<>();
+  @VisibleForTesting
+  final AtomicReference<Map<HostAndPort, LookupsStateWithMap>> knownOldState = new AtomicReference<>();
 
   // Updated by config watching service
   private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
@@ -128,11 +128,26 @@ public class LookupCoordinatorManager
       final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig
   )
   {
+    this(
+        listenerDiscoverer,
+        configManager,
+        lookupCoordinatorManagerConfig,
+        new LookupsCommunicator(httpClient, lookupCoordinatorManagerConfig, smileMapper)
+    );
+  }
+
+  @VisibleForTesting
+  LookupCoordinatorManager(
+      final ListenerDiscoverer listenerDiscoverer,
+      final JacksonConfigManager configManager,
+      final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig,
+      final LookupsCommunicator lookupsCommunicator
+  )
+  {
     this.listenerDiscoverer = listenerDiscoverer;
     this.configManager = configManager;
-    this.httpClient = httpClient;
-    this.smileMapper = smileMapper;
     this.lookupCoordinatorManagerConfig = lookupCoordinatorManagerConfig;
+    this.lookupsCommunicator = lookupsCommunicator;
   }
 
   public boolean updateLookup(
@@ -313,7 +328,7 @@ public class LookupCoordinatorManager
         this.backgroundManagerExitedLatch = new CountDownLatch(1);
         this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
             this::lookupManagementLoop,
-            2000, //initial delay to start management after a little while
+            lookupCoordinatorManagerConfig.getInitialDelay(),
             lookupCoordinatorManagerConfig.getPeriod(),
             TimeUnit.MILLISECONDS
         );
@@ -437,10 +452,11 @@ public class LookupCoordinatorManager
     return convertedTierLookups;
   }
 
-  private void lookupManagementLoop()
+  @VisibleForTesting
+  void lookupManagementLoop()
   {
     // Sanity check for if we are shutting down
-    if (Thread.currentThread().isInterrupted() || !lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
+    if (Thread.currentThread().isInterrupted() || !lifecycleLock.awaitStarted(15, TimeUnit.SECONDS)) {
       LOG.info("Not updating lookups because process was interrupted or not finished starting yet.");
       return;
     }
@@ -520,7 +536,7 @@ public class LookupCoordinatorManager
   {
     LOG.debug("Starting lookup sync for node [%s].", node);
 
-    LookupsStateWithMap currLookupsStateOnNode = getLookupStateForNode(node);
+    LookupsStateWithMap currLookupsStateOnNode = lookupsCommunicator.getLookupStateForNode(node);
     LOG.debug("Received lookups state from node [%s].", node);
 
 
@@ -535,7 +551,7 @@ public class LookupCoordinatorManager
     if (!toLoad.isEmpty() || !toDrop.isEmpty()) {
       // Send POST request to the node asking to load and drop the lookups necessary.
       // no need to send "current" in the LookupsStateWithMap , that is not required
-      currLookupsStateOnNode = updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop));
+      currLookupsStateOnNode = lookupsCommunicator.updateNode(node, new LookupsStateWithMap(null, toLoad, toDrop));
 
       LOG.debug(
           "Sent lookup toAdd[%s] and toDrop[%s] updates to node [%s].",
@@ -595,114 +611,6 @@ public class LookupCoordinatorManager
     return toDrop;
   }
 
-  @VisibleForTesting
-  LookupsStateWithMap updateNode(
-      HostAndPort node,
-      LookupsStateWithMap lookupsUpdate
-  )
-      throws IOException, InterruptedException, ExecutionException
-  {
-    final AtomicInteger returnCode = new AtomicInteger(0);
-    final AtomicReference<String> reasonString = new AtomicReference<>(null);
-
-    final URL url = getLookupsUpdateURL(node);
-
-    LOG.debug("Sending lookups load/drop request to [%s]. Request [%s]", url, lookupsUpdate);
-
-    try (final InputStream result = httpClient.go(
-        new Request(HttpMethod.POST, url)
-            .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-            .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-            .setContent(smileMapper.writeValueAsBytes(lookupsUpdate)),
-        makeResponseHandler(returnCode, reasonString),
-        lookupCoordinatorManagerConfig.getHostTimeout()
-    ).get()) {
-      if (httpStatusIsSuccess(returnCode.get())) {
-        try {
-          final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
-          LOG.debug(
-              "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
-              response
-          );
-          return response;
-        } catch (IOException ex) {
-          throw new IOE(
-              ex, "Failed to parse update response from [%s]. response [%s]", url, result
-          );
-        }
-      } else {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-          StreamUtils.copyAndClose(result, baos);
-        }
-        catch (IOException e2) {
-          LOG.warn(e2, "Error reading response");
-        }
-
-        throw new IOE(
-            "Bad update request to [%s] : [%d] : [%s]  Response: [%s]",
-            url,
-            returnCode.get(),
-            reasonString.get(),
-            StringUtils.fromUtf8(baos.toByteArray())
-        );
-      }
-    }
-  }
-
-  @VisibleForTesting
-  LookupsStateWithMap getLookupStateForNode(
-      HostAndPort node
-  ) throws IOException, InterruptedException, ExecutionException
-  {
-    final URL url = getLookupsURL(node);
-    final AtomicInteger returnCode = new AtomicInteger(0);
-    final AtomicReference<String> reasonString = new AtomicReference<>(null);
-
-    LOG.debug("Getting lookups from [%s]", url);
-
-    try (final InputStream result = httpClient.go(
-        new Request(HttpMethod.GET, url)
-            .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
-        makeResponseHandler(returnCode, reasonString),
-        lookupCoordinatorManagerConfig.getHostTimeout()
-    ).get()) {
-      if (returnCode.get() == 200) {
-        try {
-          final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
-          LOG.debug(
-              "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
-              response
-          );
-          return response;
-        } catch(IOException ex) {
-          throw new IOE(
-              ex,
-              "Failed to parser GET lookups response from [%s]. response [%s].",
-              url,
-              result
-          );
-        }
-      } else {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-          StreamUtils.copyAndClose(result, baos);
-        }
-        catch (IOException ex) {
-          LOG.warn(ex, "Error reading response from GET on url [%s]", url);
-        }
-
-        throw new IOE(
-            "GET request failed to [%s] : [%d] : [%s]  Response: [%s]",
-            url,
-            returnCode.get(),
-            reasonString.get(),
-            StringUtils.fromUtf8(baos.toByteArray())
-        );
-      }
-    }
-  }
-
   static URL getLookupsURL(HostAndPort druidNode) throws MalformedURLException
   {
     return new URL(
@@ -741,21 +649,145 @@ public class LookupCoordinatorManager
     return backgroundManagerExitedLatch.await(timeout, TimeUnit.MILLISECONDS);
   }
 
-  @VisibleForTesting
-  HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
-      final AtomicInteger returnCode,
-      final AtomicReference<String> reasonString
-  )
+  public static class LookupsCommunicator
   {
-    return new SequenceInputStreamResponseHandler()
+    private final HttpClient httpClient;
+    private final LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig;
+    private final ObjectMapper smileMapper;
+
+    public LookupsCommunicator(
+        HttpClient httpClient,
+        LookupCoordinatorManagerConfig lookupCoordinatorManagerConfig,
+        ObjectMapper smileMapper
+    )
     {
-      @Override
-      public ClientResponse<InputStream> handleResponse(HttpResponse response)
-      {
-        returnCode.set(response.getStatus().getCode());
-        reasonString.set(response.getStatus().getReasonPhrase());
-        return super.handleResponse(response);
+      this.httpClient = httpClient;
+      this.lookupCoordinatorManagerConfig = lookupCoordinatorManagerConfig;
+      this.smileMapper = smileMapper;
+    }
+
+    public LookupsStateWithMap updateNode(
+        HostAndPort node,
+        LookupsStateWithMap lookupsUpdate
+    )
+        throws IOException, InterruptedException, ExecutionException
+    {
+      final AtomicInteger returnCode = new AtomicInteger(0);
+      final AtomicReference<String> reasonString = new AtomicReference<>(null);
+
+      final URL url = getLookupsUpdateURL(node);
+
+      LOG.debug("Sending lookups load/drop request to [%s]. Request [%s]", url, lookupsUpdate);
+
+      try (final InputStream result = httpClient.go(
+          new Request(HttpMethod.POST, url)
+              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .setContent(smileMapper.writeValueAsBytes(lookupsUpdate)),
+          makeResponseHandler(returnCode, reasonString),
+          lookupCoordinatorManagerConfig.getHostTimeout()
+      ).get()) {
+        if (httpStatusIsSuccess(returnCode.get())) {
+          try {
+            final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+            LOG.debug(
+                "Update on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                response
+            );
+            return response;
+          } catch (IOException ex) {
+            throw new IOE(
+                ex, "Failed to parse update response from [%s]. response [%s]", url, result
+            );
+          }
+        } else {
+          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          try {
+            StreamUtils.copyAndClose(result, baos);
+          }
+          catch (IOException e2) {
+            LOG.warn(e2, "Error reading response");
+          }
+
+          throw new IOE(
+              "Bad update request to [%s] : [%d] : [%s]  Response: [%s]",
+              url,
+              returnCode.get(),
+              reasonString.get(),
+              StringUtils.fromUtf8(baos.toByteArray())
+          );
+        }
       }
-    };
+    }
+
+    public LookupsStateWithMap getLookupStateForNode(
+        HostAndPort node
+    ) throws IOException, InterruptedException, ExecutionException
+    {
+      final URL url = getLookupsURL(node);
+      final AtomicInteger returnCode = new AtomicInteger(0);
+      final AtomicReference<String> reasonString = new AtomicReference<>(null);
+
+      LOG.debug("Getting lookups from [%s]", url);
+
+      try (final InputStream result = httpClient.go(
+          new Request(HttpMethod.GET, url)
+              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
+          makeResponseHandler(returnCode, reasonString),
+          lookupCoordinatorManagerConfig.getHostTimeout()
+      ).get()) {
+        if (returnCode.get() == 200) {
+          try {
+            final LookupsStateWithMap response = smileMapper.readValue(result, LookupsStateWithMap.class);
+            LOG.debug(
+                "Get on [%s], Status: %s reason: [%s], Response [%s].", url, returnCode.get(), reasonString.get(),
+                response
+            );
+            return response;
+          } catch(IOException ex) {
+            throw new IOE(
+                ex,
+                "Failed to parser GET lookups response from [%s]. response [%s].",
+                url,
+                result
+            );
+          }
+        } else {
+          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          try {
+            StreamUtils.copyAndClose(result, baos);
+          }
+          catch (IOException ex) {
+            LOG.warn(ex, "Error reading response from GET on url [%s]", url);
+          }
+
+          throw new IOE(
+              "GET request failed to [%s] : [%d] : [%s]  Response: [%s]",
+              url,
+              returnCode.get(),
+              reasonString.get(),
+              StringUtils.fromUtf8(baos.toByteArray())
+          );
+        }
+      }
+    }
+
+    @VisibleForTesting
+    HttpResponseHandler<InputStream, InputStream> makeResponseHandler(
+        final AtomicInteger returnCode,
+        final AtomicReference<String> reasonString
+    )
+    {
+      return new SequenceInputStreamResponseHandler()
+      {
+        @Override
+        public ClientResponse<InputStream> handleResponse(HttpResponse response)
+        {
+          returnCode.set(response.getStatus().getCode());
+          reasonString.set(response.getStatus().getReasonPhrase());
+          return super.handleResponse(response);
+        }
+      };
+    }
   }
 }
