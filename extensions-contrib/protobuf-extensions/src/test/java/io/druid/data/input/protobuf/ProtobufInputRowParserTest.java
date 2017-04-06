@@ -94,6 +94,19 @@ public class ProtobufInputRowParserTest
 
   }
 
+  @Test(expected = ParseException.class)
+  public void testMalformedDescriptorUrl() throws Exception
+  {
+    //configure parser with non existent desc file
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "file:/nonexist.desc", "BadName");
+  }
+
+  @Test
+  public void testSingleDescriptorNoMessageType() throws Exception
+  {
+    // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", null);
+  }
 
   @Test
   public void testParse() throws Exception
