@@ -27,5 +27,4 @@ message ProtoTestEvent {
     optional uint64 someLongColumn = 9;
     optional Foo foo = 10;
     repeated Foo bar = 11;
-
 }
