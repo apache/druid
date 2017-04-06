@@ -178,11 +178,10 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   {
     try {
       queryWatcher.registerQuery(query, future);
-      final long timeout = QueryContexts.getTimeout(query);
-      if (QueryContexts.isNoTimeout(timeout)) {
-        future.get();
+      if (QueryContexts.hasTimeout(query)) {
+        future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
       } else {
-        future.get(timeout, TimeUnit.MILLISECONDS);
+        future.get();
       }
     }
     catch (InterruptedException e) {

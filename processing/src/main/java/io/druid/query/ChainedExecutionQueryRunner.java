@@ -152,12 +152,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
-              final long timeout = QueryContexts.getTimeout(query);
               return new MergeIterable<>(
                   ordering.nullsFirst(),
-                  QueryContexts.isNoTimeout(timeout) ?
-                  futures.get() :
-                  futures.get(timeout, TimeUnit.MILLISECONDS)
+                  QueryContexts.hasTimeout(query) ?
+                  futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                  futures.get()
               ).iterator();
             }
             catch (InterruptedException e) {
