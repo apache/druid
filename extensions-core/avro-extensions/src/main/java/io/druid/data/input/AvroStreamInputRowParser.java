@@ -54,8 +54,11 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   }
 
   protected static InputRow parseGenericRecord(
-      GenericRecord record, ParseSpec parseSpec, List<String> dimensions,
-      boolean fromPigAvroStorage, boolean binaryAsString
+      GenericRecord record,
+      ParseSpec parseSpec,
+      List<String> dimensions,
+      boolean fromPigAvroStorage,
+      boolean binaryAsString
   )
   {
     GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, fromPigAvroStorage, binaryAsString);
