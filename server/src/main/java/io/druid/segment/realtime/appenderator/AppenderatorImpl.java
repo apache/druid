@@ -32,6 +32,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.Closer;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -73,6 +74,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -553,22 +555,32 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("Merged target[%s] exists after removing?!", mergedTarget);
       }
 
-      List<QueryableIndex> indexes = Lists.newArrayList();
-      for (FireHydrant fireHydrant : sink) {
-        Segment segment = fireHydrant.getSegment();
-        final QueryableIndex queryableIndex = segment.asQueryableIndex();
-        log.info("Adding hydrant[%s]", fireHydrant);
-        indexes.add(queryableIndex);
-      }
-
       final File mergedFile;
-      mergedFile = indexMerger.mergeQueryableIndex(
-          indexes,
-          schema.getGranularitySpec().isRollup(),
-          schema.getAggregators(),
-          mergedTarget,
-          tuningConfig.getIndexSpec()
-      );
+      List<QueryableIndex> indexes = Lists.newArrayList();
+      Closer closer = Closer.create();
+      try {
+        for (FireHydrant fireHydrant : sink) {
+          Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          log.info("Adding hydrant[%s]", fireHydrant);
+          indexes.add(queryableIndex);
+          closer.register(segmentAndCloseable.rhs);
+        }
+
+        mergedFile = indexMerger.mergeQueryableIndex(
+            indexes,
+            schema.getGranularitySpec().isRollup(),
+            schema.getAggregators(),
+            mergedTarget,
+            tuningConfig.getIndexSpec()
+        );
+      }
+      catch (Throwable t) {
+        throw closer.rethrow(t);
+      }
+      finally {
+        closer.close();
+      }
 
       QueryableIndex index = indexIO.loadIndex(mergedFile);
 
@@ -1005,7 +1017,7 @@ public class AppenderatorImpl implements Appenderator
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
-                indexToPersist.getSegment().getIdentifier(),
+                indexToPersist.getSegmentIdentifier(),
                 indexIO.loadIndex(persistedFile)
             )
         );

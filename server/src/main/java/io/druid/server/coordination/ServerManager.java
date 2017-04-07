@@ -66,7 +66,6 @@ import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -223,16 +222,8 @@ public class ServerManager implements QuerySegmentWalker
           dataSourceCounts.add(dataSource, -1L);
         }
 
-        try {
-          log.info("Attempting to close segment %s", segment.getIdentifier());
-          oldQueryable.close();
-        }
-        catch (IOException e) {
-          log.makeAlert(e, "Exception closing segment")
-             .addData("dataSource", dataSource)
-             .addData("segmentId", segment.getIdentifier())
-             .emit();
-        }
+        log.info("Attempting to close segment %s", segment.getIdentifier());
+        oldQueryable.close();
       } else {
         log.info(
             "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
