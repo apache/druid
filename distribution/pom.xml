@@ -97,6 +97,8 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-lookups-cached-single</argument>
                                 <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-protobuf-extensions</argument>
+                                <argument>-c</argument>
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
