@@ -19,7 +19,7 @@
 
 package io.druid.segment;
 
-import com.google.common.io.Closer;
+import io.druid.java.util.common.io.Closer;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
