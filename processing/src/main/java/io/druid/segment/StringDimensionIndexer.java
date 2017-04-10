@@ -415,7 +415,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
         int[] row = null;
         int rowSize = 0;
-        // typically, currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
+
+        // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
         if (indices == null || indices.length == 0) {
           final int nullId = getEncodedValue(null, false);
           if (nullId > -1) {

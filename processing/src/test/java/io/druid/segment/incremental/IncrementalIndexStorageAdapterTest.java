@@ -65,6 +65,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.CountDownLatch;
 
 /**
  */
@@ -408,6 +409,7 @@ public class IncrementalIndexStorageAdapterTest
     Sequence<Cursor> cursors = sa.makeCursors(
         null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
     );
+    final CountDownLatch assertCursorsNotEmpty = new CountDownLatch(1);
 
     Sequences.toList(
         Sequences.map(
@@ -450,6 +452,7 @@ public class IncrementalIndexStorageAdapterTest
                   }
                   cursor.advance();
                 }
+                assertCursorsNotEmpty.countDown();
 
                 return null;
               }
@@ -457,6 +460,7 @@ public class IncrementalIndexStorageAdapterTest
         ),
         new ArrayList<>()
     );
+    Assert.assertEquals(0, assertCursorsNotEmpty.getCount());
   }
 
   @Test
@@ -480,6 +484,7 @@ public class IncrementalIndexStorageAdapterTest
     Sequence<Cursor> cursors = sa.makeCursors(
         null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
     );
+    final CountDownLatch assertCursorsNotEmpty = new CountDownLatch(1);
 
     Sequences.toList(
         Sequences.map(
@@ -490,13 +495,13 @@ public class IncrementalIndexStorageAdapterTest
               @Override
               public Object apply(Cursor cursor)
               {
-                DimensionSelector dimSelectorA = cursor.makeDimensionSelector(
+                DimensionSelector dimSelector1A = cursor.makeDimensionSelector(
                     new DefaultDimensionSpec(
                         "billy",
                         "billy"
                     )
                 );
-                int cardinalityA = dimSelectorA.getValueCardinality();
+                int cardinalityA = dimSelector1A.getValueCardinality();
 
                 //index gets more rows at this point, while other thread is iterating over the cursor
                 try {
@@ -512,7 +517,7 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelectorB = cursor.makeDimensionSelector(
+                DimensionSelector dimSelector1B = cursor.makeDimensionSelector(
                     new DefaultDimensionSpec(
                         "billy",
                         "billy"
@@ -539,14 +544,14 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelectorC = cursor.makeDimensionSelector(
+                DimensionSelector dimSelector1C = cursor.makeDimensionSelector(
                     new DefaultDimensionSpec(
                         "billy",
                         "billy"
                     )
                 );
 
-                DimensionSelector dimSelectorD = cursor.makeDimensionSelector(
+                DimensionSelector dimSelector2D = cursor.makeDimensionSelector(
                     new DefaultDimensionSpec(
                         "billy2",
                         "billy2"
@@ -573,36 +578,40 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
-                DimensionSelector dimSelectorE = cursor.makeDimensionSelector(
+                DimensionSelector dimSelector3E = cursor.makeDimensionSelector(
                     new DefaultDimensionSpec(
                         "billy3",
                         "billy3"
                     )
                 );
 
+                CountDownLatch rowNumInCursor = new CountDownLatch(1);
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
-                  IndexedInts rowA = dimSelectorA.getRow();
+                  IndexedInts rowA = dimSelector1A.getRow();
                   for (int i : rowA) {
                     Assert.assertTrue(i < cardinalityA);
                   }
-                  IndexedInts rowB = dimSelectorB.getRow();
+                  IndexedInts rowB = dimSelector1B.getRow();
                   for (int i : rowB) {
                     Assert.assertTrue(i < cardinalityA);
                   }
-                  IndexedInts rowC = dimSelectorC.getRow();
+                  IndexedInts rowC = dimSelector1C.getRow();
                   for (int i : rowC) {
                     Assert.assertTrue(i < cardinalityA);
                   }
-                  IndexedInts rowD = dimSelectorD.getRow();
+                  IndexedInts rowD = dimSelector2D.getRow();
                   // no null id, so should get empty dims array
                   Assert.assertEquals(0, rowD.size());
-                  IndexedInts rowE = dimSelectorE.getRow();
+                  IndexedInts rowE = dimSelector3E.getRow();
                   Assert.assertEquals(1, rowE.size());
                   // the null id
                   Assert.assertEquals(0, rowE.get(0));
                   cursor.advance();
+                  rowNumInCursor.countDown();
                 }
+                Assert.assertEquals(0, rowNumInCursor.getCount());
+                assertCursorsNotEmpty.countDown();
 
                 return null;
               }
@@ -610,5 +619,6 @@ public class IncrementalIndexStorageAdapterTest
         ),
         new ArrayList<>()
     );
+    Assert.assertEquals(0, assertCursorsNotEmpty.getCount());
   }
 }
