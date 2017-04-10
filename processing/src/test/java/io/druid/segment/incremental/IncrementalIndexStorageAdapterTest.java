@@ -458,4 +458,157 @@ public class IncrementalIndexStorageAdapterTest
         new ArrayList<>()
     );
   }
+
+  @Test
+  public void testCursoringAndSnapshot() throws Exception
+  {
+    final IncrementalIndex index = indexCreator.createIndex();
+    final long timestamp = System.currentTimeMillis();
+
+    for (int i = 0; i < 2; i++) {
+      index.add(
+          new MapBasedInputRow(
+              timestamp,
+              Lists.newArrayList("billy"),
+              ImmutableMap.<String, Object>of("billy", "v0" + i)
+          )
+      );
+    }
+
+    final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
+
+    Sequence<Cursor> cursors = sa.makeCursors(
+        null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
+    );
+
+    Sequences.toList(
+        Sequences.map(
+            cursors,
+            new Function<Cursor, Object>()
+            {
+              @Nullable
+              @Override
+              public Object apply(Cursor cursor)
+              {
+                DimensionSelector dimSelectorA = cursor.makeDimensionSelector(
+                    new DefaultDimensionSpec(
+                        "billy",
+                        "billy"
+                    )
+                );
+                int cardinalityA = dimSelectorA.getValueCardinality();
+
+                //index gets more rows at this point, while other thread is iterating over the cursor
+                try {
+                  index.add(
+                      new MapBasedInputRow(
+                          timestamp,
+                          Lists.newArrayList("billy"),
+                          ImmutableMap.<String, Object>of("billy", "v1")
+                      )
+                  );
+                }
+                catch (Exception ex) {
+                  throw new RuntimeException(ex);
+                }
+
+                DimensionSelector dimSelectorB = cursor.makeDimensionSelector(
+                    new DefaultDimensionSpec(
+                        "billy",
+                        "billy"
+                    )
+                );
+                //index gets more rows at this point, while other thread is iterating over the cursor
+                try {
+                  index.add(
+                      new MapBasedInputRow(
+                          timestamp,
+                          Lists.newArrayList("billy"),
+                          ImmutableMap.<String, Object>of("billy", "v2")
+                      )
+                  );
+                  index.add(
+                      new MapBasedInputRow(
+                          timestamp,
+                          Lists.newArrayList("billy2"),
+                          ImmutableMap.<String, Object>of("billy2", "v3")
+                      )
+                  );
+                }
+                catch (Exception ex) {
+                  throw new RuntimeException(ex);
+                }
+
+                DimensionSelector dimSelectorC = cursor.makeDimensionSelector(
+                    new DefaultDimensionSpec(
+                        "billy",
+                        "billy"
+                    )
+                );
+
+                DimensionSelector dimSelectorD = cursor.makeDimensionSelector(
+                    new DefaultDimensionSpec(
+                        "billy2",
+                        "billy2"
+                    )
+                );
+                //index gets more rows at this point, while other thread is iterating over the cursor
+                try {
+                  index.add(
+                      new MapBasedInputRow(
+                          timestamp,
+                          Lists.newArrayList("billy"),
+                          ImmutableMap.<String, Object>of("billy", "v3")
+                      )
+                  );
+                  index.add(
+                      new MapBasedInputRow(
+                          timestamp,
+                          Lists.newArrayList("billy3"),
+                          ImmutableMap.<String, Object>of("billy3", "")
+                      )
+                  );
+                }
+                catch (Exception ex) {
+                  throw new RuntimeException(ex);
+                }
+
+                DimensionSelector dimSelectorE = cursor.makeDimensionSelector(
+                    new DefaultDimensionSpec(
+                        "billy3",
+                        "billy3"
+                    )
+                );
+
+                // and then, cursoring continues in the other thread
+                while (!cursor.isDone()) {
+                  IndexedInts rowA = dimSelectorA.getRow();
+                  for (int i : rowA) {
+                    Assert.assertTrue(i < cardinalityA);
+                  }
+                  IndexedInts rowB = dimSelectorB.getRow();
+                  for (int i : rowB) {
+                    Assert.assertTrue(i < cardinalityA);
+                  }
+                  IndexedInts rowC = dimSelectorC.getRow();
+                  for (int i : rowC) {
+                    Assert.assertTrue(i < cardinalityA);
+                  }
+                  IndexedInts rowD = dimSelectorD.getRow();
+                  // no null id, so should get empty dims array
+                  Assert.assertEquals(0, rowD.size());
+                  IndexedInts rowE = dimSelectorE.getRow();
+                  Assert.assertEquals(1, rowE.size());
+                  // the null id
+                  Assert.assertEquals(0, rowE.get(0));
+                  cursor.advance();
+                }
+
+                return null;
+              }
+            }
+        ),
+        new ArrayList<>()
+    );
+  }
 }
