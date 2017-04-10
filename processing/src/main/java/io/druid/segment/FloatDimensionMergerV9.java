@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
-import com.google.common.io.Closer;
+import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;

@@ -43,5 +43,10 @@
     <module name="RedundantImport"/>
     <module name="UnusedImports" />
     <module name="NeedBraces"/>
+    <module name="Regexp">
+      <!-- Prohibit using Guava's Closer, see comment in io.druid.java.util.common.io.Closer -->
+      <property name="format" value="com\.google\.common\.io\.Closer"/>
+      <property name="illegalPattern" value="true"/>
+    </module>
   </module>
 </module>
