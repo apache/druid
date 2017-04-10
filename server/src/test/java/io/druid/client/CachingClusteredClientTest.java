@@ -442,8 +442,6 @@ public class CachingClusteredClientTest
       }
     };
 
-    Map<String, Object> queryContext = new HashMap<>(CONTEXT);
-    queryContext.put("finalize", true);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -451,7 +449,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
-                                                        .context(queryContext);
+                                                        .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client, new TimeseriesQueryQueryToolChest(
@@ -483,8 +481,6 @@ public class CachingClusteredClientTest
   @SuppressWarnings("unchecked")
   public void testTimeseriesCaching() throws Exception
   {
-    Map<String, Object> queryContext = new HashMap<>(CONTEXT);
-    queryContext.put("finalize", true);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -492,7 +488,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
-                                                        .context(queryContext);
+                                                        .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client, new TimeseriesQueryQueryToolChest(
@@ -614,8 +610,6 @@ public class CachingClusteredClientTest
   @Test
   public void testTimeseriesMergingOutOfOrderPartitions() throws Exception
   {
-    Map<String, Object> queryContext = new HashMap<>(CONTEXT);
-    queryContext.put("finalize", true);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -623,7 +617,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
-                                                        .context(queryContext);
+                                                        .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client, new TimeseriesQueryQueryToolChest(
@@ -679,8 +673,6 @@ public class CachingClusteredClientTest
   @SuppressWarnings("unchecked")
   public void testTimeseriesCachingTimeZone() throws Exception
   {
-    Map<String, Object> queryContext = new HashMap<>(CONTEXT);
-    queryContext.put("finalize", true);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -688,7 +680,7 @@ public class CachingClusteredClientTest
                                                         .granularity(PT1H_TZ_GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
-                                                        .context(queryContext);
+                                                        .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client, new TimeseriesQueryQueryToolChest(
@@ -1673,8 +1665,6 @@ public class CachingClusteredClientTest
                              )
                              .build();
 
-    Map<String, Object> queryContext = new HashMap<>(CONTEXT);
-    queryContext.put("finalize", true);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -1682,7 +1672,7 @@ public class CachingClusteredClientTest
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
-                                                        .context(queryContext);
+                                                        .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client, new TimeseriesQueryQueryToolChest(

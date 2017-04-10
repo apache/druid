@@ -21,6 +21,7 @@ package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -40,7 +41,6 @@ import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import org.joda.time.DateTime;
@@ -79,6 +79,21 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     return new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(queryRunner)
     {
+      @Override
+      public Sequence<Result<TimeseriesResultValue>> doRun(
+          QueryRunner<Result<TimeseriesResultValue>> baseRunner,
+          Query<Result<TimeseriesResultValue>> query,
+          Map<String, Object> context
+      )
+      {
+        return super.doRun(
+            baseRunner,
+            // Don't do post aggs until makePostComputeManipulatorFn() is called
+            ((TimeseriesQuery) query).withPostAggregatorSpecs(ImmutableList.<PostAggregator>of()),
+            context
+        );
+      }
+
       @Override
       protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
       {
@@ -240,8 +255,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       TimeseriesQuery query, MetricManipulationFn fn
   )
   {
-    boolean shouldFinalize = MetricManipulatorFns.finalizing().equals(fn);
-    return makeComputeManipulatorFn(query, fn, shouldFinalize);
+    return makeComputeManipulatorFn(query, fn, true);
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(
@@ -255,7 +269,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         final TimeseriesResultValue holder = result.getValue();
         final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
-        if (calculatePostAggs) {
+        if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
             values.put(agg.getName(), holder.getMetric(agg.getName()));
