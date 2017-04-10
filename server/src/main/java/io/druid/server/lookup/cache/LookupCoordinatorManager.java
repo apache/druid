@@ -567,7 +567,8 @@ public class LookupCoordinatorManager
 
   // Returns the Map<lookup-name, lookup-spec> that needs to be loaded by the node and it does not know about
   // those already.
-  private Map<String, LookupExtractorFactoryMapContainer> getToBeLoadedOnNode(
+  @VisibleForTesting
+  Map<String, LookupExtractorFactoryMapContainer> getToBeLoadedOnNode(
       LookupsStateWithMap currLookupsStateOnNode,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )
@@ -586,6 +587,7 @@ public class LookupCoordinatorManager
       }
 
       if (current == null || //lookup is neither pending nor already loaded on the node OR
+          currLookupsStateOnNode.getToDrop().contains(name) || //it is being dropped on the node OR
           lookupToBe.replaces(current) //lookup is already know to node, but lookupToBe overrides that
           ) {
         toLoad.put(name, lookupToBe);
@@ -596,7 +598,8 @@ public class LookupCoordinatorManager
 
   // Returns Set<lookup-name> that should be dropped from the node which has them already either in pending to load
   // state or loaded
-  private Set<String> getToBeDroppedFromNode(
+  @VisibleForTesting
+  Set<String> getToBeDroppedFromNode(
       LookupsStateWithMap currLookupsStateOnNode,
       Map<String, LookupExtractorFactoryMapContainer> nodeTierLookupsToBe
   )

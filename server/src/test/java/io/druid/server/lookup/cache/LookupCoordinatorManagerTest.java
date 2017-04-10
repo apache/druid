@@ -1148,6 +1148,73 @@ public class LookupCoordinatorManagerTest
   }
 
   @Test
+  public void testGetToBeLoadedOnNode()
+  {
+    LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        client,
+        discoverer,
+        mapper,
+        configManager,
+        lookupCoordinatorManagerConfig
+    );
+
+    LookupsStateWithMap currNodeState = new LookupsStateWithMap(
+        ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
+                        "lookup1", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k1", "v1"))
+        ),
+        ImmutableMap.of("lookup2", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k2", "v2")),
+                        "lookup3", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k3", "v3"))
+        ),
+        ImmutableSet.of("lookup2", "lookup4")
+    );
+
+    Map<String, LookupExtractorFactoryMapContainer> stateToBe = ImmutableMap.of(
+        "lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
+        "lookup1", new LookupExtractorFactoryMapContainer("v2", ImmutableMap.of("k1", "v1")),
+        "lookup2", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k2", "v2"))
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "lookup1", new LookupExtractorFactoryMapContainer("v2", ImmutableMap.of("k1", "v1")),
+            "lookup2", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k2", "v2"))
+        ),
+        manager.getToBeLoadedOnNode(currNodeState, stateToBe)
+    );
+  }
+
+  @Test
+  public void testToBeDropped()
+  {
+    LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        client,
+        discoverer,
+        mapper,
+        configManager,
+        lookupCoordinatorManagerConfig
+    );
+
+    LookupsStateWithMap currNodeState = new LookupsStateWithMap(
+        ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
+                        "lookup1", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k1", "v1"))
+        ),
+        ImmutableMap.of("lookup2", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k2", "v2")),
+                        "lookup3", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k3", "v3"))
+        ),
+        ImmutableSet.of("lookup2", "lookup4")
+    );
+
+    Map<String, LookupExtractorFactoryMapContainer> stateToBe = ImmutableMap.of(
+        "lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0"))
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of("lookup1", "lookup3"),
+        manager.getToBeDroppedFromNode(currNodeState, stateToBe)
+    );
+  }
+
+  @Test
   public void testStartStop() throws Exception
   {
     EasyMock.reset(configManager);
