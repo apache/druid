@@ -279,9 +279,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   BaseQuery.checkInterrupted();
 
                   Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
-                  // ignore rows whose rowIndex is beyond the maxRowIndex
-                  // rows are order by timestamp, not rowIndex,
-                  // so we need to go through all rows here to skip rows added after cursor created
                   if (beyondMaxRowIndex(entry.getValue())) {
                     continue;
                   }
@@ -312,9 +309,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   }
 
                   Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
-                  // ignore rows whose rowIndex is beyond the maxRowIndex
-                  // rows are order by timestamp, not rowIndex,
-                  // so we need to go through all rows here to skip rows added after cursor created
                   if (beyondMaxRowIndex(entry.getValue())) {
                     continue;
                   }
@@ -369,9 +363,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 boolean foundMatched = false;
                 while (baseIter.hasNext()) {
                   Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
-                  // ignore rows whose rowIndex is beyond the maxRowIndex
-                  // rows are order by timestamp, not rowIndex,
-                  // so we need to go through all rows here to skip rows added after cursor created
                   if (beyondMaxRowIndex(entry.getValue())) {
                     continue;
                   }
@@ -388,6 +379,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               private boolean beyondMaxRowIndex(Integer rowIndex) {
+                // ignore rows whose rowIndex is beyond the maxRowIndex
+                // rows are order by timestamp, not rowIndex,
+                // so we still need to go through all rows to skip rows added after cursor created
                 return rowIndex.compareTo(maxRowIndex) > 0;
               }
 
