@@ -2562,7 +2562,31 @@ public class TimeseriesQueryRunnerTest
         optimizedRunner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
-    TestHelper.assertExpectedResults(expectedResults, results2);
+    // post aggs are calculated in FinalizeResultsQueryRunner.run()
+    // toolChest.mergeResults doesn't do post aggs, so addRowsIndexConstant is not included in expectedResults2
+    List<Result<TimeseriesResultValue>> expectedResults2 = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 11L,
+                    "index", 3783L,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 11L,
+                    "index", 3313L,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults2, results2);
 
   }
 }
