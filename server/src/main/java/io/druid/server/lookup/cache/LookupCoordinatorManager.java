@@ -65,12 +65,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -473,7 +475,7 @@ public class LookupCoordinatorManager
     final Map<HostAndPort, LookupsStateWithMap> currState = new ConcurrentHashMap<>();
 
     try {
-      List<ListenableFuture<?>> futures = new ArrayList<>();
+      List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
       for (Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : allLookupTiers.entrySet()) {
 
         LOG.debug("Starting lookup mgmt for tier [%s].", tierEntry.getKey());
@@ -492,7 +494,7 @@ public class LookupCoordinatorManager
               executorService.submit(
                   () -> {
                     try {
-                      currState.put(node, this.doLookupManagementOnNode(node, tierLookups));
+                      return new AbstractMap.SimpleImmutableEntry<>(node, doLookupManagementOnNode(node, tierLookups));
                     }
                     catch (Exception ex) {
                       LOG.makeAlert(
@@ -501,6 +503,7 @@ public class LookupCoordinatorManager
                           node.getHostText(),
                           node.getPort()
                       );
+                      return null;
                     }
                   }
               )
@@ -508,10 +511,15 @@ public class LookupCoordinatorManager
         }
       }
 
-      final ListenableFuture allFuture = Futures.allAsList(futures);
+      final ListenableFuture<List<Map.Entry>> allFuture = Futures.allAsList(futures);
       try {
-        allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS);
-        knownOldState.set(currState);
+        ImmutableMap.Builder<HostAndPort, LookupsStateWithMap> stateBuilder = ImmutableMap.builder();
+        allFuture.get(lookupCoordinatorManagerConfig.getAllHostTimeout().getMillis(), TimeUnit.MILLISECONDS)
+                 .stream()
+                 .filter(Objects::nonNull)
+                 .forEach(stateBuilder::put)
+        ;
+        knownOldState.set(stateBuilder.build());
       }
       catch (InterruptedException ex) {
         allFuture.cancel(true);
@@ -567,6 +575,7 @@ public class LookupCoordinatorManager
 
   // Returns the Map<lookup-name, lookup-spec> that needs to be loaded by the node and it does not know about
   // those already.
+  // It is assumed that currLookupsStateOnNode "toLoad" and "toDrop" are disjoint.
   @VisibleForTesting
   Map<String, LookupExtractorFactoryMapContainer> getToBeLoadedOnNode(
       LookupsStateWithMap currLookupsStateOnNode,
@@ -598,6 +607,7 @@ public class LookupCoordinatorManager
 
   // Returns Set<lookup-name> that should be dropped from the node which has them already either in pending to load
   // state or loaded
+  // It is assumed that currLookupsStateOnNode "toLoad" and "toDrop" are disjoint.
   @VisibleForTesting
   Set<String> getToBeDroppedFromNode(
       LookupsStateWithMap currLookupsStateOnNode,

@@ -261,6 +261,7 @@ public class LookupReferencesManager
     return stateRef.get().lookupMap.get(lookupName);
   }
 
+  // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
   public LookupsState getAllLookupsState()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));

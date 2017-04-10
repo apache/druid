@@ -29,7 +29,8 @@ import java.util.Set;
 
 /**
  * Same as LookupsState except that it uses LookupExtractorFactoryMapContainer instead of
- * LookupExtractorFactoryContainer to refer to lookup specs.
+ * LookupExtractorFactoryContainer to refer to lookup specs so that lookup extensions are not required to
+ * be loaded at the Coordinator.
  */
 public class LookupsStateWithMap
 {
