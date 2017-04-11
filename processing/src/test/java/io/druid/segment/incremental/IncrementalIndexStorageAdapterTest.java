@@ -65,7 +65,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -409,7 +409,7 @@ public class IncrementalIndexStorageAdapterTest
     Sequence<Cursor> cursors = sa.makeCursors(
         null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
     );
-    final CountDownLatch assertCursorsNotEmpty = new CountDownLatch(1);
+    final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
     Sequences.toList(
         Sequences.map(
@@ -444,6 +444,7 @@ public class IncrementalIndexStorageAdapterTest
                   throw new RuntimeException(ex);
                 }
 
+                int rowNumInCursor = 0;
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
                   IndexedInts row = dimSelector.getRow();
@@ -451,8 +452,10 @@ public class IncrementalIndexStorageAdapterTest
                     Assert.assertTrue(i < cardinality);
                   }
                   cursor.advance();
+                  rowNumInCursor++;
                 }
-                assertCursorsNotEmpty.countDown();
+                Assert.assertEquals(2, rowNumInCursor);
+                assertCursorsNotEmpty.incrementAndGet();
 
                 return null;
               }
@@ -460,7 +463,7 @@ public class IncrementalIndexStorageAdapterTest
         ),
         new ArrayList<>()
     );
-    Assert.assertEquals(0, assertCursorsNotEmpty.getCount());
+    Assert.assertEquals(1, assertCursorsNotEmpty.get());
   }
 
   @Test
@@ -484,7 +487,7 @@ public class IncrementalIndexStorageAdapterTest
     Sequence<Cursor> cursors = sa.makeCursors(
         null, new Interval(timestamp - 60_000, timestamp + 60_000), VirtualColumns.EMPTY, Granularities.ALL, false
     );
-    final CountDownLatch assertCursorsNotEmpty = new CountDownLatch(1);
+    final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
     Sequences.toList(
         Sequences.map(
@@ -585,7 +588,7 @@ public class IncrementalIndexStorageAdapterTest
                     )
                 );
 
-                CountDownLatch rowNumInCursor = new CountDownLatch(1);
+                int rowNumInCursor = 0;
                 // and then, cursoring continues in the other thread
                 while (!cursor.isDone()) {
                   IndexedInts rowA = dimSelector1A.getRow();
@@ -608,10 +611,10 @@ public class IncrementalIndexStorageAdapterTest
                   // the null id
                   Assert.assertEquals(0, rowE.get(0));
                   cursor.advance();
-                  rowNumInCursor.countDown();
+                  rowNumInCursor++;
                 }
-                Assert.assertEquals(0, rowNumInCursor.getCount());
-                assertCursorsNotEmpty.countDown();
+                Assert.assertEquals(2, rowNumInCursor);
+                assertCursorsNotEmpty.incrementAndGet();
 
                 return null;
               }
@@ -619,6 +622,6 @@ public class IncrementalIndexStorageAdapterTest
         ),
         new ArrayList<>()
     );
-    Assert.assertEquals(0, assertCursorsNotEmpty.getCount());
+    Assert.assertEquals(1, assertCursorsNotEmpty.get());
   }
 }

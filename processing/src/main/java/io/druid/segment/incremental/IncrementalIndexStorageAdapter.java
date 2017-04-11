@@ -290,9 +290,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   }
                 }
 
-                if (!filterMatcher.matches()) {
-                  done = true;
-                }
+                done = true;
               }
 
               @Override
@@ -320,9 +318,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   }
                 }
 
-                if (!filterMatcher.matches()) {
-                  done = true;
-                }
+                done = true;
               }
 
               @Override
@@ -364,6 +360,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 while (baseIter.hasNext()) {
                   Map.Entry<IncrementalIndex.TimeAndDims, Integer> entry = baseIter.next();
                   if (beyondMaxRowIndex(entry.getValue())) {
+                    numAdvanced++;
                     continue;
                   }
                   currEntry.set(entry);
@@ -378,11 +375,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 done = !foundMatched && (emptyRange || !baseIter.hasNext());
               }
 
-              private boolean beyondMaxRowIndex(Integer rowIndex) {
+              private boolean beyondMaxRowIndex(int rowIndex) {
                 // ignore rows whose rowIndex is beyond the maxRowIndex
                 // rows are order by timestamp, not rowIndex,
                 // so we still need to go through all rows to skip rows added after cursor created
-                return rowIndex.compareTo(maxRowIndex) > 0;
+                return rowIndex > maxRowIndex;
               }
 
               @Override
