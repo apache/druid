@@ -28,8 +28,10 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -2553,40 +2555,16 @@ public class TimeseriesQueryRunnerTest
     );
     TestHelper.assertExpectedResults(expectedResults, results);
 
-    TimeseriesQueryQueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     QueryRunner<Result<TimeseriesResultValue>> optimizedRunner = toolChest.postMergeQueryDecoration(
         toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
     Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        optimizedRunner.run(query, CONTEXT),
+        new FinalizeResultsQueryRunner(optimizedRunner, toolChest).run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
-    // post aggs are calculated in FinalizeResultsQueryRunner.run()
-    // toolChest.mergeResults doesn't do post aggs, so addRowsIndexConstant is not included in expectedResults2
-    List<Result<TimeseriesResultValue>> expectedResults2 = Arrays.asList(
-        new Result<>(
-            new DateTime("2011-04-01"),
-            new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 11L,
-                    "index", 3783L,
-                    "uniques", QueryRunnerTestHelper.UNIQUES_9
-                )
-            )
-        ),
-        new Result<>(
-            new DateTime("2011-04-02"),
-            new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 11L,
-                    "index", 3313L,
-                    "uniques", QueryRunnerTestHelper.UNIQUES_9
-                )
-            )
-        )
-    );
-    TestHelper.assertExpectedResults(expectedResults2, results2);
+    TestHelper.assertExpectedResults(expectedResults, results2);
 
   }
 }
