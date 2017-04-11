@@ -81,21 +81,21 @@ Please make sure these keys are properly configured for successful ingestion.
 
 ```json
 {
-  type: "kafka",
-  dataSchema: {
-    dataSource: "metrics-kafka2",
-    parser: {
-      type: "protobuf",
-      descriptor: "file:///tmp/metrics.desc",
-      protoMessageType: "Metrics",
-      parseSpec: {
-        format: "json",
-        timestampSpec: {
-          column: "timestamp",
-          format: "auto"
+  "type": "kafka",
+  "dataSchema": {
+    "dataSource": "metrics-kafka2",
+    "parser": {
+      "type": "protobuf",
+      "descriptor": "file:///tmp/metrics.desc",
+      "protoMessageType": "Metrics",
+      "parseSpec": {
+        "format": "json",
+        "timestampSpec": {
+          "column": "timestamp",
+          "format": "auto"
         },
-        dimensionsSpec: {
-          dimensions: [
+        "dimensionsSpec": {
+          "dimensions": [
             "unit",
             "http_method",
             "http_code",
@@ -103,52 +103,52 @@ Please make sure these keys are properly configured for successful ingestion.
             "metricType",
             "server"
           ],
-          dimensionExclusions: [
+          "dimensionExclusions": [
             "timestamp",
             "value"
           ]
         }
       }
     },
-    metricsSpec: [
+    "metricsSpec": [
       {
-        name: "count",
-        type: "count"
+        "name": "count",
+        "type": "count"
       },
       {
-        name: "value_sum",
-        fieldName: "value",
-        type: "doubleSum"
+        "name": "value_sum",
+        "fieldName": "value",
+        "type": "doubleSum"
       },
       {
-        name: "value_min",
-        fieldName: "value",
-        type: "doubleMin"
+        "name": "value_min",
+        "fieldName": "value",
+        "type": "doubleMin"
       },
       {
-        name: "value_max",
-        fieldName: "value",
-        type: "doubleMax"
+        "name": "value_max",
+        "fieldName": "value",
+        "type": "doubleMax"
       }
     ],
-    granularitySpec: {
-      type: "uniform",
-      segmentGranularity: "HOUR",
-      queryGranularity: "NONE"
+    "granularitySpec": {
+      "type": "uniform",
+      "segmentGranularity": "HOUR",
+      "queryGranularity": "NONE"
     }
   },
-  tuningConfig: {
-    type: "kafka",
-    maxRowsPerSegment: 5000000
+  "tuningConfig": {
+    "type": "kafka",
+    "maxRowsPerSegment": 5000000
   },
-  ioConfig: {
-    topic: "metrics_pb",
-    consumerProperties: {
-      bootstrap.servers: "localhost:9092"
+  "ioConfig": {
+    "topic": "metrics_pb",
+    "consumerProperties": {
+      "bootstrap.servers": "localhost:9092"
     },
-    taskCount: 1,
-    replicas: 1,
-    taskDuration: "PT1H"
+    "taskCount": 1,
+    "replicas": 1,
+    "taskDuration": "PT1H"
   }
 }
 ```
