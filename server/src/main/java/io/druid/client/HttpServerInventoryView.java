@@ -19,7 +19,6 @@
 
 package io.druid.client;
 
-import com.amazonaws.annotation.GuardedBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Function;
@@ -63,6 +62,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
+import javax.annotation.concurrent.GuardedBy;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,6 +82,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * This class uses CuratorInventoryManager to listen for queryable server membership which serve segments(e.g. Historicals).
+ * For each queryable server, it uses HTTP GET /druid/internal/v1/segments (see docs in SegmentListerResource.getSegments(..).
  */
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
@@ -97,12 +99,18 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
   private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
 
+  // For each queryable server, a name -> DruidServerHolder entry is kept
   @GuardedBy("inventory")
-  private final Map<String, DruidServerHolder> servers = new HashMap<>(); //Name -> DruidServer mapping
-
-  private final BlockingQueue<String> queue = new LinkedBlockingDeque<>();
+  private final Map<String, DruidServerHolder> servers = new HashMap<>();
 
   private volatile ExecutorService executor;
+
+  // a queue of queryable server names for which worker threads in executor initiate the segment list call i.e.
+  // DruidServerHolder.updateSegmentsListAsync(..) which updates the segment list asynchronously and adds itself
+  // to this queue again for next update.
+  private final BlockingQueue<String> queue = new LinkedBlockingDeque<>();
+
+
 
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;

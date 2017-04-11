@@ -19,7 +19,6 @@
 
 package io.druid.server.coordination;
 
-import com.amazonaws.annotation.GuardedBy;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -29,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.java.util.common.IAE;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +37,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
+ * This class keeps a bounded list of segment updates made on the server such as adding/dropping segments.
+ *
+ * Clients call addSegmentChangeRequest(DataSegmentChangeRequest) or addSegmentChangeRequests(List<DataSegmentChangeRequest>)
+ * to add segment updates.
+ *
+ * Clients call ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter) to get segment
+ * updates since given counter.
  */
 public class SegmentChangeRequestHistory
 {
@@ -49,7 +56,7 @@ public class SegmentChangeRequestHistory
 
   @VisibleForTesting
   @GuardedBy("waitingFutures")
-  final LinkedHashMap<SettableFuture, Counter> waitingFutures;
+  final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
 
   private final ExecutorService singleThreadedExecutor;
   private final Runnable resolveWaitingFuturesRunnable;
@@ -85,23 +92,11 @@ public class SegmentChangeRequestHistory
     );
   }
 
-  private void resolveWaitingFutures()
-  {
-    final LinkedHashMap<SettableFuture, Counter> waitingFuturesCopy = new LinkedHashMap<>();
-    synchronized (waitingFutures) {
-      waitingFuturesCopy.putAll(waitingFutures);
-      waitingFutures.clear();
-    }
 
-    for (Map.Entry<SettableFuture, Counter> e : waitingFuturesCopy.entrySet()) {
-      try {
-        e.getKey().set(getRequestsSinceWithoutWait(e.getValue()));
-      } catch (Exception ex) {
-        e.getKey().setException(ex);
-      }
-    }
-  }
 
+  /**
+   * Add batch of segment changes update.
+   */
   public synchronized void addSegmentChangeRequests(List<DataSegmentChangeRequest> requests)
   {
     for (DataSegmentChangeRequest request : requests) {
@@ -114,14 +109,27 @@ public class SegmentChangeRequestHistory
     singleThreadedExecutor.execute(resolveWaitingFuturesRunnable);
   }
 
+  /**
+   * Add single segment change update.
+   */
   public synchronized void addSegmentChangeRequest(DataSegmentChangeRequest request)
   {
     addSegmentChangeRequests(ImmutableList.of(request));
   }
 
+  /**
+   * Returns a Future that , on completion, returns list of segment updates and associated counter.
+   * If there are no update since given counter then Future completion waits till an updates is provided.
+   *
+   * If counter is very older than max number of changes maintained than IAE exception is thrown.
+   *
+   * If there were no updates to provide immediately then a future is created and returned to caller. This future
+   * is added to the "waitingFutures" list and all the futures in the list get resolved as soon as a segment
+   * update is provided.
+   */
   public synchronized ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter)
   {
-    final SettableFuture future = new SettableFuture(waitingFutures);
+    final CustomSettableFuture future = new CustomSettableFuture(waitingFutures);
 
     if (counter.counter < 0) {
       future.setException(new IAE("counter must be >= 0"));
@@ -171,6 +179,23 @@ public class SegmentChangeRequestHistory
       }
 
       return new SegmentChangeRequestsSnapshot(changes.get(changes.size() - 1).counter, result);
+    }
+  }
+
+  private void resolveWaitingFutures()
+  {
+    final LinkedHashMap<CustomSettableFuture, Counter> waitingFuturesCopy = new LinkedHashMap<>();
+    synchronized (waitingFutures) {
+      waitingFuturesCopy.putAll(waitingFutures);
+      waitingFutures.clear();
+    }
+
+    for (Map.Entry<CustomSettableFuture, Counter> e : waitingFuturesCopy.entrySet()) {
+      try {
+        e.getKey().set(getRequestsSinceWithoutWait(e.getValue()));
+      } catch (Exception ex) {
+        e.getKey().setException(ex);
+      }
     }
   }
 
@@ -237,15 +262,16 @@ public class SegmentChangeRequestHistory
 
     public boolean matches(Counter other)
     {
-      return this.counter == other.counter;// && this.hash == other.hash;
+      return this.counter == other.counter && this.hash == other.hash;
     }
   }
 
-  private static class SettableFuture extends AbstractFuture<SegmentChangeRequestsSnapshot>
+  // Future with cancel() implementation to remove it from "waitingFutures" list
+  private static class CustomSettableFuture extends AbstractFuture<SegmentChangeRequestsSnapshot>
   {
-    private final LinkedHashMap<SettableFuture, Counter> waitingFutures;
+    private final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
 
-    private SettableFuture( LinkedHashMap<SettableFuture, Counter> waitingFutures)
+    private CustomSettableFuture(LinkedHashMap<CustomSettableFuture, Counter> waitingFutures)
     {
       this.waitingFutures = waitingFutures;
     }

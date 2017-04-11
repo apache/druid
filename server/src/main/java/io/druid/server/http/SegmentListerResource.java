@@ -76,6 +76,33 @@ public class SegmentListerResource
     this.announcer = announcer;
   }
 
+  /**
+   * This endpoint is used by HttpServerInventoryView to keep an up-to-date list of segments served by
+   * historical/realtime nodes.
+   *
+   * This endpoint lists segments served by this server and can also incrementally provide the segments added/dropped
+   * since last response.
+   *
+   * Here is how, this is used.
+   *
+   * (1) Client sends first request /druid/internal/v1/segments?counter=-1&timeout=<timeout>
+   * Server responds with list of segments currently served and a <counter,hash> pair.
+   *
+   * (2) Client sends subsequent requests /druid/internal/v1/segments?counter=<counter>&hash=<hash>&timeout=<timeout>
+   * Where <counter,hash> values are used from the last response. Server responds with list of segment updates
+   * since given counter.
+   *
+   * This endpoint makes the client wait till either there is some segment update or given timeout elapses.
+   *
+   * So, clients keep on sending next request immediately after receiving the response in order to keep the list
+   * of segments served by this server up-to-date.
+   *
+   * @param counter counter received in last response.
+   * @param hash hash received in last response.
+   * @param timeout after which response is sent even if there are no new segment updates.
+   * @param req
+   * @throws IOException
+   */
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
