@@ -66,16 +66,15 @@ public class OssStorageDruidModule implements DruidModule {
         JsonConfigProvider.bind(binder, "druid.oss", OssCredentialsConfig.class);
 
         Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(OssDataSegmentPuller.class).in(LazySingleton.class);
+        Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(OssDataSegmentPusher.class).in(LazySingleton.class);
         Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(OssDataSegmentKiller.class).in(LazySingleton.class);
         Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME).to(OssDataSegmentMover.class).in(LazySingleton.class);
         Binders.dataSegmentArchiverBinder(binder).addBinding(SCHEME).to(OssDataSegmentArchiver.class).in(LazySingleton.class);
-        Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(OssDataSegmentPusher.class).in(LazySingleton.class);
         Binders.taskLogsBinder(binder).addBinding(SCHEME).to(OssTaskLogs.class).in(LazySingleton.class);
 
         JsonConfigProvider.bind(binder, "druid.oss.storage", OssDataSegmentPusherConfig.class);
         JsonConfigProvider.bind(binder, "druid.oss.storage", OssDataSegmentArchiverConfig.class);
         JsonConfigProvider.bind(binder, "druid.oss.storage", OssTaskLogsConfig.class);
-
     }
 
     @Provides

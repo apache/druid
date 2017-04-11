@@ -44,8 +44,11 @@ public class OssDataSegmentPuller implements DataSegmentPuller, URIDataPuller {
 
     private static final Logger log = new Logger(OssDataSegmentPuller.class);
 
+    //  bucket and key info
     protected static final String BUCKET = "bucket";
     protected static final String KEY = "key";
+
+    //  oss client for object opt
     protected final OSSClient ossClient;
 
     @Inject
@@ -234,6 +237,8 @@ public class OssDataSegmentPuller implements DataSegmentPuller, URIDataPuller {
     }
 
     private String getKey(URI uri) {
+
+        // remove '/' from key
         return uri.getPath().substring(1);
     }
 
@@ -241,7 +246,7 @@ public class OssDataSegmentPuller implements DataSegmentPuller, URIDataPuller {
         try {
             return new URI("oss://" + MapUtils.getString(segment.getLoadSpec(), BUCKET) + MapUtils.getString(segment.getLoadSpec(), KEY));
         } catch (URISyntaxException e) {
-            e.printStackTrace();
+            log.error("get uri from segment error, error message is [%s]", e);
             return null;
         }
     }
